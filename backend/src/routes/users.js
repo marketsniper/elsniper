@@ -1,0 +1,89 @@
+import { Router } from 'express';
+import { z } from 'zod';
+import { query } from '../db.js';
+import { HttpError, notFound } from '../errors.js';
+import { asyncHandler } from '../middleware/errorHandler.js';
+
+const router = Router();
+
+const createUserSchema = z
+  .object({
+    fullName: z.string().min(2),
+    phone: z.string().min(6),
+    email: z.string().email().optional(),
+    accountType: z.enum(['tourist', 'resident']),
+    // Document d'identité : requis pour un résident (tarif local).
+    idDocumentUrl: z.string().url().optional(),
+  })
+  .refine((d) => d.accountType !== 'resident' || d.idDocumentUrl, {
+    path: ['idDocumentUrl'],
+    message: "Document d'identité requis pour un compte résident",
+  });
+
+const verifySchema = z.object({
+  status: z.enum(['verified', 'rejected']),
+});
+
+// POST /users — inscription touriste ou résident.
+// Touriste : currency USD, vérifié d'office. Résident : TZS, en attente de
+// validation manuelle du document par l'équipe.
+router.post(
+  '/',
+  asyncHandler(async (req, res) => {
+    const data = createUserSchema.parse(req.body);
+    const isResident = data.accountType === 'resident';
+
+    const { rows } = await query(
+      `INSERT INTO users (full_name, phone, email, account_type, currency, verification_status, id_document_url)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       RETURNING *`,
+      [
+        data.fullName,
+        data.phone,
+        data.email ?? null,
+        data.accountType,
+        isResident ? 'TZS' : 'USD',
+        isResident ? 'pending' : 'verified',
+        data.idDocumentUrl ?? null,
+      ]
+    );
+    res.status(201).json(rows[0]);
+  })
+);
+
+// GET /users/:id — détail utilisateur.
+router.get(
+  '/:id',
+  asyncHandler(async (req, res) => {
+    const { rows } = await query('SELECT * FROM users WHERE id = $1', [req.params.id]);
+    if (!rows[0]) throw notFound('Utilisateur');
+    res.json(rows[0]);
+  })
+);
+
+// PATCH /users/:id/verify — validation manuelle du document par l'équipe.
+router.patch(
+  '/:id/verify',
+  asyncHandler(async (req, res) => {
+    const { status } = verifySchema.parse(req.body);
+
+    const { rows } = await query('SELECT * FROM users WHERE id = $1', [req.params.id]);
+    const user = rows[0];
+    if (!user) throw notFound('Utilisateur');
+    if (user.verification_status !== 'pending') {
+      throw new HttpError(
+        409,
+        'invalid_status',
+        `Ce compte a déjà été traité (statut: ${user.verification_status})`
+      );
+    }
+
+    const updated = await query(
+      'UPDATE users SET verification_status = $1 WHERE id = $2 RETURNING *',
+      [status, req.params.id]
+    );
+    res.json(updated.rows[0]);
+  })
+);
+
+export default router;
