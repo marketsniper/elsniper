@@ -1,0 +1,120 @@
+// Authentification par OTP SMS → JWT.
+//
+// Flux : POST /request-otp {phone} → SMS avec un code 6 chiffres →
+//        POST /verify-otp {phone, code} → {token, user, driver, hotel}.
+// Un nouveau client vérifie d'abord son téléphone, PUIS crée son profil
+// (POST /users, /drivers ou /hotels avec le même phone que le jeton).
+import crypto from 'node:crypto';
+import { Router } from 'express';
+import jwt from 'jsonwebtoken';
+import { z } from 'zod';
+import { config } from '../config.js';
+import { pool, withTransaction } from '../db.js';
+import { HttpError } from '../errors.js';
+import * as smsService from '../services/smsService.js';
+
+export const authRouter = Router();
+
+const phoneSchema = z
+  .string()
+  .regex(/^\+[1-9]\d{6,14}$/, 'Numéro au format international requis (ex. +255777123456)');
+
+const OTP_TTL_MINUTES = 10;
+
+function hashCode(code) {
+  return crypto.createHash('sha256').update(code).digest('hex');
+}
+
+// POST /api/auth/request-otp {phone}
+// Génère un code 6 chiffres (crypto), stocke son hash (sha256) avec une
+// expiration de 10 min, invalide les codes précédents non consommés du
+// même numéro, puis envoie le SMS.
+// COMPORTEMENT DEV : si NODE_ENV !== "production", la réponse contient
+// devCode (le code en clair) pour permettre les tests automatisés —
+// jamais en production.
+authRouter.post('/request-otp', async (req, res, next) => {
+  try {
+    const { phone } = z.object({ phone: phoneSchema }).parse(req.body);
+
+    // Code à 6 chiffres cryptographiquement aléatoire (000000–999999)
+    const code = crypto.randomInt(0, 1_000_000).toString().padStart(6, '0');
+
+    await withTransaction(async (client) => {
+      // Invalider (consommer) les codes précédents non consommés du même numéro
+      await client.query(
+        `UPDATE otp_codes SET consumed_at = now()
+         WHERE phone = $1 AND consumed_at IS NULL`,
+        [phone]
+      );
+      await client.query(
+        `INSERT INTO otp_codes (phone, code_hash, expires_at)
+         VALUES ($1, $2, now() + interval '${OTP_TTL_MINUTES} minutes')`,
+        [phone, hashCode(code)]
+      );
+    });
+
+    await smsService.sendOtp(phone, code);
+
+    const body = { sent: true, expiresInMinutes: OTP_TTL_MINUTES };
+    if (config.env !== 'production') {
+      body.devCode = code; // exposé UNIQUEMENT hors production
+    }
+    res.status(200).json(body);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/auth/verify-otp {phone, code}
+// Vérifie le code (hash + non expiré + non consommé), le consomme, puis
+// signe un JWT. Réponse : {token, user, driver, hotel} — chacun null si
+// aucun profil n'existe encore pour ce numéro.
+authRouter.post('/verify-otp', async (req, res, next) => {
+  try {
+    const { phone, code } = z
+      .object({
+        phone: phoneSchema,
+        code: z.string().regex(/^\d{6}$/, 'Code à 6 chiffres requis'),
+      })
+      .parse(req.body);
+
+    const { rows } = await pool.query(
+      `UPDATE otp_codes SET consumed_at = now()
+       WHERE id = (
+         SELECT id FROM otp_codes
+         WHERE phone = $1 AND code_hash = $2
+           AND consumed_at IS NULL AND expires_at > now()
+         ORDER BY created_at DESC
+         LIMIT 1
+       )
+       RETURNING id`,
+      [phone, hashCode(code)]
+    );
+    if (rows.length === 0) {
+      throw new HttpError(401, 'invalid_otp', 'Code OTP invalide ou expiré');
+    }
+
+    // Profils éventuels rattachés à ce numéro
+    const [userRes, driverRes, hotelRes] = await Promise.all([
+      pool.query('SELECT * FROM users WHERE phone = $1', [phone]),
+      pool.query('SELECT * FROM drivers WHERE phone = $1', [phone]),
+      pool.query('SELECT * FROM hotels WHERE phone = $1', [phone]),
+    ]);
+    const user = userRes.rows[0] || null;
+    const driver = driverRes.rows[0] || null;
+    const hotel = hotelRes.rows[0] || null;
+
+    const payload = { phone };
+    if (user) payload.userId = user.id;
+    if (driver) payload.driverId = driver.id;
+    if (hotel) payload.hotelId = hotel.id;
+
+    const token = jwt.sign(payload, config.jwtSecret, {
+      expiresIn: config.jwtExpiresIn,
+    });
+
+    res.json({ token, user, driver, hotel });
+  } catch (err) {
+    next(err);
+  }
+});

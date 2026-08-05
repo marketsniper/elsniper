@@ -17,19 +17,30 @@ arrivera en V2 comme un service au-dessus de ces mêmes routes, sans les casser.
 
 | Dossier | Description |
 | --- | --- |
-| [`backend/`](backend/) | API REST complète : schéma PostgreSQL (7 tables), 6 routers Express (~25 endpoints), validation Zod, services (Pesapal stub, WhatsApp, QR, tarification), tests de bout en bout |
+| [`backend/`](backend/) | API REST complète : schéma PostgreSQL (7 tables + OTP), 8 routers Express, authentification OTP SMS + JWT, autorisation par ressource, upload S3/R2, Pesapal (stub → réel par simple config), rate limiting, suite de tests + smoke-test |
+| [`mobile/`](mobile/) | App mobile Expo React Native (TypeScript) : client (réservation, trajets, colis avec QR, profil) et mode chauffeur (scan QR, photos de ramassage/livraison) |
 | [`docs/architecture-technique.md`](docs/architecture-technique.md) | Cahier des charges technique du MVP (v0.1) |
+| [`docs/deploiement.md`](docs/deploiement.md) | Guide de déploiement (Railway / Render / VM) et variables d'environnement |
+| [`.github/workflows/ci.yml`](.github/workflows/ci.yml) | CI : tests backend sur PostgreSQL 16 + typecheck mobile à chaque push |
 
 ## Démarrage rapide
 
 ```bash
+# Backend
 cd backend
 npm install
 cp .env.example .env      # adapter DATABASE_URL si besoin
 npm run migrate           # applique db/migrations/ sur PostgreSQL
 npm start                 # API sur http://localhost:3000/api
-npm run smoke-test        # 37 tests bout-en-bout contre le serveur démarré
+npm test                  # suite automatisée (base zanzigo_test)
+npm run smoke-test        # 50 vérifications bout-en-bout (serveur démarré)
+
+# App mobile (Expo Go sur votre téléphone)
+cd ../mobile
+npm install
+npx expo start            # EXPO_PUBLIC_API_URL = IP locale du backend
 ```
 
 Voir [`backend/README.md`](backend/README.md) pour la référence API complète
-et les règles métier implémentées.
+(authentification, permissions par route, règles métier) et
+[`mobile/README.md`](mobile/README.md) pour le lancement de l'app.

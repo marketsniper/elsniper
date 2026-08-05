@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { query } from '../db.js';
 import { HttpError, notFound } from '../errors.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
+import { isAdmin, requireAuth, requireAdmin } from '../middleware/auth.js';
 import { generateVehicleQr } from '../services/qrService.js';
 
 const router = Router();
@@ -28,10 +29,15 @@ const searchSchema = z.object({
 });
 
 // POST /drivers — candidature Taxi Partner (avec documents).
+// Le téléphone du body doit être celui vérifié par OTP (jeton).
 router.post(
   '/',
+  requireAuth,
   asyncHandler(async (req, res) => {
     const data = createDriverSchema.parse(req.body);
+    if (!isAdmin(req) && data.phone !== req.auth.phone) {
+      throw new HttpError(403, 'phone_mismatch', 'Le téléphone doit être celui vérifié par OTP (jeton)');
+    }
     const { rows } = await query(
       `INSERT INTO drivers (full_name, phone, license_number, vehicle_plate, vehicle_model, zone, license_document_url, id_document_url)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
@@ -51,9 +57,10 @@ router.post(
   })
 );
 
-// GET /drivers?zone=&available= — recherche de chauffeurs vérifiés.
+// GET /drivers?zone=&available= — recherche de chauffeurs vérifiés (équipe).
 router.get(
   '/',
+  requireAdmin,
   asyncHandler(async (req, res) => {
     const { zone, available } = searchSchema.parse(req.query);
 
@@ -76,21 +83,26 @@ router.get(
   })
 );
 
-// GET /drivers/:id — détail chauffeur.
+// GET /drivers/:id — détail chauffeur (lui-même ou l'équipe).
 router.get(
   '/:id',
+  requireAuth,
   asyncHandler(async (req, res) => {
+    if (!isAdmin(req) && req.auth.driverId !== req.params.id) {
+      throw new HttpError(403, 'forbidden', 'Accès réservé au chauffeur concerné');
+    }
     const { rows } = await query('SELECT * FROM drivers WHERE id = $1', [req.params.id]);
     if (!rows[0]) throw notFound('Chauffeur');
     res.json(rows[0]);
   })
 );
 
-// PATCH /drivers/:id/verify — validation manuelle par l'équipe.
+// PATCH /drivers/:id/verify — validation manuelle (équipe uniquement).
 // À la validation, le QR véhicule fixe est généré une seule fois :
 // il ne changera plus jamais ensuite (contrairement au QR colis).
 router.patch(
   '/:id/verify',
+  requireAdmin,
   asyncHandler(async (req, res) => {
     const { status } = verifySchema.parse(req.body);
 

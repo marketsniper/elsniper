@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { query } from '../db.js';
 import { HttpError, notFound } from '../errors.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
+import { isAdmin, requireAuth, requireAdmin } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -25,12 +26,18 @@ const verifySchema = z.object({
 });
 
 // POST /users — inscription touriste ou résident.
+// Le téléphone est toujours vérifié par OTP avant la création du profil :
+// le phone du body doit être celui du jeton (l'équipe peut créer pour autrui).
 // Touriste : currency USD, vérifié d'office. Résident : TZS, en attente de
 // validation manuelle du document par l'équipe.
 router.post(
   '/',
+  requireAuth,
   asyncHandler(async (req, res) => {
     const data = createUserSchema.parse(req.body);
+    if (!isAdmin(req) && data.phone !== req.auth.phone) {
+      throw new HttpError(403, 'phone_mismatch', 'Le téléphone doit être celui vérifié par OTP (jeton)');
+    }
     const isResident = data.accountType === 'resident';
 
     const { rows } = await query(
@@ -51,19 +58,24 @@ router.post(
   })
 );
 
-// GET /users/:id — détail utilisateur.
+// GET /users/:id — détail utilisateur (lui-même ou l'équipe).
 router.get(
   '/:id',
+  requireAuth,
   asyncHandler(async (req, res) => {
+    if (!isAdmin(req) && req.auth.userId !== req.params.id) {
+      throw new HttpError(403, 'forbidden', 'Accès réservé au titulaire du compte');
+    }
     const { rows } = await query('SELECT * FROM users WHERE id = $1', [req.params.id]);
     if (!rows[0]) throw notFound('Utilisateur');
     res.json(rows[0]);
   })
 );
 
-// PATCH /users/:id/verify — validation manuelle du document par l'équipe.
+// PATCH /users/:id/verify — validation manuelle du document (équipe uniquement).
 router.patch(
   '/:id/verify',
+  requireAdmin,
   asyncHandler(async (req, res) => {
     const { status } = verifySchema.parse(req.body);
 

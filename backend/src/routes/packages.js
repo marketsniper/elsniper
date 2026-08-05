@@ -3,8 +3,9 @@ import { z } from 'zod';
 import { query } from '../db.js';
 import { HttpError, notFound } from '../errors.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
+import { isAdmin, requireAuth } from '../middleware/auth.js';
 import { pricePackage } from '../services/pricingService.js';
-import { createPaymentLink } from '../services/pesapalService.js';
+import { createPaymentOrder } from '../services/pesapalService.js';
 import { generatePackageQr } from '../services/qrService.js';
 import { buildTeamNotificationLink, packageRequestMessage } from '../services/whatsappService.js';
 
@@ -42,13 +43,30 @@ async function getPackage(id) {
   return rows[0];
 }
 
+function isSender(pkg, auth) {
+  return (
+    (pkg.sender_user_id !== null && pkg.sender_user_id === auth.userId) ||
+    (pkg.sender_hotel_id !== null && pkg.sender_hotel_id === auth.hotelId)
+  );
+}
+
 // POST /packages — création de la demande (utilisateur ou hôtel).
+// L'expéditeur ne peut créer que pour lui-même (id du jeton).
 // Génère le QR colis unique et fige le prix. La devise suit l'expéditeur :
 // celle du compte pour un user, TZS pour un hôtel partenaire.
 router.post(
   '/',
+  requireAuth,
   asyncHandler(async (req, res) => {
     const data = createPackageSchema.parse(req.body);
+    if (!isAdmin(req)) {
+      if (data.senderType === 'user' && data.senderUserId !== req.auth.userId) {
+        throw new HttpError(403, 'forbidden', 'Un client ne peut créer un colis que pour lui-même');
+      }
+      if (data.senderType === 'hotel' && data.senderHotelId !== req.auth.hotelId) {
+        throw new HttpError(403, 'forbidden', 'Un hôtel ne peut créer un colis que pour lui-même');
+      }
+    }
 
     let currency = 'TZS';
     let senderLabel;
@@ -95,30 +113,47 @@ router.post(
   })
 );
 
-// GET /packages/by-qr/:qrCode — lookup par QR (usage app chauffeur).
+// GET /packages/by-qr/:qrCode — lookup par QR (chauffeur authentifié ou équipe).
 // Déclarée avant /:id pour ne pas être interceptée par la route paramétrée.
 router.get(
   '/by-qr/:qrCode',
+  requireAuth,
   asyncHandler(async (req, res) => {
+    if (!isAdmin(req) && !req.auth.driverId) {
+      throw new HttpError(403, 'forbidden', 'Accès réservé aux chauffeurs');
+    }
     const { rows } = await query('SELECT * FROM packages WHERE qr_code = $1', [req.params.qrCode]);
     if (!rows[0]) throw notFound('Colis');
     res.json(rows[0]);
   })
 );
 
-// GET /packages/:id — détail.
+// GET /packages/:id — détail (expéditeur, chauffeur assigné ou équipe).
 router.get(
   '/:id',
+  requireAuth,
   asyncHandler(async (req, res) => {
-    res.json(await getPackage(req.params.id));
+    const pkg = await getPackage(req.params.id);
+    const allowed =
+      isAdmin(req) ||
+      isSender(pkg, req.auth) ||
+      (pkg.driver_id !== null && pkg.driver_id === req.auth.driverId);
+    if (!allowed) {
+      throw new HttpError(403, 'forbidden', "Accès réservé à l'expéditeur, au chauffeur ou à l'équipe");
+    }
+    res.json(pkg);
   })
 );
 
-// POST /packages/:id/payment — lien de paiement Pesapal.
+// POST /packages/:id/payment — lien de paiement Pesapal (expéditeur ou équipe).
 router.post(
   '/:id/payment',
+  requireAuth,
   asyncHandler(async (req, res) => {
     const pkg = await getPackage(req.params.id);
+    if (!isAdmin(req) && !isSender(pkg, req.auth)) {
+      throw new HttpError(403, 'forbidden', "Accès réservé à l'expéditeur du colis");
+    }
 
     if (pkg.status !== 'created') {
       throw new HttpError(
@@ -128,7 +163,7 @@ router.post(
       );
     }
 
-    const { reference, paymentLink } = await createPaymentLink({
+    const { reference, paymentLink } = await createPaymentOrder({
       amount: pkg.price,
       currency: pkg.currency,
       description: `zanziGo colis ${pkg.id}`,
@@ -144,14 +179,18 @@ router.post(
   })
 );
 
-// PATCH /packages/:id/pickup — photo + scan QR au ramassage.
-// Le QR scanné doit être celui de CE colis. Le chauffeur qui ramasse
-// peut être enregistré via driverId (optionnel au MVP).
+// PATCH /packages/:id/pickup — photo + scan QR au ramassage (chauffeur ou équipe).
+// Le QR scanné doit être celui de CE colis. Le chauffeur qui ramasse est
+// enregistré (celui du jeton, ou driverId explicite pour l'équipe).
 router.patch(
   '/:id/pickup',
+  requireAuth,
   asyncHandler(async (req, res) => {
     const data = scanSchema.parse(req.body);
     const pkg = await getPackage(req.params.id);
+    if (!isAdmin(req) && !req.auth.driverId) {
+      throw new HttpError(403, 'forbidden', 'Accès réservé aux chauffeurs');
+    }
 
     if (pkg.status !== 'paid') {
       throw new HttpError(
@@ -164,10 +203,12 @@ router.patch(
       throw new HttpError(403, 'qr_mismatch', 'Ce QR ne correspond pas à ce colis');
     }
 
-    if (data.driverId) {
+    // Le chauffeur du jeton par défaut ; l'équipe peut désigner un chauffeur.
+    const driverId = req.auth.driverId ?? data.driverId ?? null;
+    if (driverId) {
       const { rows } = await query(
         `SELECT id FROM drivers WHERE id = $1 AND verification_status = 'verified'`,
-        [data.driverId]
+        [driverId]
       );
       if (!rows[0]) throw new HttpError(409, 'driver_not_verified', 'Chauffeur inconnu ou non validé');
     }
@@ -177,18 +218,23 @@ router.patch(
        SET status = 'picked_up', pickup_photo_url = $1, picked_up_at = now(),
            driver_id = COALESCE($2, driver_id)
        WHERE id = $3 RETURNING *`,
-      [data.photoUrl, data.driverId ?? null, req.params.id]
+      [data.photoUrl, driverId, req.params.id]
     );
     res.json(rows[0]);
   })
 );
 
-// PATCH /packages/:id/deliver — photo + scan QR à la livraison.
+// PATCH /packages/:id/deliver — photo + scan QR à la livraison
+// (chauffeur assigné au colis ou équipe).
 router.patch(
   '/:id/deliver',
+  requireAuth,
   asyncHandler(async (req, res) => {
     const data = scanSchema.parse(req.body);
     const pkg = await getPackage(req.params.id);
+    if (!isAdmin(req) && (!req.auth.driverId || pkg.driver_id !== req.auth.driverId)) {
+      throw new HttpError(403, 'forbidden', 'Accès réservé au chauffeur assigné à ce colis');
+    }
 
     if (pkg.status !== 'picked_up') {
       throw new HttpError(

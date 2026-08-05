@@ -5,7 +5,9 @@ import { config } from '../config.js';
 // V2 : remplacer par l'API WhatsApp Business officielle.
 
 export function buildTeamNotificationLink(text) {
-  return `https://wa.me/${config.teamWhatsappNumber}?text=${encodeURIComponent(text)}`;
+  // wa.me attend le numéro international sans "+" ni espaces.
+  const number = config.teamWhatsappNumber.replace(/\D/g, '');
+  return `https://wa.me/${number}?text=${encodeURIComponent(text)}`;
 }
 
 export function tripRequestMessage(trip, user) {

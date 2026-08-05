@@ -3,8 +3,9 @@ import { z } from 'zod';
 import { query, withTransaction } from '../db.js';
 import { HttpError, notFound } from '../errors.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
+import { isAdmin, requireAuth, requireAdmin } from '../middleware/auth.js';
 import { priceTrip } from '../services/pricingService.js';
-import { createPaymentLink } from '../services/pesapalService.js';
+import { createPaymentOrder } from '../services/pesapalService.js';
 import { buildTeamNotificationLink, tripRequestMessage } from '../services/whatsappService.js';
 
 const router = Router();
@@ -32,12 +33,17 @@ async function getTrip(id) {
 
 // POST /trips — demande de trajet : calcule le prix (figé), génère le lien
 // WhatsApp pour que l'équipe organise le matching manuellement.
+// Le client ne peut réserver que pour lui-même (userId = jeton).
 // Règle métier : le tarif local (shared_local) est réservé aux résidents
 // dont le document a été vérifié par l'équipe.
 router.post(
   '/',
+  requireAuth,
   asyncHandler(async (req, res) => {
     const data = createTripSchema.parse(req.body);
+    if (!isAdmin(req) && data.userId !== req.auth.userId) {
+      throw new HttpError(403, 'forbidden', 'Un client ne peut réserver que pour lui-même');
+    }
 
     const { rows: userRows } = await query('SELECT * FROM users WHERE id = $1', [data.userId]);
     const user = userRows[0];
@@ -91,11 +97,15 @@ router.post(
   })
 );
 
-// GET /trips?userId= — historique d'un utilisateur.
+// GET /trips?userId= — historique d'un utilisateur (lui-même ou l'équipe).
 router.get(
   '/',
+  requireAuth,
   asyncHandler(async (req, res) => {
     const { userId } = z.object({ userId: z.string().uuid() }).parse(req.query);
+    if (!isAdmin(req) && userId !== req.auth.userId) {
+      throw new HttpError(403, 'forbidden', 'Accès réservé au titulaire du compte');
+    }
     const { rows } = await query(
       'SELECT * FROM trips WHERE user_id = $1 ORDER BY created_at DESC',
       [userId]
@@ -104,17 +114,27 @@ router.get(
   })
 );
 
-// GET /trips/:id — détail.
+// GET /trips/:id — détail (le client, le chauffeur assigné ou l'équipe).
 router.get(
   '/:id',
+  requireAuth,
   asyncHandler(async (req, res) => {
-    res.json(await getTrip(req.params.id));
+    const trip = await getTrip(req.params.id);
+    const allowed =
+      isAdmin(req) ||
+      trip.user_id === req.auth.userId ||
+      (trip.driver_id !== null && trip.driver_id === req.auth.driverId);
+    if (!allowed) {
+      throw new HttpError(403, 'forbidden', 'Accès réservé au client, au chauffeur assigné ou à l\'équipe');
+    }
+    res.json(trip);
   })
 );
 
-// PATCH /trips/:id/assign-driver — l'équipe confirme un chauffeur.
+// PATCH /trips/:id/assign-driver — l'équipe confirme un chauffeur (équipe uniquement).
 router.patch(
   '/:id/assign-driver',
+  requireAdmin,
   asyncHandler(async (req, res) => {
     const { driverId } = assignDriverSchema.parse(req.body);
     const trip = await getTrip(req.params.id);
@@ -145,13 +165,17 @@ router.patch(
   })
 );
 
-// POST /trips/:id/payment — génère le lien de paiement Pesapal.
+// POST /trips/:id/payment — génère le lien de paiement Pesapal (client ou équipe).
 // Règle métier : le paiement ne peut être demandé qu'après confirmation
 // d'un chauffeur — jamais avant.
 router.post(
   '/:id/payment',
+  requireAuth,
   asyncHandler(async (req, res) => {
     const trip = await getTrip(req.params.id);
+    if (!isAdmin(req) && trip.user_id !== req.auth.userId) {
+      throw new HttpError(403, 'forbidden', 'Accès réservé au client de la course');
+    }
 
     if (trip.status !== 'driver_confirmed') {
       throw new HttpError(
@@ -161,7 +185,7 @@ router.post(
       );
     }
 
-    const { reference, paymentLink } = await createPaymentLink({
+    const { reference, paymentLink } = await createPaymentOrder({
       amount: trip.price,
       currency: trip.currency,
       description: `zanziGo trajet ${trip.id}`,
@@ -177,14 +201,18 @@ router.post(
   })
 );
 
-// PATCH /trips/:id/start — scan du QR véhicule au départ.
+// PATCH /trips/:id/start — scan du QR véhicule au départ (chauffeur assigné ou équipe).
 // Règle métier : le QR scanné doit correspondre au véhicule du chauffeur
 // assigné à CETTE course — pas n'importe quel QR véhicule valide.
 router.patch(
   '/:id/start',
+  requireAuth,
   asyncHandler(async (req, res) => {
     const { qrCode } = scanSchema.parse(req.body);
     const trip = await getTrip(req.params.id);
+    if (!isAdmin(req) && (!req.auth.driverId || trip.driver_id !== req.auth.driverId)) {
+      throw new HttpError(403, 'forbidden', 'Accès réservé au chauffeur assigné à cette course');
+    }
 
     if (trip.status !== 'paid') {
       throw new HttpError(
@@ -209,14 +237,18 @@ router.patch(
   })
 );
 
-// PATCH /trips/:id/complete — scan du QR véhicule à l'arrivée.
+// PATCH /trips/:id/complete — scan du QR véhicule à l'arrivée (chauffeur assigné ou équipe).
 // Clôture la course et incrémente les stats mensuelles du chauffeur
 // (support du programme de fidélité) — ce qui débloque son paiement.
 router.patch(
   '/:id/complete',
+  requireAuth,
   asyncHandler(async (req, res) => {
     const { qrCode } = scanSchema.parse(req.body);
     const trip = await getTrip(req.params.id);
+    if (!isAdmin(req) && (!req.auth.driverId || trip.driver_id !== req.auth.driverId)) {
+      throw new HttpError(403, 'forbidden', 'Accès réservé au chauffeur assigné à cette course');
+    }
 
     if (trip.status !== 'in_progress') {
       throw new HttpError(
@@ -252,12 +284,16 @@ router.patch(
 );
 
 // POST /trips/:id/rating — note du chauffeur (1-5), à sens unique :
-// une course déjà notée renvoie 409 Conflict.
+// une course déjà notée renvoie 409 Conflict. Réservé au client de la course.
 router.post(
   '/:id/rating',
+  requireAuth,
   asyncHandler(async (req, res) => {
     const data = ratingSchema.parse(req.body);
     const trip = await getTrip(req.params.id);
+    if (!isAdmin(req) && trip.user_id !== req.auth.userId) {
+      throw new HttpError(403, 'forbidden', 'Seul le client de la course peut la noter');
+    }
 
     if (trip.status !== 'completed') {
       throw new HttpError(409, 'invalid_status', 'Seule une course terminée peut être notée');
