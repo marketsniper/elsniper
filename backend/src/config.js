@@ -27,6 +27,10 @@ export const config = {
   jwtSecret,
   jwtExpiresIn: env.JWT_EXPIRES_IN || '30d',
   adminApiKey: env.ADMIN_API_KEY || 'dev-admin-key',
+  // Mode pilote : renvoie le code OTP dans la réponse API même en
+  // production (tant qu'aucun fournisseur SMS n'est branché). Ne JAMAIS
+  // laisser activé avec de vrais utilisateurs.
+  exposeOtpDevCode: env.OTP_EXPOSE_DEV_CODE === '1',
 
   // Métier
   commissionRate: Number(env.COMMISSION_RATE) || 0.15,
