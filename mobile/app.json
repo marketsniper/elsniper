@@ -4,6 +4,12 @@
     "slug": "karim",
     "owner": "zanzigo.com",
     "version": "1.0.0",
+    "runtimeVersion": {
+      "policy": "sdkVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/df409e04-637b-4287-9e58-e99ea1fa521e"
+    },
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "zanzigo",
