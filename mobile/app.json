@@ -8,11 +8,18 @@
     "scheme": "zanzigo",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/expo.icon",
+      "bundleIdentifier": "com.zanzigo.app",
+      "supportsTablet": false,
+      "infoPlist": {
+        "NSCameraUsageDescription": "zanziGo utilise la caméra pour scanner les QR codes des véhicules et des colis.",
+        "NSPhotoLibraryUsageDescription": "zanziGo accède à vos photos pour joindre les preuves de ramassage et de livraison des colis."
+      }
     },
     "android": {
+      "package": "com.zanzigo.app",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#CCFBF1",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
@@ -28,12 +35,24 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#208AEF",
+          "backgroundColor": "#0D9488",
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "zanziGo utilise la caméra pour scanner les QR codes des véhicules et des colis."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "zanziGo accède à vos photos pour joindre les preuves de ramassage et de livraison des colis."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

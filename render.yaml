@@ -1,0 +1,43 @@
+# Blueprint Render — déploiement 1-clic de l'API zanziGo + PostgreSQL.
+# Sur render.com : New → Blueprint → sélectionner ce dépôt → Apply.
+#
+# Plans "free" pour démarrer (démo) :
+#  - le service web s'endort après 15 min d'inactivité (1er appel plus lent) ;
+#  - la base gratuite expire au bout de 30 jours — passer sur un plan payant
+#    (basic-256mb) avant un vrai lancement.
+databases:
+  - name: zanzigo-db
+    databaseName: zanzigo
+    user: zanzigo
+    plan: free
+    region: frankfurt
+
+services:
+  - type: web
+    name: zanzigo-api
+    runtime: node
+    plan: free
+    region: frankfurt
+    rootDir: backend
+    buildCommand: npm ci
+    # Les migrations sont idempotentes (table schema_migrations) : on les
+    # applique à chaque démarrage avant de lancer le serveur.
+    startCommand: npm run migrate && node src/server.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: zanzigo-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ADMIN_API_KEY
+        generateValue: true
+      - key: COMMISSION_RATE
+        value: "0.15"
+      # Numéro WhatsApp Business de l'équipe — à renseigner dans le
+      # dashboard Render (Environment) avec le vrai numéro.
+      - key: TEAM_WHATSAPP_NUMBER
+        sync: false
