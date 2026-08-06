@@ -1,7 +1,8 @@
 {
   "expo": {
     "name": "zanziGo",
-    "slug": "zanzigo",
+    "slug": "karim",
+    "owner": "zanzigo.com",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -57,6 +58,11 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "df409e04-637b-4287-9e58-e99ea1fa521e"
+      }
     }
   }
 }
