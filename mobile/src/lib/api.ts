@@ -209,10 +209,14 @@ export interface CreationChauffeur {
   vehiclePlate: string;
   vehicleModel?: string;
   zone: string;
-  /** URL du permis téléversé sur POST /uploads. */
+  /** URL du permis de conduire téléversé sur POST /uploads. */
   licenseDocumentUrl: string;
-  /** URL de la pièce d'identité téléversée sur POST /uploads. */
-  idDocumentUrl: string;
+  /** URL de l'assurance du véhicule téléversée sur POST /uploads. */
+  insuranceDocumentUrl: string;
+  /** URL de la photo du véhicule téléversée sur POST /uploads. */
+  vehiclePhotoUrl: string;
+  /** Devenu optionnel côté serveur — l'app ne l'envoie plus. */
+  idDocumentUrl?: string;
 }
 
 /**

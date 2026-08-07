@@ -1,21 +1,23 @@
-// Onglet « Réserver » : itinéraire en haut, puis choix du mode Privé ou
-// Partagé, récapitulatif de prix et bouton. Le prix officiel est calculé par
-// le backend (pricingService) et FIGÉ à la création ; la grille affichée ici
-// en est le miroir exact (types.ts).
-// Segmentation : touriste USD plein tarif ; résident USD (−10 % une fois
-// vérifié, bandeau d'attente sinon) ; local (carte tanzanienne) 15 000 TZS
-// partout une fois vérifié — non vérifié, il ne peut pas réserver (écran
-// d'attente, 403 local_not_verified côté serveur). « Partagé » =
-// shared_tourist pour touristes/résidents/hôtels, shared_local pour les
-// locaux vérifiés. La formule posted_return n'est plus proposée.
-// Mode hôtel : réservation POUR SON CLIENT — TZS, champs Nom/Téléphone du
-// client, payload {hotelId, clientName, clientPhone, …} sans userId.
+// Onglet « Réserver » : itinéraire en menus déroulants (hubs + villes) en
+// haut, puis choix du mode Privé ou Partagé.
+// - Privé : récapitulatif de prix (miroir types.ts, trajets spéciaux inclus,
+//   ex. Nungwi ↔ Paje 65 USD / 58,50 USD résident vérifié) et bouton Réserver.
+//   Une précision optionnelle (hôtel, adresse…) est ajoutée entre parenthèses
+//   dans pickupLocation SAUF sur un trajet spécial : le serveur ne reconnaît
+//   la paire spéciale que sur les villes EXACTES, on envoie alors les villes
+//   seules et on rappelle à l'utilisateur de préciser le lieu via WhatsApp.
+// - Partagé : PAS de réservation directe — on affiche la liste des trajets
+//   postés par les chauffeurs (RidesPartages), place réservée via WhatsApp.
+// Le prix officiel reste calculé et FIGÉ côté serveur (pricingService).
+// Mode hôtel : réservation privée POUR SON CLIENT — TZS, champs Nom/Téléphone
+// du client, payload {hotelId, clientName, clientPhone, …} sans userId.
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import React, { useCallback, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { RidesPartages } from '@/components/RidesPartages';
+import { Selecteur } from '@/components/Selecteur';
 import { Bouton, Champ, Ecran, EncartInfo, EtatVide, TexteErreur } from '@/components/ui';
 import { api, ErreurApi } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
@@ -25,7 +27,9 @@ import {
   champ,
   formaterMontant,
   localVerifie,
+  ORIGINES_RIDES,
   profilTarifaireUtilisateur,
+  tarifSpecialPrive,
   tarifTrajetProfil,
   type ProfilTarifaire,
   type TypeCompte,
@@ -53,16 +57,36 @@ export default function EcranReserver() {
   const [mode, setMode] = useState<ModeCourse>('prive');
   const [depart, setDepart] = useState('');
   const [arrivee, setArrivee] = useState('');
+  const [precision, setPrecision] = useState('');
   const [programme, setProgramme] = useState('');
   const [nomClient, setNomClient] = useState('');
   const [telClient, setTelClient] = useState('+255');
   const [erreur, setErreur] = useState('');
   const [charge, setCharge] = useState(false);
+  // Lieux proposés : hubs + villes (serveur), repli sur la liste locale.
+  const [lieux, setLieux] = useState<string[]>(ORIGINES_RIDES);
+
+  const chargerLieux = useCallback(async () => {
+    try {
+      const reponse = await api.lieuxRides();
+      if (reponse.origins.length > 0) setLieux(reponse.origins);
+    } catch {
+      // silencieux : repli sur la liste locale
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      chargerLieux();
+    }, [chargerLieux])
+  );
 
   // « Partagé » = navette locale pour un local vérifié, navette touristes sinon.
   const typePartage: TypeTrajet = estLocalVerifie ? 'shared_local' : 'shared_tourist';
-  const typeCourse: TypeTrajet = mode === 'prive' ? 'private' : typePartage;
-  const tarifCourant = tarifTrajetProfil(typeCourse, profil);
+  const itineraire = { depart, arrivee };
+  // Trajet spécial (privé uniquement) : villes exactes, deux sens.
+  const estSpecial = mode === 'prive' && tarifSpecialPrive(depart, arrivee) !== null;
+  const tarifCourant = tarifTrajetProfil('private', profil, itineraire);
 
   const reserver = async () => {
     setErreur('');
@@ -70,7 +94,7 @@ export default function EcranReserver() {
       setErreur(t('reserver_erreur_profil'));
       return;
     }
-    if (!depart.trim() || !arrivee.trim()) {
+    if (!depart || !arrivee) {
       setErreur(t('reserver_erreur_itineraire'));
       return;
     }
@@ -95,6 +119,12 @@ export default function EcranReserver() {
       }
       scheduledAt = date.toISOString();
     }
+    // Trajet spécial : villes SEULES pour que le serveur applique le tarif
+    // dédié. Sinon, la précision optionnelle est ajoutée entre parenthèses.
+    const precisionPropre = precision.trim();
+    const pickupLocation =
+      !estSpecial && precisionPropre ? `${depart} (${precisionPropre})` : depart;
+    const dropoffLocation = arrivee;
     setCharge(true);
     try {
       const trajet = modeHotel
@@ -102,20 +132,21 @@ export default function EcranReserver() {
             hotelId: hotel!.id,
             clientName: nomClient.trim(),
             clientPhone: telClientNormalise,
-            tripType: typeCourse,
-            pickupLocation: depart.trim(),
-            dropoffLocation: arrivee.trim(),
+            tripType: 'private',
+            pickupLocation,
+            dropoffLocation,
             scheduledAt,
           })
         : await api.creerTrajet({
             userId: utilisateur!.id,
-            tripType: typeCourse,
-            pickupLocation: depart.trim(),
-            dropoffLocation: arrivee.trim(),
+            tripType: 'private',
+            pickupLocation,
+            dropoffLocation,
             scheduledAt,
           });
       setDepart('');
       setArrivee('');
+      setPrecision('');
       setProgramme('');
       setNomClient('');
       setTelClient('+255');
@@ -163,17 +194,23 @@ export default function EcranReserver() {
       )}
 
       <Text style={styles.titreSection}>{t('reserver_itineraire')}</Text>
-      <Champ
+      <Selecteur
         label={t('commun_depart')}
-        value={depart}
-        onChangeText={setDepart}
-        placeholder={t('reserver_depart_placeholder')}
+        valeur={depart}
+        options={lieux}
+        onChange={setDepart}
+      />
+      <Selecteur
+        label={t('commun_arrivee')}
+        valeur={arrivee}
+        options={lieux}
+        onChange={setArrivee}
       />
       <Champ
-        label={t('commun_arrivee')}
-        value={arrivee}
-        onChangeText={setArrivee}
-        placeholder={t('reserver_arrivee_placeholder')}
+        label={t('reserver_precision')}
+        value={precision}
+        onChangeText={setPrecision}
+        placeholder={t('reserver_precision_placeholder')}
       />
 
       <Text style={styles.titreSection}>{t('reserver_mode_titre')}</Text>
@@ -197,7 +234,7 @@ export default function EcranReserver() {
           ]
         ).map((option) => {
           const actif = mode === option.cle;
-          const tarif = tarifTrajetProfil(option.type, profil);
+          const tarif = tarifTrajetProfil(option.type, profil, itineraire);
           return (
             <Pressable
               key={option.cle}
@@ -227,53 +264,69 @@ export default function EcranReserver() {
         })}
       </View>
 
-      {modeHotel && (
+      {mode === 'partage' ? (
+        // Partagé : pas de réservation directe — liste des trajets postés.
         <>
-          <Text style={styles.titreSection}>{t('reserver_votre_client')}</Text>
+          <EncartInfo icone="people-outline">{t('reserver_partage_info')}</EncartInfo>
+          <RidesPartages />
+        </>
+      ) : (
+        <>
+          {estSpecial && (
+            <EncartInfo icone="sparkles-outline" ton="succes">
+              {t('reserver_special_info', { depart, arrivee })}
+            </EncartInfo>
+          )}
+
+          {modeHotel && (
+            <>
+              <Text style={styles.titreSection}>{t('reserver_votre_client')}</Text>
+              <Champ
+                label={t('reserver_nom_client')}
+                value={nomClient}
+                onChangeText={setNomClient}
+                placeholder={t('reserver_nom_client_placeholder')}
+              />
+              <Champ
+                label={t('reserver_tel_client')}
+                value={telClient}
+                onChangeText={setTelClient}
+                keyboardType="phone-pad"
+                placeholder="+255 712 345 678"
+              />
+            </>
+          )}
+
           <Champ
-            label={t('reserver_nom_client')}
-            value={nomClient}
-            onChangeText={setNomClient}
-            placeholder={t('reserver_nom_client_placeholder')}
+            label={t('reserver_programmer')}
+            value={programme}
+            onChangeText={setProgramme}
+            placeholder={t('reserver_programmer_placeholder')}
           />
-          <Champ
-            label={t('reserver_tel_client')}
-            value={telClient}
-            onChangeText={setTelClient}
-            keyboardType="phone-pad"
-            placeholder="+255 712 345 678"
+
+          <View style={styles.cartePrix}>
+            <View style={styles.lignePrix}>
+              <Text style={styles.labelPrix}>{t('reserver_prix_course')}</Text>
+              <Text style={styles.valeurPrix}>
+                {tarifCourant !== null
+                  ? formaterMontant(tarifCourant.montant, tarifCourant.devise)
+                  : '—'}
+              </Text>
+            </View>
+            <Text style={styles.note}>{t('reserver_note_prix')}</Text>
+          </View>
+
+          <TexteErreur>{erreur}</TexteErreur>
+          <Bouton
+            titre={modeHotel ? t('reserver_bouton_hotel') : t('reserver_bouton')}
+            icone="checkmark-circle-outline"
+            onPress={reserver}
+            charge={charge}
           />
+
+          <RidesPartages />
         </>
       )}
-
-      <Champ
-        label={t('reserver_programmer')}
-        value={programme}
-        onChangeText={setProgramme}
-        placeholder={t('reserver_programmer_placeholder')}
-      />
-
-      <View style={styles.cartePrix}>
-        <View style={styles.lignePrix}>
-          <Text style={styles.labelPrix}>{t('reserver_prix_course')}</Text>
-          <Text style={styles.valeurPrix}>
-            {tarifCourant !== null
-              ? formaterMontant(tarifCourant.montant, tarifCourant.devise)
-              : '—'}
-          </Text>
-        </View>
-        <Text style={styles.note}>{t('reserver_note_prix')}</Text>
-      </View>
-
-      <TexteErreur>{erreur}</TexteErreur>
-      <Bouton
-        titre={modeHotel ? t('reserver_bouton_hotel') : t('reserver_bouton')}
-        icone="checkmark-circle-outline"
-        onPress={reserver}
-        charge={charge}
-      />
-
-      <RidesPartages />
     </Ecran>
   );
 }

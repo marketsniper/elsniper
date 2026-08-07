@@ -141,6 +141,11 @@ export default function EcranAccueil() {
             onPress={() => choisir('driver')}
           />
 
+          <View style={styles.ligneConfiance}>
+            <Ionicons name="shield-checkmark" size={18} color={couleurs.primaireClair} />
+            <Text style={styles.texteConfiance}>{t('accueil_confiance')}</Text>
+          </View>
+
           <Text style={styles.pied}>{t('accueil_pied')}</Text>
         </ScrollView>
       </SafeAreaView>
@@ -223,6 +228,25 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: couleurs.attente,
     fontWeight: '600',
+  },
+  ligneConfiance: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: espaces.s,
+    marginTop: espaces.s,
+    paddingHorizontal: espaces.l,
+  },
+  texteConfiance: {
+    flexShrink: 1,
+    fontSize: 13,
+    fontWeight: '600',
+    color: couleurs.blanc,
+    textAlign: 'center',
+    lineHeight: 18,
+    textShadowColor: 'rgba(0, 0, 0, 0.4)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
   },
   pied: {
     fontSize: 13,

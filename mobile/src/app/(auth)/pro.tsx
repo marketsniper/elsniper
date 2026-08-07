@@ -81,8 +81,10 @@ export default function EcranPro() {
   const [plaque, setPlaque] = useState('');
   const [modele, setModele] = useState('');
   const [zone, setZone] = useState('');
+  // Trois documents obligatoires : permis, assurance, photo du véhicule.
   const [permisUri, setPermisUri] = useState<string | null>(null);
-  const [identiteUri, setIdentiteUri] = useState<string | null>(null);
+  const [assuranceUri, setAssuranceUri] = useState<string | null>(null);
+  const [vehiculeUri, setVehiculeUri] = useState<string | null>(null);
   const [erreur, setErreur] = useState('');
   const [charge, setCharge] = useState(false);
 
@@ -124,16 +126,17 @@ export default function EcranPro() {
       setErreur(t('pro_erreur_zone'));
       return;
     }
-    if (!permisUri || !identiteUri) {
+    if (!permisUri || !assuranceUri || !vehiculeUri) {
       setErreur(t('pro_erreur_docs'));
       return;
     }
     setCharge(true);
     try {
-      // Téléverser les deux documents pour obtenir leurs URLs.
-      const [docPermis, docIdentite] = await Promise.all([
+      // Téléverser les trois documents pour obtenir leurs URLs.
+      const [docPermis, docAssurance, photoVehicule] = await Promise.all([
         api.televerser(permisUri),
-        api.televerser(identiteUri),
+        api.televerser(assuranceUri),
+        api.televerser(vehiculeUri),
       ]);
       const profil = await api.creerChauffeur({
         fullName: nom.trim(),
@@ -143,7 +146,8 @@ export default function EcranPro() {
         vehicleModel: modele.trim() || undefined,
         zone: zone.trim(),
         licenseDocumentUrl: docPermis.url,
-        idDocumentUrl: docIdentite.url,
+        insuranceDocumentUrl: docAssurance.url,
+        vehiclePhotoUrl: photoVehicule.url,
       });
       // La session porte désormais le profil chauffeur (pending) : cet écran
       // bascule sur l'état « candidature envoyée ».
@@ -270,9 +274,17 @@ export default function EcranPro() {
           texteAjouter={t('pro_doc_ajouter')}
         />
         <LigneDocument
-          label={t('pro_doc_identite')}
-          uri={identiteUri}
-          onChoisir={() => choisirImage(setIdentiteUri)}
+          label={t('pro_doc_assurance')}
+          uri={assuranceUri}
+          onChoisir={() => choisirImage(setAssuranceUri)}
+          texteAjoute={t('client_doc_ajoute')}
+          texteChanger={t('client_doc_changer')}
+          texteAjouter={t('pro_doc_ajouter')}
+        />
+        <LigneDocument
+          label={t('pro_doc_vehicule')}
+          uri={vehiculeUri}
+          onChoisir={() => choisirImage(setVehiculeUri)}
           texteAjoute={t('client_doc_ajoute')}
           texteChanger={t('client_doc_changer')}
           texteAjouter={t('pro_doc_ajouter')}

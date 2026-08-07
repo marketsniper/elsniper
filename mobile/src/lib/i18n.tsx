@@ -179,6 +179,11 @@ const CHAINES = {
     en: 'Already registered? Pick your profile — your phone number signs you in.',
     sw: 'Umeshajisajili? Chagua wasifu wako — namba yako ya simu inakutambua.',
   },
+  accueil_confiance: {
+    fr: 'Tous nos chauffeurs sont vérifiés et disposent de tous les papiers en règle',
+    en: 'All our drivers are verified and fully licensed',
+    sw: 'Madereva wetu wote wamethibitishwa na wana nyaraka zote halali',
+  },
 
   // --- Téléphone / OTP -------------------------------------------------------
   tel_bienvenue: { fr: 'Bienvenue', en: 'Welcome', sw: 'Karibu' },
@@ -444,10 +449,15 @@ const CHAINES = {
     en: "Driver's licence (clear photo)",
     sw: 'Leseni ya udereva (picha inayosomeka)',
   },
-  pro_doc_identite: {
-    fr: "Pièce d'identité (photo lisible)",
-    en: 'ID document (clear photo)',
-    sw: 'Kitambulisho (picha inayosomeka)',
+  pro_doc_assurance: {
+    fr: 'Assurance du véhicule (photo lisible)',
+    en: 'Vehicle insurance (clear photo)',
+    sw: 'Bima ya gari (picha inayosomeka)',
+  },
+  pro_doc_vehicule: {
+    fr: 'Photo du véhicule',
+    en: 'Vehicle photo',
+    sw: 'Picha ya gari',
   },
   pro_doc_ajouter: { fr: 'Ajouter le document', en: 'Add document', sw: 'Ongeza nyaraka' },
   pro_note_docs: {
@@ -472,9 +482,9 @@ const CHAINES = {
     sw: 'Weka eneo lako la kazi (mf. Stone Town, Nungwi).',
   },
   pro_erreur_docs: {
-    fr: 'Ajoutez vos deux documents : permis de conduire et pièce d’identité.',
-    en: 'Add both documents: driver’s licence and ID document.',
-    sw: 'Ongeza nyaraka zote mbili: leseni ya udereva na kitambulisho.',
+    fr: 'Ajoutez vos trois documents : permis de conduire, assurance et photo du véhicule.',
+    en: 'Add all three documents: driver’s licence, insurance and vehicle photo.',
+    sw: 'Ongeza nyaraka zote tatu: leseni ya udereva, bima na picha ya gari.',
   },
   pro_erreur_envoi: {
     fr: "L'envoi de la candidature a échoué. Réessayez.",
@@ -511,6 +521,26 @@ const CHAINES = {
     fr: 'Une place dans une navette.',
     en: 'A seat in a shuttle.',
     sw: 'Kiti kwenye safari ya pamoja.',
+  },
+  reserver_precision: {
+    fr: 'Précision (hôtel, adresse…) — optionnel',
+    en: 'Details (hotel, address…) — optional',
+    sw: 'Maelezo (hoteli, anwani…) — hiari',
+  },
+  reserver_precision_placeholder: {
+    fr: 'Ex. : hôtel Ocean View, chambre 12',
+    en: 'E.g. Ocean View hotel, room 12',
+    sw: 'Mf. hoteli Ocean View, chumba 12',
+  },
+  reserver_special_info: {
+    fr: 'Tarif spécial {depart} ↔ {arrivee} appliqué. Indiquez le lieu exact au chauffeur via WhatsApp.',
+    en: 'Special {depart} ↔ {arrivee} fare applied. Share the exact spot with the driver on WhatsApp.',
+    sw: 'Bei maalum ya {depart} ↔ {arrivee} imetumika. Mweleze dereva mahali kamili kupitia WhatsApp.',
+  },
+  reserver_partage_info: {
+    fr: 'En mode Partagé, réservez votre place sur un trajet posté par un chauffeur — choisissez ci-dessous.',
+    en: 'In Shared mode, book a seat on a driver-posted ride — pick one below.',
+    sw: 'Katika hali ya Pamoja, hifadhi kiti kwenye safari iliyotangazwa na dereva — chagua hapa chini.',
   },
   reserver_votre_client: { fr: 'Votre client', en: 'Your guest', sw: 'Mteja wako' },
   reserver_nom_client: { fr: 'Nom du client', en: 'Guest name', sw: 'Jina la mteja' },

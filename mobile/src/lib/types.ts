@@ -142,10 +142,10 @@ export const LIBELLES_STATUT_RIDE: Record<StatutRide, string> = {
   cancelled: 'Annulé',
 };
 
-// Listes fermées des lieux de trajets partagés — repli local de
-// GET /rides/locations. Les chaînes doivent matcher EXACTEMENT la validation
-// serveur (400 hors liste au POST /rides).
-export const ORIGINES_RIDES: string[] = ['Aéroport (AAKIA)', 'Stone Town Ferry'];
+// Listes fermées des lieux — repli local de GET /rides/locations. Les chaînes
+// doivent matcher EXACTEMENT la validation serveur (400 hors liste au
+// POST /rides).
+export const HUBS_RIDES: string[] = ['Aéroport (AAKIA)', 'Stone Town Ferry'];
 export const DESTINATIONS_RIDES: string[] = [
   'Stone Town',
   'Nungwi',
@@ -164,6 +164,8 @@ export const DESTINATIONS_RIDES: string[] = [
   'Kizimkazi',
   'Fumba',
 ];
+// Départs ouverts à toutes les villes : hubs + 16 villes (miroir de origins).
+export const ORIGINES_RIDES: string[] = [...HUBS_RIDES, ...DESTINATIONS_RIDES];
 
 /**
  * Devise du compte utilisateur : TZS pour un compte local (carte tanzanienne),
@@ -250,9 +252,31 @@ export type ProfilTarifaire = 'tourist' | 'resident' | 'resident_verifie' | 'loc
 /** Plein tarif USD (touristes, résidents non vérifiés). Pas de navette locale. */
 export const TARIFS_TRAJET_USD: Partial<Record<TypeTrajet, number>> = {
   private: 50,
-  shared_tourist: 17,
-  posted_return: 17,
+  shared_tourist: 18,
+  posted_return: 18,
 };
+
+/**
+ * Trajets spéciaux : paires ville ↔ ville (insensible à la casse, deux sens)
+ * avec tarif privé dédié en USD. Le serveur applique la même règle quand
+ * pickupLocation/dropoffLocation valent EXACTEMENT ces villes (sans précision
+ * ajoutée) — d'où l'envoi des villes seules sur ces trajets.
+ */
+export const TRAJETS_SPECIAUX_PRIVE_USD: { villes: [string, string]; prix: number }[] = [
+  { villes: ['Nungwi', 'Paje'], prix: 65 },
+];
+
+/** Tarif privé spécial USD pour un itinéraire donné, ou null si aucun. */
+export function tarifSpecialPrive(depart: string, arrivee: string): number | null {
+  const a = depart.trim().toLowerCase();
+  const b = arrivee.trim().toLowerCase();
+  if (!a || !b) return null;
+  for (const special of TRAJETS_SPECIAUX_PRIVE_USD) {
+    const [v1, v2] = [special.villes[0].toLowerCase(), special.villes[1].toLowerCase()];
+    if ((a === v1 && b === v2) || (a === v2 && b === v1)) return special.prix;
+  }
+  return null;
+}
 
 /** Remise résident (documents de résidence validés) sur tous les prix USD. */
 export const REMISE_RESIDENT = 0.1;
@@ -280,10 +304,13 @@ export function profilTarifaireUtilisateur(
 /**
  * Tarif affiché d'une course selon le profil, ou null si ce type de course
  * n'est pas proposé à ce profil (ex. navette locale hors comptes locaux).
+ * `itineraire` (optionnel) active les trajets spéciaux privés en USD
+ * (ex. Nungwi ↔ Paje 65 USD, 58,50 USD résident vérifié).
  */
 export function tarifTrajetProfil(
   type: TypeTrajet,
-  profil: ProfilTarifaire
+  profil: ProfilTarifaire,
+  itineraire?: { depart: string; arrivee: string }
 ): { montant: number; devise: Devise } | null {
   if (profil === 'local') {
     return { montant: TARIF_LOCAL_TZS, devise: 'TZS' };
@@ -292,7 +319,11 @@ export function tarifTrajetProfil(
     const montant = TARIFS_TRAJET_HOTEL_TZS[type];
     return montant === undefined ? null : { montant, devise: 'TZS' };
   }
-  const plein = TARIFS_TRAJET_USD[type];
+  const special =
+    type === 'private' && itineraire
+      ? tarifSpecialPrive(itineraire.depart, itineraire.arrivee)
+      : null;
+  const plein = special ?? TARIFS_TRAJET_USD[type];
   if (plein === undefined) return null;
   const montant =
     profil === 'resident_verifie'
