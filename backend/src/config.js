@@ -35,6 +35,9 @@ export const config = {
   // Métier
   commissionRate: Number(env.COMMISSION_RATE) || 0.15,
   teamWhatsappNumber: env.TEAM_WHATSAPP_NUMBER || '+255000000000',
+  // Taux de change pour l'affichage des trajets partagés aux touristes
+  // (prix postés en TZS par les chauffeurs, montrés en USD aux visiteurs).
+  exchangeTzsPerUsd: Number(env.EXCHANGE_TZS_PER_USD) || 2600,
 
   // Pesapal (paiements) — sans clés, le service tourne en mode stub
   pesapal: {

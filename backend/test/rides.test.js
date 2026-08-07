@@ -43,6 +43,8 @@ describe('Trajets partagés (rides)', () => {
     assert.equal(res.body.seats_available, 4);
     assert.equal(res.body.currency, 'TZS');
     assert.equal(Number(res.body.price_per_seat), 10000);
+    // 10 000 TZS au taux par défaut (2600 TZS/USD) → 4 USD (arrondi au dollar sup.)
+    assert.equal(res.body.price_per_seat_usd, 4);
     assert.ok(res.body.whatsapp_link.includes('wa.me'));
   });
 

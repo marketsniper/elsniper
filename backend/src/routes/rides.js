@@ -15,6 +15,7 @@ import { HttpError, notFound } from '../errors.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { isAdmin, requireAuth } from '../middleware/auth.js';
 import { buildTeamNotificationLink } from '../services/whatsappService.js';
+import { config } from '../config.js';
 
 const router = Router();
 
@@ -54,7 +55,14 @@ function rideWhatsappLink(ride) {
   );
 }
 
-const withLink = (ride) => ({ ...ride, whatsapp_link: rideWhatsappLink(ride) });
+// Le chauffeur poste son prix en shillings ; les visiteurs/touristes voient
+// le même trajet en dollars (conversion au taux configuré, arrondie au
+// dollar supérieur). L'app affiche l'un ou l'autre selon le profil.
+const withLink = (ride) => ({
+  ...ride,
+  price_per_seat_usd: Math.ceil(Number(ride.price_per_seat) / config.exchangeTzsPerUsd),
+  whatsapp_link: rideWhatsappLink(ride),
+});
 
 // POST /rides — un chauffeur validé publie son prochain trajet partagé.
 router.post(
