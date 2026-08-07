@@ -234,19 +234,36 @@ export async function createVerifiedDriver(opts = {}) {
 
 // Hôtel partenaire : OTP → profil (pas de workflow de vérification côté hôtels).
 // Retour : {token, hotel}
+let hotelEmailCounter = 0;
+export function nextHotelEmail() {
+  hotelEmailCounter += 1;
+  return `hotel${hotelEmailCounter}@test.example.com`;
+}
+
+export const HOTEL_PASSWORD = 'MotDePasse#1';
+
+// Hôtel partenaire : compte email + mot de passe (POST /hotels public),
+// puis connexion via POST /auth/hotel-login.
+// Retour : {token, hotel, email, password}
 export async function createHotel({
   phone = nextPhone(),
   name = 'Hôtel Test',
   contactName = 'Contact Test',
   zone = 'Nungwi',
+  email = nextHotelEmail(),
+  password = HOTEL_PASSWORD,
 } = {}) {
-  const { token } = await authenticate(phone);
   const res = await request(app)
     .post('/api/hotels')
-    .set(authHeaders(token))
-    .send({ name, phone, contactName, zone });
+    .send({ name, contactName, email, password, phone, zone });
   if (res.status !== 201) {
     throw new Error(`création hôtel échouée : ${JSON.stringify(res.body)}`);
   }
-  return { token, hotel: res.body };
+  const login = await request(app)
+    .post('/api/auth/hotel-login')
+    .send({ email, password });
+  if (login.status !== 200 || !login.body.token) {
+    throw new Error(`hotel-login échoué : ${JSON.stringify(login.body)}`);
+  }
+  return { token: login.body.token, hotel: login.body.hotel, email, password };
 }

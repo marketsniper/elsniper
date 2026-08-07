@@ -4,34 +4,50 @@ import { query } from '../db.js';
 import { HttpError, notFound } from '../errors.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { isAdmin, requireAuth } from '../middleware/auth.js';
+import { hashPassword } from '../services/passwordService.js';
 
 const router = Router();
 
 const createHotelSchema = z.object({
   name: z.string().min(2),
   contactName: z.string().min(2),
+  email: z.string().email(),
+  password: z.string().min(8, 'Mot de passe : 8 caractères minimum'),
+  // Numéro WhatsApp de l'établissement (contact équipe), pas un identifiant.
   phone: z.string().min(6),
   zone: z.string().min(2),
   address: z.string().optional(),
 });
 
-// POST /hotels — inscription partenaire (simplifiée).
-// Le téléphone du body doit être celui vérifié par OTP (jeton).
+// Le hash de mot de passe ne sort JAMAIS de l'API.
+export function sanitizeHotel(hotel) {
+  if (!hotel) return hotel;
+  const { password_hash, ...rest } = hotel;
+  return rest;
+}
+
+// POST /hotels — création de compte partenaire (public, rate limité).
+// Identité de connexion : email + mot de passe (voir /auth/hotel-login).
 router.post(
   '/',
-  requireAuth,
   asyncHandler(async (req, res) => {
     const data = createHotelSchema.parse(req.body);
-    if (!isAdmin(req) && data.phone !== req.auth.phone) {
-      throw new HttpError(403, 'phone_mismatch', 'Le téléphone doit être celui vérifié par OTP (jeton)');
-    }
+    const passwordHash = await hashPassword(data.password);
     const { rows } = await query(
-      `INSERT INTO hotels (name, contact_name, phone, zone, address)
-       VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO hotels (name, contact_name, email, password_hash, phone, zone, address)
+       VALUES ($1, $2, lower($3), $4, $5, $6, $7)
        RETURNING *`,
-      [data.name, data.contactName, data.phone, data.zone, data.address ?? null]
+      [
+        data.name,
+        data.contactName,
+        data.email,
+        passwordHash,
+        data.phone,
+        data.zone,
+        data.address ?? null,
+      ]
     );
-    res.status(201).json(rows[0]);
+    res.status(201).json(sanitizeHotel(rows[0]));
   })
 );
 
@@ -45,7 +61,7 @@ router.get(
     }
     const { rows } = await query('SELECT * FROM hotels WHERE id = $1', [req.params.id]);
     if (!rows[0]) throw notFound('Hôtel');
-    res.json(rows[0]);
+    res.json(sanitizeHotel(rows[0]));
   })
 );
 

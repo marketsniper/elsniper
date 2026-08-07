@@ -1,14 +1,16 @@
-// Tests hôtels partenaires : inscription, ownership, historique des colis.
+// Tests hôtels partenaires : compte email + mot de passe, connexion,
+// ownership, historique des colis.
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import request from 'supertest';
 import {
+  HOTEL_PASSWORD,
   adminHeaders,
   app,
   authHeaders,
-  authenticate,
   createHotel,
   createTourist,
+  nextHotelEmail,
   nextPhone,
   useTestDb,
 } from './setup.js';
@@ -18,36 +20,86 @@ useTestDb();
 const UNKNOWN_ID = '00000000-0000-4000-8000-000000000000';
 
 describe('Hôtels (hotels)', () => {
-  it('inscription partenaire → 201', async () => {
-    const phone = nextPhone();
-    const { token } = await authenticate(phone);
+  it('création de compte (email + mot de passe) → 201, sans hash exposé', async () => {
+    const email = nextHotelEmail();
     const res = await request(app)
       .post('/api/hotels')
-      .set(authHeaders(token))
-      .send({ name: 'Hotel Baraka', contactName: 'Fatma', phone, zone: 'Nungwi', address: 'Plage de Nungwi' });
+      .send({
+        name: 'Hotel Baraka',
+        contactName: 'Fatma',
+        email,
+        password: HOTEL_PASSWORD,
+        phone: nextPhone(),
+        zone: 'Nungwi',
+        address: 'Plage de Nungwi',
+      });
     assert.equal(res.status, 201);
     assert.equal(res.body.name, 'Hotel Baraka');
-    assert.equal(res.body.contact_name, 'Fatma');
-    assert.equal(res.body.zone, 'Nungwi');
+    assert.equal(res.body.email, email);
+    assert.equal(res.body.password_hash, undefined);
   });
 
-  it('inscription avec un autre téléphone que le jeton → 403 phone_mismatch', async () => {
-    const { token } = await authenticate(nextPhone());
-    const res = await request(app)
+  it('connexion hotel-login → 200 {token, hotel} ; mauvais mot de passe → 401', async () => {
+    const { email } = await createHotel();
+
+    const ok = await request(app)
+      .post('/api/auth/hotel-login')
+      .send({ email, password: HOTEL_PASSWORD });
+    assert.equal(ok.status, 200);
+    assert.ok(ok.body.token);
+    assert.equal(ok.body.hotel.password_hash, undefined);
+
+    const bad = await request(app)
+      .post('/api/auth/hotel-login')
+      .send({ email, password: 'mauvais-mot-de-passe' });
+    assert.equal(bad.status, 401);
+    assert.equal(bad.body.error.code, 'invalid_credentials');
+
+    const unknown = await request(app)
+      .post('/api/auth/hotel-login')
+      .send({ email: 'inconnu@test.example.com', password: HOTEL_PASSWORD });
+    assert.equal(unknown.status, 401);
+  });
+
+  it('email déjà utilisé → 409 duplicate ; mot de passe trop court → 400', async () => {
+    const { email } = await createHotel();
+    const dup = await request(app)
       .post('/api/hotels')
-      .set(authHeaders(token))
-      .send({ name: 'Hotel Imposteur', contactName: 'X Y', phone: nextPhone(), zone: 'Paje' });
-    assert.equal(res.status, 403);
-    assert.equal(res.body.error.code, 'phone_mismatch');
+      .send({
+        name: 'Hotel Copie',
+        contactName: 'X Y',
+        email,
+        password: HOTEL_PASSWORD,
+        phone: nextPhone(),
+        zone: 'Paje',
+      });
+    assert.equal(dup.status, 409);
+    assert.equal(dup.body.error.code, 'duplicate');
+
+    const weak = await request(app)
+      .post('/api/hotels')
+      .send({
+        name: 'Hotel Faible',
+        contactName: 'X Y',
+        email: nextHotelEmail(),
+        password: 'court',
+        phone: nextPhone(),
+        zone: 'Paje',
+      });
+    assert.equal(weak.status, 400);
+    assert.equal(weak.body.error.code, 'validation_error');
   });
 
   it('corps invalide (zone manquante) → 400 validation_error', async () => {
-    const phone = nextPhone();
-    const { token } = await authenticate(phone);
     const res = await request(app)
       .post('/api/hotels')
-      .set(authHeaders(token))
-      .send({ name: 'Hotel Sans Zone', contactName: 'Fatma', phone });
+      .send({
+        name: 'Hotel Sans Zone',
+        contactName: 'Fatma',
+        email: nextHotelEmail(),
+        password: HOTEL_PASSWORD,
+        phone: nextPhone(),
+      });
     assert.equal(res.status, 400);
     assert.equal(res.body.error.code, 'validation_error');
   });

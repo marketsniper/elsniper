@@ -39,24 +39,19 @@ export async function requireAuth(req, _res, next) {
   // son jeton, émis avant la création, ne contient pas encore les ids.
   // On complète req.auth depuis la base (lookup par phone, indexé unique).
   try {
-    if (
-      req.auth.phone &&
-      (!req.auth.userId || !req.auth.driverId || !req.auth.hotelId)
-    ) {
-      const [u, d, h] = await Promise.all([
+    // (Les hôtels ne sont pas concernés : leur jeton, émis par hotel-login,
+    // contient déjà hotelId — et leur téléphone n'est pas un identifiant.)
+    if (req.auth.phone && (!req.auth.userId || !req.auth.driverId)) {
+      const [u, d] = await Promise.all([
         req.auth.userId
           ? null
           : pool.query('SELECT id FROM users WHERE phone = $1', [req.auth.phone]),
         req.auth.driverId
           ? null
           : pool.query('SELECT id FROM drivers WHERE phone = $1', [req.auth.phone]),
-        req.auth.hotelId
-          ? null
-          : pool.query('SELECT id FROM hotels WHERE phone = $1', [req.auth.phone]),
       ]);
       if (u?.rows[0]) req.auth.userId = u.rows[0].id;
       if (d?.rows[0]) req.auth.driverId = d.rows[0].id;
-      if (h?.rows[0]) req.auth.hotelId = h.rows[0].id;
     }
   } catch (err) {
     return next(err);

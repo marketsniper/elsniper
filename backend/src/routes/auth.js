@@ -1,9 +1,12 @@
-// Authentification par OTP SMS → JWT.
+// Authentification zanziGo → JWT.
 //
-// Flux : POST /request-otp {phone} → SMS avec un code 6 chiffres →
-//        POST /verify-otp {phone, code} → {token, user, driver, hotel}.
-// Un nouveau client vérifie d'abord son téléphone, PUIS crée son profil
-// (POST /users, /drivers ou /hotels avec le même phone que le jeton).
+// Clients et chauffeurs (OTP SMS) :
+//   POST /request-otp {phone} → SMS avec un code 6 chiffres →
+//   POST /verify-otp {phone, code} → {token, user, driver}.
+//   Un nouveau venu vérifie d'abord son téléphone, PUIS crée son profil
+//   (POST /users ou /drivers avec le même phone que le jeton).
+// Hôtels partenaires (email + mot de passe) :
+//   POST /hotel-login {email, password} → {token, hotel}.
 import crypto from 'node:crypto';
 import { Router } from 'express';
 import jwt from 'jsonwebtoken';
@@ -12,6 +15,8 @@ import { config } from '../config.js';
 import { pool, withTransaction } from '../db.js';
 import { HttpError } from '../errors.js';
 import * as smsService from '../services/smsService.js';
+import { verifyPassword } from '../services/passwordService.js';
+import { sanitizeHotel } from './hotels.js';
 
 export const authRouter = Router();
 
@@ -98,26 +103,51 @@ authRouter.post('/verify-otp', async (req, res, next) => {
       throw new HttpError(401, 'invalid_otp', 'Code OTP invalide ou expiré');
     }
 
-    // Profils éventuels rattachés à ce numéro
-    const [userRes, driverRes, hotelRes] = await Promise.all([
+    // Profils éventuels rattachés à ce numéro. Les hôtels ne se connectent
+    // PAS par téléphone : voir POST /auth/hotel-login (email + mot de passe).
+    const [userRes, driverRes] = await Promise.all([
       pool.query('SELECT * FROM users WHERE phone = $1', [phone]),
       pool.query('SELECT * FROM drivers WHERE phone = $1', [phone]),
-      pool.query('SELECT * FROM hotels WHERE phone = $1', [phone]),
     ]);
     const user = userRes.rows[0] || null;
     const driver = driverRes.rows[0] || null;
-    const hotel = hotelRes.rows[0] || null;
 
     const payload = { phone };
     if (user) payload.userId = user.id;
     if (driver) payload.driverId = driver.id;
-    if (hotel) payload.hotelId = hotel.id;
 
     const token = jwt.sign(payload, config.jwtSecret, {
       expiresIn: config.jwtExpiresIn,
     });
 
-    res.json({ token, user, driver, hotel });
+    res.json({ token, user, driver, hotel: null });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/auth/hotel-login {email, password}
+// Connexion des hôtels partenaires — email + mot de passe (pas d'OTP).
+// Réponse : {token, hotel}. Échec → 401 invalid_credentials (sans préciser
+// si c'est l'email ou le mot de passe qui est en cause).
+authRouter.post('/hotel-login', async (req, res, next) => {
+  try {
+    const { email, password } = z
+      .object({ email: z.string().email(), password: z.string().min(1) })
+      .parse(req.body);
+
+    const { rows } = await pool.query('SELECT * FROM hotels WHERE email = lower($1)', [email]);
+    const hotel = rows[0];
+    const valid = hotel && (await verifyPassword(password, hotel.password_hash));
+    if (!valid) {
+      throw new HttpError(401, 'invalid_credentials', 'Email ou mot de passe incorrect');
+    }
+
+    const token = jwt.sign({ hotelId: hotel.id, email: hotel.email }, config.jwtSecret, {
+      expiresIn: config.jwtExpiresIn,
+    });
+
+    res.json({ token, hotel: sanitizeHotel(hotel) });
   } catch (err) {
     next(err);
   }

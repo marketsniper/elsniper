@@ -242,16 +242,40 @@ async function main() {
   check('historique d’un autre utilisateur -> 403', foreignHistory.status === 403, foreignHistory);
 
   console.log('— Flux complet : colis envoyé par un hôtel');
-  const hotelToken = (await authenticate(PHONES.hotel)).token;
-  const hotel = (
-    await call(
-      'POST',
-      '/hotels',
-      { name: 'Hotel Baraka', contactName: 'Fatma', phone: PHONES.hotel, zone: 'Nungwi' },
-      bearer(hotelToken)
-    )
-  ).body;
-  check('hôtel partenaire inscrit', !!hotel.id, hotel);
+  const hotelEmail = `hotel${run}@test.example.com`;
+  const hotelPassword = 'MotDePasse#1';
+  const hotelCreated = await call('POST', '/hotels', {
+    name: 'Hotel Baraka',
+    contactName: 'Fatma',
+    email: hotelEmail,
+    password: hotelPassword,
+    phone: PHONES.hotel,
+    zone: 'Nungwi',
+  });
+  check('hôtel partenaire inscrit (email + mot de passe)', hotelCreated.status === 201 && !!hotelCreated.body.id, hotelCreated);
+
+  const badLogin = await call('POST', '/auth/hotel-login', { email: hotelEmail, password: 'mauvais' });
+  check('connexion hôtel avec mauvais mot de passe -> 401', badLogin.status === 401 && badLogin.body.error.code === 'invalid_credentials', badLogin);
+
+  const hotelLogin = await call('POST', '/auth/hotel-login', { email: hotelEmail, password: hotelPassword });
+  check('connexion hôtel par email + mot de passe', hotelLogin.status === 200 && !!hotelLogin.body.token, hotelLogin);
+  const hotelToken = hotelLogin.body.token;
+  const hotel = hotelLogin.body.hotel;
+
+  const hotelTrip = await call(
+    'POST',
+    '/trips',
+    {
+      hotelId: hotel.id,
+      clientName: 'M. Dupont',
+      clientPhone: '+33612345678',
+      tripType: 'private',
+      pickupLocation: 'Hotel Baraka, Nungwi',
+      dropoffLocation: 'Aéroport AAKIA',
+    },
+    bearer(hotelToken)
+  );
+  check('hôtel réserve un taxi pour son client (prix TZS figé)', hotelTrip.status === 201 && hotelTrip.body.currency === 'TZS' && hotelTrip.body.client_name === 'M. Dupont', hotelTrip);
 
   const badSender = await call(
     'POST',
