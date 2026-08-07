@@ -10,12 +10,13 @@ import { Linking, StyleSheet, Text, View } from 'react-native';
 import { Etoiles } from '@/components/Etoiles';
 import { TimelineStatut } from '@/components/TimelineStatut';
 import {
-  Badge,
+  BadgeStatutTrajet,
   Bouton,
   Carte,
   Champ,
   ChargementCentre,
   Ecran,
+  EncartInfo,
   LigneInfo,
   SousTitre,
   TexteErreur,
@@ -73,12 +74,13 @@ export default function EcranTrajet() {
         <TexteErreur>{erreur}</TexteErreur>
       </Ecran>
     ) : (
-      <ChargementCentre />
+      <ChargementCentre message="Chargement de votre course…" />
     );
   }
 
   const statut = champ<StatutTrajet>(trajet, 'status', 'statut');
   const typeTrajet = champ<TypeTrajet>(trajet, 'trip_type', 'tripType');
+  const nomClient = champ<string>(trajet, 'client_name', 'clientName');
   const lienWhatsapp = champ<string>(trajet, 'whatsapp_link', 'whatsappLink') ?? WHATSAPP_EQUIPE;
   const annule = statut === 'cancelled';
   // Règle serveur : le paiement n'est possible qu'après confirmation d'un chauffeur.
@@ -99,7 +101,7 @@ export default function EcranTrajet() {
         setErreur("Le lien de paiement n'est pas encore disponible.");
       }
     } catch (e) {
-      setErreur(e instanceof ErreurApi ? e.message : 'Paiement indisponible.');
+      setErreur(e instanceof ErreurApi ? e.message : 'Paiement indisponible pour le moment.');
     } finally {
       setChargePaiement(false);
     }
@@ -147,16 +149,20 @@ export default function EcranTrajet() {
       <Carte>
         <View style={styles.enTete}>
           <Titre>Votre course</Titre>
-          <Badge
-            texte={statut ? LIBELLES_STATUT_TRAJET[statut] ?? statut : '—'}
-            ton={annule ? 'danger' : statut === 'completed' ? 'succes' : 'primaire'}
-          />
+          <BadgeStatutTrajet statut={statut} />
         </View>
         {typeTrajet && (
           <LigneInfo label="Type" valeur={LIBELLES_TYPE_TRAJET[typeTrajet] ?? typeTrajet} />
         )}
-        <LigneInfo label="Départ" valeur={String(champ(trajet, 'pickup_location', 'pickupLocation') ?? '—')} />
-        <LigneInfo label="Arrivée" valeur={String(champ(trajet, 'dropoff_location', 'dropoffLocation') ?? '—')} />
+        {!!nomClient && <LigneInfo label="Client" valeur={String(nomClient)} />}
+        <LigneInfo
+          label="Départ"
+          valeur={String(champ(trajet, 'pickup_location', 'pickupLocation') ?? '—')}
+        />
+        <LigneInfo
+          label="Arrivée"
+          valeur={String(champ(trajet, 'dropoff_location', 'dropoffLocation') ?? '—')}
+        />
         {!!champ(trajet, 'scheduled_at', 'scheduledAt') && (
           <LigneInfo
             label="Programmé le"
@@ -170,7 +176,7 @@ export default function EcranTrajet() {
       </Carte>
 
       <Carte>
-        <SousTitre>Suivi de la course</SousTitre>
+        <Text style={styles.titreSuivi}>Suivi de la course</Text>
         <TimelineStatut
           etapes={ETAPES_TRAJET.map((cle) => ({ cle, label: LIBELLES_STATUT_TRAJET[cle] }))}
           statutCourant={statut}
@@ -179,13 +185,13 @@ export default function EcranTrajet() {
       </Carte>
 
       {statut === 'requested' && (
-        <SousTitre>
+        <EncartInfo icone="time-outline" ton="attente">
           Demande envoyée — l&apos;équipe zanziGo vous confirme un chauffeur, puis le paiement
           sera proposé ici.
-        </SousTitre>
+        </EncartInfo>
       )}
       {peutPayer && (
-        <Bouton titre="Payer (Pesapal)" onPress={payer} charge={chargePaiement} />
+        <Bouton titre="Payer la course" icone="card-outline" onPress={payer} charge={chargePaiement} />
       )}
       {__DEV__ && peutPayer && paiementId && (
         <Bouton
@@ -196,14 +202,15 @@ export default function EcranTrajet() {
         />
       )}
       {statut === 'paid' && (
-        <SousTitre>
+        <EncartInfo icone="checkmark-circle-outline">
           Paiement reçu — votre chauffeur scanne le QR de son véhicule au départ.
-        </SousTitre>
+        </EncartInfo>
       )}
 
       {!annule && (
         <Bouton
           titre="Contacter l'équipe WhatsApp"
+          icone="logo-whatsapp"
           variante="secondaire"
           onPress={() => Linking.openURL(lienWhatsapp)}
         />
@@ -219,7 +226,9 @@ export default function EcranTrajet() {
           ) : peutNoter ? (
             <>
               <SousTitre>Comment s&apos;est passée votre course ?</SousTitre>
-              <Etoiles note={note} onChange={setNote} />
+              <View style={styles.etoilesCentrees}>
+                <Etoiles note={note} onChange={setNote} taille={40} />
+              </View>
               <Champ
                 label="Commentaire (optionnel)"
                 value={commentaire}
@@ -227,14 +236,24 @@ export default function EcranTrajet() {
                 placeholder="Chauffeur ponctuel, très bonne course…"
                 multiline
               />
-              <Bouton titre="Envoyer ma note" onPress={envoyerNote} charge={chargeNote} />
+              <Bouton
+                titre="Envoyer ma note"
+                icone="star-outline"
+                onPress={envoyerNote}
+                charge={chargeNote}
+              />
             </>
           ) : null}
         </Carte>
       )}
 
       <TexteErreur>{erreur}</TexteErreur>
-      <Bouton titre="Actualiser le statut" variante="secondaire" onPress={charger} />
+      <Bouton
+        titre="Actualiser le statut"
+        icone="refresh-outline"
+        variante="secondaire"
+        onPress={charger}
+      />
     </Ecran>
   );
 }
@@ -257,12 +276,19 @@ const styles = StyleSheet.create({
   },
   labelPrix: {
     fontSize: 14,
+    fontWeight: '600',
     color: couleurs.texteSecondaire,
   },
   prix: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: '800',
     color: couleurs.primaire,
+  },
+  titreSuivi: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: couleurs.encre,
+    marginBottom: espaces.s,
   },
   blocNote: {
     flexDirection: 'row',
@@ -273,5 +299,9 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     color: couleurs.encre,
+  },
+  etoilesCentrees: {
+    alignItems: 'center',
+    paddingVertical: espaces.s,
   },
 });

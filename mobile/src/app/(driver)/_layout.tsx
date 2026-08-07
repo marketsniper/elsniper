@@ -31,6 +31,10 @@ export default function LayoutChauffeur() {
         options={{ title: 'Mes courses', tabBarIcon: icone('car-outline') }}
       />
       <Tabs.Screen
+        name="annonces"
+        options={{ title: 'Annonces', tabBarIcon: icone('megaphone-outline') }}
+      />
+      <Tabs.Screen
         name="scanner"
         options={{ title: 'Scanner', tabBarIcon: icone('qr-code-outline'), headerShown: false }}
       />

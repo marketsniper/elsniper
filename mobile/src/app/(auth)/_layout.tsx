@@ -15,11 +15,14 @@ export default function LayoutAuth() {
         contentStyle: { backgroundColor: couleurs.sable },
       }}
     >
-      <Stack.Screen name="telephone" options={{ headerShown: false }} />
+      <Stack.Screen name="accueil" options={{ headerShown: false }} />
+      <Stack.Screen name="telephone" options={{ title: '', headerTransparent: true }} />
       <Stack.Screen name="otp" options={{ title: 'Code de vérification' }} />
-      <Stack.Screen name="choix" options={{ title: 'Votre profil', headerBackVisible: false }} />
+      <Stack.Screen name="choix" options={{ headerShown: false }} />
       <Stack.Screen name="client" options={{ title: 'Profil client' }} />
-      <Stack.Screen name="pro" options={{ title: 'Chauffeurs & hôtels' }} />
+      <Stack.Screen name="hotel" options={{ title: 'Hôtel partenaire' }} />
+      <Stack.Screen name="hotel-inscription" options={{ title: 'Compte partenaire' }} />
+      <Stack.Screen name="pro" options={{ title: 'Devenir chauffeur' }} />
     </Stack>
   );
 }

@@ -1,14 +1,32 @@
-// Onglet « Profil » : informations du compte (touriste/résident, devise),
-// statut de vérification du document résident, déconnexion.
+// Onglet « Profil » : informations du compte (touriste/résident/hôtel,
+// devise), statut de vérification du document résident, déconnexion.
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { Badge, Bouton, Carte, Ecran, LigneInfo, SousTitre } from '@/components/ui';
+import {
+  Badge,
+  Bouton,
+  Carte,
+  Ecran,
+  EncartInfo,
+  LigneInfo,
+  SousTitre,
+} from '@/components/ui';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import { couleurs, espaces } from '@/lib/theme';
+import { couleurs, espaces, tailles } from '@/lib/theme';
 import { champ, type StatutVerification, type TypeCompte } from '@/lib/types';
+
+/** Initiales (2 lettres max) d'un nom complet. */
+function initiales(nom: string): string {
+  const mots = nom.trim().split(/\s+/).filter(Boolean);
+  if (mots.length === 0) return 'Z';
+  const premiere = mots[0].charAt(0);
+  const seconde = mots.length > 1 ? mots[mots.length - 1].charAt(0) : '';
+  return (premiere + seconde).toUpperCase();
+}
 
 export default function EcranProfil() {
   const router = useRouter();
@@ -25,6 +43,9 @@ export default function EcranProfil() {
     champ<StatutVerification>(utilisateur, 'verification_status', 'verificationStatus') ??
     'pending';
   const devise = champ<string>(utilisateur, 'currency');
+  const nomAffiche = String(
+    champ(utilisateur ?? hotel, 'full_name', 'fullName', 'name') ?? 'Compte zanziGo'
+  );
 
   // Recharge le profil (utile pour voir la validation résident arriver).
   const actualiser = async () => {
@@ -49,26 +70,18 @@ export default function EcranProfil() {
     <Ecran>
       <Carte style={styles.carteIdentite}>
         <View style={styles.avatar}>
-          <Text style={styles.initiale}>
-            {String(champ(utilisateur ?? hotel, 'full_name', 'fullName', 'name') ?? 'z')
-              .charAt(0)
-              .toUpperCase()}
-          </Text>
+          <Text style={styles.initiale}>{initiales(nomAffiche)}</Text>
         </View>
-        <Text style={styles.nom}>
-          {String(
-            champ(utilisateur ?? hotel, 'full_name', 'fullName', 'name') ?? 'Compte zanziGo'
-          )}
-        </Text>
+        <Text style={styles.nom}>{nomAffiche}</Text>
         <SousTitre>{session?.phone ?? ''}</SousTitre>
-        {utilisateur && (
+        {utilisateur && estResident && (
           <Badge
             texte={
               statutVerif === 'verified'
-                ? 'Compte vérifié'
+                ? 'Résident vérifié ✓'
                 : statutVerif === 'rejected'
                   ? 'Vérification refusée'
-                  : 'Vérification en attente'
+                  : 'En attente de validation'
             }
             ton={
               statutVerif === 'verified'
@@ -79,46 +92,61 @@ export default function EcranProfil() {
             }
           />
         )}
-        {hotel && <Badge texte="Compte hôtel" ton="primaire" />}
+        {utilisateur && !estResident && <Badge texte="Compte vérifié ✓" ton="succes" />}
+        {hotel && <Badge texte="Hôtel partenaire" ton="primaire" />}
       </Carte>
 
       {estResident && statutVerif === 'pending' && (
-        <Carte>
-          <SousTitre>
-            Compte résident en attente de validation : l&apos;équipe zanziGo vérifie votre
-            document d&apos;identité. Le tarif local (partagée locale) sera activé une fois le
-            compte vérifié.
-          </SousTitre>
-        </Carte>
+        <EncartInfo icone="hourglass-outline" ton="attente">
+          Compte résident en attente de validation : l&apos;équipe zanziGo vérifie votre
+          document d&apos;identité. Le tarif local (navette locale) sera activé une fois le
+          compte vérifié.
+        </EncartInfo>
       )}
       {estResident && statutVerif === 'rejected' && (
-        <Carte>
-          <SousTitre>
-            Votre document d&apos;identité a été refusé par l&apos;équipe. Contactez-nous sur
-            WhatsApp pour le mettre à jour.
-          </SousTitre>
-        </Carte>
+        <EncartInfo icone="alert-circle-outline" ton="attente">
+          Votre document d&apos;identité a été refusé par l&apos;équipe. Contactez-nous sur
+          WhatsApp pour le mettre à jour.
+        </EncartInfo>
       )}
 
       <Carte>
-        <LigneInfo label="Téléphone" valeur={session?.phone ?? '—'} />
-        <LigneInfo label="E-mail" valeur={String(champ(utilisateur, 'email') ?? '—')} />
+        <LigneInfo label="Téléphone" valeur={session?.phone || '—'} />
+        <LigneInfo
+          label="E-mail"
+          valeur={String(champ(utilisateur ?? hotel, 'email') ?? '—')}
+        />
         <LigneInfo
           label="Type de compte"
-          valeur={hotel ? 'Hôtel' : estResident ? 'Résident' : 'Touriste'}
+          valeur={hotel ? 'Hôtel partenaire' : estResident ? 'Résident' : 'Touriste'}
         />
+        {hotel && (
+          <>
+            <LigneInfo label="Contact" valeur={String(champ(hotel, 'contact_name', 'contactName') ?? '—')} />
+            <LigneInfo label="Zone" valeur={String(champ(hotel, 'zone') ?? '—')} />
+          </>
+        )}
         <LigneInfo label="Devise" valeur={devise ?? (hotel ? 'TZS' : '—')} />
       </Carte>
 
       {utilisateur && (
         <Bouton
           titre="Actualiser mon profil"
+          icone="refresh-outline"
           variante="secondaire"
           onPress={actualiser}
           charge={chargeMaj}
         />
       )}
-      <Bouton titre="Se déconnecter" variante="danger" onPress={seDeconnecter} />
+
+      <Pressable
+        onPress={seDeconnecter}
+        style={({ pressed }) => [styles.ligneDeconnexion, pressed && { opacity: 0.6 }]}
+        accessibilityRole="button"
+      >
+        <Ionicons name="log-out-outline" size={20} color={couleurs.danger} />
+        <Text style={styles.texteDeconnexion}>Se déconnecter</Text>
+      </Pressable>
     </Ecran>
   );
 }
@@ -130,21 +158,34 @@ const styles = StyleSheet.create({
     paddingVertical: espaces.xl,
   },
   avatar: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: couleurs.primaire,
+    width: tailles.avatar,
+    height: tailles.avatar,
+    borderRadius: tailles.avatar / 2,
+    backgroundColor: couleurs.primaireClair,
     alignItems: 'center',
     justifyContent: 'center',
   },
   initiale: {
-    fontSize: 30,
+    fontSize: 28,
     fontWeight: '800',
-    color: couleurs.blanc,
+    color: couleurs.primaireFonce,
   },
   nom: {
     fontSize: 20,
     fontWeight: '700',
     color: couleurs.encre,
+  },
+  ligneDeconnexion: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: espaces.s,
+    paddingVertical: espaces.l,
+    marginTop: espaces.s,
+  },
+  texteDeconnexion: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: couleurs.danger,
   },
 });

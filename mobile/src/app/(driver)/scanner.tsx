@@ -16,10 +16,11 @@ import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
-  Badge,
+  BadgeStatutColis,
   Bouton,
   Carte,
   Ecran,
+  EncartInfo,
   LigneInfo,
   SousTitre,
   TexteErreur,
@@ -28,16 +29,26 @@ import {
 import { api, ErreurApi, prochaineActionColis } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { couleurs, espaces, rayons } from '@/lib/theme';
-import {
-  champ,
-  LIBELLES_STATUT_COLIS,
-  type Colis,
-  type StatutColis,
-} from '@/lib/types';
+import { champ, type Colis, type StatutColis } from '@/lib/types';
 
 /** Vrai si la chaîne scannée ressemble à un QR de colis zanziGo (PKG-…). */
 function estQrColis(data: string): boolean {
   return data.startsWith('PKG-');
+}
+
+const TAILLE_FENETRE = 240;
+const TAILLE_COIN = 36;
+
+/** Fenêtre de visée : quatre coins turquoise sur fond transparent. */
+function FenetreScan() {
+  return (
+    <View style={styles.fenetre}>
+      <View style={[styles.coin, styles.coinHautGauche]} />
+      <View style={[styles.coin, styles.coinHautDroit]} />
+      <View style={[styles.coin, styles.coinBasGauche]} />
+      <View style={[styles.coin, styles.coinBasDroit]} />
+    </View>
+  );
 }
 
 export default function EcranScanner() {
@@ -45,7 +56,8 @@ export default function EcranScanner() {
   const { session } = useAuth();
   const params = useLocalSearchParams<{ tripId?: string; action?: string }>();
   const tripId = typeof params.tripId === 'string' && params.tripId ? params.tripId : null;
-  const actionCourse = params.action === 'start' || params.action === 'complete' ? params.action : null;
+  const actionCourse =
+    params.action === 'start' || params.action === 'complete' ? params.action : null;
 
   const [permission, demanderPermission] = useCameraPermissions();
   const scanEnCours = useRef(false);
@@ -168,7 +180,11 @@ export default function EcranScanner() {
           <SousTitre>
             Le scan des QR codes (véhicule et colis) nécessite l&apos;accès à la caméra.
           </SousTitre>
-          <Bouton titre="Autoriser la caméra" onPress={() => demanderPermission()} />
+          <Bouton
+            titre="Autoriser la caméra"
+            icone="camera-outline"
+            onPress={() => demanderPermission()}
+          />
         </Carte>
       </Ecran>
     );
@@ -181,26 +197,43 @@ export default function EcranScanner() {
     return (
       <Ecran>
         <Carte>
-          <Titre>Colis {qrColis}</Titre>
-          <Badge
-            texte={statut ? LIBELLES_STATUT_COLIS[statut] ?? statut : '—'}
-            ton={statut === 'delivered' ? 'succes' : 'primaire'}
+          <View style={styles.enTeteColis}>
+            <Titre>Colis</Titre>
+            <BadgeStatutColis statut={statut} />
+          </View>
+          <Text style={styles.codeColis}>{qrColis}</Text>
+          <LigneInfo
+            label="Collecte"
+            valeur={String(champ(colis, 'pickup_location', 'pickupLocation') ?? '—')}
           />
-          <LigneInfo label="Collecte" valeur={String(champ(colis, 'pickup_location', 'pickupLocation') ?? '—')} />
-          <LigneInfo label="Livraison" valeur={String(champ(colis, 'dropoff_location', 'dropoffLocation') ?? '—')} />
-          <LigneInfo label="Destinataire" valeur={String(champ(colis, 'recipient_name', 'recipientName') ?? '—')} />
-          <LigneInfo label="Téléphone" valeur={String(champ(colis, 'recipient_phone', 'recipientPhone') ?? '—')} />
+          <LigneInfo
+            label="Livraison"
+            valeur={String(champ(colis, 'dropoff_location', 'dropoffLocation') ?? '—')}
+          />
+          <LigneInfo
+            label="Destinataire"
+            valeur={String(champ(colis, 'recipient_name', 'recipientName') ?? '—')}
+          />
+          <LigneInfo
+            label="Téléphone"
+            valeur={String(champ(colis, 'recipient_phone', 'recipientPhone') ?? '—')}
+          />
           {!!champ(colis, 'description') && (
             <LigneInfo label="Description" valeur={String(champ(colis, 'description'))} />
           )}
         </Carte>
 
-        {!!message && <SousTitre>{message}</SousTitre>}
+        {!!message && (
+          <EncartInfo icone="checkmark-circle-outline" ton="succes">
+            {message}
+          </EncartInfo>
+        )}
         <TexteErreur>{erreur}</TexteErreur>
 
         {action === 'pickup' && (
           <Bouton
             titre="Ramasser le colis (photo de preuve)"
+            icone="camera-outline"
             onPress={() => traiterColis('pickup')}
             charge={charge}
           />
@@ -208,24 +241,30 @@ export default function EcranScanner() {
         {action === 'deliver' && (
           <Bouton
             titre="Livrer le colis (photo de preuve)"
+            icone="camera-outline"
             onPress={() => traiterColis('deliver')}
             charge={charge}
           />
         )}
         {action === null && (
-          <SousTitre>
+          <EncartInfo icone="information-circle-outline" ton="attente">
             {statut === 'created'
               ? "Colis pas encore payé par l'expéditeur — le ramassage sera possible après paiement."
               : 'Aucune action possible sur ce colis (déjà livré).'}
-          </SousTitre>
+          </EncartInfo>
         )}
 
-        <Bouton titre="Scanner un autre QR" variante="secondaire" onPress={reprendreScan} />
+        <Bouton
+          titre="Scanner un autre QR"
+          icone="qr-code-outline"
+          variante="secondaire"
+          onPress={reprendreScan}
+        />
       </Ecran>
     );
   }
 
-  // Vue caméra plein écran.
+  // Vue caméra plein écran : voile sombre autour d'une fenêtre à coins turquoise.
   return (
     <View style={styles.conteneur}>
       <CameraView
@@ -234,17 +273,30 @@ export default function EcranScanner() {
         barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
         onBarcodeScanned={surScan}
       />
+      <View style={StyleSheet.absoluteFill} pointerEvents="none">
+        <View style={styles.voile} />
+        <View style={styles.rangeeFenetre}>
+          <View style={styles.voileCote} />
+          <FenetreScan />
+          <View style={styles.voileCote} />
+        </View>
+        <View style={styles.voile} />
+      </View>
       <SafeAreaView style={styles.calque} edges={['top', 'bottom']}>
         <View style={styles.bandeau}>
           <Text style={styles.titreBandeau}>
             {tripId && actionCourse
               ? actionCourse === 'start'
-                ? 'Scannez le QR du véhicule pour démarrer'
-                : 'Scannez le QR du véhicule pour terminer'
-              : 'Scannez un QR colis PKG-… (ou un QR véhicule depuis une course)'}
+                ? 'Scannez le QR du véhicule pour démarrer la course'
+                : 'Scannez le QR du véhicule pour terminer la course'
+              : 'Scannez un QR colis (PKG-…)'}
+          </Text>
+          <Text style={styles.aideBandeau}>
+            {tripId && actionCourse
+              ? 'Le QR est affiché à bord du véhicule.'
+              : 'Placez le QR du colis dans le cadre.'}
           </Text>
         </View>
-        <View style={styles.viseur} />
         <View style={styles.bandeauBas}>
           {!!message && <Text style={styles.messageOk}>{message}</Text>}
           {!!erreur && (
@@ -256,6 +308,7 @@ export default function EcranScanner() {
           {tripId && actionCourse && monQrVehicule && (
             <Bouton
               titre="Utiliser mon QR véhicule"
+              icone="car-outline"
               onPress={() => surScan({ data: monQrVehicule })}
               charge={charge}
             />
@@ -272,7 +325,68 @@ export default function EcranScanner() {
 const styles = StyleSheet.create({
   conteneur: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: couleurs.encre,
+  },
+  enTeteColis: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: espaces.m,
+  },
+  codeColis: {
+    fontFamily: 'monospace',
+    fontSize: 14,
+    color: couleurs.texteSecondaire,
+  },
+  voile: {
+    flex: 1,
+    backgroundColor: couleurs.voile,
+  },
+  rangeeFenetre: {
+    flexDirection: 'row',
+    height: TAILLE_FENETRE,
+  },
+  voileCote: {
+    flex: 1,
+    backgroundColor: couleurs.voile,
+  },
+  fenetre: {
+    width: TAILLE_FENETRE,
+    height: TAILLE_FENETRE,
+  },
+  coin: {
+    position: 'absolute',
+    width: TAILLE_COIN,
+    height: TAILLE_COIN,
+    borderColor: couleurs.primaire,
+  },
+  coinHautGauche: {
+    top: 0,
+    left: 0,
+    borderTopWidth: 4,
+    borderLeftWidth: 4,
+    borderTopLeftRadius: rayons.bouton,
+  },
+  coinHautDroit: {
+    top: 0,
+    right: 0,
+    borderTopWidth: 4,
+    borderRightWidth: 4,
+    borderTopRightRadius: rayons.bouton,
+  },
+  coinBasGauche: {
+    bottom: 0,
+    left: 0,
+    borderBottomWidth: 4,
+    borderLeftWidth: 4,
+    borderBottomLeftRadius: rayons.bouton,
+  },
+  coinBasDroit: {
+    bottom: 0,
+    right: 0,
+    borderBottomWidth: 4,
+    borderRightWidth: 4,
+    borderBottomRightRadius: rayons.bouton,
   },
   calque: {
     flex: 1,
@@ -280,39 +394,37 @@ const styles = StyleSheet.create({
     padding: espaces.l,
   },
   bandeau: {
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: couleurs.voile,
     borderRadius: rayons.carte,
     padding: espaces.l,
+    gap: espaces.xs,
   },
   titreBandeau: {
     color: couleurs.blanc,
-    fontSize: 15,
-    fontWeight: '600',
+    fontSize: 16,
+    fontWeight: '700',
     textAlign: 'center',
   },
-  viseur: {
-    alignSelf: 'center',
-    width: 220,
-    height: 220,
-    borderWidth: 3,
-    borderColor: couleurs.primaire,
-    borderRadius: rayons.carte,
+  aideBandeau: {
+    color: couleurs.bordure,
+    fontSize: 13,
+    textAlign: 'center',
   },
   bandeauBas: {
     gap: espaces.m,
   },
   messageOk: {
-    color: '#6EE7B7',
+    color: couleurs.succesClair,
     fontSize: 15,
     fontWeight: '700',
     textAlign: 'center',
   },
   messageErreur: {
-    color: '#FCA5A5',
+    color: couleurs.dangerClair,
     fontSize: 14,
     fontWeight: '600',
     textAlign: 'center',
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: couleurs.voile,
     borderRadius: rayons.bouton,
     padding: espaces.m,
   },

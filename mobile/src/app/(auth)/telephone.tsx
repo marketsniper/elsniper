@@ -1,11 +1,31 @@
-// Écran d'accueil : saisie du numéro de téléphone (+255 par défaut).
-import { useRouter } from 'expo-router';
+// Écran de connexion : saisie du numéro de téléphone (+255 par défaut).
+// Le profil choisi sur la page d'accueil (?profil=) est transmis jusqu'à
+// l'OTP pour orienter la création de profil.
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { Bouton, Carte, Champ, Ecran, SousTitre, TexteErreur, Titre } from '@/components/ui';
+import {
+  Bouton,
+  Carte,
+  Champ,
+  Ecran,
+  EncartInfo,
+  LogoZanziGo,
+  SousTitre,
+  TexteErreur,
+  Titre,
+} from '@/components/ui';
 import { api, ErreurApi } from '@/lib/api';
 import { couleurs, espaces } from '@/lib/theme';
+
+/** Libellé doux du profil choisi sur la page d'accueil. */
+const LIBELLES_PROFIL: Record<string, string> = {
+  tourist: 'Visiteur · Touriste',
+  resident: 'Résident · Local',
+  hotel: 'Hôtel partenaire',
+  driver: 'Chauffeur — Taxi Partner',
+};
 
 /** Normalise le numéro saisi en format international (+255...). */
 function normaliserTelephone(indicatif: string, numero: string): string {
@@ -15,6 +35,9 @@ function normaliserTelephone(indicatif: string, numero: string): string {
 
 export default function EcranTelephone() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ profil?: string }>();
+  const profil = typeof params.profil === 'string' ? params.profil : '';
+
   const [indicatif, setIndicatif] = useState('+255');
   const [numero, setNumero] = useState('');
   const [erreur, setErreur] = useState('');
@@ -32,10 +55,10 @@ export default function EcranTelephone() {
       const { devCode } = await api.demanderOtp(telephone);
       router.push({
         pathname: '/(auth)/otp',
-        params: { phone: telephone, devCode: devCode ?? '' },
+        params: { phone: telephone, devCode: devCode ?? '', profil },
       });
     } catch (e) {
-      setErreur(e instanceof ErreurApi ? e.message : "Échec de l'envoi du code.");
+      setErreur(e instanceof ErreurApi ? e.message : "Impossible d'envoyer le code. Réessayez.");
     } finally {
       setCharge(false);
     }
@@ -44,13 +67,19 @@ export default function EcranTelephone() {
   return (
     <Ecran>
       <View style={styles.entete}>
-        <Text style={styles.logo}>zanziGo</Text>
-        <SousTitre>Courses et livraison de colis à Zanzibar</SousTitre>
+        <LogoZanziGo taille={44} />
+        <Text style={styles.tagline}>Vos trajets et vos colis à Zanzibar</Text>
       </View>
+
       <Carte>
         <Titre>Bienvenue</Titre>
+        {!!profil && LIBELLES_PROFIL[profil] && (
+          <Text style={styles.profilChoisi}>Profil choisi : {LIBELLES_PROFIL[profil]}</Text>
+        )}
         <SousTitre>
-          Entrez votre numéro de téléphone, nous vous envoyons un code de vérification par SMS.
+          {profil === 'driver'
+            ? 'Déjà Taxi Partner ? Entrez votre numéro : vous retrouvez directement votre compte. Nouveau ? Vous déposerez votre candidature juste après le code.'
+            : 'Entrez votre numéro de téléphone pour recevoir votre code de connexion.'}
         </SousTitre>
         <View style={styles.rangeeTelephone}>
           <Champ
@@ -66,14 +95,19 @@ export default function EcranTelephone() {
               value={numero}
               onChangeText={setNumero}
               keyboardType="phone-pad"
+              textContentType="telephoneNumber"
               placeholder="712 345 678"
               autoFocus
             />
           </View>
         </View>
         <TexteErreur>{erreur}</TexteErreur>
-        <Bouton titre="Recevoir le code" onPress={envoyer} charge={charge} />
+        <Bouton titre="Recevoir mon code" icone="arrow-forward" onPress={envoyer} charge={charge} />
       </Carte>
+
+      <EncartInfo icone="flask-outline" ton="attente">
+        Le code s&apos;affiche à l&apos;écran — phase de test sans SMS.
+      </EncartInfo>
     </Ecran>
   );
 }
@@ -81,20 +115,25 @@ export default function EcranTelephone() {
 const styles = StyleSheet.create({
   entete: {
     alignItems: 'center',
-    paddingVertical: espaces.xl * 2,
+    paddingVertical: espaces.xxl,
     gap: espaces.s,
   },
-  logo: {
-    fontSize: 40,
-    fontWeight: '800',
-    color: couleurs.primaire,
+  tagline: {
+    fontSize: 16,
+    color: couleurs.texteSecondaire,
+    textAlign: 'center',
+  },
+  profilChoisi: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: couleurs.primaireFonce,
   },
   rangeeTelephone: {
     flexDirection: 'row',
     gap: espaces.m,
   },
   champIndicatif: {
-    width: 80,
+    width: 84,
   },
   champNumero: {
     flex: 1,

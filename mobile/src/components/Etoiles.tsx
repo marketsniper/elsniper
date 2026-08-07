@@ -26,7 +26,7 @@ export function Etoiles({
           <Ionicons
             name={valeur <= note ? 'star' : 'star-outline'}
             size={taille}
-            color={valeur <= note ? '#F59E0B' : couleurs.texteSecondaire}
+            color={valeur <= note ? couleurs.etoile : couleurs.bordure}
           />
         </Pressable>
       ))}

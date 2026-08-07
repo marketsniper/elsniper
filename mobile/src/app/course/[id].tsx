@@ -9,11 +9,12 @@ import React, { useCallback, useState } from 'react';
 
 import { TimelineStatut } from '@/components/TimelineStatut';
 import {
-  Badge,
+  BadgeStatutTrajet,
   Bouton,
   Carte,
   ChargementCentre,
   Ecran,
+  EncartInfo,
   LigneInfo,
   SousTitre,
   TexteErreur,
@@ -65,7 +66,7 @@ export default function EcranDetailCourse() {
         <TexteErreur>{erreur}</TexteErreur>
       </Ecran>
     ) : (
-      <ChargementCentre />
+      <ChargementCentre message="Chargement de la course…" />
     );
   }
 
@@ -110,10 +111,7 @@ export default function EcranDetailCourse() {
     <Ecran>
       <Carte>
         <Titre>Course</Titre>
-        <Badge
-          texte={statut ? LIBELLES_STATUT_TRAJET[statut] ?? statut : '—'}
-          ton={statut === 'completed' ? 'succes' : statut === 'cancelled' ? 'danger' : 'primaire'}
-        />
+        <BadgeStatutTrajet statut={statut} />
         {typeTrajet && (
           <LigneInfo label="Type" valeur={LIBELLES_TYPE_TRAJET[typeTrajet] ?? typeTrajet} />
         )}
@@ -138,11 +136,13 @@ export default function EcranDetailCourse() {
         <>
           <Bouton
             titre="Scanner le QR véhicule — démarrer"
+            icone="qr-code-outline"
             onPress={() => allerAuScan('start')}
           />
           {monQrVehicule && (
             <Bouton
               titre="Utiliser mon QR véhicule"
+              icone="car-outline"
               variante="secondaire"
               onPress={() => utiliserMonQr('start')}
               charge={chargeAction}
@@ -154,11 +154,13 @@ export default function EcranDetailCourse() {
         <>
           <Bouton
             titre="Scanner le QR véhicule — terminer"
+            icone="qr-code-outline"
             onPress={() => allerAuScan('complete')}
           />
           {monQrVehicule && (
             <Bouton
               titre="Utiliser mon QR véhicule"
+              icone="car-outline"
               variante="secondaire"
               onPress={() => utiliserMonQr('complete')}
               charge={chargeAction}
@@ -167,17 +169,19 @@ export default function EcranDetailCourse() {
         </>
       )}
       {statut === 'requested' && (
-        <SousTitre>Course demandée — pas encore confirmée par l&apos;équipe.</SousTitre>
+        <EncartInfo icone="time-outline" ton="attente">
+          Course demandée — pas encore confirmée par l&apos;équipe.
+        </EncartInfo>
       )}
       {statut === 'driver_confirmed' && (
-        <SousTitre>
+        <EncartInfo icone="card-outline" ton="attente">
           En attente du paiement du client. Le départ pourra être scanné une fois la course
           payée.
-        </SousTitre>
+        </EncartInfo>
       )}
 
       <TexteErreur>{erreur}</TexteErreur>
-      <Bouton titre="Actualiser" variante="secondaire" onPress={charger} />
+      <Bouton titre="Actualiser" icone="refresh-outline" variante="secondaire" onPress={charger} />
     </Ecran>
   );
 }

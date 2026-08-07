@@ -7,18 +7,19 @@ import QRCode from 'react-native-qrcode-svg';
 
 import { TimelineStatut } from '@/components/TimelineStatut';
 import {
-  Badge,
+  BadgeStatutColis,
   Bouton,
   Carte,
   ChargementCentre,
   Ecran,
+  EncartInfo,
   LigneInfo,
   SousTitre,
   TexteErreur,
   Titre,
 } from '@/components/ui';
 import { api, ErreurApi } from '@/lib/api';
-import { couleurs, espaces } from '@/lib/theme';
+import { couleurs, espaces, ombres, rayons } from '@/lib/theme';
 import {
   champ,
   ETAPES_COLIS,
@@ -62,7 +63,7 @@ export default function EcranDetailColis() {
         <TexteErreur>{erreur}</TexteErreur>
       </Ecran>
     ) : (
-      <ChargementCentre />
+      <ChargementCentre message="Chargement de votre colis…" />
     );
   }
 
@@ -84,7 +85,7 @@ export default function EcranDetailColis() {
         setErreur("Le lien de paiement n'est pas encore disponible.");
       }
     } catch (e) {
-      setErreur(e instanceof ErreurApi ? e.message : 'Paiement indisponible.');
+      setErreur(e instanceof ErreurApi ? e.message : 'Paiement indisponible pour le moment.');
     } finally {
       setChargePaiement(false);
     }
@@ -109,29 +110,46 @@ export default function EcranDetailColis() {
   return (
     <Ecran>
       <Carte style={styles.carteQr}>
-        <Titre>Votre colis</Titre>
-        <SousTitre>
-          Présentez ce QR code au chauffeur : il le scanne au ramassage puis à la livraison.
-        </SousTitre>
+        <View style={styles.enTeteQr}>
+          <Titre>Votre colis</Titre>
+          <BadgeStatutColis statut={statut} />
+        </View>
         {codeQr ? (
-          <View style={styles.blocQr}>
-            <QRCode value={codeQr} size={180} color={couleurs.encre} backgroundColor={couleurs.blanc} />
+          <View style={styles.cadreQr}>
+            <QRCode
+              value={codeQr}
+              size={180}
+              color={couleurs.encre}
+              backgroundColor={couleurs.blanc}
+            />
             <Text style={styles.codeTexte}>{codeQr}</Text>
           </View>
         ) : (
           <TexteErreur>QR code indisponible.</TexteErreur>
         )}
-        <Badge
-          texte={statut ? LIBELLES_STATUT_COLIS[statut] ?? statut : '—'}
-          ton={statut === 'delivered' ? 'succes' : statut === 'created' ? 'attente' : 'primaire'}
-        />
+        <SousTitre centre>Présentez ce QR au chauffeur</SousTitre>
+        <Text style={styles.consigne}>
+          Il le scanne au ramassage puis à la livraison.
+        </Text>
       </Carte>
 
       <Carte>
-        <LigneInfo label="Collecte" valeur={String(champ(colis, 'pickup_location', 'pickupLocation') ?? '—')} />
-        <LigneInfo label="Livraison" valeur={String(champ(colis, 'dropoff_location', 'dropoffLocation') ?? '—')} />
-        <LigneInfo label="Destinataire" valeur={String(champ(colis, 'recipient_name', 'recipientName') ?? '—')} />
-        <LigneInfo label="Téléphone" valeur={String(champ(colis, 'recipient_phone', 'recipientPhone') ?? '—')} />
+        <LigneInfo
+          label="Collecte"
+          valeur={String(champ(colis, 'pickup_location', 'pickupLocation') ?? '—')}
+        />
+        <LigneInfo
+          label="Livraison"
+          valeur={String(champ(colis, 'dropoff_location', 'dropoffLocation') ?? '—')}
+        />
+        <LigneInfo
+          label="Destinataire"
+          valeur={String(champ(colis, 'recipient_name', 'recipientName') ?? '—')}
+        />
+        <LigneInfo
+          label="Téléphone"
+          valeur={String(champ(colis, 'recipient_phone', 'recipientPhone') ?? '—')}
+        />
         {!!champ(colis, 'description') && (
           <LigneInfo label="Description" valeur={String(champ(colis, 'description'))} />
         )}
@@ -139,7 +157,7 @@ export default function EcranDetailColis() {
       </Carte>
 
       <Carte>
-        <SousTitre>Suivi du colis</SousTitre>
+        <Text style={styles.titreSuivi}>Suivi du colis</Text>
         <TimelineStatut
           etapes={ETAPES_COLIS.map((cle) => ({ cle, label: LIBELLES_STATUT_COLIS[cle] }))}
           statutCourant={statut}
@@ -147,7 +165,7 @@ export default function EcranDetailColis() {
       </Carte>
 
       {peutPayer && (
-        <Bouton titre="Payer l'envoi (Pesapal)" onPress={payer} charge={chargePaiement} />
+        <Bouton titre="Payer l'envoi" icone="card-outline" onPress={payer} charge={chargePaiement} />
       )}
       {__DEV__ && peutPayer && paiementId && (
         <Bouton
@@ -158,17 +176,25 @@ export default function EcranDetailColis() {
         />
       )}
       {statut === 'paid' && (
-        <SousTitre>Paiement reçu — un chauffeur va ramasser votre colis.</SousTitre>
+        <EncartInfo icone="checkmark-circle-outline">
+          Paiement reçu — un chauffeur va ramasser votre colis.
+        </EncartInfo>
       )}
 
       <Bouton
         titre="Contacter l'équipe WhatsApp"
+        icone="logo-whatsapp"
         variante="secondaire"
         onPress={() => Linking.openURL(lienWhatsapp)}
       />
 
       <TexteErreur>{erreur}</TexteErreur>
-      <Bouton titre="Actualiser le statut" variante="secondaire" onPress={charger} />
+      <Bouton
+        titre="Actualiser le statut"
+        icone="refresh-outline"
+        variante="secondaire"
+        onPress={charger}
+      />
     </Ecran>
   );
 }
@@ -177,14 +203,34 @@ const styles = StyleSheet.create({
   carteQr: {
     alignItems: 'center',
   },
-  blocQr: {
+  enTeteQr: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: espaces.m,
+  },
+  cadreQr: {
     alignItems: 'center',
     gap: espaces.s,
-    paddingVertical: espaces.m,
+    padding: espaces.l,
+    marginVertical: espaces.s,
+    backgroundColor: couleurs.blanc,
+    borderRadius: rayons.carte,
+    ...ombres.douce,
   },
   codeTexte: {
     fontFamily: 'monospace',
     fontSize: 14,
     color: couleurs.texteSecondaire,
+  },
+  consigne: {
+    fontSize: 13,
+    color: couleurs.texteSecondaire,
+    textAlign: 'center',
+  },
+  titreSuivi: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: couleurs.encre,
+    marginBottom: espaces.s,
   },
 });

@@ -63,12 +63,12 @@ describe('Courses taxi (trips)', () => {
     const { token: userToken, user } = await createTourist();
     const { token: driverToken, driver } = await createVerifiedDriver();
 
-    // Création : prix USD figé côté serveur (private → 35 USD, commission 15 %)
+    // Création : prix USD figé côté serveur (private → 50 USD, commission 15 %)
     const trip = await createTrip(userToken, user.id);
     assert.equal(trip.status, 'requested');
     assert.equal(trip.currency, 'USD');
-    assert.equal(Number(trip.price), 35);
-    assert.equal(Number(trip.commission), 5.25);
+    assert.equal(Number(trip.price), 50);
+    assert.equal(Number(trip.commission), 7.5);
     assert.match(trip.whatsapp_link, /wa\.me/);
     assert.equal(trip.driver_id, null);
 
@@ -80,7 +80,7 @@ describe('Courses taxi (trips)', () => {
     // Paiement (stub Pesapal) → course payée
     const payment = await payTrip(userToken, trip.id);
     assert.equal(payment.trip_id, trip.id);
-    assert.equal(Number(payment.amount), 35);
+    assert.equal(Number(payment.amount), 50);
     const paid = await request(app).get(`/api/trips/${trip.id}`).set(authHeaders(userToken));
     assert.equal(paid.body.status, 'paid');
 
@@ -115,11 +115,11 @@ describe('Courses taxi (trips)', () => {
     const { token: residentToken, user: resident } = await createResident();
 
     const shared = await createTrip(touristToken, tourist.id, { tripType: 'shared_tourist' });
-    assert.equal(Number(shared.price), 15);
+    assert.equal(Number(shared.price), 17);
     assert.equal(shared.currency, 'USD');
 
     const posted = await createTrip(touristToken, tourist.id, { tripType: 'posted_return' });
-    assert.equal(Number(posted.price), 25);
+    assert.equal(Number(posted.price), 17);
 
     const privateTzs = await createTrip(residentToken, resident.id);
     assert.equal(Number(privateTzs.price), 90000);

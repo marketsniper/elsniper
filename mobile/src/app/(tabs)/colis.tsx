@@ -6,29 +6,12 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 
-import { Badge, Bouton, SousTitre } from '@/components/ui';
+import { BadgeStatutColis, Bouton, EtatVide } from '@/components/ui';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { listerColisLocaux } from '@/lib/colisLocal';
-import { couleurs, espaces, rayons } from '@/lib/theme';
-import {
-  champ,
-  formaterPrix,
-  LIBELLES_STATUT_COLIS,
-  type Colis,
-  type StatutColis,
-} from '@/lib/types';
-
-function tonStatut(statut: StatutColis | undefined) {
-  switch (statut) {
-    case 'delivered':
-      return 'succes' as const;
-    case 'created':
-      return 'attente' as const;
-    default:
-      return 'primaire' as const;
-  }
-}
+import { couleurs, espaces, ombres, rayons } from '@/lib/theme';
+import { champ, formaterPrix, type Colis, type StatutColis } from '@/lib/types';
 
 export default function EcranColis() {
   const router = useRouter();
@@ -77,17 +60,24 @@ export default function EcranColis() {
         }
         ListHeaderComponent={
           <Bouton
-            titre="+ Envoyer un colis"
+            titre="Envoyer un colis"
+            icone="add-circle-outline"
             onPress={() => router.push('/package/nouveau')}
             style={styles.boutonNouveau}
           />
         }
         ListEmptyComponent={
-          <View style={styles.vide}>
-            <SousTitre>
-              Aucun colis pour le moment. Créez votre premier envoi !
-            </SousTitre>
-          </View>
+          !charge ? (
+            <EtatVide
+              icone="cube-outline"
+              titre="Aucun colis pour l'instant"
+              message={
+                hotel
+                  ? 'Envoyez le premier colis d’un de vos clients : un chauffeur zanziGo le livre partout sur l’île.'
+                  : 'Documents, cadeaux, courses… un chauffeur zanziGo livre votre premier colis partout sur l’île !'
+              }
+            />
+          ) : null
         }
         renderItem={({ item }) => {
           const statut = champ<StatutColis>(item, 'status', 'statut');
@@ -100,13 +90,11 @@ export default function EcranColis() {
                 <Text style={styles.destinataire}>
                   {champ(item, 'recipient_name', 'recipientName') ?? 'Colis'}
                 </Text>
-                <Badge
-                  texte={statut ? LIBELLES_STATUT_COLIS[statut] ?? statut : '—'}
-                  ton={tonStatut(statut)}
-                />
+                <BadgeStatutColis statut={statut} />
               </View>
               <Text style={styles.itineraire}>
-                {champ(item, 'pickup_location', 'pickupLocation') ?? '?'} →{' '}
+                {champ(item, 'pickup_location', 'pickupLocation') ?? '?'}{'  '}
+                <Text style={styles.fleche}>→</Text>{'  '}
                 {champ(item, 'dropoff_location', 'dropoffLocation') ?? '?'}
               </Text>
               <View style={styles.pied}>
@@ -134,15 +122,12 @@ const styles = StyleSheet.create({
   boutonNouveau: {
     marginBottom: espaces.s,
   },
-  vide: {
-    alignItems: 'center',
-    paddingTop: espaces.xl,
-  },
   carte: {
     backgroundColor: couleurs.blanc,
     borderRadius: rayons.carte,
     padding: espaces.l,
     gap: espaces.s,
+    ...ombres.carte,
   },
   enTete: {
     flexDirection: 'row',
@@ -154,10 +139,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: couleurs.encre,
+    flexShrink: 1,
   },
   itineraire: {
-    fontSize: 14,
+    fontSize: 15,
+    fontWeight: '600',
     color: couleurs.encre,
+    lineHeight: 21,
+  },
+  fleche: {
+    color: couleurs.primaire,
+    fontWeight: '800',
   },
   pied: {
     flexDirection: 'row',

@@ -5,13 +5,24 @@
 // tarif local, mais document d'identité OBLIGATOIRE (téléversé sur
 // POST /uploads), puis validation manuelle par l'équipe (statut 'pending'
 // → 'verified'/'rejected').
+// Le choix fait sur la page d'accueil (?type=tourist|resident) préremplit le
+// type de compte et masque le sélecteur.
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { Bouton, Carte, Champ, Ecran, SousTitre, TexteErreur, Titre } from '@/components/ui';
+import {
+  Bouton,
+  Carte,
+  Champ,
+  Ecran,
+  EncartInfo,
+  SousTitre,
+  TexteErreur,
+  Titre,
+} from '@/components/ui';
 import { api, ErreurApi } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { couleurs, espaces, rayons } from '@/lib/theme';
@@ -34,10 +45,14 @@ const TYPES_COMPTE: { cle: TypeCompte; titre: string; description: string }[] = 
 export default function EcranClient() {
   const router = useRouter();
   const { session, majSession } = useAuth();
+  const params = useLocalSearchParams<{ type?: string }>();
+  // Type choisi sur la page d'accueil : prérempli et non modifiable ici.
+  const typePredefini: TypeCompte | null =
+    params.type === 'tourist' || params.type === 'resident' ? params.type : null;
 
   const [nom, setNom] = useState('');
   const [email, setEmail] = useState('');
-  const [typeCompte, setTypeCompte] = useState<TypeCompte>('tourist');
+  const [typeCompte, setTypeCompte] = useState<TypeCompte>(typePredefini ?? 'tourist');
   // URI locale du document d'identité choisi (résident uniquement).
   const [documentUri, setDocumentUri] = useState<string | null>(null);
   const [erreur, setErreur] = useState('');
@@ -93,7 +108,7 @@ export default function EcranClient() {
       await majSession({ user: utilisateur });
       router.replace('/');
     } catch (e) {
-      setErreur(e instanceof ErreurApi ? e.message : 'Impossible de créer le profil.');
+      setErreur(e instanceof ErreurApi ? e.message : 'Impossible de créer le profil. Réessayez.');
     } finally {
       setCharge(false);
     }
@@ -104,6 +119,19 @@ export default function EcranClient() {
       <Carte>
         <Titre>Votre profil client</Titre>
         <SousTitre>Numéro vérifié : {session?.phone ?? ''}</SousTitre>
+
+        {typePredefini === 'tourist' && (
+          <EncartInfo icone="airplane-outline">
+            Compte touriste — prix en USD, actif immédiatement.
+          </EncartInfo>
+        )}
+        {typePredefini === 'resident' && (
+          <EncartInfo icone="home-outline">
+            Compte résident — tarif local en TZS. Votre document d&apos;identité est vérifié
+            par l&apos;équipe sous 48 h.
+          </EncartInfo>
+        )}
+
         <Champ label="Nom complet" value={nom} onChangeText={setNom} placeholder="Amina Hassan" />
         <Champ
           label="E-mail (optionnel)"
@@ -114,27 +142,36 @@ export default function EcranClient() {
           autoCapitalize="none"
         />
 
-        <Text style={styles.labelType}>Vous êtes…</Text>
-        {TYPES_COMPTE.map((t) => {
-          const actif = typeCompte === t.cle;
-          return (
-            <Pressable
-              key={t.cle}
-              onPress={() => setTypeCompte(t.cle)}
-              style={[styles.optionType, actif && styles.optionActive]}
-            >
-              <Text style={[styles.titreOption, actif && styles.titreActif]}>{t.titre}</Text>
-              <Text style={styles.descriptionOption}>{t.description}</Text>
-            </Pressable>
-          );
-        })}
+        {!typePredefini && (
+          <>
+            <Text style={styles.labelType}>Vous êtes…</Text>
+            {TYPES_COMPTE.map((t) => {
+              const actif = typeCompte === t.cle;
+              return (
+                <Pressable
+                  key={t.cle}
+                  onPress={() => setTypeCompte(t.cle)}
+                  style={[styles.optionType, actif && styles.optionActive]}
+                >
+                  <View style={styles.enTeteOption}>
+                    <Text style={[styles.titreOption, actif && styles.titreActif]}>{t.titre}</Text>
+                    {actif && (
+                      <Ionicons name="checkmark-circle" size={20} color={couleurs.primaire} />
+                    )}
+                  </View>
+                  <Text style={styles.descriptionOption}>{t.description}</Text>
+                </Pressable>
+              );
+            })}
+          </>
+        )}
 
         {typeCompte === 'resident' && (
           <View style={styles.blocDocument}>
             <Text style={styles.labelType}>Document d&apos;identité (obligatoire)</Text>
             <SousTitre>
-              Carte d&apos;identité, passeport ou permis de résidence — photo lisible. L&apos;équipe
-              zanziGo le vérifie avant d&apos;activer le tarif local.
+              Carte d&apos;identité, passeport ou permis de résidence — photo lisible.
+              L&apos;équipe zanziGo le vérifie avant d&apos;activer le tarif local.
             </SousTitre>
             {documentUri ? (
               <View style={styles.ligneDocument}>
@@ -147,6 +184,7 @@ export default function EcranClient() {
             ) : (
               <Bouton
                 titre="Ajouter mon document"
+                icone="cloud-upload-outline"
                 variante="secondaire"
                 onPress={choisirDocument}
               />
@@ -155,7 +193,7 @@ export default function EcranClient() {
         )}
 
         <TexteErreur>{erreur}</TexteErreur>
-        <Bouton titre="Créer mon profil" onPress={valider} charge={charge} />
+        <Bouton titre="Créer mon profil" icone="person-add-outline" onPress={valider} charge={charge} />
       </Carte>
     </Ecran>
   );
@@ -168,7 +206,7 @@ const styles = StyleSheet.create({
     color: couleurs.texteSecondaire,
   },
   optionType: {
-    borderWidth: 1.5,
+    borderWidth: 2,
     borderColor: couleurs.bordure,
     borderRadius: rayons.bouton,
     padding: espaces.m,
@@ -178,6 +216,12 @@ const styles = StyleSheet.create({
   optionActive: {
     borderColor: couleurs.primaire,
     backgroundColor: couleurs.primaireClair,
+  },
+  enTeteOption: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: espaces.s,
   },
   titreOption: {
     fontSize: 15,

@@ -1,13 +1,23 @@
 // Mode chauffeur — profil, QR véhicule fixe (VEH-…) et déconnexion.
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 
-import { Badge, Bouton, Carte, Ecran, LigneInfo, SousTitre } from '@/components/ui';
+import { Badge, Carte, Ecran, LigneInfo, SousTitre } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
-import { couleurs, espaces } from '@/lib/theme';
+import { couleurs, espaces, ombres, rayons, tailles } from '@/lib/theme';
 import { champ, type StatutVerification } from '@/lib/types';
+
+/** Initiales (2 lettres max) d'un nom complet. */
+function initiales(nom: string): string {
+  const mots = nom.trim().split(/\s+/).filter(Boolean);
+  if (mots.length === 0) return 'Z';
+  const premiere = mots[0].charAt(0);
+  const seconde = mots.length > 1 ? mots[mots.length - 1].charAt(0) : '';
+  return (premiere + seconde).toUpperCase();
+}
 
 export default function EcranCompteChauffeur() {
   const router = useRouter();
@@ -24,6 +34,7 @@ export default function EcranCompteChauffeur() {
     moyenneBrute !== undefined && Number.isFinite(Number(moyenneBrute))
       ? Number(moyenneBrute).toFixed(1)
       : null;
+  const nomAffiche = String(champ(chauffeur, 'full_name', 'fullName') ?? 'Chauffeur zanziGo');
 
   const seDeconnecter = async () => {
     await deconnexion();
@@ -34,23 +45,17 @@ export default function EcranCompteChauffeur() {
     <Ecran>
       <Carte style={styles.carteIdentite}>
         <View style={styles.avatar}>
-          <Text style={styles.initiale}>
-            {String(champ(chauffeur, 'full_name', 'fullName') ?? 'z')
-              .charAt(0)
-              .toUpperCase()}
-          </Text>
+          <Text style={styles.initiale}>{initiales(nomAffiche)}</Text>
         </View>
-        <Text style={styles.nom}>
-          {String(champ(chauffeur, 'full_name', 'fullName') ?? 'Chauffeur zanziGo')}
-        </Text>
+        <Text style={styles.nom}>{nomAffiche}</Text>
         <SousTitre>{session?.phone ?? ''}</SousTitre>
         <Badge
           texte={
             verifie
-              ? 'Chauffeur vérifié'
+              ? 'Chauffeur vérifié ✓'
               : statutVerif === 'rejected'
                 ? 'Candidature refusée'
-                : 'Vérification en attente'
+                : 'En attente de validation'
           }
           ton={verifie ? 'succes' : statutVerif === 'rejected' ? 'danger' : 'attente'}
         />
@@ -61,11 +66,11 @@ export default function EcranCompteChauffeur() {
 
       {qrVehicule && (
         <Carte style={styles.carteQr}>
-          <SousTitre>
-            QR de votre véhicule — à afficher à bord. Il sert à confirmer le départ et
-            l&apos;arrivée de chaque course.
+          <SousTitre centre>
+            QR de votre véhicule — à afficher à bord. Il confirme le départ et l&apos;arrivée
+            de chaque course.
           </SousTitre>
-          <View style={styles.blocQr}>
+          <View style={styles.cadreQr}>
             <QRCode
               value={qrVehicule}
               size={160}
@@ -94,7 +99,14 @@ export default function EcranCompteChauffeur() {
         <LigneInfo label="Zone" valeur={String(champ(chauffeur, 'zone') ?? '—')} />
       </Carte>
 
-      <Bouton titre="Se déconnecter" variante="danger" onPress={seDeconnecter} />
+      <Pressable
+        onPress={seDeconnecter}
+        style={({ pressed }) => [styles.ligneDeconnexion, pressed && { opacity: 0.6 }]}
+        accessibilityRole="button"
+      >
+        <Ionicons name="log-out-outline" size={20} color={couleurs.danger} />
+        <Text style={styles.texteDeconnexion}>Se déconnecter</Text>
+      </Pressable>
     </Ecran>
   );
 }
@@ -106,17 +118,17 @@ const styles = StyleSheet.create({
     paddingVertical: espaces.xl,
   },
   avatar: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: couleurs.primaire,
+    width: tailles.avatar,
+    height: tailles.avatar,
+    borderRadius: tailles.avatar / 2,
+    backgroundColor: couleurs.primaireClair,
     alignItems: 'center',
     justifyContent: 'center',
   },
   initiale: {
-    fontSize: 30,
+    fontSize: 28,
     fontWeight: '800',
-    color: couleurs.blanc,
+    color: couleurs.primaireFonce,
   },
   nom: {
     fontSize: 20,
@@ -126,14 +138,31 @@ const styles = StyleSheet.create({
   carteQr: {
     alignItems: 'center',
   },
-  blocQr: {
+  cadreQr: {
     alignItems: 'center',
     gap: espaces.s,
-    paddingVertical: espaces.m,
+    padding: espaces.l,
+    marginVertical: espaces.s,
+    backgroundColor: couleurs.blanc,
+    borderRadius: rayons.carte,
+    ...ombres.douce,
   },
   codeTexte: {
     fontFamily: 'monospace',
     fontSize: 14,
     color: couleurs.texteSecondaire,
+  },
+  ligneDeconnexion: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: espaces.s,
+    paddingVertical: espaces.l,
+    marginTop: espaces.s,
+  },
+  texteDeconnexion: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: couleurs.danger,
   },
 });

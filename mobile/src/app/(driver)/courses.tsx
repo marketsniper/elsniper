@@ -3,19 +3,30 @@
 // zanziGo notifie chaque chauffeur par WhatsApp avec la référence de la
 // course. On ouvre donc une course par sa référence (GET /trips/:id, autorisé
 // au chauffeur assigné) et on garde localement les courses récemment ouvertes.
+import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { Badge, Bouton, Carte, Champ, Ecran, SousTitre, TexteErreur, Titre } from '@/components/ui';
+import {
+  BadgeStatutTrajet,
+  Bouton,
+  Carte,
+  Champ,
+  Ecran,
+  EncartInfo,
+  EtatVide,
+  TexteErreur,
+  Titre,
+} from '@/components/ui';
 import { api, ErreurApi } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { ajouterCourseLocale, listerCoursesLocales } from '@/lib/colisLocal';
-import { couleurs, espaces, rayons } from '@/lib/theme';
+import { couleurs, espaces, ombres, rayons } from '@/lib/theme';
 import {
   champ,
+  formaterDateRelative,
   formaterPrix,
-  LIBELLES_STATUT_TRAJET,
   type StatutTrajet,
   type Trajet,
 } from '@/lib/types';
@@ -71,27 +82,37 @@ export default function EcranCourses() {
 
   return (
     <Ecran>
+      <EncartInfo icone="logo-whatsapp">
+        L&apos;équipe zanziGo vous envoie vos courses par WhatsApp — entrez la référence
+        ci-dessous ou scannez.
+      </EncartInfo>
+
       <Carte>
         <Titre>Ouvrir une course</Titre>
-        <SousTitre>
-          Pas de liste automatique au lancement : l&apos;équipe zanziGo vous notifie chaque
-          course assignée par WhatsApp, avec sa référence. Collez-la ici (ou ouvrez le lien
-          reçu) pour afficher la fiche.
-        </SousTitre>
         <Champ
           label="Référence de course"
           value={idSaisi}
           onChangeText={setIdSaisi}
-          placeholder="ex. 6f9619ff-8b86-d011-b42d-00c04fc964ff"
+          placeholder="Collez la référence ou le lien reçu"
           autoCapitalize="none"
         />
         <TexteErreur>{erreur}</TexteErreur>
-        <Bouton titre="Ouvrir la course" onPress={ouvrir} charge={charge} />
+        <Bouton titre="Ouvrir la course" icone="open-outline" onPress={ouvrir} charge={charge} />
+        <Bouton
+          titre="Ouvrir le scanner"
+          icone="qr-code-outline"
+          variante="secondaire"
+          onPress={() => router.push('/(driver)/scanner')}
+        />
       </Carte>
 
-      <SousTitre>Courses récentes</SousTitre>
+      <Text style={styles.titreSection}>Courses récentes</Text>
       {recentes.length === 0 && (
-        <SousTitre>Aucune course ouverte récemment sur ce téléphone.</SousTitre>
+        <EtatVide
+          icone="car-outline"
+          titre="Aucune course récente"
+          message="Les courses ouvertes sur ce téléphone apparaîtront ici."
+        />
       )}
       {recentes.map((item) => {
         const statut = champ<StatutTrajet>(item, 'status', 'statut');
@@ -103,22 +124,21 @@ export default function EcranCourses() {
           >
             <View style={styles.enTete}>
               <Text style={styles.type}>Course</Text>
-              <Badge
-                texte={statut ? LIBELLES_STATUT_TRAJET[statut] ?? statut : '—'}
-                ton={
-                  statut === 'in_progress'
-                    ? 'attente'
-                    : statut === 'completed'
-                      ? 'succes'
-                      : 'primaire'
-                }
-              />
+              <BadgeStatutTrajet statut={statut} />
             </View>
             <Text style={styles.itineraire}>
-              {champ(item, 'pickup_location', 'pickupLocation') ?? '?'} →{' '}
+              {champ(item, 'pickup_location', 'pickupLocation') ?? '?'}{'  '}
+              <Text style={styles.fleche}>→</Text>{'  '}
               {champ(item, 'dropoff_location', 'dropoffLocation') ?? '?'}
             </Text>
-            <Text style={styles.prix}>{formaterPrix(item)}</Text>
+            <View style={styles.pied}>
+              <Text style={styles.date}>
+                {formaterDateRelative(
+                  champ(item, 'scheduled_at', 'scheduledAt', 'created_at', 'createdAt')
+                )}
+              </Text>
+              <Text style={styles.prix}>{formaterPrix(item)}</Text>
+            </View>
           </Pressable>
         );
       })}
@@ -127,11 +147,18 @@ export default function EcranCourses() {
 }
 
 const styles = StyleSheet.create({
+  titreSection: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: couleurs.encre,
+    marginTop: espaces.s,
+  },
   carte: {
     backgroundColor: couleurs.blanc,
     borderRadius: rayons.carte,
     padding: espaces.l,
     gap: espaces.s,
+    ...ombres.carte,
   },
   enTete: {
     flexDirection: 'row',
@@ -140,13 +167,28 @@ const styles = StyleSheet.create({
     gap: espaces.m,
   },
   type: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: couleurs.texteSecondaire,
+  },
+  itineraire: {
     fontSize: 16,
     fontWeight: '700',
     color: couleurs.encre,
+    lineHeight: 22,
   },
-  itineraire: {
-    fontSize: 14,
-    color: couleurs.encre,
+  fleche: {
+    color: couleurs.primaire,
+    fontWeight: '800',
+  },
+  pied: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  date: {
+    fontSize: 13,
+    color: couleurs.texteSecondaire,
   },
   prix: {
     fontSize: 15,

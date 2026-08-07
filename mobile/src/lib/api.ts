@@ -5,8 +5,10 @@
 import type {
   Chauffeur,
   Colis,
+  Hotel,
   Paiement,
   ReponseVerifieOtp,
+  Ride,
   StatutColis,
   Trajet,
   TypeCompte,
@@ -130,6 +132,21 @@ export async function verifierOtp(phone: string, code: string): Promise<ReponseV
   });
 }
 
+/**
+ * POST /auth/hotel-login {email, password} → {token, hotel}.
+ * Connexion des hôtels partenaires (401 invalid_credentials si erreur) —
+ * les sessions hôtel passent par ici, plus par l'OTP.
+ */
+export async function connexionHotel(
+  email: string,
+  password: string
+): Promise<{ token: string; hotel: Hotel }> {
+  return requete<{ token: string; hotel: Hotel }>('/auth/hotel-login', {
+    methode: 'POST',
+    corps: { email, password },
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Profils (backend/src/routes/users.js)
 // ---------------------------------------------------------------------------
@@ -158,6 +175,55 @@ export async function obtenirUtilisateur(id: string): Promise<Utilisateur> {
 }
 
 // ---------------------------------------------------------------------------
+// Hôtels partenaires (backend/src/routes/hotels.js)
+// ---------------------------------------------------------------------------
+
+export interface CreationHotel {
+  name: string;
+  contactName: string;
+  email: string;
+  password: string; // min 8 caractères
+  phone: string; // numéro WhatsApp de l'établissement, format +255…
+  zone: string;
+  address?: string;
+}
+
+/**
+ * POST /hotels (public, sans OTP) — création d'un compte hôtel partenaire :
+ * {name, contactName, email, password, phone, zone, address?} → 201 {hotel}.
+ * 409 duplicate si e-mail ou téléphone déjà utilisés. Enchaîner ensuite
+ * connexionHotel(email, password) pour obtenir le jeton.
+ */
+export async function creerHotel(donnees: CreationHotel): Promise<Hotel> {
+  return requete<Hotel>('/hotels', { methode: 'POST', corps: donnees });
+}
+
+// ---------------------------------------------------------------------------
+// Chauffeurs (backend/src/routes/drivers.js)
+// ---------------------------------------------------------------------------
+
+export interface CreationChauffeur {
+  fullName: string;
+  phone: string; // doit être le téléphone vérifié par OTP (celui du jeton)
+  licenseNumber: string;
+  vehiclePlate: string;
+  vehicleModel?: string;
+  zone: string;
+  /** URL du permis téléversé sur POST /uploads. */
+  licenseDocumentUrl: string;
+  /** URL de la pièce d'identité téléversée sur POST /uploads. */
+  idDocumentUrl: string;
+}
+
+/**
+ * POST /drivers — candidature Taxi Partner (avec documents). Le compte reste
+ * verification_status 'pending' jusqu'à validation manuelle par l'équipe.
+ */
+export async function creerChauffeur(donnees: CreationChauffeur): Promise<Chauffeur> {
+  return requete<Chauffeur>('/drivers', { methode: 'POST', corps: donnees });
+}
+
+// ---------------------------------------------------------------------------
 // Trajets (backend/src/routes/trips.js)
 // ---------------------------------------------------------------------------
 
@@ -182,6 +248,32 @@ export async function creerTrajet(donnees: CreationTrajet): Promise<Trajet> {
 /** GET /trips?userId= → historique du client (réservé à lui-même). */
 export async function listerTrajets(userId: string): Promise<Trajet[]> {
   const query = new URLSearchParams({ userId });
+  const reponse = await requete<unknown>(`/trips?${query.toString()}`);
+  return commeListe<Trajet>(reponse, 'trips');
+}
+
+export interface CreationTrajetHotel {
+  hotelId: string;
+  clientName: string;
+  clientPhone: string;
+  tripType: TypeTrajet;
+  pickupLocation: string;
+  dropoffLocation: string;
+  scheduledAt?: string; // ISO 8601 avec fuseau
+}
+
+/**
+ * POST /trips (mode hôtel) — l'hôtel réserve un taxi POUR SON CLIENT :
+ * {hotelId, clientName, clientPhone, tripType, pickupLocation,
+ * dropoffLocation, scheduledAt?} — pas de userId. Tarifs en TZS.
+ */
+export async function creerTrajetHotel(donnees: CreationTrajetHotel): Promise<Trajet> {
+  return requete<Trajet>('/trips', { methode: 'POST', corps: donnees });
+}
+
+/** GET /trips?hotelId= → historique des réservations d'un hôtel partenaire. */
+export async function listerTrajetsHotel(hotelId: string): Promise<Trajet[]> {
+  const query = new URLSearchParams({ hotelId });
   const reponse = await requete<unknown>(`/trips?${query.toString()}`);
   return commeListe<Trajet>(reponse, 'trips');
 }
@@ -228,6 +320,60 @@ export async function demarrerCourse(id: string, qrCode: string): Promise<Trajet
 /** PATCH /trips/:id/complete {qrCode} — course 'in_progress' → 'completed'. */
 export async function terminerCourse(id: string, qrCode: string): Promise<Trajet> {
   return requete<Trajet>(`/trips/${id}/complete`, { methode: 'PATCH', corps: { qrCode } });
+}
+
+// ---------------------------------------------------------------------------
+// Trajets partagés postés par les chauffeurs (backend /rides)
+// ---------------------------------------------------------------------------
+
+export interface CreationRide {
+  origin: string;
+  destination: string;
+  departureAt: string; // ISO 8601 avec offset, dans le futur
+  seatsTotal: number; // 1 à 8
+  pricePerSeat: number; // TZS
+  notes?: string;
+}
+
+/**
+ * POST /rides — un chauffeur VALIDÉ publie un trajet partagé → 201.
+ * Erreurs : 400 departure_in_past, 403 driver_not_verified.
+ */
+export async function creerRide(donnees: CreationRide): Promise<Ride> {
+  return requete<Ride>('/rides', { methode: 'POST', corps: donnees });
+}
+
+/** GET /rides → trajets ouverts futurs, triés par heure de départ. */
+export async function listerRides(): Promise<Ride[]> {
+  const reponse = await requete<unknown>('/rides');
+  return commeListe<Ride>(reponse, 'rides');
+}
+
+/**
+ * GET /rides/locations (publique) → {origins, destinations} : listes fermées
+ * des lieux acceptés au POST /rides (validation serveur stricte).
+ */
+export async function lieuxRides(): Promise<{ origins: string[]; destinations: string[] }> {
+  const reponse = await requete<Record<string, unknown>>('/rides/locations');
+  const origins = Array.isArray(reponse?.origins) ? (reponse.origins as string[]) : [];
+  const destinations = Array.isArray(reponse?.destinations)
+    ? (reponse.destinations as string[])
+    : [];
+  return { origins, destinations };
+}
+
+/** GET /rides/mine → trajets publiés par le chauffeur connecté (tous statuts). */
+export async function listerMesRides(): Promise<Ride[]> {
+  const reponse = await requete<unknown>('/rides/mine');
+  return commeListe<Ride>(reponse, 'rides');
+}
+
+/** PATCH /rides/:id {seatsAvailable} et/ou {status:'closed'|'cancelled'}. */
+export async function modifierRide(
+  id: string,
+  donnees: { seatsAvailable?: number; status?: 'closed' | 'cancelled' }
+): Promise<Ride> {
+  return requete<Ride>(`/rides/${id}`, { methode: 'PATCH', corps: donnees });
 }
 
 // ---------------------------------------------------------------------------
@@ -328,16 +474,26 @@ export async function televerser(uri: string): Promise<{ url: string }> {
 export const api = {
   demanderOtp,
   verifierOtp,
+  connexionHotel,
   creerUtilisateur,
   obtenirUtilisateur,
+  creerHotel,
+  creerChauffeur,
   creerTrajet,
+  creerTrajetHotel,
   listerTrajets,
+  listerTrajetsHotel,
   obtenirTrajet,
   payerTrajet,
   confirmerPaiement,
   noterTrajet,
   demarrerCourse,
   terminerCourse,
+  creerRide,
+  listerRides,
+  listerMesRides,
+  modifierRide,
+  lieuxRides,
   creerColis,
   obtenirColis,
   listerColisHotel,
@@ -348,4 +504,4 @@ export const api = {
   televerser,
 };
 
-export type { Chauffeur, Colis, Paiement, Trajet, Utilisateur };
+export type { Chauffeur, Colis, Hotel, Paiement, Trajet, Utilisateur };

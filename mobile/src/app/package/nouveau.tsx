@@ -7,11 +7,19 @@ import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { Bouton, Carte, Champ, Ecran, SousTitre, TexteErreur, Titre } from '@/components/ui';
+import {
+  Bouton,
+  Carte,
+  Champ,
+  Ecran,
+  SousTitre,
+  TexteErreur,
+  Titre,
+} from '@/components/ui';
 import { api, ErreurApi } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { ajouterColisLocal } from '@/lib/colisLocal';
-import { couleurs } from '@/lib/theme';
+import { couleurs, espaces, rayons } from '@/lib/theme';
 import { deviseUtilisateur, formaterMontant, tarifColis, type Devise } from '@/lib/types';
 
 export default function EcranNouveauColis() {
@@ -63,7 +71,7 @@ export default function EcranNouveauColis() {
       await ajouterColisLocal(proprietaireId, colis.id);
       router.replace(`/package/${colis.id}`);
     } catch (e) {
-      setErreur(e instanceof ErreurApi ? e.message : 'La création du colis a échoué.');
+      setErreur(e instanceof ErreurApi ? e.message : 'La création du colis a échoué. Réessayez.');
     } finally {
       setCharge(false);
     }
@@ -76,6 +84,8 @@ export default function EcranNouveauColis() {
         <SousTitre>
           Un chauffeur zanziGo récupère votre colis et le livre contre scan du QR code.
         </SousTitre>
+
+        <Text style={styles.titreSection}>Trajet du colis</Text>
         <Champ
           label="Lieu de collecte"
           value={depart}
@@ -88,6 +98,8 @@ export default function EcranNouveauColis() {
           onChangeText={setArrivee}
           placeholder="Ex. : Paje, guesthouse Baraka"
         />
+
+        <Text style={styles.titreSection}>Destinataire</Text>
         <Champ
           label="Nom du destinataire"
           value={destinataire}
@@ -109,23 +121,38 @@ export default function EcranNouveauColis() {
           multiline
         />
 
-        <View style={styles.lignePrix}>
-          <Text style={styles.labelPrix}>Prix de l&apos;envoi</Text>
-          <Text style={styles.valeurPrix}>{formaterMontant(prix, devise)}</Text>
+        <View style={styles.blocPrix}>
+          <View style={styles.lignePrix}>
+            <Text style={styles.labelPrix}>Prix de l&apos;envoi</Text>
+            <Text style={styles.valeurPrix}>{formaterMontant(prix, devise)}</Text>
+          </View>
+          <Text style={styles.note}>
+            Tarif plat zanziGo, quel que soit le trajet sur l&apos;île. Le prix officiel est
+            figé à la création de l&apos;envoi.
+          </Text>
         </View>
-        <Text style={styles.note}>
-          Tarif plat zanziGo, quel que soit le trajet sur l&apos;île. Le prix officiel est figé
-          par le serveur à la création de l&apos;envoi.
-        </Text>
 
         <TexteErreur>{erreur}</TexteErreur>
-        <Bouton titre="Créer l'envoi" onPress={envoyer} charge={charge} />
+        <Bouton titre="Créer l'envoi" icone="cube-outline" onPress={envoyer} charge={charge} />
       </Carte>
     </Ecran>
   );
 }
 
 const styles = StyleSheet.create({
+  titreSection: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: couleurs.encre,
+    marginTop: espaces.s,
+  },
+  blocPrix: {
+    backgroundColor: couleurs.primaireClair,
+    borderRadius: rayons.bouton,
+    padding: espaces.m,
+    gap: espaces.xs,
+    marginTop: espaces.s,
+  },
   lignePrix: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -133,16 +160,18 @@ const styles = StyleSheet.create({
   },
   labelPrix: {
     fontSize: 14,
-    color: couleurs.texteSecondaire,
+    fontWeight: '600',
+    color: couleurs.primaireFonce,
   },
   valeurPrix: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '800',
-    color: couleurs.primaire,
+    color: couleurs.primaireFonce,
   },
   note: {
     fontSize: 12,
-    color: couleurs.texteSecondaire,
+    color: couleurs.primaireFonce,
     lineHeight: 17,
+    opacity: 0.8,
   },
 });

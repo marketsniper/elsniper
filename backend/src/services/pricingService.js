@@ -4,11 +4,11 @@ import { config } from '../config.js';
 // Le prix et la commission sont figés sur chaque trip/package au moment de la
 // création : modifier cette grille ne réécrit jamais l'historique.
 const TRIP_FARES = {
-  private: { USD: 35, TZS: 90000 },
-  shared_tourist: { USD: 15, TZS: 40000 },
+  private: { USD: 50, TZS: 90000 },
+  shared_tourist: { USD: 17, TZS: 40000 },
   // Tarif local : réservé aux résidents vérifiés, toujours en TZS.
   shared_local: { TZS: 8000 },
-  posted_return: { USD: 25, TZS: 65000 },
+  posted_return: { USD: 17, TZS: 65000 },
 };
 
 const PACKAGE_FARES = { USD: 10, TZS: 25000 };

@@ -38,32 +38,53 @@ const updateRideSchema = z
     message: 'Fournir seatsAvailable et/ou status',
   });
 
-// Lien WhatsApp de demande de place, généré à la volée pour chaque trajet.
-function rideWhatsappLink(ride) {
+// Cloison tarifaire stricte : les visiteurs/touristes (compte en USD)
+// voient UNIQUEMENT le tarif touriste fixe (config.sharedRideUsdPerSeat) ;
+// les résidents, hôtels et chauffeurs voient UNIQUEMENT le prix local en
+// shillings posté par le chauffeur. L'équipe voit les deux.
+async function viewerPricing(req) {
+  if (isAdmin(req)) return 'both';
+  if (req.auth.userId) {
+    const { rows } = await query('SELECT currency FROM users WHERE id = $1', [req.auth.userId]);
+    if (rows[0]?.currency === 'USD') return 'USD';
+  }
+  return 'TZS';
+}
+
+// Lien WhatsApp de demande de place — le prix affiché suit la même cloison.
+function rideWhatsappLink(ride, pricing) {
   const depart = new Date(ride.departure_at).toLocaleString('fr-FR', {
     timeZone: 'Africa/Dar_es_Salaam',
     dateStyle: 'short',
     timeStyle: 'short',
   });
+  const prix =
+    pricing === 'USD'
+      ? `${config.sharedRideUsdPerSeat} USD`
+      : `${ride.price_per_seat} ${ride.currency}`;
   return buildTeamNotificationLink(
     [
       '🚌 Demande de place — trajet partagé zanziGo',
       `Trajet: ${ride.origin} → ${ride.destination}`,
       `Départ: ${depart}`,
-      `Prix par place: ${ride.price_per_seat} ${ride.currency}`,
+      `Prix par place: ${prix}`,
       `Réf: ${ride.id}`,
     ].join('\n')
   );
 }
 
-// Le chauffeur poste son prix en shillings ; les visiteurs/touristes voient
-// le même trajet en dollars (conversion au taux configuré, arrondie au
-// dollar supérieur). L'app affiche l'un ou l'autre selon le profil.
-const withLink = (ride) => ({
-  ...ride,
-  price_per_seat_usd: Math.ceil(Number(ride.price_per_seat) / config.exchangeTzsPerUsd),
-  whatsapp_link: rideWhatsappLink(ride),
-});
+function serializeRide(ride, pricing) {
+  const out = { ...ride, whatsapp_link: rideWhatsappLink(ride, pricing) };
+  if (pricing === 'USD') {
+    // Jamais le prix local sous les yeux d'un touriste.
+    delete out.price_per_seat;
+    out.currency = 'USD';
+    out.price_per_seat_usd = config.sharedRideUsdPerSeat;
+  } else if (pricing === 'both') {
+    out.price_per_seat_usd = config.sharedRideUsdPerSeat;
+  }
+  return out;
+}
 
 // GET /rides/locations — listes officielles pour les menus déroulants
 // de l'app (départs limités aux deux hubs, arrivées de l'île).
@@ -107,7 +128,8 @@ router.post(
         data.notes ?? null,
       ]
     );
-    res.status(201).json(withLink(rows[0]));
+    // Le chauffeur qui publie voit son prix local (TZS).
+    res.status(201).json(serializeRide(rows[0], 'TZS'));
   })
 );
 
@@ -125,7 +147,8 @@ router.get(
        ORDER BY r.departure_at ASC
        LIMIT 100`
     );
-    res.json(rows.map(withLink));
+    const pricing = await viewerPricing(req);
+    res.json(rows.map((r) => serializeRide(r, pricing)));
   })
 );
 
@@ -141,7 +164,7 @@ router.get(
       `SELECT * FROM posted_rides WHERE driver_id = $1 ORDER BY departure_at DESC`,
       [req.auth.driverId]
     );
-    res.json(rows.map(withLink));
+    res.json(rows.map((r) => serializeRide(r, 'TZS')));
   })
 );
 
@@ -172,7 +195,7 @@ router.patch(
        RETURNING *`,
       [data.seatsAvailable ?? null, data.status ?? null, req.params.id]
     );
-    res.json(withLink(rows[0]));
+    res.json(serializeRide(rows[0], isAdmin(req) ? 'both' : 'TZS'));
   })
 );
 

@@ -4,21 +4,27 @@ import React from 'react';
 
 import { ChargementCentre } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
+import { champ, type StatutVerification } from '@/lib/types';
 
 export default function Index() {
   const { session, chargement } = useAuth();
 
   if (chargement) return <ChargementCentre />;
 
-  // Pas connecté : parcours téléphone → OTP.
-  if (!session) return <Redirect href="/(auth)/telephone" />;
+  // Pas connecté : page d'accueil de marque (choix du profil).
+  if (!session) return <Redirect href="/(auth)/accueil" />;
 
-  // Mode chauffeur si le compte est lié à un profil chauffeur.
-  if (session.driver) return <Redirect href="/(driver)/courses" />;
+  // Profil chauffeur : mode chauffeur si validé, sinon suivi de candidature.
+  if (session.driver) {
+    const verifie =
+      champ<StatutVerification>(session.driver, 'verification_status', 'verificationStatus') ===
+      'verified';
+    return <Redirect href={verifie ? '/(driver)/courses' : '/(auth)/pro'} />;
+  }
 
-  // Connecté mais sans profil : choix du type de compte.
-  if (!session.user && !session.hotel) return <Redirect href="/(auth)/choix" />;
+  // Connecté mais sans profil : retour au choix de profil.
+  if (!session.user && !session.hotel) return <Redirect href="/(auth)/accueil" />;
 
-  // Client (ou hôtel) : onglets principaux.
+  // Client ou hôtel : onglets principaux (l'hôtel réserve pour ses clients).
   return <Redirect href="/(tabs)/reserver" />;
 }

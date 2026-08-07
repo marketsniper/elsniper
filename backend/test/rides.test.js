@@ -43,8 +43,8 @@ describe('Trajets partagés (rides)', () => {
     assert.equal(res.body.seats_available, 4);
     assert.equal(res.body.currency, 'TZS');
     assert.equal(Number(res.body.price_per_seat), 10000);
-    // 10 000 TZS au taux par défaut (2600 TZS/USD) → 4 USD (arrondi au dollar sup.)
-    assert.equal(res.body.price_per_seat_usd, 4);
+    // Le chauffeur voit son prix local — jamais le tarif touriste.
+    assert.equal(res.body.price_per_seat_usd, undefined);
     assert.ok(res.body.whatsapp_link.includes('wa.me'));
   });
 
@@ -100,6 +100,27 @@ describe('Trajets partagés (rides)', () => {
 
     const anonymous = await request(app).get('/api/rides');
     assert.equal(anonymous.status, 401);
+  });
+
+  it('cloison tarifaire : touriste → 17 USD sans prix local ; résident → TZS sans prix touriste', async () => {
+    const { token } = await createVerifiedDriver();
+    const ride = (await postRide(token)).body;
+
+    const { token: touristToken } = await createTourist();
+    const forTourist = await request(app).get('/api/rides').set(authHeaders(touristToken));
+    const t = forTourist.body.find((r) => r.id === ride.id);
+    assert.equal(t.price_per_seat_usd, 17);
+    assert.equal(t.currency, 'USD');
+    assert.equal(t.price_per_seat, undefined, 'le prix local ne doit pas fuiter vers un touriste');
+    assert.ok(t.whatsapp_link.includes(encodeURIComponent('17 USD')));
+
+    const { createResident } = await import('./setup.js');
+    const { token: residentToken } = await createResident();
+    const forResident = await request(app).get('/api/rides').set(authHeaders(residentToken));
+    const r = forResident.body.find((x) => x.id === ride.id);
+    assert.equal(Number(r.price_per_seat), 10000);
+    assert.equal(r.currency, 'TZS');
+    assert.equal(r.price_per_seat_usd, undefined, 'le tarif touriste ne s’affiche pas aux résidents');
   });
 
   it('un trajet clôturé ou sans places disparaît de la liste publique', async () => {
