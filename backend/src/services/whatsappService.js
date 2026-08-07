@@ -10,11 +10,11 @@ export function buildTeamNotificationLink(text) {
   return `https://wa.me/${number}?text=${encodeURIComponent(text)}`;
 }
 
-export function tripRequestMessage(trip, user) {
+export function tripRequestMessage(trip, bookerLabel) {
   return [
     `🚕 Nouvelle demande de trajet zanziGo`,
     `Type: ${trip.trip_type}`,
-    `Client: ${user.full_name} (${user.phone})`,
+    `Client: ${bookerLabel}`,
     `Départ: ${trip.pickup_location}`,
     `Arrivée: ${trip.dropoff_location}`,
     `Prix: ${trip.price} ${trip.currency}`,

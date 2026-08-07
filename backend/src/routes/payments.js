@@ -17,8 +17,12 @@ async function getPayment(id) {
 // (client de la course, ou expéditeur du colis).
 async function isPayer(payment, auth) {
   if (payment.trip_id) {
-    const { rows } = await query('SELECT user_id FROM trips WHERE id = $1', [payment.trip_id]);
-    return rows[0]?.user_id === auth.userId;
+    const { rows } = await query('SELECT user_id, hotel_id FROM trips WHERE id = $1', [payment.trip_id]);
+    if (!rows[0]) return false;
+    return (
+      (rows[0].user_id !== null && rows[0].user_id === auth.userId) ||
+      (rows[0].hotel_id !== null && rows[0].hotel_id === auth.hotelId)
+    );
   }
   const { rows } = await query(
     'SELECT sender_user_id, sender_hotel_id FROM packages WHERE id = $1',

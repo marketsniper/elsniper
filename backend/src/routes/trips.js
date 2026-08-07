@@ -10,13 +10,27 @@ import { buildTeamNotificationLink, tripRequestMessage } from '../services/whats
 
 const router = Router();
 
-const createTripSchema = z.object({
-  userId: z.string().uuid(),
-  tripType: z.enum(['private', 'shared_tourist', 'shared_local', 'posted_return']),
-  pickupLocation: z.string().min(2),
-  dropoffLocation: z.string().min(2),
-  scheduledAt: z.string().datetime({ offset: true }).optional(),
-});
+// Une course est réservée soit par un compte client (userId), soit par un
+// hôtel partenaire pour l'un de ses clients (hotelId + nom et téléphone).
+const createTripSchema = z
+  .object({
+    userId: z.string().uuid().optional(),
+    hotelId: z.string().uuid().optional(),
+    clientName: z.string().min(2).optional(),
+    clientPhone: z.string().min(6).optional(),
+    tripType: z.enum(['private', 'shared_tourist', 'shared_local', 'posted_return']),
+    pickupLocation: z.string().min(2),
+    dropoffLocation: z.string().min(2),
+    scheduledAt: z.string().datetime({ offset: true }).optional(),
+  })
+  .refine((d) => Boolean(d.userId) !== Boolean(d.hotelId), {
+    path: ['userId'],
+    message: 'Fournir soit userId (client), soit hotelId (hôtel) — pas les deux',
+  })
+  .refine((d) => !d.hotelId || (d.clientName && d.clientPhone), {
+    path: ['clientName'],
+    message: "clientName et clientPhone requis pour une réservation d'hôtel",
+  });
 
 const assignDriverSchema = z.object({ driverId: z.string().uuid() });
 const scanSchema = z.object({ qrCode: z.string().min(1) });
@@ -41,42 +55,68 @@ router.post(
   requireAuth,
   asyncHandler(async (req, res) => {
     const data = createTripSchema.parse(req.body);
-    if (!isAdmin(req) && data.userId !== req.auth.userId) {
-      throw new HttpError(403, 'forbidden', 'Un client ne peut réserver que pour lui-même');
-    }
 
-    const { rows: userRows } = await query('SELECT * FROM users WHERE id = $1', [data.userId]);
-    const user = userRows[0];
-    if (!user) throw notFound('Utilisateur');
+    let bookerLabel;
+    let currency;
 
-    if (data.tripType === 'shared_local') {
-      if (user.account_type !== 'resident') {
+    if (data.userId) {
+      // ----- Réservation par un compte client -----
+      if (!isAdmin(req) && data.userId !== req.auth.userId) {
+        throw new HttpError(403, 'forbidden', 'Un client ne peut réserver que pour lui-même');
+      }
+      const { rows: userRows } = await query('SELECT * FROM users WHERE id = $1', [data.userId]);
+      const user = userRows[0];
+      if (!user) throw notFound('Utilisateur');
+
+      if (data.tripType === 'shared_local') {
+        if (user.account_type !== 'resident') {
+          throw new HttpError(403, 'resident_only', 'Le tarif local est réservé aux comptes résidents');
+        }
+        if (user.verification_status !== 'verified') {
+          throw new HttpError(
+            403,
+            'resident_not_verified',
+            "Le tarif local nécessite un compte résident vérifié (document en cours de validation)"
+          );
+        }
+      }
+      currency = user.currency;
+      bookerLabel = `${user.full_name} (${user.phone})`;
+    } else {
+      // ----- Réservation par un hôtel partenaire, pour son client -----
+      if (!isAdmin(req) && data.hotelId !== req.auth.hotelId) {
+        throw new HttpError(403, 'forbidden', 'Un hôtel ne peut réserver que pour ses propres clients');
+      }
+      const { rows: hotelRows } = await query('SELECT * FROM hotels WHERE id = $1', [data.hotelId]);
+      const hotel = hotelRows[0];
+      if (!hotel) throw notFound('Hôtel');
+
+      if (data.tripType === 'shared_local') {
         throw new HttpError(403, 'resident_only', 'Le tarif local est réservé aux comptes résidents');
       }
-      if (user.verification_status !== 'verified') {
-        throw new HttpError(
-          403,
-          'resident_not_verified',
-          "Le tarif local nécessite un compte résident vérifié (document en cours de validation)"
-        );
-      }
+      // Les hôtels partenaires sont facturés en shillings.
+      currency = 'TZS';
+      bookerLabel = `${hotel.name} (hôtel) pour ${data.clientName} (${data.clientPhone})`;
     }
 
-    const pricing = priceTrip(data.tripType, user.currency);
+    const pricing = priceTrip(data.tripType, currency);
     if (!pricing) {
       throw new HttpError(
         400,
         'unsupported_trip_type',
-        `Le type de trajet ${data.tripType} n'est pas disponible en ${user.currency}`
+        `Le type de trajet ${data.tripType} n'est pas disponible en ${currency}`
       );
     }
 
     const { rows } = await query(
-      `INSERT INTO trips (user_id, trip_type, pickup_location, dropoff_location, scheduled_at, price, commission, currency)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      `INSERT INTO trips (user_id, hotel_id, client_name, client_phone, trip_type, pickup_location, dropoff_location, scheduled_at, price, commission, currency)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
        RETURNING *`,
       [
-        data.userId,
+        data.userId ?? null,
+        data.hotelId ?? null,
+        data.clientName ?? null,
+        data.clientPhone ?? null,
         data.tripType,
         data.pickupLocation,
         data.dropoffLocation,
@@ -88,7 +128,7 @@ router.post(
     );
     let trip = rows[0];
 
-    const whatsappLink = buildTeamNotificationLink(tripRequestMessage(trip, user));
+    const whatsappLink = buildTeamNotificationLink(tripRequestMessage(trip, bookerLabel));
     const updated = await query('UPDATE trips SET whatsapp_link = $1 WHERE id = $2 RETURNING *', [
       whatsappLink,
       trip.id,
@@ -97,18 +137,36 @@ router.post(
   })
 );
 
-// GET /trips?userId= — historique d'un utilisateur (lui-même ou l'équipe).
+// GET /trips?userId= ou ?hotelId= — historique (le titulaire ou l'équipe).
 router.get(
   '/',
   requireAuth,
   asyncHandler(async (req, res) => {
-    const { userId } = z.object({ userId: z.string().uuid() }).parse(req.query);
-    if (!isAdmin(req) && userId !== req.auth.userId) {
-      throw new HttpError(403, 'forbidden', 'Accès réservé au titulaire du compte');
+    const { userId, hotelId } = z
+      .object({ userId: z.string().uuid().optional(), hotelId: z.string().uuid().optional() })
+      .refine((d) => Boolean(d.userId) !== Boolean(d.hotelId), {
+        path: ['userId'],
+        message: 'Fournir userId ou hotelId',
+      })
+      .parse(req.query);
+
+    if (userId) {
+      if (!isAdmin(req) && userId !== req.auth.userId) {
+        throw new HttpError(403, 'forbidden', 'Accès réservé au titulaire du compte');
+      }
+      const { rows } = await query(
+        'SELECT * FROM trips WHERE user_id = $1 ORDER BY created_at DESC',
+        [userId]
+      );
+      return res.json(rows);
+    }
+
+    if (!isAdmin(req) && hotelId !== req.auth.hotelId) {
+      throw new HttpError(403, 'forbidden', "Accès réservé à l'hôtel concerné");
     }
     const { rows } = await query(
-      'SELECT * FROM trips WHERE user_id = $1 ORDER BY created_at DESC',
-      [userId]
+      'SELECT * FROM trips WHERE hotel_id = $1 ORDER BY created_at DESC',
+      [hotelId]
     );
     res.json(rows);
   })
@@ -122,10 +180,11 @@ router.get(
     const trip = await getTrip(req.params.id);
     const allowed =
       isAdmin(req) ||
-      trip.user_id === req.auth.userId ||
+      (trip.user_id !== null && trip.user_id === req.auth.userId) ||
+      (trip.hotel_id !== null && trip.hotel_id === req.auth.hotelId) ||
       (trip.driver_id !== null && trip.driver_id === req.auth.driverId);
     if (!allowed) {
-      throw new HttpError(403, 'forbidden', 'Accès réservé au client, au chauffeur assigné ou à l\'équipe');
+      throw new HttpError(403, 'forbidden', 'Accès réservé au réservateur, au chauffeur assigné ou à l\'équipe');
     }
     res.json(trip);
   })
@@ -173,8 +232,11 @@ router.post(
   requireAuth,
   asyncHandler(async (req, res) => {
     const trip = await getTrip(req.params.id);
-    if (!isAdmin(req) && trip.user_id !== req.auth.userId) {
-      throw new HttpError(403, 'forbidden', 'Accès réservé au client de la course');
+    const isBooker =
+      (trip.user_id !== null && trip.user_id === req.auth.userId) ||
+      (trip.hotel_id !== null && trip.hotel_id === req.auth.hotelId);
+    if (!isAdmin(req) && !isBooker) {
+      throw new HttpError(403, 'forbidden', 'Accès réservé au réservateur de la course');
     }
 
     if (trip.status !== 'driver_confirmed') {
@@ -291,8 +353,11 @@ router.post(
   asyncHandler(async (req, res) => {
     const data = ratingSchema.parse(req.body);
     const trip = await getTrip(req.params.id);
-    if (!isAdmin(req) && trip.user_id !== req.auth.userId) {
-      throw new HttpError(403, 'forbidden', 'Seul le client de la course peut la noter');
+    const isBooker =
+      (trip.user_id !== null && trip.user_id === req.auth.userId) ||
+      (trip.hotel_id !== null && trip.hotel_id === req.auth.hotelId);
+    if (!isAdmin(req) && !isBooker) {
+      throw new HttpError(403, 'forbidden', 'Seul le réservateur de la course peut la noter');
     }
 
     if (trip.status !== 'completed') {
