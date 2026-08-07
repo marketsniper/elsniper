@@ -24,7 +24,7 @@ async function postRide(token, extra = {}) {
     .post('/api/rides')
     .set(authHeaders(token))
     .send({
-      origin: 'Stone Town',
+      origin: 'Aéroport (AAKIA)',
       destination: 'Nungwi',
       departureAt: inOneDay(),
       seatsTotal: 4,
@@ -65,6 +65,25 @@ describe('Trajets partagés (rides)', () => {
     const res = await postRide(token, { departureAt: yesterday() });
     assert.equal(res.status, 400);
     assert.equal(res.body.error.code, 'departure_in_past');
+  });
+
+  it('point de départ hors des deux hubs → 400 ; arrivée inconnue → 400', async () => {
+    const { token } = await createVerifiedDriver();
+    const badOrigin = await postRide(token, { origin: 'Kendwa' });
+    assert.equal(badOrigin.status, 400);
+    assert.equal(badOrigin.body.error.code, 'validation_error');
+
+    const badDestination = await postRide(token, { destination: 'Zanzibar City Mall' });
+    assert.equal(badDestination.status, 400);
+    assert.equal(badDestination.body.error.code, 'validation_error');
+  });
+
+  it('GET /rides/locations : listes pour les menus déroulants (2 départs)', async () => {
+    const res = await request(app).get('/api/rides/locations');
+    assert.equal(res.status, 200);
+    assert.deepEqual(res.body.origins, ['Aéroport (AAKIA)', 'Stone Town Ferry']);
+    assert.ok(res.body.destinations.includes('Nungwi'));
+    assert.ok(res.body.destinations.length >= 10);
   });
 
   it('la liste publique montre les trajets ouverts à venir avec les infos chauffeur', async () => {

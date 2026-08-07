@@ -16,12 +16,13 @@ import { asyncHandler } from '../middleware/errorHandler.js';
 import { isAdmin, requireAuth } from '../middleware/auth.js';
 import { buildTeamNotificationLink } from '../services/whatsappService.js';
 import { config } from '../config.js';
+import { RIDE_DESTINATIONS, RIDE_ORIGINS } from '../services/locations.js';
 
 const router = Router();
 
 const createRideSchema = z.object({
-  origin: z.string().min(2).max(300),
-  destination: z.string().min(2).max(300),
+  origin: z.enum(RIDE_ORIGINS, { message: 'Point de départ inconnu' }),
+  destination: z.enum(RIDE_DESTINATIONS, { message: "Ville d'arrivée inconnue" }),
   departureAt: z.string().datetime({ offset: true }),
   seatsTotal: z.number().int().min(1).max(8),
   pricePerSeat: z.number().positive(),
@@ -62,6 +63,12 @@ const withLink = (ride) => ({
   ...ride,
   price_per_seat_usd: Math.ceil(Number(ride.price_per_seat) / config.exchangeTzsPerUsd),
   whatsapp_link: rideWhatsappLink(ride),
+});
+
+// GET /rides/locations — listes officielles pour les menus déroulants
+// de l'app (départs limités aux deux hubs, arrivées de l'île).
+router.get('/locations', (_req, res) => {
+  res.json({ origins: RIDE_ORIGINS, destinations: RIDE_DESTINATIONS });
 });
 
 // POST /rides — un chauffeur validé publie son prochain trajet partagé.
