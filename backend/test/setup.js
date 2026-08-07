@@ -238,7 +238,8 @@ export async function createDriverApplication({
       vehicleModel: 'Toyota Noah',
       zone,
       licenseDocumentUrl: DOC_URL,
-      idDocumentUrl: DOC_URL,
+      insuranceDocumentUrl: DOC_URL,
+      vehiclePhotoUrl: DOC_URL,
     });
   if (res.status !== 201) {
     throw new Error(`candidature chauffeur échouée : ${JSON.stringify(res.body)}`);

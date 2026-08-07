@@ -22,6 +22,7 @@ import {
 } from '@/components/ui';
 import { api, ErreurApi } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { useT } from '@/lib/i18n';
 import { couleurs, espaces } from '@/lib/theme';
 import { champ, type StatutVerification } from '@/lib/types';
 
@@ -33,10 +34,16 @@ function LigneDocument({
   label,
   uri,
   onChoisir,
+  texteAjoute,
+  texteChanger,
+  texteAjouter,
 }: {
   label: string;
   uri: string | null;
   onChoisir: () => void;
+  texteAjoute: string;
+  texteChanger: string;
+  texteAjouter: string;
 }) {
   return (
     <View style={styles.blocDocument}>
@@ -44,14 +51,14 @@ function LigneDocument({
       {uri ? (
         <View style={styles.ligneDocumentOk}>
           <Ionicons name="checkmark-circle" size={22} color={couleurs.succes} />
-          <Text style={styles.documentOk}>Document ajouté</Text>
+          <Text style={styles.documentOk}>{texteAjoute}</Text>
           <Pressable onPress={onChoisir} hitSlop={8}>
-            <Text style={styles.changer}>Changer</Text>
+            <Text style={styles.changer}>{texteChanger}</Text>
           </Pressable>
         </View>
       ) : (
         <Bouton
-          titre="Ajouter le document"
+          titre={texteAjouter}
           icone="cloud-upload-outline"
           variante="secondaire"
           onPress={onChoisir}
@@ -64,6 +71,7 @@ function LigneDocument({
 export default function EcranPro() {
   const router = useRouter();
   const { session, majSession, deconnexion } = useAuth();
+  const { t } = useT();
   const chauffeur = session?.driver ?? null;
   const statutVerif =
     champ<StatutVerification>(chauffeur, 'verification_status', 'verificationStatus') ?? 'pending';
@@ -82,7 +90,7 @@ export default function EcranPro() {
     setErreur('');
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      setErreur("Autorisez l'accès aux photos pour ajouter vos documents.");
+      setErreur(t('client_erreur_photos'));
       return;
     }
     const resultat = await ImagePicker.launchImageLibraryAsync({
@@ -101,23 +109,23 @@ export default function EcranPro() {
       return;
     }
     if (nom.trim().length < 2) {
-      setErreur('Indiquez votre nom complet.');
+      setErreur(t('client_erreur_nom'));
       return;
     }
     if (permis.trim().length < 3) {
-      setErreur('Indiquez votre numéro de permis de conduire.');
+      setErreur(t('pro_erreur_permis'));
       return;
     }
     if (plaque.trim().length < 3) {
-      setErreur("Indiquez la plaque d'immatriculation de votre véhicule.");
+      setErreur(t('pro_erreur_plaque'));
       return;
     }
     if (zone.trim().length < 2) {
-      setErreur('Indiquez votre zone de travail (ex. : Stone Town, Nungwi).');
+      setErreur(t('pro_erreur_zone'));
       return;
     }
     if (!permisUri || !identiteUri) {
-      setErreur('Ajoutez vos deux documents : permis de conduire et pièce d’identité.');
+      setErreur(t('pro_erreur_docs'));
       return;
     }
     setCharge(true);
@@ -141,9 +149,7 @@ export default function EcranPro() {
       // bascule sur l'état « candidature envoyée ».
       await majSession({ driver: profil });
     } catch (e) {
-      setErreur(
-        e instanceof ErreurApi ? e.message : "L'envoi de la candidature a échoué. Réessayez."
-      );
+      setErreur(e instanceof ErreurApi ? e.message : t('pro_erreur_envoi'));
     } finally {
       setCharge(false);
     }
@@ -158,17 +164,15 @@ export default function EcranPro() {
   if (chauffeur) {
     if (statutVerif === 'verified') {
       return (
-        <Ecran>
+        <Ecran fond="vagues">
           <Carte style={styles.carteEtat}>
             <View style={styles.bulleEtat}>
               <Ionicons name="checkmark-circle" size={40} color={couleurs.succes} />
             </View>
-            <Titre>Compte chauffeur activé</Titre>
-            <SousTitre centre>
-              Votre compte Taxi Partner est vérifié. Accédez à vos courses et scannez les QR.
-            </SousTitre>
+            <Titre>{t('pro_active')}</Titre>
+            <SousTitre centre>{t('pro_active_texte')}</SousTitre>
             <Bouton
-              titre="Accéder à mes courses"
+              titre={t('pro_acceder')}
               icone="car-outline"
               onPress={() => router.replace('/')}
             />
@@ -178,45 +182,46 @@ export default function EcranPro() {
     }
     if (statutVerif === 'rejected') {
       return (
-        <Ecran>
+        <Ecran fond="vagues">
           <Carte style={styles.carteEtat}>
             <View style={[styles.bulleEtat, { backgroundColor: couleurs.dangerFond }]}>
               <Ionicons name="close-circle" size={40} color={couleurs.danger} />
             </View>
-            <Titre>Candidature refusée</Titre>
-            <SousTitre centre>
-              L&apos;équipe zanziGo n&apos;a pas pu valider votre candidature. Contactez-nous sur
-              WhatsApp pour en savoir plus ou mettre vos documents à jour.
-            </SousTitre>
+            <Titre>{t('pro_refusee')}</Titre>
+            <SousTitre centre>{t('pro_refusee_texte')}</SousTitre>
             <Bouton
-              titre="Contacter l'équipe sur WhatsApp"
+              titre={t('pro_contacter')}
               icone="logo-whatsapp"
               onPress={() => Linking.openURL(WHATSAPP_EQUIPE)}
             />
-            <Bouton titre="Changer de compte" variante="secondaire" onPress={changerDeCompte} />
+            <Bouton
+              titre={t('pro_changer_compte')}
+              variante="secondaire"
+              onPress={changerDeCompte}
+            />
           </Carte>
         </Ecran>
       );
     }
     // pending
     return (
-      <Ecran>
+      <Ecran fond="vagues">
         <Carte style={styles.carteEtat}>
           <View style={[styles.bulleEtat, { backgroundColor: couleurs.attenteFond }]}>
             <Ionicons name="hourglass-outline" size={40} color={couleurs.attente} />
           </View>
-          <Titre>Candidature envoyée</Titre>
-          <SousTitre centre>
-            L&apos;équipe zanziGo vérifie votre permis, votre véhicule et votre assurance, puis
-            vous contactera sur WhatsApp. Une fois validé, reconnectez-vous simplement avec
-            votre numéro de téléphone.
-          </SousTitre>
+          <Titre>{t('pro_candidature_envoyee')}</Titre>
+          <SousTitre centre>{t('pro_candidature_texte')}</SousTitre>
           <Bouton
-            titre="Contacter l'équipe sur WhatsApp"
+            titre={t('pro_contacter')}
             icone="logo-whatsapp"
             onPress={() => Linking.openURL(WHATSAPP_EQUIPE)}
           />
-          <Bouton titre="Changer de compte" variante="secondaire" onPress={changerDeCompte} />
+          <Bouton
+            titre={t('pro_changer_compte')}
+            variante="secondaire"
+            onPress={changerDeCompte}
+          />
         </Carte>
       </Ecran>
     );
@@ -224,60 +229,60 @@ export default function EcranPro() {
 
   // --- Pas encore de profil chauffeur : formulaire de candidature. ---
   return (
-    <Ecran>
+    <Ecran fond="vagues">
       <Carte>
-        <Titre>Devenir chauffeur</Titre>
-        <SousTitre>
-          Nouveau ? Déposez votre candidature Taxi Partner : l&apos;équipe zanziGo vérifie vos
-          documents et vous répond sous 48 h. (Déjà Taxi Partner ? Votre numéro vous connecte
-          directement à votre compte.)
-        </SousTitre>
-        <Champ label="Nom complet" value={nom} onChangeText={setNom} placeholder="Juma Ali" />
+        <Titre>{t('pro_titre')}</Titre>
+        <SousTitre>{t('pro_intro')}</SousTitre>
+        <Champ label={t('client_nom')} value={nom} onChangeText={setNom} placeholder="Juma Ali" />
         <Champ
-          label="Numéro de permis de conduire"
+          label={t('pro_permis')}
           value={permis}
           onChangeText={setPermis}
-          placeholder="Ex. : Z123456"
+          placeholder="Z123456"
           autoCapitalize="characters"
         />
         <Champ
-          label="Plaque d'immatriculation"
+          label={t('pro_plaque')}
           value={plaque}
           onChangeText={setPlaque}
-          placeholder="Ex. : Z 123 ABC"
+          placeholder="Z 123 ABC"
           autoCapitalize="characters"
         />
         <Champ
-          label="Modèle du véhicule (optionnel)"
+          label={t('pro_modele')}
           value={modele}
           onChangeText={setModele}
-          placeholder="Ex. : Toyota Noah"
+          placeholder="Toyota Noah"
         />
         <Champ
-          label="Zone de travail"
+          label={t('pro_zone')}
           value={zone}
           onChangeText={setZone}
-          placeholder="Ex. : Stone Town, Nungwi…"
+          placeholder="Stone Town, Nungwi…"
         />
 
         <LigneDocument
-          label="Permis de conduire (photo lisible)"
+          label={t('pro_doc_permis')}
           uri={permisUri}
           onChoisir={() => choisirImage(setPermisUri)}
+          texteAjoute={t('client_doc_ajoute')}
+          texteChanger={t('client_doc_changer')}
+          texteAjouter={t('pro_doc_ajouter')}
         />
         <LigneDocument
-          label="Pièce d'identité (photo lisible)"
+          label={t('pro_doc_identite')}
           uri={identiteUri}
           onChoisir={() => choisirImage(setIdentiteUri)}
+          texteAjoute={t('client_doc_ajoute')}
+          texteChanger={t('client_doc_changer')}
+          texteAjouter={t('pro_doc_ajouter')}
         />
 
-        <EncartInfo icone="shield-checkmark-outline">
-          Vos documents servent uniquement à la vérification par l&apos;équipe zanziGo.
-        </EncartInfo>
+        <EncartInfo icone="shield-checkmark-outline">{t('pro_note_docs')}</EncartInfo>
 
         <TexteErreur>{erreur}</TexteErreur>
         <Bouton
-          titre="Envoyer ma candidature"
+          titre={t('pro_bouton')}
           icone="send-outline"
           onPress={envoyerCandidature}
           charge={charge}

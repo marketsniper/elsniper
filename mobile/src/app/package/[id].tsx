@@ -19,12 +19,12 @@ import {
   Titre,
 } from '@/components/ui';
 import { api, ErreurApi } from '@/lib/api';
+import { libelleStatutColis, useT } from '@/lib/i18n';
 import { couleurs, espaces, ombres, rayons } from '@/lib/theme';
 import {
   champ,
   ETAPES_COLIS,
   formaterPrix,
-  LIBELLES_STATUT_COLIS,
   type Colis,
   type StatutColis,
 } from '@/lib/types';
@@ -34,6 +34,7 @@ const WHATSAPP_EQUIPE = 'https://wa.me/255779000000';
 
 export default function EcranDetailColis() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { t } = useT();
   const [colis, setColis] = useState<Colis | null>(null);
   const [erreur, setErreur] = useState('');
   const [chargePaiement, setChargePaiement] = useState(false);
@@ -47,9 +48,9 @@ export default function EcranDetailColis() {
       setColis(await api.obtenirColis(id));
       setErreur('');
     } catch (e) {
-      setErreur(e instanceof ErreurApi ? e.message : 'Colis introuvable.');
+      setErreur(e instanceof ErreurApi ? e.message : t('dcolis_introuvable'));
     }
-  }, [id]);
+  }, [id, t]);
 
   useFocusEffect(
     useCallback(() => {
@@ -59,11 +60,11 @@ export default function EcranDetailColis() {
 
   if (!colis) {
     return erreur ? (
-      <Ecran>
+      <Ecran fond="lagon">
         <TexteErreur>{erreur}</TexteErreur>
       </Ecran>
     ) : (
-      <ChargementCentre message="Chargement de votre colis…" />
+      <ChargementCentre message={t('dcolis_chargement')} />
     );
   }
 
@@ -82,10 +83,10 @@ export default function EcranDetailColis() {
       if (paiement.payment_link) {
         await Linking.openURL(paiement.payment_link);
       } else {
-        setErreur("Le lien de paiement n'est pas encore disponible.");
+        setErreur(t('trip_lien_indisponible'));
       }
     } catch (e) {
-      setErreur(e instanceof ErreurApi ? e.message : 'Paiement indisponible pour le moment.');
+      setErreur(e instanceof ErreurApi ? e.message : t('trip_paiement_indisponible'));
     } finally {
       setChargePaiement(false);
     }
@@ -101,17 +102,17 @@ export default function EcranDetailColis() {
       setPaiementId(null);
       await charger();
     } catch (e) {
-      setErreur(e instanceof ErreurApi ? e.message : 'Confirmation impossible.');
+      setErreur(e instanceof ErreurApi ? e.message : t('trip_confirmation_impossible'));
     } finally {
       setChargeConfirmation(false);
     }
   };
 
   return (
-    <Ecran>
+    <Ecran fond="lagon">
       <Carte style={styles.carteQr}>
         <View style={styles.enTeteQr}>
-          <Titre>Votre colis</Titre>
+          <Titre>{t('dcolis_titre')}</Titre>
           <BadgeStatutColis statut={statut} />
         </View>
         {codeQr ? (
@@ -125,64 +126,65 @@ export default function EcranDetailColis() {
             <Text style={styles.codeTexte}>{codeQr}</Text>
           </View>
         ) : (
-          <TexteErreur>QR code indisponible.</TexteErreur>
+          <TexteErreur>{t('dcolis_qr_indisponible')}</TexteErreur>
         )}
-        <SousTitre centre>Présentez ce QR au chauffeur</SousTitre>
-        <Text style={styles.consigne}>
-          Il le scanne au ramassage puis à la livraison.
-        </Text>
+        <SousTitre centre>{t('dcolis_presenter')}</SousTitre>
+        <Text style={styles.consigne}>{t('dcolis_consigne')}</Text>
       </Carte>
 
       <Carte>
         <LigneInfo
-          label="Collecte"
+          label={t('dcolis_collecte')}
           valeur={String(champ(colis, 'pickup_location', 'pickupLocation') ?? '—')}
         />
         <LigneInfo
-          label="Livraison"
+          label={t('dcolis_livraison')}
           valeur={String(champ(colis, 'dropoff_location', 'dropoffLocation') ?? '—')}
         />
         <LigneInfo
-          label="Destinataire"
+          label={t('dcolis_destinataire')}
           valeur={String(champ(colis, 'recipient_name', 'recipientName') ?? '—')}
         />
         <LigneInfo
-          label="Téléphone"
+          label={t('commun_telephone')}
           valeur={String(champ(colis, 'recipient_phone', 'recipientPhone') ?? '—')}
         />
         {!!champ(colis, 'description') && (
-          <LigneInfo label="Description" valeur={String(champ(colis, 'description'))} />
+          <LigneInfo label={t('commun_description')} valeur={String(champ(colis, 'description'))} />
         )}
-        <LigneInfo label="Prix" valeur={formaterPrix(colis)} />
+        <LigneInfo label={t('commun_prix')} valeur={formaterPrix(colis)} />
       </Carte>
 
       <Carte>
-        <Text style={styles.titreSuivi}>Suivi du colis</Text>
+        <Text style={styles.titreSuivi}>{t('dcolis_suivi')}</Text>
         <TimelineStatut
-          etapes={ETAPES_COLIS.map((cle) => ({ cle, label: LIBELLES_STATUT_COLIS[cle] }))}
+          etapes={ETAPES_COLIS.map((cle) => ({ cle, label: libelleStatutColis(cle, t) }))}
           statutCourant={statut}
         />
       </Carte>
 
       {peutPayer && (
-        <Bouton titre="Payer l'envoi" icone="card-outline" onPress={payer} charge={chargePaiement} />
+        <Bouton
+          titre={t('dcolis_payer')}
+          icone="card-outline"
+          onPress={payer}
+          charge={chargePaiement}
+        />
       )}
       {__DEV__ && peutPayer && paiementId && (
         <Bouton
-          titre="Simuler la confirmation (dev)"
+          titre={t('trip_confirm_dev')}
           variante="secondaire"
           onPress={simulerConfirmation}
           charge={chargeConfirmation}
         />
       )}
       {statut === 'paid' && (
-        <EncartInfo icone="checkmark-circle-outline">
-          Paiement reçu — un chauffeur va ramasser votre colis.
-        </EncartInfo>
+        <EncartInfo icone="checkmark-circle-outline">{t('dcolis_paiement_recu')}</EncartInfo>
       )}
 
       <Bouton
-        titre="Contacter l'équipe WhatsApp"
+        titre={t('commun_contact_whatsapp')}
         icone="logo-whatsapp"
         variante="secondaire"
         onPress={() => Linking.openURL(lienWhatsapp)}
@@ -190,7 +192,7 @@ export default function EcranDetailColis() {
 
       <TexteErreur>{erreur}</TexteErreur>
       <Bouton
-        titre="Actualiser le statut"
+        titre={t('commun_actualiser_statut')}
         icone="refresh-outline"
         variante="secondaire"
         onPress={charger}

@@ -4,13 +4,14 @@ import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { useT } from '@/lib/i18n';
 import { couleurs, espaces, rayons, tailles } from '@/lib/theme';
 
 export function Selecteur({
   label,
   valeur,
   options,
-  placeholder = 'Choisir…',
+  placeholder,
   onChange,
 }: {
   label: string;
@@ -19,7 +20,9 @@ export function Selecteur({
   placeholder?: string;
   onChange: (valeur: string) => void;
 }) {
+  const { t } = useT();
   const [ouvert, setOuvert] = useState(false);
+  const texteVide = placeholder ?? t('commun_choisir');
 
   return (
     <View style={styles.conteneur}>
@@ -30,7 +33,7 @@ export function Selecteur({
         style={({ pressed }) => [styles.champ, pressed && { opacity: 0.7 }]}
       >
         <Text style={valeur ? styles.valeur : styles.placeholder}>
-          {valeur || placeholder}
+          {valeur || texteVide}
         </Text>
         <Ionicons name="chevron-down" size={18} color={couleurs.texteSecondaire} />
       </Pressable>

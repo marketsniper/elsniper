@@ -1,10 +1,12 @@
-// Pile du parcours d'authentification / création de profil.
+// Pile du parcours d'authentification / création de profil (titres traduits).
 import { Stack } from 'expo-router';
 import React from 'react';
 
+import { useT } from '@/lib/i18n';
 import { couleurs } from '@/lib/theme';
 
 export default function LayoutAuth() {
+  const { t } = useT();
   return (
     <Stack
       screenOptions={{
@@ -17,12 +19,12 @@ export default function LayoutAuth() {
     >
       <Stack.Screen name="accueil" options={{ headerShown: false }} />
       <Stack.Screen name="telephone" options={{ title: '', headerTransparent: true }} />
-      <Stack.Screen name="otp" options={{ title: 'Code de vérification' }} />
+      <Stack.Screen name="otp" options={{ title: t('titre_otp') }} />
       <Stack.Screen name="choix" options={{ headerShown: false }} />
-      <Stack.Screen name="client" options={{ title: 'Profil client' }} />
-      <Stack.Screen name="hotel" options={{ title: 'Hôtel partenaire' }} />
-      <Stack.Screen name="hotel-inscription" options={{ title: 'Compte partenaire' }} />
-      <Stack.Screen name="pro" options={{ title: 'Devenir chauffeur' }} />
+      <Stack.Screen name="client" options={{ title: t('titre_client') }} />
+      <Stack.Screen name="hotel" options={{ title: t('titre_hotel') }} />
+      <Stack.Screen name="hotel-inscription" options={{ title: t('titre_hotel_inscription') }} />
+      <Stack.Screen name="pro" options={{ title: t('titre_pro') }} />
     </Stack>
   );
 }

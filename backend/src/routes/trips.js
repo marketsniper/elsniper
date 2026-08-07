@@ -114,7 +114,10 @@ router.post(
       bookerLabel = `${hotel.name} (hôtel) pour ${data.clientName} (${data.clientPhone})`;
     }
 
-    const pricing = priceTrip(data.tripType, audience);
+    const pricing = priceTrip(data.tripType, audience, {
+      pickup: data.pickupLocation,
+      dropoff: data.dropoffLocation,
+    });
     if (!pricing) {
       throw new HttpError(
         400,

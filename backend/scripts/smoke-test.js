@@ -189,7 +189,8 @@ async function main() {
         vehicleModel: 'Toyota Noah',
         zone: 'Stone Town',
         licenseDocumentUrl: 'https://files.example.com/lic-juma.jpg',
-        idDocumentUrl: 'https://files.example.com/id-juma.jpg',
+        insuranceDocumentUrl: 'https://files.example.com/assurance-juma.jpg',
+        vehiclePhotoUrl: 'https://files.example.com/vehicule-juma.jpg',
       },
       bearer(driverToken)
     )

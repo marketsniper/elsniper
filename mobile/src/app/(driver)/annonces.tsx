@@ -3,7 +3,8 @@
 // seatsTotal (1-8), pricePerSeat (TZS), notes?} — chauffeur VALIDÉ uniquement
 // (403 driver_not_verified sinon, 400 departure_in_past si l'heure est passée).
 // « Mes trajets publiés » : GET /rides/mine, ajustement des places et
-// clôture/annulation via PATCH /rides/:id.
+// clôture/annulation via PATCH /rides/:id. Lieux : listes fermées servies par
+// GET /rides/locations (repli local ORIGINES_RIDES / DESTINATIONS_RIDES).
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from 'expo-router';
 import React, { useCallback, useState } from 'react';
@@ -23,13 +24,13 @@ import {
 } from '@/components/ui';
 import { api, ErreurApi } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { libelleStatutRide, useT } from '@/lib/i18n';
 import { couleurs, espaces, ombres, rayons } from '@/lib/theme';
 import {
   champ,
   DESTINATIONS_RIDES,
   formaterDate,
   formaterMontant,
-  LIBELLES_STATUT_RIDE,
   ORIGINES_RIDES,
   type Ride,
   type StatutRide,
@@ -51,6 +52,7 @@ function tonStatut(statut: StatutRide | undefined) {
 
 export default function EcranAnnonces() {
   const { session } = useAuth();
+  const { t } = useT();
   const chauffeur = session?.driver ?? null;
   const verifie =
     champ<StatutVerification>(chauffeur, 'verification_status', 'verificationStatus') ===
@@ -79,8 +81,8 @@ export default function EcranAnnonces() {
     try {
       setMesRides(await api.listerMesRides());
       setErreurListe('');
-    } catch (e) {
-      setErreurListe(e instanceof Error ? e.message : 'Chargement des annonces impossible.');
+    } catch {
+      setErreurListe(t('annonces_erreur_chargement'));
     }
     try {
       const lieux = await api.lieuxRides();
@@ -89,7 +91,7 @@ export default function EcranAnnonces() {
     } catch {
       // silencieux : repli sur les listes locales
     }
-  }, [chauffeur]);
+  }, [chauffeur, t]);
 
   useFocusEffect(
     useCallback(() => {
@@ -101,26 +103,26 @@ export default function EcranAnnonces() {
     setErreur('');
     setMessageOk('');
     if (!origine || !destination) {
-      setErreur('Choisissez le hub de départ et la ville de destination.');
+      setErreur(t('annonces_erreur_lieux'));
       return;
     }
     const date = new Date(depart.trim().replace(' ', 'T'));
     if (!depart.trim() || Number.isNaN(date.getTime())) {
-      setErreur('Date de départ invalide. Format attendu : AAAA-MM-JJ HH:MM.');
+      setErreur(t('annonces_erreur_date'));
       return;
     }
     if (date.getTime() <= Date.now()) {
-      setErreur("L'heure de départ doit être dans le futur.");
+      setErreur(t('annonces_erreur_futur'));
       return;
     }
     const nbPlaces = Number(places);
     if (!Number.isInteger(nbPlaces) || nbPlaces < 1 || nbPlaces > PLACES_MAX) {
-      setErreur(`Le nombre de places doit être compris entre 1 et ${PLACES_MAX}.`);
+      setErreur(t('annonces_erreur_places', { max: PLACES_MAX }));
       return;
     }
     const prix = Number(prixPlace.replace(/[\s]/g, ''));
     if (!Number.isFinite(prix) || prix <= 0) {
-      setErreur('Indiquez le prix par place en TZS (ex. : 8000).');
+      setErreur(t('annonces_erreur_prix'));
       return;
     }
     setCharge(true);
@@ -139,15 +141,15 @@ export default function EcranAnnonces() {
       setPlaces('4');
       setPrixPlace('');
       setNotes('');
-      setMessageOk('Trajet publié ! Les clients peuvent maintenant réserver une place.');
+      setMessageOk(t('annonces_publie'));
       await rafraichir();
     } catch (e) {
       if (e instanceof ErreurApi && e.code === 'departure_in_past') {
-        setErreur("L'heure de départ doit être dans le futur.");
+        setErreur(t('annonces_erreur_futur'));
       } else if (e instanceof ErreurApi && e.code === 'driver_not_verified') {
-        setErreur("Votre compte chauffeur est en attente de validation par l'équipe.");
+        setErreur(t('annonces_erreur_non_verifie'));
       } else {
-        setErreur(e instanceof ErreurApi ? e.message : 'La publication du trajet a échoué.');
+        setErreur(e instanceof ErreurApi ? e.message : t('annonces_erreur_publication'));
       }
     } finally {
       setCharge(false);
@@ -164,8 +166,8 @@ export default function EcranAnnonces() {
     try {
       await api.modifierRide(ride.id, { seatsAvailable: suivantes });
       await rafraichir();
-    } catch (e) {
-      setErreurListe(e instanceof Error ? e.message : 'Ajustement des places impossible.');
+    } catch {
+      setErreurListe(t('annonces_erreur_places_maj'));
     } finally {
       setActionEnCours(null);
     }
@@ -177,52 +179,48 @@ export default function EcranAnnonces() {
     try {
       await api.modifierRide(ride.id, { status: statut });
       await rafraichir();
-    } catch (e) {
-      setErreurListe(e instanceof Error ? e.message : 'Mise à jour du trajet impossible.');
+    } catch {
+      setErreurListe(t('annonces_erreur_statut'));
     } finally {
       setActionEnCours(null);
     }
   };
 
   return (
-    <Ecran>
+    <Ecran fond="vagues">
       {!verifie && (
         <EncartInfo icone="hourglass-outline" ton="attente">
-          La publication de trajets partagés sera disponible une fois votre compte chauffeur
-          validé par l&apos;équipe.
+          {t('annonces_attente')}
         </EncartInfo>
       )}
 
       <Carte>
-        <Titre>Proposer un trajet</Titre>
-        <Text style={styles.explication}>
-          Publiez un trajet partagé : les clients réservent leur place via l&apos;équipe
-          zanziGo.
-        </Text>
+        <Titre>{t('annonces_proposer')}</Titre>
+        <Text style={styles.explication}>{t('annonces_intro')}</Text>
         <Selecteur
-          label="Origine (hub de départ)"
+          label={t('annonces_origine')}
           valeur={origine}
           options={origines}
-          placeholder="Choisir le hub de départ…"
+          placeholder={t('annonces_origine_placeholder')}
           onChange={setOrigine}
         />
         <Selecteur
-          label="Destination"
+          label={t('annonces_destination')}
           valeur={destination}
           options={destinations}
-          placeholder="Choisir la ville d'arrivée…"
+          placeholder={t('annonces_destination_placeholder')}
           onChange={setDestination}
         />
         <Champ
-          label="Départ (AAAA-MM-JJ HH:MM)"
+          label={t('annonces_depart_champ')}
           value={depart}
           onChangeText={setDepart}
-          placeholder="Ex. : 2026-08-10 14:30"
+          placeholder="2026-08-10 14:30"
         />
         <View style={styles.rangeeChamps}>
           <View style={styles.demiChamp}>
             <Champ
-              label={`Places (1 à ${PLACES_MAX})`}
+              label={t('annonces_places', { max: PLACES_MAX })}
               value={places}
               onChangeText={setPlaces}
               keyboardType="number-pad"
@@ -231,7 +229,7 @@ export default function EcranAnnonces() {
           </View>
           <View style={styles.demiChamp}>
             <Champ
-              label="Prix par place (TZS)"
+              label={t('annonces_prix_place')}
               value={prixPlace}
               onChangeText={setPrixPlace}
               keyboardType="number-pad"
@@ -240,10 +238,10 @@ export default function EcranAnnonces() {
           </View>
         </View>
         <Champ
-          label="Notes (optionnel)"
+          label={t('annonces_notes')}
           value={notes}
           onChangeText={setNotes}
-          placeholder="Ex. : départ devant le marché, bagages légers"
+          placeholder={t('annonces_notes_placeholder')}
           multiline
         />
         {!!messageOk && (
@@ -253,7 +251,7 @@ export default function EcranAnnonces() {
         )}
         <TexteErreur>{erreur}</TexteErreur>
         <Bouton
-          titre="Publier le trajet"
+          titre={t('annonces_publier')}
           icone="megaphone-outline"
           onPress={publier}
           charge={charge}
@@ -261,13 +259,13 @@ export default function EcranAnnonces() {
         />
       </Carte>
 
-      <Text style={styles.titreSection}>Mes trajets publiés</Text>
+      <Text style={styles.titreSection}>{t('annonces_mes_trajets')}</Text>
       <TexteErreur>{erreurListe}</TexteErreur>
       {mesRides.length === 0 && !erreurListe && (
         <EtatVide
           icone="megaphone-outline"
-          titre="Aucun trajet publié"
-          message="Vos trajets partagés apparaîtront ici avec leurs places restantes."
+          titre={t('annonces_vide_titre')}
+          message={t('annonces_vide_texte')}
         />
       )}
       {mesRides.map((ride) => {
@@ -286,10 +284,7 @@ export default function EcranAnnonces() {
                 <Text style={styles.fleche}>→</Text>{'  '}
                 {champ(ride, 'destination') ?? '?'}
               </Text>
-              <Badge
-                texte={statut ? LIBELLES_STATUT_RIDE[statut] ?? statut : '—'}
-                ton={tonStatut(statut)}
-              />
+              <Badge texte={libelleStatutRide(statut, t)} ton={tonStatut(statut)} />
             </View>
             <View style={styles.ligneDetails}>
               <View style={styles.detail}>
@@ -299,12 +294,16 @@ export default function EcranAnnonces() {
                 </Text>
               </View>
               <Text style={styles.prixRide}>
-                {prix !== undefined ? `${formaterMontant(prix, devise)} / place` : '—'}
+                {prix !== undefined
+                  ? `${formaterMontant(prix, devise)} ${t('rides_par_place')}`
+                  : '—'}
               </Text>
             </View>
             <View style={styles.rangeePlaces}>
               <Text style={styles.textePlaces}>
-                {restantes}/{total} {total > 1 ? 'places restantes' : 'place restante'}
+                {t(total > 1 ? 'rides_places_restantes' : 'rides_place_restante', {
+                  n: `${restantes}/${total}`,
+                })}
               </Text>
               {ouvert && (
                 <View style={styles.boutonsPlaces}>
@@ -342,7 +341,7 @@ export default function EcranAnnonces() {
                   ]}
                 >
                   <Ionicons name="lock-closed-outline" size={15} color={couleurs.primaireFonce} />
-                  <Text style={styles.texteAction}>Clôturer</Text>
+                  <Text style={styles.texteAction}>{t('annonces_cloturer')}</Text>
                 </Pressable>
                 <Pressable
                   onPress={() => changerStatut(ride, 'cancelled')}
@@ -354,7 +353,9 @@ export default function EcranAnnonces() {
                   ]}
                 >
                   <Ionicons name="close-circle-outline" size={15} color={couleurs.danger} />
-                  <Text style={[styles.texteAction, { color: couleurs.danger }]}>Annuler</Text>
+                  <Text style={[styles.texteAction, { color: couleurs.danger }]}>
+                    {t('commun_annuler')}
+                  </Text>
                 </Pressable>
               </View>
             )}
@@ -385,7 +386,7 @@ const styles = StyleSheet.create({
     marginTop: espaces.s,
   },
   carteRide: {
-    backgroundColor: couleurs.blanc,
+    backgroundColor: couleurs.carteTranslucide,
     borderRadius: rayons.carte,
     padding: espaces.l,
     gap: espaces.s,

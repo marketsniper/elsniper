@@ -18,6 +18,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { FondPlage, type NomFond } from '@/components/FondPlage';
+import { LANGUES, useT, libelleStatutColis, libelleStatutTrajet } from '@/lib/i18n';
 import {
   couleurs,
   couleursStatutColis,
@@ -27,42 +29,72 @@ import {
   rayons,
   tailles,
 } from '@/lib/theme';
-import {
-  LIBELLES_STATUT_COLIS,
-  LIBELLES_STATUT_TRAJET,
-  type StatutColis,
-  type StatutTrajet,
-} from '@/lib/types';
+import type { StatutColis, StatutTrajet } from '@/lib/types';
 
 type NomIonicons = React.ComponentProps<typeof Ionicons>['name'];
 
-/** Conteneur d'écran : fond sable + zone sûre + clavier géré + défilement optionnel. */
+/**
+ * Conteneur d'écran : photo de plage en fond (voile blanc de lisibilité),
+ * zone sûre, clavier géré, défilement optionnel.
+ */
 export function Ecran({
   children,
   defiler = true,
+  fond = 'lagon',
 }: {
   children: React.ReactNode;
   defiler?: boolean;
+  fond?: NomFond;
 }) {
   return (
-    <SafeAreaView style={styles.ecran} edges={['top', 'left', 'right']}>
-      <KeyboardAvoidingView
-        style={styles.flexible}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        {defiler ? (
-          <ScrollView
-            contentContainerStyle={styles.contenuDefilant}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
+    <FondPlage fond={fond} voile="clair">
+      <SafeAreaView style={styles.ecran} edges={['top', 'left', 'right']}>
+        <KeyboardAvoidingView
+          style={styles.flexible}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          {defiler ? (
+            <ScrollView
+              contentContainerStyle={styles.contenuDefilant}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
+              {children}
+            </ScrollView>
+          ) : (
+            <View style={styles.contenuFixe}>{children}</View>
+          )}
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </FondPlage>
+  );
+}
+
+/** Pills « FR · EN · SW » de changement de langue. */
+export function SelecteurLangue({ compact = false }: { compact?: boolean }) {
+  const { langue, changerLangue } = useT();
+  return (
+    <View style={[styles.rangeeLangues, compact && styles.rangeeLanguesCompacte]}>
+      {LANGUES.map(({ code, libelle }) => {
+        const active = code === langue;
+        return (
+          <Pressable
+            key={code}
+            onPress={() => changerLangue(code)}
+            accessibilityRole="button"
+            style={({ pressed }) => [
+              styles.pillLangue,
+              active && styles.pillLangueActive,
+              pressed && { opacity: 0.7 },
+            ]}
           >
-            {children}
-          </ScrollView>
-        ) : (
-          <View style={styles.contenuFixe}>{children}</View>
-        )}
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+            <Text style={[styles.textePillLangue, active && styles.textePillLangueActif]}>
+              {libelle}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
   );
 }
 
@@ -205,13 +237,14 @@ export function Badge({
  * En cours turquoise, Terminée vert, Annulée gris.
  */
 export function BadgeStatutTrajet({ statut }: { statut: StatutTrajet | undefined }) {
+  const { t } = useT();
   const ton = statut ? couleursStatutTrajet[statut] : undefined;
   return (
     <View
       style={[styles.badge, { backgroundColor: ton?.fond ?? couleurs.bordure }]}
     >
       <Text style={[styles.texteBadge, { color: ton?.texte ?? couleurs.encre }]}>
-        {statut ? LIBELLES_STATUT_TRAJET[statut] ?? statut : '—'}
+        {libelleStatutTrajet(statut, t)}
       </Text>
     </View>
   );
@@ -219,13 +252,14 @@ export function BadgeStatutTrajet({ statut }: { statut: StatutTrajet | undefined
 
 /** Pastille de statut d'un colis (Créé → Payé → Ramassé → Livré). */
 export function BadgeStatutColis({ statut }: { statut: StatutColis | undefined }) {
+  const { t } = useT();
   const ton = statut ? couleursStatutColis[statut] : undefined;
   return (
     <View
       style={[styles.badge, { backgroundColor: ton?.fond ?? couleurs.bordure }]}
     >
       <Text style={[styles.texteBadge, { color: ton?.texte ?? couleurs.encre }]}>
-        {statut ? LIBELLES_STATUT_COLIS[statut] ?? statut : '—'}
+        {libelleStatutColis(statut, t)}
       </Text>
     </View>
   );
@@ -317,10 +351,40 @@ export function ChargementCentre({ message }: { message?: string }) {
 const styles = StyleSheet.create({
   ecran: {
     flex: 1,
-    backgroundColor: couleurs.sable,
+    backgroundColor: 'transparent',
   },
   flexible: {
     flex: 1,
+  },
+  rangeeLangues: {
+    flexDirection: 'row',
+    gap: espaces.xs,
+    alignSelf: 'flex-end',
+  },
+  rangeeLanguesCompacte: {
+    alignSelf: 'center',
+  },
+  pillLangue: {
+    borderRadius: rayons.pastille,
+    paddingHorizontal: espaces.m,
+    paddingVertical: espaces.s,
+    backgroundColor: couleurs.carteTranslucide,
+    borderWidth: 1,
+    borderColor: couleurs.bordure,
+    minWidth: 44,
+    alignItems: 'center',
+  },
+  pillLangueActive: {
+    backgroundColor: couleurs.primaire,
+    borderColor: couleurs.primaire,
+  },
+  textePillLangue: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: couleurs.texteSecondaire,
+  },
+  textePillLangueActif: {
+    color: couleurs.blanc,
   },
   contenuDefilant: {
     padding: espaces.l,
@@ -337,7 +401,7 @@ const styles = StyleSheet.create({
     letterSpacing: -1,
   },
   carte: {
-    backgroundColor: couleurs.blanc,
+    backgroundColor: couleurs.carteTranslucide,
     borderRadius: rayons.carte,
     padding: espaces.l,
     gap: espaces.s,

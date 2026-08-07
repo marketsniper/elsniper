@@ -18,12 +18,14 @@ import {
 } from '@/components/ui';
 import { api, ErreurApi } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { useT } from '@/lib/i18n';
 import { champ, type Hotel } from '@/lib/types';
 import { couleurs, espaces } from '@/lib/theme';
 
 export default function EcranHotelConnexion() {
   const router = useRouter();
   const { connexion } = useAuth();
+  const { t } = useT();
 
   const [email, setEmail] = useState('');
   const [motDePasse, setMotDePasse] = useState('');
@@ -33,11 +35,11 @@ export default function EcranHotelConnexion() {
   const seConnecter = async () => {
     setErreur('');
     if (!/^\S+@\S+\.\S+$/.test(email.trim())) {
-      setErreur('Indiquez une adresse e-mail valide.');
+      setErreur(t('hotelcx_erreur_email'));
       return;
     }
     if (!motDePasse) {
-      setErreur('Indiquez votre mot de passe.');
+      setErreur(t('hotelcx_erreur_mdp'));
       return;
     }
     setCharge(true);
@@ -54,9 +56,9 @@ export default function EcranHotelConnexion() {
       router.replace('/');
     } catch (e) {
       if (e instanceof ErreurApi && e.code === 'invalid_credentials') {
-        setErreur('E-mail ou mot de passe incorrect.');
+        setErreur(t('hotelcx_erreur_identifiants'));
       } else {
-        setErreur(e instanceof ErreurApi ? e.message : 'Connexion impossible. Réessayez.');
+        setErreur(e instanceof ErreurApi ? e.message : t('hotelcx_erreur_connexion'));
       }
     } finally {
       setCharge(false);
@@ -64,18 +66,16 @@ export default function EcranHotelConnexion() {
   };
 
   return (
-    <Ecran>
+    <Ecran fond="lagon">
       <View style={styles.entete}>
         <LogoZanziGo taille={40} />
-        <Text style={styles.tagline}>Espace hôtels partenaires</Text>
+        <Text style={styles.tagline}>{t('hotelcx_espace')}</Text>
       </View>
       <Carte>
-        <Titre>Connexion hôtel</Titre>
-        <SousTitre>
-          Réservez des taxis pour vos clients et suivez vos envois de colis.
-        </SousTitre>
+        <Titre>{t('hotelcx_titre')}</Titre>
+        <SousTitre>{t('hotelcx_intro')}</SousTitre>
         <Champ
-          label="E-mail"
+          label={t('commun_email')}
           value={email}
           onChangeText={setEmail}
           placeholder="reception@oceanview.co.tz"
@@ -84,22 +84,27 @@ export default function EcranHotelConnexion() {
           autoComplete="email"
         />
         <Champ
-          label="Mot de passe"
+          label={t('hotelcx_mdp')}
           value={motDePasse}
           onChangeText={setMotDePasse}
-          placeholder="Votre mot de passe"
+          placeholder={t('hotelcx_mdp_placeholder')}
           secureTextEntry
           autoCapitalize="none"
         />
         <TexteErreur>{erreur}</TexteErreur>
-        <Bouton titre="Se connecter" icone="log-in-outline" onPress={seConnecter} charge={charge} />
+        <Bouton
+          titre={t('hotelcx_bouton')}
+          icone="log-in-outline"
+          onPress={seConnecter}
+          charge={charge}
+        />
         <Pressable
           onPress={() => router.push('/(auth)/hotel-inscription')}
           style={styles.lienInscription}
           hitSlop={8}
         >
           <Ionicons name="add-circle-outline" size={18} color={couleurs.primaire} />
-          <Text style={styles.texteLien}>Créer un compte partenaire</Text>
+          <Text style={styles.texteLien}>{t('hotelcx_creer')}</Text>
         </Pressable>
       </Carte>
     </Ecran>

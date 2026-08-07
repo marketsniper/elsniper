@@ -1,17 +1,20 @@
-// Page d'accueil de marque : premier écran d'un visiteur non connecté.
-// Choix du profil (touriste, résident, hôtel, chauffeur) — le choix est
-// transmis à travers le flux téléphone → OTP → formulaire adapté.
+// Page d'accueil de marque : coucher de soleil en fond, logotype sur dégradé,
+// sélecteur de langue FR·EN·SW et choix du profil (visiteur, local, hôtel,
+// chauffeur). Le choix est transmis au flux téléphone → OTP → formulaire.
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Ecran, LogoZanziGo } from '@/components/ui';
+import { FondPlage } from '@/components/FondPlage';
+import { LogoZanziGo, SelecteurLangue } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
+import { useT } from '@/lib/i18n';
 import { couleurs, espaces, ombres, rayons } from '@/lib/theme';
-import { formaterMontant, tarifTrajet } from '@/lib/types';
+import { formaterMontant, TARIF_LOCAL_TZS, TARIFS_TRAJET_USD } from '@/lib/types';
 
-type ProfilAccueil = 'tourist' | 'resident' | 'hotel' | 'driver';
+type ProfilAccueil = 'visitor' | 'local' | 'hotel' | 'driver';
 
 function CarteProfil({
   icone,
@@ -35,7 +38,7 @@ function CarteProfil({
       style={({ pressed }) => [
         styles.carte,
         sombre && styles.carteSombre,
-        pressed && { opacity: 0.75 },
+        pressed && { opacity: 0.8 },
       ]}
     >
       <View style={[styles.bulleIcone, sombre && styles.bulleIconeSombre]}>
@@ -64,11 +67,12 @@ function CarteProfil({
 export default function EcranAccueil() {
   const router = useRouter();
   const { session } = useAuth();
+  const { t } = useT();
 
-  const prixPrive = tarifTrajet('private', 'USD');
-  const prixLocal = tarifTrajet('shared_local', 'TZS');
+  const prixPrive = formaterMontant(TARIFS_TRAJET_USD.private ?? 50, 'USD');
+  const prixLocal = formaterMontant(TARIF_LOCAL_TZS, 'TZS');
 
-  // Touriste / résident / chauffeur : flux téléphone → OTP.
+  // Visiteurs (touriste/résident) et locaux : flux téléphone → OTP.
   // Hôtel : connexion e-mail + mot de passe (pas d'OTP).
   // Connecté sans profil : on va directement au bon formulaire.
   const choisir = (profil: ProfilAccueil) => {
@@ -87,82 +91,101 @@ export default function EcranAccueil() {
       return;
     }
     if (session.user) router.replace('/');
-    else router.push({ pathname: '/(auth)/client', params: { type: profil } });
+    else if (profil === 'local') {
+      router.push({ pathname: '/(auth)/client', params: { type: 'local' } });
+    } else {
+      router.push('/(auth)/client');
+    }
   };
 
   return (
-    <Ecran>
-      <View style={styles.entete}>
-        <LogoZanziGo taille={46} />
-        <Text style={styles.tagline}>Vos trajets et vos colis à Zanzibar</Text>
-      </View>
+    <FondPlage fond="coucherSoleil" voile="sombre">
+      <SafeAreaView style={styles.zone} edges={['top', 'left', 'right']}>
+        <ScrollView
+          contentContainerStyle={styles.contenu}
+          showsVerticalScrollIndicator={false}
+        >
+          <SelecteurLangue />
+          <View style={styles.entete}>
+            <LogoZanziGo taille={48} surFonce />
+            <Text style={styles.tagline}>{t('app_tagline')}</Text>
+          </View>
 
-      <Text style={styles.question}>Qui êtes-vous ?</Text>
+          <Text style={styles.question}>{t('accueil_question')}</Text>
 
-      <CarteProfil
-        icone="airplane-outline"
-        titre="Visiteur · Touriste"
-        sousTitre={`Courses privées et navettes — prix en USD${
-          prixPrive !== null ? ` (Course privée ${formaterMontant(prixPrive, 'USD')})` : ''
-        }`}
-        onPress={() => choisir('tourist')}
-      />
-      <CarteProfil
-        icone="home-outline"
-        titre="Résident · Local"
-        sousTitre={`Tarif local en shillings${
-          prixLocal !== null ? ` — Navette locale ${formaterMontant(prixLocal, 'TZS')}` : ''
-        }`}
-        mention="Vérification du document d'identité requise"
-        onPress={() => choisir('resident')}
-      />
-      <CarteProfil
-        icone="business-outline"
-        titre="Hôtel partenaire"
-        sousTitre="Réservez des taxis pour vos clients"
-        onPress={() => choisir('hotel')}
-      />
+          <CarteProfil
+            icone="airplane-outline"
+            titre={t('accueil_visiteur_titre')}
+            sousTitre={t('accueil_visiteur_soustitre', { prix: prixPrive })}
+            onPress={() => choisir('visitor')}
+          />
+          <CarteProfil
+            icone="id-card-outline"
+            titre={t('accueil_local_titre')}
+            sousTitre={t('accueil_local_soustitre', { prix: prixLocal })}
+            mention={t('accueil_local_mention')}
+            onPress={() => choisir('local')}
+          />
+          <CarteProfil
+            icone="business-outline"
+            titre={t('accueil_hotel_titre')}
+            sousTitre={t('accueil_hotel_soustitre')}
+            onPress={() => choisir('hotel')}
+          />
 
-      <View style={styles.separateur} />
+          <CarteProfil
+            icone="car-sport-outline"
+            titre={t('accueil_chauffeur_titre')}
+            sousTitre={t('accueil_chauffeur_soustitre')}
+            sombre
+            onPress={() => choisir('driver')}
+          />
 
-      <CarteProfil
-        icone="car-sport-outline"
-        titre="Chauffeur — Taxi Partner"
-        sousTitre="Accédez à vos courses et scannez les QR"
-        sombre
-        onPress={() => choisir('driver')}
-      />
-
-      <Text style={styles.pied}>
-        Déjà inscrit ? Choisissez votre profil : votre numéro de téléphone vous reconnaît.
-      </Text>
-    </Ecran>
+          <Text style={styles.pied}>{t('accueil_pied')}</Text>
+        </ScrollView>
+      </SafeAreaView>
+    </FondPlage>
   );
 }
 
 const styles = StyleSheet.create({
+  zone: {
+    flex: 1,
+  },
+  contenu: {
+    padding: espaces.l,
+    paddingBottom: espaces.xl * 2,
+    gap: espaces.m,
+  },
   entete: {
     alignItems: 'center',
-    paddingTop: espaces.xxl,
+    paddingTop: espaces.xl,
     paddingBottom: espaces.xl,
     gap: espaces.s,
   },
   tagline: {
     fontSize: 16,
-    color: couleurs.texteSecondaire,
+    fontWeight: '600',
+    color: couleurs.blanc,
     textAlign: 'center',
+    textShadowColor: 'rgba(0, 0, 0, 0.4)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
   },
   question: {
     fontSize: 18,
     fontWeight: '700',
-    color: couleurs.encre,
+    color: couleurs.blanc,
     marginBottom: espaces.xs,
+    textShadowColor: 'rgba(0, 0, 0, 0.4)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
   },
   carte: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: espaces.m,
-    backgroundColor: couleurs.blanc,
+    backgroundColor: couleurs.carteTranslucide,
     borderRadius: rayons.carte,
     padding: espaces.l,
     minHeight: 88,
@@ -201,16 +224,14 @@ const styles = StyleSheet.create({
     color: couleurs.attente,
     fontWeight: '600',
   },
-  separateur: {
-    height: 1,
-    backgroundColor: couleurs.bordure,
-    marginVertical: espaces.s,
-  },
   pied: {
     fontSize: 13,
-    color: couleurs.texteSecondaire,
+    color: couleurs.blanc,
     textAlign: 'center',
     marginTop: espaces.s,
     lineHeight: 18,
+    textShadowColor: 'rgba(0, 0, 0, 0.4)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
   },
 });

@@ -116,11 +116,23 @@ describe('Courses taxi (trips)', () => {
     const { token: residentToken, user: resident } = await createResident();
 
     const shared = await createTrip(touristToken, tourist.id, { tripType: 'shared_tourist' });
-    assert.equal(Number(shared.price), 17);
+    assert.equal(Number(shared.price), 18);
     assert.equal(shared.currency, 'USD');
 
     const posted = await createTrip(touristToken, tourist.id, { tripType: 'posted_return' });
-    assert.equal(Number(posted.price), 17);
+    assert.equal(Number(posted.price), 18);
+
+    // Trajet spécial Nungwi ↔ Paje : 65 USD en privé (58,50 pour un résident).
+    const special = await createTrip(touristToken, tourist.id, {
+      pickupLocation: 'Nungwi',
+      dropoffLocation: 'Paje',
+    });
+    assert.equal(Number(special.price), 65);
+    const specialResident = await createTrip(residentToken, resident.id, {
+      pickupLocation: 'Paje',
+      dropoffLocation: 'Nungwi',
+    });
+    assert.equal(Number(specialResident.price), 58.5);
 
     // Résident vérifié : remise de 10 % sur le tarif touriste, en USD.
     const privateResident = await createTrip(residentToken, resident.id);

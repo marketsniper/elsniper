@@ -3,7 +3,6 @@
 // zanziGo notifie chaque chauffeur par WhatsApp avec la référence de la
 // course. On ouvre donc une course par sa référence (GET /trips/:id, autorisé
 // au chauffeur assigné) et on garde localement les courses récemment ouvertes.
-import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -22,18 +21,14 @@ import {
 import { api, ErreurApi } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { ajouterCourseLocale, listerCoursesLocales } from '@/lib/colisLocal';
+import { formaterDateRelativeI18n, useT } from '@/lib/i18n';
 import { couleurs, espaces, ombres, rayons } from '@/lib/theme';
-import {
-  champ,
-  formaterDateRelative,
-  formaterPrix,
-  type StatutTrajet,
-  type Trajet,
-} from '@/lib/types';
+import { champ, formaterPrix, type StatutTrajet, type Trajet } from '@/lib/types';
 
 export default function EcranCourses() {
   const router = useRouter();
   const { session } = useAuth();
+  const { t } = useT();
   const [idSaisi, setIdSaisi] = useState('');
   const [recentes, setRecentes] = useState<Trajet[]>([]);
   const [erreur, setErreur] = useState('');
@@ -47,7 +42,7 @@ export default function EcranCourses() {
     const resultats = await Promise.all(
       ids.map((courseId) => api.obtenirTrajet(courseId).catch(() => null))
     );
-    setRecentes(resultats.filter((t): t is Trajet => t !== null));
+    setRecentes(resultats.filter((trajet): trajet is Trajet => trajet !== null));
   }, [chauffeurId]);
 
   useFocusEffect(
@@ -64,7 +59,7 @@ export default function EcranCourses() {
     );
     const id = correspondance?.[0] ?? '';
     if (!id) {
-      setErreur('Référence de course invalide (collez la référence ou le lien WhatsApp reçu).');
+      setErreur(t('courses_erreur_reference'));
       return;
     }
     setCharge(true);
@@ -74,44 +69,46 @@ export default function EcranCourses() {
       setIdSaisi('');
       router.push(`/course/${id}`);
     } catch (e) {
-      setErreur(e instanceof ErreurApi ? e.message : 'Course introuvable ou non assignée.');
+      setErreur(e instanceof ErreurApi ? e.message : t('courses_erreur_introuvable'));
     } finally {
       setCharge(false);
     }
   };
 
   return (
-    <Ecran>
-      <EncartInfo icone="logo-whatsapp">
-        L&apos;équipe zanziGo vous envoie vos courses par WhatsApp — entrez la référence
-        ci-dessous ou scannez.
-      </EncartInfo>
+    <Ecran fond="vagues">
+      <EncartInfo icone="logo-whatsapp">{t('courses_info')}</EncartInfo>
 
       <Carte>
-        <Titre>Ouvrir une course</Titre>
+        <Titre>{t('courses_ouvrir_titre')}</Titre>
         <Champ
-          label="Référence de course"
+          label={t('courses_reference')}
           value={idSaisi}
           onChangeText={setIdSaisi}
-          placeholder="Collez la référence ou le lien reçu"
+          placeholder={t('courses_reference_placeholder')}
           autoCapitalize="none"
         />
         <TexteErreur>{erreur}</TexteErreur>
-        <Bouton titre="Ouvrir la course" icone="open-outline" onPress={ouvrir} charge={charge} />
         <Bouton
-          titre="Ouvrir le scanner"
+          titre={t('courses_ouvrir_bouton')}
+          icone="open-outline"
+          onPress={ouvrir}
+          charge={charge}
+        />
+        <Bouton
+          titre={t('courses_scanner_bouton')}
           icone="qr-code-outline"
           variante="secondaire"
           onPress={() => router.push('/(driver)/scanner')}
         />
       </Carte>
 
-      <Text style={styles.titreSection}>Courses récentes</Text>
+      <Text style={styles.titreSection}>{t('courses_recentes')}</Text>
       {recentes.length === 0 && (
         <EtatVide
           icone="car-outline"
-          titre="Aucune course récente"
-          message="Les courses ouvertes sur ce téléphone apparaîtront ici."
+          titre={t('courses_vide_titre')}
+          message={t('courses_vide_texte')}
         />
       )}
       {recentes.map((item) => {
@@ -123,7 +120,7 @@ export default function EcranCourses() {
             style={({ pressed }) => [styles.carte, pressed && { opacity: 0.7 }]}
           >
             <View style={styles.enTete}>
-              <Text style={styles.type}>Course</Text>
+              <Text style={styles.type}>{t('trajets_course_defaut')}</Text>
               <BadgeStatutTrajet statut={statut} />
             </View>
             <Text style={styles.itineraire}>
@@ -133,8 +130,9 @@ export default function EcranCourses() {
             </Text>
             <View style={styles.pied}>
               <Text style={styles.date}>
-                {formaterDateRelative(
-                  champ(item, 'scheduled_at', 'scheduledAt', 'created_at', 'createdAt')
+                {formaterDateRelativeI18n(
+                  champ(item, 'scheduled_at', 'scheduledAt', 'created_at', 'createdAt'),
+                  t
                 )}
               </Text>
               <Text style={styles.prix}>{formaterPrix(item)}</Text>
@@ -154,7 +152,7 @@ const styles = StyleSheet.create({
     marginTop: espaces.s,
   },
   carte: {
-    backgroundColor: couleurs.blanc,
+    backgroundColor: couleurs.carteTranslucide,
     borderRadius: rayons.carte,
     padding: espaces.l,
     gap: espaces.s,

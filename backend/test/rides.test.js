@@ -69,7 +69,7 @@ describe('Trajets partagés (rides)', () => {
 
   it('point de départ hors des deux hubs → 400 ; arrivée inconnue → 400', async () => {
     const { token } = await createVerifiedDriver();
-    const badOrigin = await postRide(token, { origin: 'Kendwa' });
+    const badOrigin = await postRide(token, { origin: 'Zanzibar City Mall' });
     assert.equal(badOrigin.status, 400);
     assert.equal(badOrigin.body.error.code, 'validation_error');
 
@@ -81,7 +81,9 @@ describe('Trajets partagés (rides)', () => {
   it('GET /rides/locations : listes pour les menus déroulants (2 départs)', async () => {
     const res = await request(app).get('/api/rides/locations');
     assert.equal(res.status, 200);
-    assert.deepEqual(res.body.origins, ['Aéroport (AAKIA)', 'Stone Town Ferry']);
+    assert.ok(res.body.origins.includes('Aéroport (AAKIA)'));
+    assert.ok(res.body.origins.includes('Stone Town Ferry'));
+    assert.ok(res.body.origins.includes('Nungwi'), 'les villes sont aussi des départs');
     assert.ok(res.body.destinations.includes('Nungwi'));
     assert.ok(res.body.destinations.length >= 10);
   });
@@ -102,17 +104,17 @@ describe('Trajets partagés (rides)', () => {
     assert.equal(anonymous.status, 401);
   });
 
-  it('cloison tarifaire : touriste 17 USD, résident vérifié 15,30 USD, local TZS', async () => {
+  it('cloison tarifaire : touriste 18 USD, résident vérifié 16,20 USD, local TZS', async () => {
     const { token } = await createVerifiedDriver();
     const ride = (await postRide(token)).body;
 
     const { token: touristToken } = await createTourist();
     const forTourist = await request(app).get('/api/rides').set(authHeaders(touristToken));
     const t = forTourist.body.find((r) => r.id === ride.id);
-    assert.equal(t.price_per_seat_usd, 17);
+    assert.equal(t.price_per_seat_usd, 18);
     assert.equal(t.currency, 'USD');
     assert.equal(t.price_per_seat, undefined, 'le prix local ne doit pas fuiter vers un touriste');
-    assert.ok(t.whatsapp_link.includes(encodeURIComponent('17 USD')));
+    assert.ok(t.whatsapp_link.includes(encodeURIComponent('18 USD')));
 
     const { createResident, createLocal } = await import('./setup.js');
 
@@ -120,7 +122,7 @@ describe('Trajets partagés (rides)', () => {
     const { token: residentToken } = await createResident();
     const forResident = await request(app).get('/api/rides').set(authHeaders(residentToken));
     const r = forResident.body.find((x) => x.id === ride.id);
-    assert.equal(r.price_per_seat_usd, 15.3);
+    assert.equal(r.price_per_seat_usd, 16.2);
     assert.equal(r.currency, 'USD');
     assert.equal(r.price_per_seat, undefined);
 

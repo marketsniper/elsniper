@@ -1,5 +1,5 @@
-// Onglet « Profil » : informations du compte (touriste/résident/hôtel,
-// devise), statut de vérification du document résident, déconnexion.
+// Onglet « Profil » : informations du compte (touriste/résident/local/hôtel,
+// devise), statut de vérification des documents, langue, déconnexion.
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
@@ -12,10 +12,12 @@ import {
   Ecran,
   EncartInfo,
   LigneInfo,
+  SelecteurLangue,
   SousTitre,
 } from '@/components/ui';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { useT } from '@/lib/i18n';
 import { couleurs, espaces, tailles } from '@/lib/theme';
 import { champ, type StatutVerification, type TypeCompte } from '@/lib/types';
 
@@ -31,23 +33,48 @@ function initiales(nom: string): string {
 export default function EcranProfil() {
   const router = useRouter();
   const { session, deconnexion, majSession } = useAuth();
+  const { t } = useT();
   const utilisateur = session?.user ?? null;
   const hotel = session?.hotel ?? null;
   const [chargeMaj, setChargeMaj] = useState(false);
 
   const typeCompte = champ<TypeCompte>(utilisateur, 'account_type', 'accountType');
   const estResident = typeCompte === 'resident';
-  // Touriste : vérifié d'office. Résident : pending → verified/rejected
-  // (validation manuelle du document d'identité par l'équipe).
+  const estLocal = typeCompte === 'local';
+  // Touriste : vérifié d'office. Résident/local : pending → verified/rejected
+  // (validation manuelle des documents par l'équipe).
   const statutVerif =
     champ<StatutVerification>(utilisateur, 'verification_status', 'verificationStatus') ??
     'pending';
   const devise = champ<string>(utilisateur, 'currency');
   const nomAffiche = String(
-    champ(utilisateur ?? hotel, 'full_name', 'fullName', 'name') ?? 'Compte zanziGo'
+    champ(utilisateur ?? hotel, 'full_name', 'fullName', 'name') ?? t('profil_compte_defaut')
   );
 
-  // Recharge le profil (utile pour voir la validation résident arriver).
+  // Badge selon le type de compte et l'état de vérification.
+  const texteBadge = estResident
+    ? statutVerif === 'verified'
+      ? t('profil_badge_resident_ok')
+      : statutVerif === 'rejected'
+        ? t('profil_badge_refuse')
+        : t('profil_badge_resident_attente')
+    : estLocal
+      ? statutVerif === 'verified'
+        ? t('profil_badge_local_ok')
+        : statutVerif === 'rejected'
+          ? t('profil_badge_refuse')
+          : t('profil_badge_local_attente')
+      : t('profil_badge_verifie');
+  const tonBadge =
+    !estResident && !estLocal
+      ? ('succes' as const)
+      : statutVerif === 'verified'
+        ? ('succes' as const)
+        : statutVerif === 'rejected'
+          ? ('danger' as const)
+          : ('attente' as const);
+
+  // Recharge le profil (utile pour voir la validation arriver).
   const actualiser = async () => {
     if (!utilisateur) return;
     setChargeMaj(true);
@@ -67,71 +94,74 @@ export default function EcranProfil() {
   };
 
   return (
-    <Ecran>
+    <Ecran fond="lagon">
       <Carte style={styles.carteIdentite}>
         <View style={styles.avatar}>
           <Text style={styles.initiale}>{initiales(nomAffiche)}</Text>
         </View>
         <Text style={styles.nom}>{nomAffiche}</Text>
         <SousTitre>{session?.phone ?? ''}</SousTitre>
-        {utilisateur && estResident && (
-          <Badge
-            texte={
-              statutVerif === 'verified'
-                ? 'Résident vérifié ✓'
-                : statutVerif === 'rejected'
-                  ? 'Vérification refusée'
-                  : 'En attente de validation'
-            }
-            ton={
-              statutVerif === 'verified'
-                ? 'succes'
-                : statutVerif === 'rejected'
-                  ? 'danger'
-                  : 'attente'
-            }
-          />
-        )}
-        {utilisateur && !estResident && <Badge texte="Compte vérifié ✓" ton="succes" />}
-        {hotel && <Badge texte="Hôtel partenaire" ton="primaire" />}
+        {utilisateur && <Badge texte={texteBadge} ton={tonBadge} />}
+        {hotel && <Badge texte={t('profil_badge_hotel')} ton="primaire" />}
       </Carte>
 
       {estResident && statutVerif === 'pending' && (
         <EncartInfo icone="hourglass-outline" ton="attente">
-          Compte résident en attente de validation : l&apos;équipe zanziGo vérifie votre
-          document d&apos;identité. Le tarif local (navette locale) sera activé une fois le
-          compte vérifié.
+          {t('profil_info_resident_attente')}
         </EncartInfo>
       )}
-      {estResident && statutVerif === 'rejected' && (
+      {estLocal && statutVerif === 'pending' && (
+        <EncartInfo icone="hourglass-outline" ton="attente">
+          {t('profil_info_local_attente')}
+        </EncartInfo>
+      )}
+      {(estResident || estLocal) && statutVerif === 'rejected' && (
         <EncartInfo icone="alert-circle-outline" ton="attente">
-          Votre document d&apos;identité a été refusé par l&apos;équipe. Contactez-nous sur
-          WhatsApp pour le mettre à jour.
+          {t('profil_info_refuse')}
         </EncartInfo>
       )}
 
       <Carte>
-        <LigneInfo label="Téléphone" valeur={session?.phone || '—'} />
+        <LigneInfo label={t('commun_telephone')} valeur={session?.phone || '—'} />
         <LigneInfo
-          label="E-mail"
+          label={t('commun_email')}
           valeur={String(champ(utilisateur ?? hotel, 'email') ?? '—')}
         />
         <LigneInfo
-          label="Type de compte"
-          valeur={hotel ? 'Hôtel partenaire' : estResident ? 'Résident' : 'Touriste'}
+          label={t('profil_type_compte')}
+          valeur={
+            hotel
+              ? t('profil_badge_hotel')
+              : estResident
+                ? t('client_type_resident')
+                : estLocal
+                  ? t('profil_type_local')
+                  : t('client_type_touriste')
+          }
         />
         {hotel && (
           <>
-            <LigneInfo label="Contact" valeur={String(champ(hotel, 'contact_name', 'contactName') ?? '—')} />
-            <LigneInfo label="Zone" valeur={String(champ(hotel, 'zone') ?? '—')} />
+            <LigneInfo
+              label={t('profil_contact')}
+              valeur={String(champ(hotel, 'contact_name', 'contactName') ?? '—')}
+            />
+            <LigneInfo label={t('commun_zone')} valeur={String(champ(hotel, 'zone') ?? '—')} />
           </>
         )}
-        <LigneInfo label="Devise" valeur={devise ?? (hotel ? 'TZS' : '—')} />
+        <LigneInfo
+          label={t('commun_devise')}
+          valeur={devise ?? (hotel || estLocal ? 'TZS' : 'USD')}
+        />
+      </Carte>
+
+      <Carte>
+        <Text style={styles.labelLangue}>{t('commun_langue')}</Text>
+        <SelecteurLangue compact />
       </Carte>
 
       {utilisateur && (
         <Bouton
-          titre="Actualiser mon profil"
+          titre={t('profil_actualiser')}
           icone="refresh-outline"
           variante="secondaire"
           onPress={actualiser}
@@ -145,7 +175,7 @@ export default function EcranProfil() {
         accessibilityRole="button"
       >
         <Ionicons name="log-out-outline" size={20} color={couleurs.danger} />
-        <Text style={styles.texteDeconnexion}>Se déconnecter</Text>
+        <Text style={styles.texteDeconnexion}>{t('commun_se_deconnecter')}</Text>
       </Pressable>
     </Ecran>
   );
@@ -174,6 +204,11 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
     color: couleurs.encre,
+  },
+  labelLangue: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: couleurs.texteSecondaire,
   },
   ligneDeconnexion: {
     flexDirection: 'row',

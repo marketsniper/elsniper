@@ -1,12 +1,20 @@
-// Mode chauffeur — profil, QR véhicule fixe (VEH-…) et déconnexion.
+// Mode chauffeur — profil, QR véhicule fixe (VEH-…), langue et déconnexion.
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 
-import { Badge, Carte, Ecran, LigneInfo, SousTitre } from '@/components/ui';
+import {
+  Badge,
+  Carte,
+  Ecran,
+  LigneInfo,
+  SelecteurLangue,
+  SousTitre,
+} from '@/components/ui';
 import { useAuth } from '@/lib/auth';
+import { useT } from '@/lib/i18n';
 import { couleurs, espaces, ombres, rayons, tailles } from '@/lib/theme';
 import { champ, type StatutVerification } from '@/lib/types';
 
@@ -22,6 +30,7 @@ function initiales(nom: string): string {
 export default function EcranCompteChauffeur() {
   const router = useRouter();
   const { session, deconnexion } = useAuth();
+  const { t } = useT();
   const chauffeur = session?.driver ?? null;
 
   const statutVerif =
@@ -34,7 +43,9 @@ export default function EcranCompteChauffeur() {
     moyenneBrute !== undefined && Number.isFinite(Number(moyenneBrute))
       ? Number(moyenneBrute).toFixed(1)
       : null;
-  const nomAffiche = String(champ(chauffeur, 'full_name', 'fullName') ?? 'Chauffeur zanziGo');
+  const nomAffiche = String(
+    champ(chauffeur, 'full_name', 'fullName') ?? t('rides_chauffeur_defaut')
+  );
 
   const seDeconnecter = async () => {
     await deconnexion();
@@ -42,7 +53,7 @@ export default function EcranCompteChauffeur() {
   };
 
   return (
-    <Ecran>
+    <Ecran fond="vagues">
       <Carte style={styles.carteIdentite}>
         <View style={styles.avatar}>
           <Text style={styles.initiale}>{initiales(nomAffiche)}</Text>
@@ -52,24 +63,21 @@ export default function EcranCompteChauffeur() {
         <Badge
           texte={
             verifie
-              ? 'Chauffeur vérifié ✓'
+              ? t('compte_badge_verifie')
               : statutVerif === 'rejected'
-                ? 'Candidature refusée'
-                : 'En attente de validation'
+                ? t('compte_badge_refuse')
+                : t('compte_badge_attente')
           }
           ton={verifie ? 'succes' : statutVerif === 'rejected' ? 'danger' : 'attente'}
         />
         {moyenne !== null && nbNotes > 0 && (
-          <Badge texte={`★ ${moyenne} (${nbNotes} avis)`} ton="primaire" />
+          <Badge texte={t('compte_avis', { note: moyenne, n: nbNotes })} ton="primaire" />
         )}
       </Carte>
 
       {qrVehicule && (
         <Carte style={styles.carteQr}>
-          <SousTitre centre>
-            QR de votre véhicule — à afficher à bord. Il confirme le départ et l&apos;arrivée
-            de chaque course.
-          </SousTitre>
+          <SousTitre centre>{t('compte_qr_texte')}</SousTitre>
           <View style={styles.cadreQr}>
             <QRCode
               value={qrVehicule}
@@ -83,20 +91,25 @@ export default function EcranCompteChauffeur() {
       )}
 
       <Carte>
-        <LigneInfo label="Téléphone" valeur={session?.phone ?? '—'} />
+        <LigneInfo label={t('commun_telephone')} valeur={session?.phone ?? '—'} />
         <LigneInfo
-          label="Véhicule"
+          label={t('compte_vehicule')}
           valeur={String(champ(chauffeur, 'vehicle_model', 'vehicleModel') ?? '—')}
         />
         <LigneInfo
-          label="Plaque"
+          label={t('compte_plaque')}
           valeur={String(champ(chauffeur, 'vehicle_plate', 'vehiclePlate') ?? '—')}
         />
         <LigneInfo
-          label="Permis"
+          label={t('compte_permis')}
           valeur={String(champ(chauffeur, 'license_number', 'licenseNumber') ?? '—')}
         />
-        <LigneInfo label="Zone" valeur={String(champ(chauffeur, 'zone') ?? '—')} />
+        <LigneInfo label={t('commun_zone')} valeur={String(champ(chauffeur, 'zone') ?? '—')} />
+      </Carte>
+
+      <Carte>
+        <Text style={styles.labelLangue}>{t('commun_langue')}</Text>
+        <SelecteurLangue compact />
       </Carte>
 
       <Pressable
@@ -105,7 +118,7 @@ export default function EcranCompteChauffeur() {
         accessibilityRole="button"
       >
         <Ionicons name="log-out-outline" size={20} color={couleurs.danger} />
-        <Text style={styles.texteDeconnexion}>Se déconnecter</Text>
+        <Text style={styles.texteDeconnexion}>{t('commun_se_deconnecter')}</Text>
       </Pressable>
     </Ecran>
   );
@@ -150,6 +163,11 @@ const styles = StyleSheet.create({
   codeTexte: {
     fontFamily: 'monospace',
     fontSize: 14,
+    color: couleurs.texteSecondaire,
+  },
+  labelLangue: {
+    fontSize: 13,
+    fontWeight: '600',
     color: couleurs.texteSecondaire,
   },
   ligneDeconnexion: {

@@ -17,14 +17,14 @@ import {
   Titre,
 } from '@/components/ui';
 import { api, ErreurApi } from '@/lib/api';
+import { useT, type CleChaine } from '@/lib/i18n';
 import { couleurs, espaces } from '@/lib/theme';
 
-/** Libellé doux du profil choisi sur la page d'accueil. */
-const LIBELLES_PROFIL: Record<string, string> = {
-  tourist: 'Visiteur · Touriste',
-  resident: 'Résident · Local',
-  hotel: 'Hôtel partenaire',
-  driver: 'Chauffeur — Taxi Partner',
+/** Clé i18n du libellé de chaque profil proposé sur la page d'accueil. */
+const CLES_PROFIL: Record<string, CleChaine> = {
+  visitor: 'accueil_visiteur_titre',
+  local: 'accueil_local_titre',
+  driver: 'accueil_chauffeur_titre',
 };
 
 /** Normalise le numéro saisi en format international (+255...). */
@@ -35,6 +35,7 @@ function normaliserTelephone(indicatif: string, numero: string): string {
 
 export default function EcranTelephone() {
   const router = useRouter();
+  const { t } = useT();
   const params = useLocalSearchParams<{ profil?: string }>();
   const profil = typeof params.profil === 'string' ? params.profil : '';
 
@@ -47,7 +48,7 @@ export default function EcranTelephone() {
     setErreur('');
     const telephone = normaliserTelephone(indicatif, numero);
     if (!/^\+\d{9,15}$/.test(telephone)) {
-      setErreur('Numéro invalide. Exemple : +255 712 345 678.');
+      setErreur(t('tel_erreur_numero'));
       return;
     }
     setCharge(true);
@@ -58,32 +59,32 @@ export default function EcranTelephone() {
         params: { phone: telephone, devCode: devCode ?? '', profil },
       });
     } catch (e) {
-      setErreur(e instanceof ErreurApi ? e.message : "Impossible d'envoyer le code. Réessayez.");
+      setErreur(e instanceof ErreurApi ? e.message : t('tel_erreur_envoi'));
     } finally {
       setCharge(false);
     }
   };
 
   return (
-    <Ecran>
+    <Ecran fond="vagues">
       <View style={styles.entete}>
         <LogoZanziGo taille={44} />
-        <Text style={styles.tagline}>Vos trajets et vos colis à Zanzibar</Text>
+        <Text style={styles.tagline}>{t('app_tagline')}</Text>
       </View>
 
       <Carte>
-        <Titre>Bienvenue</Titre>
-        {!!profil && LIBELLES_PROFIL[profil] && (
-          <Text style={styles.profilChoisi}>Profil choisi : {LIBELLES_PROFIL[profil]}</Text>
+        <Titre>{t('tel_bienvenue')}</Titre>
+        {!!profil && CLES_PROFIL[profil] && (
+          <Text style={styles.profilChoisi}>
+            {t('tel_profil_choisi', { profil: t(CLES_PROFIL[profil]) })}
+          </Text>
         )}
         <SousTitre>
-          {profil === 'driver'
-            ? 'Déjà Taxi Partner ? Entrez votre numéro : vous retrouvez directement votre compte. Nouveau ? Vous déposerez votre candidature juste après le code.'
-            : 'Entrez votre numéro de téléphone pour recevoir votre code de connexion.'}
+          {profil === 'driver' ? t('tel_intro_chauffeur') : t('tel_intro')}
         </SousTitre>
         <View style={styles.rangeeTelephone}>
           <Champ
-            label="Indicatif"
+            label={t('tel_indicatif')}
             value={indicatif}
             onChangeText={setIndicatif}
             keyboardType="phone-pad"
@@ -91,7 +92,7 @@ export default function EcranTelephone() {
           />
           <View style={styles.champNumero}>
             <Champ
-              label="Numéro de téléphone"
+              label={t('tel_numero')}
               value={numero}
               onChangeText={setNumero}
               keyboardType="phone-pad"
@@ -102,11 +103,11 @@ export default function EcranTelephone() {
           </View>
         </View>
         <TexteErreur>{erreur}</TexteErreur>
-        <Bouton titre="Recevoir mon code" icone="arrow-forward" onPress={envoyer} charge={charge} />
+        <Bouton titre={t('tel_bouton')} icone="arrow-forward" onPress={envoyer} charge={charge} />
       </Carte>
 
       <EncartInfo icone="flask-outline" ton="attente">
-        Le code s&apos;affiche à l&apos;écran — phase de test sans SMS.
+        {t('pilote_message')}
       </EncartInfo>
     </Ecran>
   );

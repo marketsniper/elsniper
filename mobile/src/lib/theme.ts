@@ -24,6 +24,10 @@ export const couleurs = {
   voile: 'rgba(31, 41, 55, 0.65)', // voile sombre du scanner (encre translucide)
   succesClair: '#6EE7B7', // texte succès sur fond sombre (scanner)
   dangerClair: '#FCA5A5', // texte erreur sur fond sombre (scanner)
+  // Design tropical : photos de plage en fond, voiles de lisibilité.
+  voilePhotoClair: 'rgba(255, 250, 244, 0.82)', // voile blanc sur les écrans formulaires/listes
+  voilePhotoSombre: 'rgba(15, 23, 42, 0.55)', // assombrissement bas des écrans d'accueil
+  carteTranslucide: 'rgba(255, 255, 255, 0.94)', // cartes blanches semi-opaques sur photo
 };
 
 export const rayons = {

@@ -1,77 +1,56 @@
-// Onglet « Réserver » : choix du type de course (tarif plat par type),
-// itinéraire, course programmée optionnelle. Le prix officiel est calculé par
-// le backend (pricingService) et FIGÉ à la création du trajet ; la grille
-// affichée ici en est le miroir exact.
-// Mode hôtel (profil hôtel connecté) : l'hôtel réserve POUR SON CLIENT —
-// prix en TZS, pas de navette locale, champs « Nom / Téléphone du client »,
-// payload {hotelId, clientName, clientPhone, …} sans userId.
+// Onglet « Réserver » : itinéraire en haut, puis choix du mode Privé ou
+// Partagé, récapitulatif de prix et bouton. Le prix officiel est calculé par
+// le backend (pricingService) et FIGÉ à la création ; la grille affichée ici
+// en est le miroir exact (types.ts).
+// Segmentation : touriste USD plein tarif ; résident USD (−10 % une fois
+// vérifié, bandeau d'attente sinon) ; local (carte tanzanienne) 15 000 TZS
+// partout une fois vérifié — non vérifié, il ne peut pas réserver (écran
+// d'attente, 403 local_not_verified côté serveur). « Partagé » =
+// shared_tourist pour touristes/résidents/hôtels, shared_local pour les
+// locaux vérifiés. La formule posted_return n'est plus proposée.
+// Mode hôtel : réservation POUR SON CLIENT — TZS, champs Nom/Téléphone du
+// client, payload {hotelId, clientName, clientPhone, …} sans userId.
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { RidesPartages } from '@/components/RidesPartages';
-import { Bouton, Champ, Ecran, EncartInfo, TexteErreur } from '@/components/ui';
+import { Bouton, Champ, Ecran, EncartInfo, EtatVide, TexteErreur } from '@/components/ui';
 import { api, ErreurApi } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { libelleTypeTrajet, useT } from '@/lib/i18n';
 import { couleurs, espaces, ombres, rayons } from '@/lib/theme';
 import {
   champ,
-  deviseUtilisateur,
   formaterMontant,
-  LIBELLES_TYPE_TRAJET,
-  residentVerifie,
-  tarifTrajet,
+  localVerifie,
+  profilTarifaireUtilisateur,
+  tarifTrajetProfil,
+  type ProfilTarifaire,
   type TypeCompte,
   type TypeTrajet,
 } from '@/lib/types';
 
-// Types de course proposés — clés = trip_type de l'API, icône par formule.
-const FORMULES: {
-  cle: TypeTrajet;
-  icone: React.ComponentProps<typeof Ionicons>['name'];
-  description: string;
-}[] = [
-  {
-    cle: 'private',
-    icone: 'car-outline',
-    description: 'Un véhicule rien que pour vous, départ immédiat ou programmé.',
-  },
-  {
-    cle: 'shared_tourist',
-    icone: 'bus-outline',
-    description: 'Trajet partagé entre voyageurs sur les grands axes.',
-  },
-  {
-    cle: 'shared_local',
-    icone: 'home-outline',
-    description: 'Trajet partagé au tarif local, réservé aux résidents vérifiés.',
-  },
-  {
-    cle: 'posted_return',
-    icone: 'swap-horizontal-outline',
-    description: "Profitez d'un retour à vide annoncé par un chauffeur, à prix doux.",
-  },
-];
+type ModeCourse = 'prive' | 'partage';
 
 export default function EcranReserver() {
   const router = useRouter();
   const { session } = useAuth();
+  const { t } = useT();
   const utilisateur = session?.user ?? null;
   const hotel = session?.hotel ?? null;
   // Mode hôtel : le profil hôtel réserve des taxis pour ses clients.
   const modeHotel = !!hotel;
 
-  const devise = modeHotel ? 'TZS' : deviseUtilisateur(utilisateur);
-  const estResident = champ<TypeCompte>(utilisateur, 'account_type', 'accountType') === 'resident';
-  const localAutorise = residentVerifie(utilisateur);
+  const typeCompteClient = champ<TypeCompte>(utilisateur, 'account_type', 'accountType');
+  const estLocalVerifie = localVerifie(utilisateur);
+  const estLocalEnAttente = !modeHotel && typeCompteClient === 'local' && !estLocalVerifie;
 
-  // Cloison tarifaire : la navette locale (tarif résident en TZS) n'apparaît
-  // QUE pour les comptes résidents — jamais aux touristes ni aux hôtels.
-  const formules =
-    !modeHotel && estResident ? FORMULES : FORMULES.filter((f) => f.cle !== 'shared_local');
+  // Profil tarifaire : détermine devise et montants affichés.
+  const profil: ProfilTarifaire = modeHotel ? 'hotel' : profilTarifaireUtilisateur(utilisateur);
 
-  const [formule, setFormule] = useState<TypeTrajet>('private');
+  const [mode, setMode] = useState<ModeCourse>('prive');
   const [depart, setDepart] = useState('');
   const [arrivee, setArrivee] = useState('');
   const [programme, setProgramme] = useState('');
@@ -80,38 +59,30 @@ export default function EcranReserver() {
   const [erreur, setErreur] = useState('');
   const [charge, setCharge] = useState(false);
 
-  const prixFormule = tarifTrajet(formule, devise);
-
-  // Raison d'indisponibilité du tarif local pour ce compte (ou null si OK).
-  const raisonLocalIndisponible = !estResident
-    ? 'Réservé aux résidents de Zanzibar (compte résident vérifié).'
-    : !localAutorise
-      ? "Compte résident en attente de validation par l'équipe."
-      : null;
+  // « Partagé » = navette locale pour un local vérifié, navette touristes sinon.
+  const typePartage: TypeTrajet = estLocalVerifie ? 'shared_local' : 'shared_tourist';
+  const typeCourse: TypeTrajet = mode === 'prive' ? 'private' : typePartage;
+  const tarifCourant = tarifTrajetProfil(typeCourse, profil);
 
   const reserver = async () => {
     setErreur('');
     if (!utilisateur && !modeHotel) {
-      setErreur('Créez votre profil client avant de réserver.');
-      return;
-    }
-    if (formule === 'shared_local' && raisonLocalIndisponible) {
-      setErreur(raisonLocalIndisponible);
+      setErreur(t('reserver_erreur_profil'));
       return;
     }
     if (!depart.trim() || !arrivee.trim()) {
-      setErreur('Indiquez le lieu de départ et la destination.');
+      setErreur(t('reserver_erreur_itineraire'));
       return;
     }
     let telClientNormalise = '';
     if (modeHotel) {
       if (!nomClient.trim()) {
-        setErreur('Indiquez le nom du client pour cette course.');
+        setErreur(t('reserver_erreur_nom_client'));
         return;
       }
       telClientNormalise = telClient.replace(/[\s-]/g, '');
       if (!/^\+[1-9]\d{6,14}$/.test(telClientNormalise)) {
-        setErreur('Téléphone du client invalide (format international +255…).');
+        setErreur(t('reserver_erreur_tel_client'));
         return;
       }
     }
@@ -119,7 +90,7 @@ export default function EcranReserver() {
     if (programme.trim()) {
       const date = new Date(programme.trim().replace(' ', 'T'));
       if (Number.isNaN(date.getTime())) {
-        setErreur('Date programmée invalide. Format attendu : AAAA-MM-JJ HH:MM.');
+        setErreur(t('reserver_erreur_date'));
         return;
       }
       scheduledAt = date.toISOString();
@@ -131,14 +102,14 @@ export default function EcranReserver() {
             hotelId: hotel!.id,
             clientName: nomClient.trim(),
             clientPhone: telClientNormalise,
-            tripType: formule,
+            tripType: typeCourse,
             pickupLocation: depart.trim(),
             dropoffLocation: arrivee.trim(),
             scheduledAt,
           })
         : await api.creerTrajet({
             userId: utilisateur!.id,
-            tripType: formule,
+            tripType: typeCourse,
             pickupLocation: depart.trim(),
             dropoffLocation: arrivee.trim(),
             scheduledAt,
@@ -150,106 +121,123 @@ export default function EcranReserver() {
       setTelClient('+255');
       router.push(`/trip/${trajet.id}`);
     } catch (e) {
-      if (e instanceof ErreurApi && e.code === 'resident_not_verified') {
-        setErreur(
-          "Votre compte résident est en attente de validation par l'équipe — le tarif local sera disponible ensuite."
-        );
+      if (e instanceof ErreurApi && e.code === 'local_only') {
+        setErreur(t('reserver_erreur_local_only'));
+      } else if (e instanceof ErreurApi && e.code === 'local_not_verified') {
+        setErreur(t('reserver_erreur_local_attente'));
       } else {
-        setErreur(e instanceof ErreurApi ? e.message : 'La réservation a échoué. Réessayez.');
+        setErreur(e instanceof ErreurApi ? e.message : t('reserver_erreur'));
       }
     } finally {
       setCharge(false);
     }
   };
 
+  // Local non vérifié : pas de réservation possible — écran d'attente doux.
+  if (estLocalEnAttente) {
+    return (
+      <Ecran fond="palmiers">
+        <EtatVide
+          icone="hourglass-outline"
+          titre={t('reserver_local_attente_titre')}
+          message={t('reserver_local_attente_texte')}
+        />
+      </Ecran>
+    );
+  }
+
   return (
-    <Ecran>
+    <Ecran fond="palmiers">
       {modeHotel && (
-        <EncartInfo icone="business-outline">
-          Mode hôtel — réservez un taxi pour votre client, tarifs en TZS.
+        <EncartInfo icone="business-outline">{t('reserver_mode_hotel_info')}</EncartInfo>
+      )}
+      {profil === 'resident' && (
+        <EncartInfo icone="hourglass-outline" ton="attente">
+          {t('reserver_remise_attente')}
+        </EncartInfo>
+      )}
+      {profil === 'resident_verifie' && (
+        <EncartInfo icone="pricetag-outline" ton="succes">
+          {t('reserver_remise_activee')}
         </EncartInfo>
       )}
 
-      <Text style={styles.titreSection}>Type de course</Text>
-      {formules.map((f) => {
-        const actif = formule === f.cle;
-        const estLocal = f.cle === 'shared_local';
-        const indisponible = estLocal && !!raisonLocalIndisponible;
-        const tarif = tarifTrajet(f.cle, estLocal ? 'TZS' : devise);
-        return (
-          <Pressable
-            key={f.cle}
-            onPress={() => {
-              if (!indisponible) setFormule(f.cle);
-            }}
-            disabled={indisponible}
-            accessibilityRole="button"
-            style={[
-              styles.carteType,
-              actif && !indisponible && styles.carteTypeActive,
-              indisponible && styles.carteTypeInactive,
-            ]}
-          >
-            <View style={styles.rangeeType}>
-              <View
-                style={[
-                  styles.bulleIcone,
-                  actif && !indisponible && styles.bulleIconeActive,
-                  indisponible && styles.bulleIconeInactive,
-                ]}
-              >
+      <Text style={styles.titreSection}>{t('reserver_itineraire')}</Text>
+      <Champ
+        label={t('commun_depart')}
+        value={depart}
+        onChangeText={setDepart}
+        placeholder={t('reserver_depart_placeholder')}
+      />
+      <Champ
+        label={t('commun_arrivee')}
+        value={arrivee}
+        onChangeText={setArrivee}
+        placeholder={t('reserver_arrivee_placeholder')}
+      />
+
+      <Text style={styles.titreSection}>{t('reserver_mode_titre')}</Text>
+      <View style={styles.rangeeModes}>
+        {(
+          [
+            {
+              cle: 'prive' as ModeCourse,
+              icone: 'car-outline' as const,
+              titre: t('reserver_prive'),
+              description: t('reserver_prive_desc'),
+              type: 'private' as TypeTrajet,
+            },
+            {
+              cle: 'partage' as ModeCourse,
+              icone: 'people-outline' as const,
+              titre: t('reserver_partage'),
+              description: t('reserver_partage_desc'),
+              type: typePartage,
+            },
+          ]
+        ).map((option) => {
+          const actif = mode === option.cle;
+          const tarif = tarifTrajetProfil(option.type, profil);
+          return (
+            <Pressable
+              key={option.cle}
+              onPress={() => setMode(option.cle)}
+              accessibilityRole="button"
+              style={[styles.carteMode, actif && styles.carteModeActive]}
+            >
+              <View style={[styles.bulleIcone, actif && styles.bulleIconeActive]}>
                 <Ionicons
-                  name={indisponible ? 'lock-closed-outline' : f.icone}
-                  size={22}
-                  color={
-                    indisponible
-                      ? couleurs.texteSecondaire
-                      : actif
-                        ? couleurs.blanc
-                        : couleurs.primaire
-                  }
+                  name={option.icone}
+                  size={24}
+                  color={actif ? couleurs.blanc : couleurs.primaire}
                 />
               </View>
-              <View style={styles.textesType}>
-                <View style={styles.enTeteType}>
-                  <Text
-                    style={[
-                      styles.titreType,
-                      actif && !indisponible && { color: couleurs.primaireFonce },
-                      indisponible && { color: couleurs.texteSecondaire },
-                    ]}
-                  >
-                    {LIBELLES_TYPE_TRAJET[f.cle]}
-                  </Text>
-                  {tarif !== null && (
-                    <Text
-                      style={[styles.prixType, indisponible && { color: couleurs.texteSecondaire }]}
-                    >
-                      {formaterMontant(tarif, estLocal ? 'TZS' : devise)}
-                    </Text>
-                  )}
-                </View>
-                <Text style={styles.descriptionType}>{f.description}</Text>
-                {indisponible && <Text style={styles.indispo}>{raisonLocalIndisponible}</Text>}
-              </View>
-            </View>
-          </Pressable>
-        );
-      })}
-
-      <RidesPartages />
+              <Text style={[styles.titreMode, actif && { color: couleurs.primaireFonce }]}>
+                {option.titre}
+              </Text>
+              <Text style={styles.descriptionMode}>{option.description}</Text>
+              <Text style={styles.sousTypeMode}>{libelleTypeTrajet(option.type, t)}</Text>
+              {tarif !== null && (
+                <Text style={styles.prixMode}>
+                  {formaterMontant(tarif.montant, tarif.devise)}
+                </Text>
+              )}
+            </Pressable>
+          );
+        })}
+      </View>
 
       {modeHotel && (
         <>
-          <Text style={styles.titreSection}>Votre client</Text>
+          <Text style={styles.titreSection}>{t('reserver_votre_client')}</Text>
           <Champ
-            label="Nom du client"
+            label={t('reserver_nom_client')}
             value={nomClient}
             onChangeText={setNomClient}
-            placeholder="Ex. : M. et Mme Dupont, chambre 12"
+            placeholder={t('reserver_nom_client_placeholder')}
           />
           <Champ
-            label="Téléphone du client"
+            label={t('reserver_tel_client')}
             value={telClient}
             onChangeText={setTelClient}
             keyboardType="phone-pad"
@@ -258,46 +246,34 @@ export default function EcranReserver() {
         </>
       )}
 
-      <Text style={styles.titreSection}>Itinéraire</Text>
       <Champ
-        label="Départ"
-        value={depart}
-        onChangeText={setDepart}
-        placeholder="Ex. : aéroport de Zanzibar (ZNZ)"
-      />
-      <Champ
-        label="Arrivée"
-        value={arrivee}
-        onChangeText={setArrivee}
-        placeholder="Ex. : Nungwi, hôtel Ocean View"
-      />
-      <Champ
-        label="Programmer (optionnel, AAAA-MM-JJ HH:MM)"
+        label={t('reserver_programmer')}
         value={programme}
         onChangeText={setProgramme}
-        placeholder="Laisser vide pour partir dès que possible"
+        placeholder={t('reserver_programmer_placeholder')}
       />
 
       <View style={styles.cartePrix}>
         <View style={styles.lignePrix}>
-          <Text style={styles.labelPrix}>Prix de la course</Text>
+          <Text style={styles.labelPrix}>{t('reserver_prix_course')}</Text>
           <Text style={styles.valeurPrix}>
-            {prixFormule !== null ? formaterMontant(prixFormule, devise) : '—'}
+            {tarifCourant !== null
+              ? formaterMontant(tarifCourant.montant, tarifCourant.devise)
+              : '—'}
           </Text>
         </View>
-        <Text style={styles.note}>
-          Tarif plat selon le type de course (grille zanziGo). Le prix est figé à la
-          réservation — aucun supplément ensuite.
-        </Text>
+        <Text style={styles.note}>{t('reserver_note_prix')}</Text>
       </View>
 
       <TexteErreur>{erreur}</TexteErreur>
       <Bouton
-        titre={modeHotel ? 'Réserver pour ce client' : 'Réserver cette course'}
+        titre={modeHotel ? t('reserver_bouton_hotel') : t('reserver_bouton')}
         icone="checkmark-circle-outline"
         onPress={reserver}
         charge={charge}
       />
+
+      <RidesPartages />
     </Ecran>
   );
 }
@@ -309,73 +285,61 @@ const styles = StyleSheet.create({
     color: couleurs.encre,
     marginTop: espaces.s,
   },
-  carteType: {
-    backgroundColor: couleurs.blanc,
+  rangeeModes: {
+    flexDirection: 'row',
+    gap: espaces.m,
+  },
+  carteMode: {
+    flex: 1,
+    backgroundColor: couleurs.carteTranslucide,
     borderRadius: rayons.carte,
     padding: espaces.l,
+    gap: espaces.xs,
+    alignItems: 'center',
     borderWidth: 2,
-    borderColor: couleurs.blanc,
+    borderColor: 'transparent',
     ...ombres.carte,
   },
-  carteTypeActive: {
+  carteModeActive: {
     borderColor: couleurs.primaire,
     backgroundColor: couleurs.primaireClair,
   },
-  carteTypeInactive: {
-    opacity: 0.6,
-  },
-  rangeeType: {
-    flexDirection: 'row',
-    gap: espaces.m,
-    alignItems: 'flex-start',
-  },
   bulleIcone: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: couleurs.primaireClair,
     alignItems: 'center',
     justifyContent: 'center',
+    marginBottom: espaces.xs,
   },
   bulleIconeActive: {
     backgroundColor: couleurs.primaire,
   },
-  bulleIconeInactive: {
-    backgroundColor: couleurs.bordure,
-  },
-  textesType: {
-    flex: 1,
-    gap: espaces.xs,
-  },
-  enTeteType: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: espaces.m,
-  },
-  titreType: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: couleurs.encre,
-    flexShrink: 1,
-  },
-  prixType: {
-    fontSize: 15,
+  titreMode: {
+    fontSize: 17,
     fontWeight: '800',
-    color: couleurs.primaire,
+    color: couleurs.encre,
   },
-  descriptionType: {
-    fontSize: 13,
-    color: couleurs.texteSecondaire,
-    lineHeight: 18,
-  },
-  indispo: {
+  descriptionMode: {
     fontSize: 12,
-    color: couleurs.attente,
+    color: couleurs.texteSecondaire,
+    textAlign: 'center',
+    lineHeight: 16,
+  },
+  sousTypeMode: {
+    fontSize: 11,
+    color: couleurs.texteSecondaire,
     fontWeight: '600',
   },
+  prixMode: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: couleurs.primaire,
+    marginTop: espaces.xs,
+  },
   cartePrix: {
-    backgroundColor: couleurs.blanc,
+    backgroundColor: couleurs.carteTranslucide,
     borderRadius: rayons.carte,
     padding: espaces.l,
     gap: espaces.s,

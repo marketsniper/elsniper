@@ -2,7 +2,7 @@
 // Payload backend : {senderType, senderUserId | senderHotelId, pickupLocation,
 // dropoffLocation, recipientName, recipientPhone, description?}. Tarif plat
 // figé côté serveur : 10 USD ou 25 000 TZS selon la devise de l'expéditeur
-// (TZS pour un hôtel partenaire).
+// (TZS pour un hôtel partenaire ou un compte local).
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
@@ -19,12 +19,14 @@ import {
 import { api, ErreurApi } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { ajouterColisLocal } from '@/lib/colisLocal';
+import { useT } from '@/lib/i18n';
 import { couleurs, espaces, rayons } from '@/lib/theme';
 import { deviseUtilisateur, formaterMontant, tarifColis, type Devise } from '@/lib/types';
 
 export default function EcranNouveauColis() {
   const router = useRouter();
   const { session } = useAuth();
+  const { t } = useT();
 
   const [depart, setDepart] = useState('');
   const [arrivee, setArrivee] = useState('');
@@ -43,16 +45,16 @@ export default function EcranNouveauColis() {
   const envoyer = async () => {
     setErreur('');
     if (!expediteurUser && !expediteurHotel) {
-      setErreur('Créez votre profil avant d’envoyer un colis.');
+      setErreur(t('ncolis_erreur_profil'));
       return;
     }
     if (!depart.trim() || !arrivee.trim() || !destinataire.trim()) {
-      setErreur('Renseignez la collecte, la livraison et le nom du destinataire.');
+      setErreur(t('ncolis_erreur_champs'));
       return;
     }
     const telephoneNormalise = telephone.replace(/[\s-]/g, '');
     if (!/^\+[1-9]\d{6,14}$/.test(telephoneNormalise)) {
-      setErreur('Téléphone du destinataire invalide (format international +255…).');
+      setErreur(t('ncolis_erreur_tel'));
       return;
     }
     setCharge(true);
@@ -71,69 +73,64 @@ export default function EcranNouveauColis() {
       await ajouterColisLocal(proprietaireId, colis.id);
       router.replace(`/package/${colis.id}`);
     } catch (e) {
-      setErreur(e instanceof ErreurApi ? e.message : 'La création du colis a échoué. Réessayez.');
+      setErreur(e instanceof ErreurApi ? e.message : t('ncolis_erreur_creation'));
     } finally {
       setCharge(false);
     }
   };
 
   return (
-    <Ecran>
+    <Ecran fond="lagon">
       <Carte>
-        <Titre>Envoyer un colis</Titre>
-        <SousTitre>
-          Un chauffeur zanziGo récupère votre colis et le livre contre scan du QR code.
-        </SousTitre>
+        <Titre>{t('colis_envoyer')}</Titre>
+        <SousTitre>{t('ncolis_intro')}</SousTitre>
 
-        <Text style={styles.titreSection}>Trajet du colis</Text>
+        <Text style={styles.titreSection}>{t('ncolis_section_trajet')}</Text>
         <Champ
-          label="Lieu de collecte"
+          label={t('ncolis_collecte')}
           value={depart}
           onChangeText={setDepart}
-          placeholder="Ex. : Stone Town, Kenyatta Road"
+          placeholder={t('ncolis_collecte_placeholder')}
         />
         <Champ
-          label="Lieu de livraison"
+          label={t('ncolis_livraison')}
           value={arrivee}
           onChangeText={setArrivee}
-          placeholder="Ex. : Paje, guesthouse Baraka"
+          placeholder={t('ncolis_livraison_placeholder')}
         />
 
-        <Text style={styles.titreSection}>Destinataire</Text>
+        <Text style={styles.titreSection}>{t('ncolis_section_destinataire')}</Text>
         <Champ
-          label="Nom du destinataire"
+          label={t('ncolis_nom_dest')}
           value={destinataire}
           onChangeText={setDestinataire}
-          placeholder="Ex. : Juma Ali"
+          placeholder={t('ncolis_nom_dest_placeholder')}
         />
         <Champ
-          label="Téléphone du destinataire"
+          label={t('ncolis_tel_dest')}
           value={telephone}
           onChangeText={setTelephone}
           keyboardType="phone-pad"
           placeholder="+255 712 345 678"
         />
         <Champ
-          label="Description (optionnel)"
+          label={t('ncolis_description_opt')}
           value={description}
           onChangeText={setDescription}
-          placeholder="Ex. : documents, fragile…"
+          placeholder={t('ncolis_description_placeholder')}
           multiline
         />
 
         <View style={styles.blocPrix}>
           <View style={styles.lignePrix}>
-            <Text style={styles.labelPrix}>Prix de l&apos;envoi</Text>
+            <Text style={styles.labelPrix}>{t('ncolis_prix_envoi')}</Text>
             <Text style={styles.valeurPrix}>{formaterMontant(prix, devise)}</Text>
           </View>
-          <Text style={styles.note}>
-            Tarif plat zanziGo, quel que soit le trajet sur l&apos;île. Le prix officiel est
-            figé à la création de l&apos;envoi.
-          </Text>
+          <Text style={styles.note}>{t('ncolis_note_prix')}</Text>
         </View>
 
         <TexteErreur>{erreur}</TexteErreur>
-        <Bouton titre="Créer l'envoi" icone="cube-outline" onPress={envoyer} charge={charge} />
+        <Bouton titre={t('ncolis_bouton')} icone="cube-outline" onPress={envoyer} charge={charge} />
       </Carte>
     </Ecran>
   );

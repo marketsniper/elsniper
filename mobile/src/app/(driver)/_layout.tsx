@@ -1,9 +1,11 @@
-// Onglets du mode chauffeur : Mes courses, Scanner, Profil.
+// Onglets du mode chauffeur : Mes courses, Annonces, Scanner, Profil
+// (titres traduits).
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import React from 'react';
 import type { ColorValue } from 'react-native';
 
+import { useT } from '@/lib/i18n';
 import { couleurs } from '@/lib/theme';
 
 function icone(nom: React.ComponentProps<typeof Ionicons>['name']) {
@@ -13,6 +15,7 @@ function icone(nom: React.ComponentProps<typeof Ionicons>['name']) {
 }
 
 export default function LayoutChauffeur() {
+  const { t } = useT();
   return (
     <Tabs
       initialRouteName="courses"
@@ -28,19 +31,19 @@ export default function LayoutChauffeur() {
     >
       <Tabs.Screen
         name="courses"
-        options={{ title: 'Mes courses', tabBarIcon: icone('car-outline') }}
+        options={{ title: t('onglet_courses'), tabBarIcon: icone('car-outline') }}
       />
       <Tabs.Screen
         name="annonces"
-        options={{ title: 'Annonces', tabBarIcon: icone('megaphone-outline') }}
+        options={{ title: t('onglet_annonces'), tabBarIcon: icone('megaphone-outline') }}
       />
       <Tabs.Screen
         name="scanner"
-        options={{ title: 'Scanner', tabBarIcon: icone('qr-code-outline'), headerShown: false }}
+        options={{ title: t('onglet_scanner'), tabBarIcon: icone('qr-code-outline'), headerShown: false }}
       />
       <Tabs.Screen
         name="compte"
-        options={{ title: 'Profil', tabBarIcon: icone('person-outline') }}
+        options={{ title: t('onglet_profil'), tabBarIcon: icone('person-outline') }}
       />
     </Tabs>
   );

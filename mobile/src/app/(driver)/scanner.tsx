@@ -28,6 +28,7 @@ import {
 } from '@/components/ui';
 import { api, ErreurApi, prochaineActionColis } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { useT } from '@/lib/i18n';
 import { couleurs, espaces, rayons } from '@/lib/theme';
 import { champ, type Colis, type StatutColis } from '@/lib/types';
 
@@ -54,6 +55,7 @@ function FenetreScan() {
 export default function EcranScanner() {
   const router = useRouter();
   const { session } = useAuth();
+  const { t } = useT();
   const params = useLocalSearchParams<{ tripId?: string; action?: string }>();
   const tripId = typeof params.tripId === 'string' && params.tripId ? params.tripId : null;
   const actionCourse =
@@ -88,14 +90,14 @@ export default function EcranScanner() {
         try {
           if (actionCourse === 'start') {
             await api.demarrerCourse(tripId, data);
-            setMessage('Course démarrée. Bonne route !');
+            setMessage(t('scanner_course_demarree'));
           } else {
             await api.terminerCourse(tripId, data);
-            setMessage('Course terminée. Merci !');
+            setMessage(t('scanner_course_terminee'));
           }
           setTimeout(() => router.replace(`/course/${tripId}`), 1200);
         } catch (e) {
-          setErreur(e instanceof ErreurApi ? e.message : 'Action refusée pour cette course.');
+          setErreur(e instanceof ErreurApi ? e.message : t('course_erreur_action'));
           scanEnCours.current = false;
         } finally {
           setCharge(false);
@@ -111,7 +113,7 @@ export default function EcranScanner() {
           setColis(fiche);
           setQrColis(data);
         } catch (e) {
-          setErreur(e instanceof ErreurApi ? e.message : 'Colis introuvable pour ce QR.');
+          setErreur(e instanceof ErreurApi ? e.message : t('scanner_erreur_colis'));
           scanEnCours.current = false;
         } finally {
           setCharge(false);
@@ -119,10 +121,10 @@ export default function EcranScanner() {
         return;
       }
 
-      setErreur('QR non reconnu. Attendu : QR véhicule (depuis une course) ou QR colis PKG-…');
+      setErreur(t('scanner_qr_inconnu'));
       scanEnCours.current = false;
     },
-    [tripId, actionCourse, charge, router]
+    [tripId, actionCourse, charge, router, t]
   );
 
   // QR véhicule fixe du chauffeur connecté (VEH-…), pour agir sans scanner.
@@ -134,7 +136,7 @@ export default function EcranScanner() {
     setErreur('');
     const permissionPhoto = await ImagePicker.requestCameraPermissionsAsync();
     if (!permissionPhoto.granted) {
-      setErreur("Autorisez l'appareil photo pour la photo de preuve.");
+      setErreur(t('scanner_erreur_photo'));
       return;
     }
     const photo = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.6 });
@@ -154,11 +156,9 @@ export default function EcranScanner() {
               photoUrl: televersement.url,
             });
       setColis(maj);
-      setMessage(
-        action === 'pickup' ? 'Colis ramassé, photo enregistrée.' : 'Colis livré, photo enregistrée.'
-      );
+      setMessage(action === 'pickup' ? t('scanner_colis_ramasse') : t('scanner_colis_livre'));
     } catch (e) {
-      setErreur(e instanceof ErreurApi ? e.message : "L'opération sur le colis a échoué.");
+      setErreur(e instanceof ErreurApi ? e.message : t('scanner_erreur_operation'));
     } finally {
       setCharge(false);
     }
@@ -167,21 +167,19 @@ export default function EcranScanner() {
   // Permission caméra.
   if (!permission) {
     return (
-      <Ecran defiler={false}>
-        <SousTitre>Préparation de la caméra…</SousTitre>
+      <Ecran fond="vagues" defiler={false}>
+        <SousTitre>{t('scanner_preparation')}</SousTitre>
       </Ecran>
     );
   }
   if (!permission.granted) {
     return (
-      <Ecran>
+      <Ecran fond="vagues">
         <Carte>
-          <Titre>Caméra requise</Titre>
-          <SousTitre>
-            Le scan des QR codes (véhicule et colis) nécessite l&apos;accès à la caméra.
-          </SousTitre>
+          <Titre>{t('scanner_camera_requise')}</Titre>
+          <SousTitre>{t('scanner_camera_texte')}</SousTitre>
           <Bouton
-            titre="Autoriser la caméra"
+            titre={t('scanner_autoriser')}
             icone="camera-outline"
             onPress={() => demanderPermission()}
           />
@@ -195,31 +193,34 @@ export default function EcranScanner() {
     const statut = champ<StatutColis>(colis, 'status', 'statut');
     const action = prochaineActionColis(statut);
     return (
-      <Ecran>
+      <Ecran fond="vagues">
         <Carte>
           <View style={styles.enTeteColis}>
-            <Titre>Colis</Titre>
+            <Titre>{t('titre_colis')}</Titre>
             <BadgeStatutColis statut={statut} />
           </View>
           <Text style={styles.codeColis}>{qrColis}</Text>
           <LigneInfo
-            label="Collecte"
+            label={t('dcolis_collecte')}
             valeur={String(champ(colis, 'pickup_location', 'pickupLocation') ?? '—')}
           />
           <LigneInfo
-            label="Livraison"
+            label={t('dcolis_livraison')}
             valeur={String(champ(colis, 'dropoff_location', 'dropoffLocation') ?? '—')}
           />
           <LigneInfo
-            label="Destinataire"
+            label={t('dcolis_destinataire')}
             valeur={String(champ(colis, 'recipient_name', 'recipientName') ?? '—')}
           />
           <LigneInfo
-            label="Téléphone"
+            label={t('commun_telephone')}
             valeur={String(champ(colis, 'recipient_phone', 'recipientPhone') ?? '—')}
           />
           {!!champ(colis, 'description') && (
-            <LigneInfo label="Description" valeur={String(champ(colis, 'description'))} />
+            <LigneInfo
+              label={t('commun_description')}
+              valeur={String(champ(colis, 'description'))}
+            />
           )}
         </Carte>
 
@@ -232,7 +233,7 @@ export default function EcranScanner() {
 
         {action === 'pickup' && (
           <Bouton
-            titre="Ramasser le colis (photo de preuve)"
+            titre={t('scanner_ramasser')}
             icone="camera-outline"
             onPress={() => traiterColis('pickup')}
             charge={charge}
@@ -240,7 +241,7 @@ export default function EcranScanner() {
         )}
         {action === 'deliver' && (
           <Bouton
-            titre="Livrer le colis (photo de preuve)"
+            titre={t('scanner_livrer')}
             icone="camera-outline"
             onPress={() => traiterColis('deliver')}
             charge={charge}
@@ -248,14 +249,12 @@ export default function EcranScanner() {
         )}
         {action === null && (
           <EncartInfo icone="information-circle-outline" ton="attente">
-            {statut === 'created'
-              ? "Colis pas encore payé par l'expéditeur — le ramassage sera possible après paiement."
-              : 'Aucune action possible sur ce colis (déjà livré).'}
+            {statut === 'created' ? t('scanner_colis_non_paye') : t('scanner_colis_livre_deja')}
           </EncartInfo>
         )}
 
         <Bouton
-          titre="Scanner un autre QR"
+          titre={t('scanner_autre')}
           icone="qr-code-outline"
           variante="secondaire"
           onPress={reprendreScan}
@@ -287,14 +286,12 @@ export default function EcranScanner() {
           <Text style={styles.titreBandeau}>
             {tripId && actionCourse
               ? actionCourse === 'start'
-                ? 'Scannez le QR du véhicule pour démarrer la course'
-                : 'Scannez le QR du véhicule pour terminer la course'
-              : 'Scannez un QR colis (PKG-…)'}
+                ? t('scanner_demarrer')
+                : t('scanner_terminer')
+              : t('scanner_colis_invite')}
           </Text>
           <Text style={styles.aideBandeau}>
-            {tripId && actionCourse
-              ? 'Le QR est affiché à bord du véhicule.'
-              : 'Placez le QR du colis dans le cadre.'}
+            {tripId && actionCourse ? t('scanner_aide_vehicule') : t('scanner_aide_colis')}
           </Text>
         </View>
         <View style={styles.bandeauBas}>
@@ -302,19 +299,27 @@ export default function EcranScanner() {
           {!!erreur && (
             <>
               <Text style={styles.messageErreur}>{erreur}</Text>
-              <Bouton titre="Réessayer" variante="secondaire" onPress={reprendreScan} />
+              <Bouton
+                titre={t('commun_reessayer')}
+                variante="secondaire"
+                onPress={reprendreScan}
+              />
             </>
           )}
           {tripId && actionCourse && monQrVehicule && (
             <Bouton
-              titre="Utiliser mon QR véhicule"
+              titre={t('course_mon_qr')}
               icone="car-outline"
               onPress={() => surScan({ data: monQrVehicule })}
               charge={charge}
             />
           )}
           {tripId && actionCourse && (
-            <Bouton titre="Annuler" variante="secondaire" onPress={() => router.back()} />
+            <Bouton
+              titre={t('commun_annuler')}
+              variante="secondaire"
+              onPress={() => router.back()}
+            />
           )}
         </View>
       </SafeAreaView>

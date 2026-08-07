@@ -6,16 +6,19 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 
+import { FondPlage } from '@/components/FondPlage';
 import { BadgeStatutColis, Bouton, EtatVide } from '@/components/ui';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { listerColisLocaux } from '@/lib/colisLocal';
+import { useT } from '@/lib/i18n';
 import { couleurs, espaces, ombres, rayons } from '@/lib/theme';
 import { champ, formaterPrix, type Colis, type StatutColis } from '@/lib/types';
 
 export default function EcranColis() {
   const router = useRouter();
   const { session } = useAuth();
+  const { t } = useT();
   const [colis, setColis] = useState<Colis[]>([]);
   const [charge, setCharge] = useState(false);
 
@@ -50,7 +53,7 @@ export default function EcranColis() {
   );
 
   return (
-    <View style={styles.conteneur}>
+    <FondPlage fond="lagon" voile="clair">
       <FlatList
         data={colis}
         keyExtractor={(c) => c.id}
@@ -60,7 +63,7 @@ export default function EcranColis() {
         }
         ListHeaderComponent={
           <Bouton
-            titre="Envoyer un colis"
+            titre={t('colis_envoyer')}
             icone="add-circle-outline"
             onPress={() => router.push('/package/nouveau')}
             style={styles.boutonNouveau}
@@ -70,12 +73,8 @@ export default function EcranColis() {
           !charge ? (
             <EtatVide
               icone="cube-outline"
-              titre="Aucun colis pour l'instant"
-              message={
-                hotel
-                  ? 'Envoyez le premier colis d’un de vos clients : un chauffeur zanziGo le livre partout sur l’île.'
-                  : 'Documents, cadeaux, courses… un chauffeur zanziGo livre votre premier colis partout sur l’île !'
-              }
+              titre={t('colis_vide_titre')}
+              message={hotel ? t('colis_vide_texte_hotel') : t('colis_vide_texte')}
             />
           ) : null
         }
@@ -88,7 +87,7 @@ export default function EcranColis() {
             >
               <View style={styles.enTete}>
                 <Text style={styles.destinataire}>
-                  {champ(item, 'recipient_name', 'recipientName') ?? 'Colis'}
+                  {champ(item, 'recipient_name', 'recipientName') ?? t('colis_defaut')}
                 </Text>
                 <BadgeStatutColis statut={statut} />
               </View>
@@ -105,15 +104,11 @@ export default function EcranColis() {
           );
         }}
       />
-    </View>
+    </FondPlage>
   );
 }
 
 const styles = StyleSheet.create({
-  conteneur: {
-    flex: 1,
-    backgroundColor: couleurs.sable,
-  },
   liste: {
     padding: espaces.l,
     gap: espaces.m,
@@ -123,7 +118,7 @@ const styles = StyleSheet.create({
     marginBottom: espaces.s,
   },
   carte: {
-    backgroundColor: couleurs.blanc,
+    backgroundColor: couleurs.carteTranslucide,
     borderRadius: rayons.carte,
     padding: espaces.l,
     gap: espaces.s,

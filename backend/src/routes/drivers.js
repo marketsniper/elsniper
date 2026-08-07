@@ -8,6 +8,8 @@ import { generateVehicleQr } from '../services/qrService.js';
 
 const router = Router();
 
+// Candidature Taxi Partner : 3 documents obligatoires — permis de conduire,
+// assurance du véhicule et photo du véhicule. Pièce d'identité optionnelle.
 const createDriverSchema = z.object({
   fullName: z.string().min(2),
   phone: z.string().min(6),
@@ -16,7 +18,9 @@ const createDriverSchema = z.object({
   vehicleModel: z.string().optional(),
   zone: z.string().min(2),
   licenseDocumentUrl: z.string().url(),
-  idDocumentUrl: z.string().url(),
+  insuranceDocumentUrl: z.string().url(),
+  vehiclePhotoUrl: z.string().url(),
+  idDocumentUrl: z.string().url().optional(),
 });
 
 const verifySchema = z.object({
@@ -39,8 +43,9 @@ router.post(
       throw new HttpError(403, 'phone_mismatch', 'Le téléphone doit être celui vérifié par OTP (jeton)');
     }
     const { rows } = await query(
-      `INSERT INTO drivers (full_name, phone, license_number, vehicle_plate, vehicle_model, zone, license_document_url, id_document_url)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      `INSERT INTO drivers (full_name, phone, license_number, vehicle_plate, vehicle_model, zone,
+                            license_document_url, insurance_document_url, vehicle_photo_url, id_document_url)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
        RETURNING *`,
       [
         data.fullName,
@@ -50,7 +55,9 @@ router.post(
         data.vehicleModel ?? null,
         data.zone,
         data.licenseDocumentUrl,
-        data.idDocumentUrl,
+        data.insuranceDocumentUrl,
+        data.vehiclePhotoUrl,
+        data.idDocumentUrl ?? null,
       ]
     );
     res.status(201).json(rows[0]);

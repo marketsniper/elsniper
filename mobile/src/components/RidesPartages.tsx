@@ -1,6 +1,9 @@
 // Section « Trajets partagés à venir » : trajets ouverts postés par les
 // chauffeurs (GET /rides). Réservation d'une place via WhatsApp (lien
 // whatsapp_link pré-rempli vers l'équipe).
+// Devise affichée : le serveur envoie price_per_seat_usd aux profils USD
+// (17 USD touriste, 15,30 USD résident vérifié) et price_per_seat (TZS) aux
+// locaux/hôtels/chauffeurs — on affiche simplement le champ présent.
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from 'expo-router';
 import React, { useCallback, useState } from 'react';
@@ -8,33 +11,20 @@ import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, View } from 'r
 
 import { Selecteur } from '@/components/Selecteur';
 import { api } from '@/lib/api';
-import { useAuth } from '@/lib/auth';
+import { useT } from '@/lib/i18n';
 import { couleurs, espaces, ombres, rayons } from '@/lib/theme';
-import {
-  champ,
-  DESTINATIONS_RIDES,
-  deviseUtilisateur,
-  formaterDate,
-  formaterMontant,
-  type Ride,
-} from '@/lib/types';
+import { champ, DESTINATIONS_RIDES, formaterDate, formaterMontant, type Ride } from '@/lib/types';
 
 // Contact WhatsApp de l'équipe zanziGo (secours si whatsapp_link absent).
 const WHATSAPP_EQUIPE = 'https://wa.me/255779000000';
 
-const TOUTES_DESTINATIONS = 'Toutes les destinations';
-
 export function RidesPartages() {
-  const { session } = useAuth();
-  // Devise d'affichage : USD pour les touristes (price_per_seat_usd), TZS
-  // pour les résidents, hôtels et chauffeurs (price_per_seat). Même liste
-  // pour tous — seule la devise affichée change.
-  const utilisateur = session?.user ?? null;
-  const enUsd = !!utilisateur && deviseUtilisateur(utilisateur) === 'USD';
+  const { t } = useT();
   const [rides, setRides] = useState<Ride[]>([]);
   const [charge, setCharge] = useState(false);
   const [chargeInitiale, setChargeInitiale] = useState(true);
-  const [filtreDestination, setFiltreDestination] = useState(TOUTES_DESTINATIONS);
+  const toutesDestinations = t('rides_toutes');
+  const [filtreDestination, setFiltreDestination] = useState('');
   const [destinations, setDestinations] = useState<string[]>(DESTINATIONS_RIDES);
 
   const rafraichir = useCallback(async () => {
@@ -61,23 +51,21 @@ export function RidesPartages() {
     }, [rafraichir])
   );
 
-  const ridesFiltres =
-    filtreDestination === TOUTES_DESTINATIONS
-      ? rides
-      : rides.filter((ride) => champ<string>(ride, 'destination') === filtreDestination);
+  const filtreActif = filtreDestination !== '' && filtreDestination !== toutesDestinations;
+  const ridesFiltres = filtreActif
+    ? rides.filter((ride) => champ<string>(ride, 'destination') === filtreDestination)
+    : rides;
 
   return (
     <View style={styles.section}>
-      <Text style={styles.titreSection}>Trajets partagés à venir</Text>
-      <Text style={styles.sousTitreSection}>
-        Postés par nos chauffeurs — réservez votre place via l&apos;équipe.
-      </Text>
+      <Text style={styles.titreSection}>{t('rides_titre')}</Text>
+      <Text style={styles.sousTitreSection}>{t('rides_soustitre')}</Text>
 
       {rides.length > 0 && (
         <Selecteur
-          label="Filtrer par destination"
-          valeur={filtreDestination}
-          options={[TOUTES_DESTINATIONS, ...destinations]}
+          label={t('rides_filtre')}
+          valeur={filtreActif ? filtreDestination : toutesDestinations}
+          options={[toutesDestinations, ...destinations]}
           onChange={setFiltreDestination}
         />
       )}
@@ -89,27 +77,25 @@ export function RidesPartages() {
       {!charge && !chargeInitiale && rides.length === 0 && (
         <View style={styles.vide}>
           <Ionicons name="people-outline" size={22} color={couleurs.texteSecondaire} />
-          <Text style={styles.texteVide}>
-            Aucun trajet partagé pour l&apos;instant — revenez plus tard.
-          </Text>
+          <Text style={styles.texteVide}>{t('rides_vide')}</Text>
         </View>
       )}
       {!charge && !chargeInitiale && rides.length > 0 && ridesFiltres.length === 0 && (
         <View style={styles.vide}>
           <Ionicons name="people-outline" size={22} color={couleurs.texteSecondaire} />
           <Text style={styles.texteVide}>
-            Aucun trajet partagé vers {filtreDestination} pour l&apos;instant.
+            {t('rides_vide_destination', { destination: filtreDestination })}
           </Text>
         </View>
       )}
 
       {ridesFiltres.map((ride) => {
         const placesRestantes = Number(champ(ride, 'seats_available', 'seatsAvailable') ?? 0);
-        const prixTzs = champ<number | string>(ride, 'price_per_seat', 'pricePerSeat');
+        // Devise selon le champ présent : USD prioritaire s'il est envoyé.
         const prixUsd = champ<number | string>(ride, 'price_per_seat_usd', 'pricePerSeatUsd');
-        const prixPlace = enUsd && prixUsd !== undefined ? prixUsd : prixTzs;
-        const devise =
-          enUsd && prixUsd !== undefined ? 'USD' : champ<string>(ride, 'currency') ?? 'TZS';
+        const prixTzs = champ<number | string>(ride, 'price_per_seat', 'pricePerSeat');
+        const prixPlace = prixUsd !== undefined ? prixUsd : prixTzs;
+        const devise = prixUsd !== undefined ? 'USD' : champ<string>(ride, 'currency') ?? 'TZS';
         const nomChauffeur = champ<string>(ride, 'driver_name', 'driverName');
         const vehicule = champ<string>(ride, 'vehicle_model', 'vehicleModel');
         const noteBrute = champ<number | string>(ride, 'driver_rating', 'driverRating');
@@ -135,7 +121,9 @@ export function RidesPartages() {
               <View style={styles.detail}>
                 <Ionicons name="people-outline" size={14} color={couleurs.texteSecondaire} />
                 <Text style={styles.texteDetail}>
-                  {placesRestantes} {placesRestantes > 1 ? 'places restantes' : 'place restante'}
+                  {t(placesRestantes > 1 ? 'rides_places_restantes' : 'rides_place_restante', {
+                    n: placesRestantes,
+                  })}
                 </Text>
               </View>
             </View>
@@ -143,7 +131,7 @@ export function RidesPartages() {
               <View style={styles.detail}>
                 <Ionicons name="person-outline" size={14} color={couleurs.texteSecondaire} />
                 <Text style={styles.texteDetail}>
-                  {nomChauffeur ?? 'Chauffeur zanziGo'}
+                  {nomChauffeur ?? t('rides_chauffeur_defaut')}
                   {vehicule ? ` · ${vehicule}` : ''}
                 </Text>
               </View>
@@ -156,7 +144,9 @@ export function RidesPartages() {
             </View>
             <View style={styles.piedCarte}>
               <Text style={styles.prix}>
-                {prixPlace !== undefined ? `${formaterMontant(prixPlace, devise)} / place` : '—'}
+                {prixPlace !== undefined
+                  ? `${formaterMontant(prixPlace, devise)} ${t('rides_par_place')}`
+                  : '—'}
               </Text>
               <Pressable
                 onPress={() => Linking.openURL(lien)}
@@ -164,7 +154,7 @@ export function RidesPartages() {
                 style={({ pressed }) => [styles.boutonReserver, pressed && { opacity: 0.7 }]}
               >
                 <Ionicons name="logo-whatsapp" size={16} color={couleurs.blanc} />
-                <Text style={styles.texteReserver}>Réserver une place</Text>
+                <Text style={styles.texteReserver}>{t('rides_reserver')}</Text>
               </Pressable>
             </View>
           </View>
@@ -196,7 +186,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: espaces.s,
-    backgroundColor: couleurs.blanc,
+    backgroundColor: couleurs.carteTranslucide,
     borderRadius: rayons.carte,
     padding: espaces.l,
   },
@@ -207,7 +197,7 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   carte: {
-    backgroundColor: couleurs.blanc,
+    backgroundColor: couleurs.carteTranslucide,
     borderRadius: rayons.carte,
     padding: espaces.l,
     gap: espaces.s,

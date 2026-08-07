@@ -1,12 +1,11 @@
 // Formulaire de création de profil client (POST /users).
 // Le backend attend {fullName, phone, email?, accountType, idDocumentUrl?} —
 // le téléphone doit être celui vérifié par OTP (celui du jeton).
-// Touriste : devise USD, compte vérifié d'office. Résident : devise TZS et
-// tarif local, mais document d'identité OBLIGATOIRE (téléversé sur
-// POST /uploads), puis validation manuelle par l'équipe (statut 'pending'
-// → 'verified'/'rejected').
-// Le choix fait sur la page d'accueil (?type=tourist|resident) préremplit le
-// type de compte et masque le sélecteur.
+// Segmentation : touriste (aucun document, USD plein tarif) ; résident
+// (documents de résidence requis, −10 % une fois validé, USD) ; local
+// (carte d'identité tanzanienne NIDA requise, 15 000 TZS partout une fois
+// validé). Le flux « visiteur » de l'accueil laisse le choix touriste ou
+// résident ; le flux « local » préremplit accountType='local'.
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -25,46 +24,46 @@ import {
 } from '@/components/ui';
 import { api, ErreurApi } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { useT } from '@/lib/i18n';
 import { couleurs, espaces, rayons } from '@/lib/theme';
-import type { TypeCompte } from '@/lib/types';
-
-const TYPES_COMPTE: { cle: TypeCompte; titre: string; description: string }[] = [
-  {
-    cle: 'tourist',
-    titre: 'Touriste',
-    description: 'Prix en USD, compte actif immédiatement.',
-  },
-  {
-    cle: 'resident',
-    titre: 'Résident',
-    description:
-      "Prix en TZS et tarif local. Document d'identité requis, validé par l'équipe sous 48 h.",
-  },
-];
+import { formaterMontant, TARIF_LOCAL_TZS, type TypeCompte } from '@/lib/types';
 
 export default function EcranClient() {
   const router = useRouter();
   const { session, majSession } = useAuth();
+  const { t } = useT();
   const params = useLocalSearchParams<{ type?: string }>();
-  // Type choisi sur la page d'accueil : prérempli et non modifiable ici.
+  // Type imposé par le flux d'accueil ('local'), ou préréglé (legacy).
   const typePredefini: TypeCompte | null =
-    params.type === 'tourist' || params.type === 'resident' ? params.type : null;
+    params.type === 'tourist' || params.type === 'resident' || params.type === 'local'
+      ? params.type
+      : null;
 
   const [nom, setNom] = useState('');
   const [email, setEmail] = useState('');
   const [typeCompte, setTypeCompte] = useState<TypeCompte>(typePredefini ?? 'tourist');
-  // URI locale du document d'identité choisi (résident uniquement).
+  // URI locale du document requis (résident : documents de résidence ;
+  // local : carte d'identité tanzanienne NIDA).
   const [documentUri, setDocumentUri] = useState<string | null>(null);
   const [erreur, setErreur] = useState('');
   const [charge, setCharge] = useState(false);
 
-  // Sélection du document d'identité dans la galerie (ou l'appareil photo du
-  // téléphone via la galerie système).
+  const estLocal = typeCompte === 'local';
+  const documentRequis = typeCompte === 'resident' || estLocal;
+  const prixLocal = formaterMontant(TARIF_LOCAL_TZS, 'TZS');
+
+  const TYPES_COMPTE: { cle: TypeCompte; titre: string; description: string }[] = [
+    { cle: 'tourist', titre: t('client_type_touriste'), description: t('client_type_touriste_desc') },
+    { cle: 'resident', titre: t('client_type_resident'), description: t('client_type_resident_desc') },
+  ];
+
+  // Sélection du document dans la galerie (ou l'appareil photo du téléphone
+  // via la galerie système).
   const choisirDocument = async () => {
     setErreur('');
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      setErreur("Autorisez l'accès aux photos pour ajouter votre document d'identité.");
+      setErreur(t('client_erreur_photos'));
       return;
     }
     const resultat = await ImagePicker.launchImageLibraryAsync({
@@ -83,18 +82,18 @@ export default function EcranClient() {
       return;
     }
     if (nom.trim().length < 2) {
-      setErreur('Indiquez votre nom complet.');
+      setErreur(t('client_erreur_nom'));
       return;
     }
-    if (typeCompte === 'resident' && !documentUri) {
-      setErreur("Ajoutez votre document d'identité : il est requis pour un compte résident.");
+    if (documentRequis && !documentUri) {
+      setErreur(estLocal ? t('client_erreur_doc_local') : t('client_erreur_doc_resident'));
       return;
     }
     setCharge(true);
     try {
-      // Résident : téléverser d'abord le document pour obtenir son URL.
+      // Résident / local : téléverser d'abord le document pour obtenir son URL.
       let idDocumentUrl: string | undefined;
-      if (typeCompte === 'resident' && documentUri) {
+      if (documentRequis && documentUri) {
         const televersement = await api.televerser(documentUri);
         idDocumentUrl = televersement.url;
       }
@@ -108,33 +107,30 @@ export default function EcranClient() {
       await majSession({ user: utilisateur });
       router.replace('/');
     } catch (e) {
-      setErreur(e instanceof ErreurApi ? e.message : 'Impossible de créer le profil. Réessayez.');
+      setErreur(e instanceof ErreurApi ? e.message : t('client_erreur_creation'));
     } finally {
       setCharge(false);
     }
   };
 
   return (
-    <Ecran>
+    <Ecran fond="vagues">
       <Carte>
-        <Titre>Votre profil client</Titre>
-        <SousTitre>Numéro vérifié : {session?.phone ?? ''}</SousTitre>
+        <Titre>{t('client_titre')}</Titre>
+        <SousTitre>{t('client_numero_verifie', { phone: session?.phone ?? '' })}</SousTitre>
 
         {typePredefini === 'tourist' && (
-          <EncartInfo icone="airplane-outline">
-            Compte touriste — prix en USD, actif immédiatement.
-          </EncartInfo>
+          <EncartInfo icone="airplane-outline">{t('client_info_touriste')}</EncartInfo>
         )}
-        {typePredefini === 'resident' && (
-          <EncartInfo icone="home-outline">
-            Compte résident — tarif local en TZS. Votre document d&apos;identité est vérifié
-            par l&apos;équipe sous 48 h.
+        {typePredefini === 'local' && (
+          <EncartInfo icone="id-card-outline">
+            {t('client_info_local', { prix: prixLocal })}
           </EncartInfo>
         )}
 
-        <Champ label="Nom complet" value={nom} onChangeText={setNom} placeholder="Amina Hassan" />
+        <Champ label={t('client_nom')} value={nom} onChangeText={setNom} placeholder="Amina Hassan" />
         <Champ
-          label="E-mail (optionnel)"
+          label={t('client_email_opt')}
           value={email}
           onChangeText={setEmail}
           placeholder="amina@example.com"
@@ -144,46 +140,51 @@ export default function EcranClient() {
 
         {!typePredefini && (
           <>
-            <Text style={styles.labelType}>Vous êtes…</Text>
-            {TYPES_COMPTE.map((t) => {
-              const actif = typeCompte === t.cle;
+            <Text style={styles.labelType}>{t('client_vous_etes')}</Text>
+            {TYPES_COMPTE.map((typeOption) => {
+              const actif = typeCompte === typeOption.cle;
               return (
                 <Pressable
-                  key={t.cle}
-                  onPress={() => setTypeCompte(t.cle)}
+                  key={typeOption.cle}
+                  onPress={() => setTypeCompte(typeOption.cle)}
                   style={[styles.optionType, actif && styles.optionActive]}
                 >
                   <View style={styles.enTeteOption}>
-                    <Text style={[styles.titreOption, actif && styles.titreActif]}>{t.titre}</Text>
+                    <Text style={[styles.titreOption, actif && styles.titreActif]}>
+                      {typeOption.titre}
+                    </Text>
                     {actif && (
                       <Ionicons name="checkmark-circle" size={20} color={couleurs.primaire} />
                     )}
                   </View>
-                  <Text style={styles.descriptionOption}>{t.description}</Text>
+                  <Text style={styles.descriptionOption}>{typeOption.description}</Text>
                 </Pressable>
               );
             })}
           </>
         )}
 
-        {typeCompte === 'resident' && (
+        {documentRequis && (
           <View style={styles.blocDocument}>
-            <Text style={styles.labelType}>Document d&apos;identité (obligatoire)</Text>
+            <Text style={styles.labelType}>
+              {estLocal ? t('client_doc_local_titre') : t('client_doc_resident_titre')}
+            </Text>
             <SousTitre>
-              Carte d&apos;identité, passeport ou permis de résidence — photo lisible.
-              L&apos;équipe zanziGo le vérifie avant d&apos;activer le tarif local.
+              {estLocal
+                ? t('client_doc_local_desc', { prix: prixLocal })
+                : t('client_doc_resident_desc')}
             </SousTitre>
             {documentUri ? (
               <View style={styles.ligneDocument}>
                 <Ionicons name="checkmark-circle" size={22} color={couleurs.succes} />
-                <Text style={styles.documentOk}>Document ajouté</Text>
+                <Text style={styles.documentOk}>{t('client_doc_ajoute')}</Text>
                 <Pressable onPress={choisirDocument} hitSlop={8}>
-                  <Text style={styles.changer}>Changer</Text>
+                  <Text style={styles.changer}>{t('client_doc_changer')}</Text>
                 </Pressable>
               </View>
             ) : (
               <Bouton
-                titre="Ajouter mon document"
+                titre={t('client_doc_ajouter')}
                 icone="cloud-upload-outline"
                 variante="secondaire"
                 onPress={choisirDocument}
@@ -193,7 +194,12 @@ export default function EcranClient() {
         )}
 
         <TexteErreur>{erreur}</TexteErreur>
-        <Bouton titre="Créer mon profil" icone="person-add-outline" onPress={valider} charge={charge} />
+        <Bouton
+          titre={t('client_bouton')}
+          icone="person-add-outline"
+          onPress={valider}
+          charge={charge}
+        />
       </Carte>
     </Ecran>
   );

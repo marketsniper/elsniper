@@ -23,14 +23,13 @@ import {
   Titre,
 } from '@/components/ui';
 import { api, ErreurApi } from '@/lib/api';
+import { libelleStatutTrajet, libelleTypeTrajet, useT } from '@/lib/i18n';
 import { couleurs, espaces } from '@/lib/theme';
 import {
   champ,
   ETAPES_TRAJET,
   formaterDate,
   formaterPrix,
-  LIBELLES_STATUT_TRAJET,
-  LIBELLES_TYPE_TRAJET,
   type StatutTrajet,
   type Trajet,
   type TypeTrajet,
@@ -41,6 +40,7 @@ const WHATSAPP_EQUIPE = 'https://wa.me/255779000000';
 
 export default function EcranTrajet() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { t } = useT();
   const [trajet, setTrajet] = useState<Trajet | null>(null);
   const [erreur, setErreur] = useState('');
   const [chargePaiement, setChargePaiement] = useState(false);
@@ -58,9 +58,9 @@ export default function EcranTrajet() {
       setTrajet(await api.obtenirTrajet(id));
       setErreur('');
     } catch (e) {
-      setErreur(e instanceof ErreurApi ? e.message : 'Trajet introuvable.');
+      setErreur(e instanceof ErreurApi ? e.message : t('trip_introuvable'));
     }
-  }, [id]);
+  }, [id, t]);
 
   useFocusEffect(
     useCallback(() => {
@@ -70,11 +70,11 @@ export default function EcranTrajet() {
 
   if (!trajet) {
     return erreur ? (
-      <Ecran>
+      <Ecran fond="palmiers">
         <TexteErreur>{erreur}</TexteErreur>
       </Ecran>
     ) : (
-      <ChargementCentre message="Chargement de votre course…" />
+      <ChargementCentre message={t('trip_chargement')} />
     );
   }
 
@@ -98,10 +98,10 @@ export default function EcranTrajet() {
       if (paiement.payment_link) {
         await Linking.openURL(paiement.payment_link);
       } else {
-        setErreur("Le lien de paiement n'est pas encore disponible.");
+        setErreur(t('trip_lien_indisponible'));
       }
     } catch (e) {
-      setErreur(e instanceof ErreurApi ? e.message : 'Paiement indisponible pour le moment.');
+      setErreur(e instanceof ErreurApi ? e.message : t('trip_paiement_indisponible'));
     } finally {
       setChargePaiement(false);
     }
@@ -117,7 +117,7 @@ export default function EcranTrajet() {
       setPaiementId(null);
       await charger();
     } catch (e) {
-      setErreur(e instanceof ErreurApi ? e.message : 'Confirmation impossible.');
+      setErreur(e instanceof ErreurApi ? e.message : t('trip_confirmation_impossible'));
     } finally {
       setChargeConfirmation(false);
     }
@@ -125,7 +125,7 @@ export default function EcranTrajet() {
 
   const envoyerNote = async () => {
     if (note < 1) {
-      setErreur('Choisissez une note de 1 à 5 étoiles.');
+      setErreur(t('trip_note_erreur'));
       return;
     }
     setChargeNote(true);
@@ -137,7 +137,7 @@ export default function EcranTrajet() {
       if (e instanceof ErreurApi && e.code === 'already_rated') {
         setNoteEnvoyee(true);
       } else {
-        setErreur(e instanceof ErreurApi ? e.message : "Impossible d'envoyer la note.");
+        setErreur(e instanceof ErreurApi ? e.message : t('trip_note_envoi_erreur'));
       }
     } finally {
       setChargeNote(false);
@@ -145,40 +145,40 @@ export default function EcranTrajet() {
   };
 
   return (
-    <Ecran>
+    <Ecran fond="palmiers">
       <Carte>
         <View style={styles.enTete}>
-          <Titre>Votre course</Titre>
+          <Titre>{t('trip_titre')}</Titre>
           <BadgeStatutTrajet statut={statut} />
         </View>
         {typeTrajet && (
-          <LigneInfo label="Type" valeur={LIBELLES_TYPE_TRAJET[typeTrajet] ?? typeTrajet} />
+          <LigneInfo label={t('commun_type')} valeur={libelleTypeTrajet(typeTrajet, t)} />
         )}
-        {!!nomClient && <LigneInfo label="Client" valeur={String(nomClient)} />}
+        {!!nomClient && <LigneInfo label={t('commun_client')} valeur={String(nomClient)} />}
         <LigneInfo
-          label="Départ"
+          label={t('commun_depart')}
           valeur={String(champ(trajet, 'pickup_location', 'pickupLocation') ?? '—')}
         />
         <LigneInfo
-          label="Arrivée"
+          label={t('commun_arrivee')}
           valeur={String(champ(trajet, 'dropoff_location', 'dropoffLocation') ?? '—')}
         />
         {!!champ(trajet, 'scheduled_at', 'scheduledAt') && (
           <LigneInfo
-            label="Programmé le"
+            label={t('trip_programme_le')}
             valeur={formaterDate(champ(trajet, 'scheduled_at', 'scheduledAt'))}
           />
         )}
         <View style={styles.blocPrix}>
-          <Text style={styles.labelPrix}>Prix figé</Text>
+          <Text style={styles.labelPrix}>{t('trip_prix_fige')}</Text>
           <Text style={styles.prix}>{formaterPrix(trajet)}</Text>
         </View>
       </Carte>
 
       <Carte>
-        <Text style={styles.titreSuivi}>Suivi de la course</Text>
+        <Text style={styles.titreSuivi}>{t('trip_suivi')}</Text>
         <TimelineStatut
-          etapes={ETAPES_TRAJET.map((cle) => ({ cle, label: LIBELLES_STATUT_TRAJET[cle] }))}
+          etapes={ETAPES_TRAJET.map((cle) => ({ cle, label: libelleStatutTrajet(cle, t) }))}
           statutCourant={statut}
           annule={annule}
         />
@@ -186,30 +186,32 @@ export default function EcranTrajet() {
 
       {statut === 'requested' && (
         <EncartInfo icone="time-outline" ton="attente">
-          Demande envoyée — l&apos;équipe zanziGo vous confirme un chauffeur, puis le paiement
-          sera proposé ici.
+          {t('trip_demande_envoyee')}
         </EncartInfo>
       )}
       {peutPayer && (
-        <Bouton titre="Payer la course" icone="card-outline" onPress={payer} charge={chargePaiement} />
+        <Bouton
+          titre={t('trip_payer')}
+          icone="card-outline"
+          onPress={payer}
+          charge={chargePaiement}
+        />
       )}
       {__DEV__ && peutPayer && paiementId && (
         <Bouton
-          titre="Simuler la confirmation (dev)"
+          titre={t('trip_confirm_dev')}
           variante="secondaire"
           onPress={simulerConfirmation}
           charge={chargeConfirmation}
         />
       )}
       {statut === 'paid' && (
-        <EncartInfo icone="checkmark-circle-outline">
-          Paiement reçu — votre chauffeur scanne le QR de son véhicule au départ.
-        </EncartInfo>
+        <EncartInfo icone="checkmark-circle-outline">{t('trip_paiement_recu')}</EncartInfo>
       )}
 
       {!annule && (
         <Bouton
-          titre="Contacter l'équipe WhatsApp"
+          titre={t('commun_contact_whatsapp')}
           icone="logo-whatsapp"
           variante="secondaire"
           onPress={() => Linking.openURL(lienWhatsapp)}
@@ -221,23 +223,23 @@ export default function EcranTrajet() {
           {noteEnvoyee || dejaNotee ? (
             <View style={styles.blocNote}>
               <Ionicons name="checkmark-circle" size={22} color={couleurs.succes} />
-              <Text style={styles.merci}>Merci pour votre note !</Text>
+              <Text style={styles.merci}>{t('trip_note_merci')}</Text>
             </View>
           ) : peutNoter ? (
             <>
-              <SousTitre>Comment s&apos;est passée votre course ?</SousTitre>
+              <SousTitre>{t('trip_note_question')}</SousTitre>
               <View style={styles.etoilesCentrees}>
                 <Etoiles note={note} onChange={setNote} taille={40} />
               </View>
               <Champ
-                label="Commentaire (optionnel)"
+                label={t('trip_note_commentaire')}
                 value={commentaire}
                 onChangeText={setCommentaire}
-                placeholder="Chauffeur ponctuel, très bonne course…"
+                placeholder={t('trip_note_placeholder')}
                 multiline
               />
               <Bouton
-                titre="Envoyer ma note"
+                titre={t('trip_note_envoyer')}
                 icone="star-outline"
                 onPress={envoyerNote}
                 charge={chargeNote}
@@ -249,7 +251,7 @@ export default function EcranTrajet() {
 
       <TexteErreur>{erreur}</TexteErreur>
       <Bouton
-        titre="Actualiser le statut"
+        titre={t('commun_actualiser_statut')}
         icone="refresh-outline"
         variante="secondaire"
         onPress={charger}

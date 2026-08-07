@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { useT } from '@/lib/i18n';
 import { couleurs, espaces } from '@/lib/theme';
 
 export interface EtapeTimeline {
@@ -20,6 +21,7 @@ export function TimelineStatut({
   statutCourant: string | undefined;
   annule?: boolean;
 }) {
+  const { t } = useT();
   const indexCourant = etapes.findIndex((e) => e.cle === statutCourant);
 
   return (
@@ -70,7 +72,7 @@ export function TimelineStatut({
               <Ionicons name="close" size={12} color={couleurs.blanc} />
             </View>
           </View>
-          <Text style={[styles.label, styles.labelAnnule]}>Annulé</Text>
+          <Text style={[styles.label, styles.labelAnnule]}>{t('timeline_annule')}</Text>
         </View>
       )}
     </View>

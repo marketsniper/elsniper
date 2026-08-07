@@ -42,7 +42,8 @@ describe('Chauffeurs (drivers)', () => {
         vehiclePlate: nextPlate(),
         zone: 'Stone Town',
         licenseDocumentUrl: DOC_URL,
-        idDocumentUrl: DOC_URL,
+        insuranceDocumentUrl: DOC_URL,
+        vehiclePhotoUrl: DOC_URL,
       });
     assert.equal(res.status, 403);
     assert.equal(res.body.error.code, 'phone_mismatch');
@@ -64,7 +65,8 @@ describe('Chauffeurs (drivers)', () => {
         vehiclePlate: plate,
         zone: 'Stone Town',
         licenseDocumentUrl: DOC_URL,
-        idDocumentUrl: DOC_URL,
+        insuranceDocumentUrl: DOC_URL,
+        vehiclePhotoUrl: DOC_URL,
       });
     assert.equal(res.status, 409);
     assert.equal(res.body.error.code, 'duplicate');

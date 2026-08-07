@@ -7,15 +7,15 @@ import React, { useCallback, useState } from 'react';
 import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 
 import { Etoiles } from '@/components/Etoiles';
+import { FondPlage } from '@/components/FondPlage';
 import { BadgeStatutTrajet, Bouton, EtatVide, TexteErreur } from '@/components/ui';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { formaterDateRelativeI18n, libelleTypeTrajet, useT } from '@/lib/i18n';
 import { couleurs, espaces, ombres, rayons } from '@/lib/theme';
 import {
   champ,
-  formaterDateRelative,
   formaterPrix,
-  LIBELLES_TYPE_TRAJET,
   type StatutTrajet,
   type Trajet,
   type TypeTrajet,
@@ -24,6 +24,7 @@ import {
 export default function EcranTrajets() {
   const router = useRouter();
   const { session } = useAuth();
+  const { t } = useT();
   const [trajets, setTrajets] = useState<Trajet[]>([]);
   const [charge, setCharge] = useState(false);
   const [erreur, setErreur] = useState('');
@@ -41,12 +42,12 @@ export default function EcranTrajets() {
         ? await api.listerTrajetsHotel(hotel.id)
         : await api.listerTrajets(utilisateur!.id);
       setTrajets(liste);
-    } catch (e) {
-      setErreur(e instanceof Error ? e.message : 'Chargement impossible. Tirez pour réessayer.');
+    } catch {
+      setErreur(t('trajets_erreur'));
     } finally {
       setCharge(false);
     }
-  }, [session?.user, hotel]);
+  }, [session?.user, hotel, t]);
 
   useFocusEffect(
     useCallback(() => {
@@ -55,10 +56,10 @@ export default function EcranTrajets() {
   );
 
   return (
-    <View style={styles.conteneur}>
+    <FondPlage fond="palmiers" voile="clair">
       <FlatList
         data={trajets}
-        keyExtractor={(t) => t.id}
+        keyExtractor={(trajet) => trajet.id}
         contentContainerStyle={styles.liste}
         refreshControl={
           <RefreshControl refreshing={charge} onRefresh={rafraichir} tintColor={couleurs.primaire} />
@@ -68,15 +69,11 @@ export default function EcranTrajets() {
           !charge && !erreur ? (
             <EtatVide
               icone="car-outline"
-              titre="Aucun trajet pour l'instant"
-              message={
-                modeHotel
-                  ? 'Réservez un premier taxi pour l’un de vos clients !'
-                  : 'Votre première course vous attend !'
-              }
+              titre={t('trajets_vide_titre')}
+              message={modeHotel ? t('trajets_vide_texte_hotel') : t('trajets_vide_texte')}
             >
               <Bouton
-                titre="Réserver une course"
+                titre={t('trajets_reserver_bouton')}
                 icone="add-circle-outline"
                 onPress={() => router.push('/(tabs)/reserver')}
               />
@@ -95,7 +92,7 @@ export default function EcranTrajets() {
             >
               <View style={styles.enTete}>
                 <Text style={styles.type}>
-                  {type ? LIBELLES_TYPE_TRAJET[type] ?? type : 'Course'}
+                  {type ? libelleTypeTrajet(type, t) : t('trajets_course_defaut')}
                 </Text>
                 <BadgeStatutTrajet statut={statut} />
               </View>
@@ -112,8 +109,9 @@ export default function EcranTrajets() {
               )}
               <View style={styles.pied}>
                 <Text style={styles.date}>
-                  {formaterDateRelative(
-                    champ(item, 'scheduled_at', 'scheduledAt', 'created_at', 'createdAt')
+                  {formaterDateRelativeI18n(
+                    champ(item, 'scheduled_at', 'scheduledAt', 'created_at', 'createdAt'),
+                    t
                   )}
                 </Text>
                 <Text style={styles.prix}>{formaterPrix(item)}</Text>
@@ -122,7 +120,7 @@ export default function EcranTrajets() {
                 <View style={styles.rangeeAction}>
                   <View style={styles.boutonPayer}>
                     <Ionicons name="card-outline" size={16} color={couleurs.blanc} />
-                    <Text style={styles.textePayer}>Payer maintenant</Text>
+                    <Text style={styles.textePayer}>{t('trajets_payer')}</Text>
                   </View>
                 </View>
               )}
@@ -132,29 +130,25 @@ export default function EcranTrajets() {
                 ) : (
                   <View style={styles.ligneClient}>
                     <Ionicons name="star-outline" size={14} color={couleurs.etoile} />
-                    <Text style={styles.aNoter}>Touchez pour noter votre course</Text>
+                    <Text style={styles.aNoter}>{t('trajets_noter')}</Text>
                   </View>
                 ))}
             </Pressable>
           );
         }}
       />
-    </View>
+    </FondPlage>
   );
 }
 
 const styles = StyleSheet.create({
-  conteneur: {
-    flex: 1,
-    backgroundColor: couleurs.sable,
-  },
   liste: {
     padding: espaces.l,
     gap: espaces.m,
     flexGrow: 1,
   },
   carte: {
-    backgroundColor: couleurs.blanc,
+    backgroundColor: couleurs.carteTranslucide,
     borderRadius: rayons.carte,
     padding: espaces.l,
     gap: espaces.s,

@@ -15,6 +15,7 @@ import {
 } from '@/components/ui';
 import { api, ErreurApi } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { useT } from '@/lib/i18n';
 import { couleurs, espaces, rayons } from '@/lib/theme';
 import type { ReponseVerifieOtp } from '@/lib/types';
 
@@ -23,6 +24,7 @@ const LONGUEUR_CODE = 6;
 export default function EcranOtp() {
   const router = useRouter();
   const { connexion } = useAuth();
+  const { t } = useT();
   const params = useLocalSearchParams<{ phone?: string; devCode?: string; profil?: string }>();
   const phone = typeof params.phone === 'string' ? params.phone : '';
   const devCode = typeof params.devCode === 'string' ? params.devCode : '';
@@ -43,10 +45,12 @@ export default function EcranOtp() {
     }
     if (profil === 'driver') {
       router.replace('/(auth)/pro');
+    } else if (profil === 'local') {
+      router.replace({ pathname: '/(auth)/client', params: { type: 'local' } });
+    } else if (profil === 'visitor') {
+      router.replace('/(auth)/client');
     } else if (profil === 'hotel') {
       router.replace('/(auth)/hotel');
-    } else if (profil === 'tourist' || profil === 'resident') {
-      router.replace({ pathname: '/(auth)/client', params: { type: profil } });
     } else {
       router.replace('/');
     }
@@ -55,7 +59,7 @@ export default function EcranOtp() {
   const verifier = async () => {
     setErreur('');
     if (!/^\d{6}$/.test(code)) {
-      setErreur('Le code comporte 6 chiffres.');
+      setErreur(t('otp_erreur_code'));
       return;
     }
     setCharge(true);
@@ -70,28 +74,26 @@ export default function EcranOtp() {
       });
       orienter(reponse);
     } catch (e) {
-      setErreur(e instanceof ErreurApi ? e.message : 'Code invalide ou expiré. Réessayez.');
+      setErreur(e instanceof ErreurApi ? e.message : t('otp_erreur_invalide'));
     } finally {
       setCharge(false);
     }
   };
 
   return (
-    <Ecran>
+    <Ecran fond="vagues">
       <Carte>
-        <Titre>Vérification</Titre>
-        <SousTitre>Saisissez le code à 6 chiffres pour le numéro {phone}.</SousTitre>
+        <Titre>{t('otp_titre')}</Titre>
+        <SousTitre>{t('otp_intro', { phone })}</SousTitre>
 
         {!!devCode && (
           <Pressable
             onPress={() => setCode(devCode.slice(0, LONGUEUR_CODE))}
             style={styles.encartPilote}
           >
-            <Text style={styles.textePilote}>
-              Phase de test sans SMS — votre code s&apos;affiche ici :
-            </Text>
+            <Text style={styles.textePilote}>{t('otp_pilote_titre')}</Text>
             <Text style={styles.codePilote}>{devCode}</Text>
-            <Text style={styles.astucePilote}>Touchez pour le remplir automatiquement</Text>
+            <Text style={styles.astucePilote}>{t('otp_pilote_astuce')}</Text>
           </Pressable>
         )}
 
@@ -131,14 +133,14 @@ export default function EcranOtp() {
 
         <TexteErreur>{erreur}</TexteErreur>
         <Bouton
-          titre="Confirmer le code"
+          titre={t('otp_bouton')}
           icone="checkmark"
           onPress={verifier}
           charge={charge}
           desactive={code.length < LONGUEUR_CODE}
         />
         <Bouton
-          titre="Changer de numéro"
+          titre={t('otp_changer_numero')}
           variante="secondaire"
           onPress={() => router.back()}
         />

@@ -37,7 +37,7 @@ export const config = {
   teamWhatsappNumber: env.TEAM_WHATSAPP_NUMBER || '+255000000000',
   // Prix touriste d'une place en taxi partagé (USD, fixe) — les chauffeurs
   // postent leur prix local en TZS, les visiteurs voient ce tarif-ci.
-  sharedRideUsdPerSeat: Number(env.RIDES_USD_PER_SEAT) || 17,
+  sharedRideUsdPerSeat: Number(env.RIDES_USD_PER_SEAT) || 18,
   // Remise accordée aux résidents vérifiés (sur les prix USD).
   residentDiscountRate: Number(env.RESIDENT_DISCOUNT_RATE) || 0.1,
   // Tarif local unique (TZS) — réservé aux locaux à carte d'identité

@@ -22,13 +22,12 @@ import {
 } from '@/components/ui';
 import { api, ErreurApi } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { libelleStatutTrajet, libelleTypeTrajet, useT } from '@/lib/i18n';
 import {
   champ,
   ETAPES_TRAJET,
   formaterDate,
   formaterPrix,
-  LIBELLES_STATUT_TRAJET,
-  LIBELLES_TYPE_TRAJET,
   type StatutTrajet,
   type Trajet,
   type TypeTrajet,
@@ -37,6 +36,7 @@ import {
 export default function EcranDetailCourse() {
   const router = useRouter();
   const { session } = useAuth();
+  const { t } = useT();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [course, setCourse] = useState<Trajet | null>(null);
   const [erreur, setErreur] = useState('');
@@ -50,9 +50,9 @@ export default function EcranDetailCourse() {
       setCourse(await api.obtenirTrajet(id));
       setErreur('');
     } catch (e) {
-      setErreur(e instanceof ErreurApi ? e.message : 'Course introuvable.');
+      setErreur(e instanceof ErreurApi ? e.message : t('courses_erreur_introuvable'));
     }
-  }, [id]);
+  }, [id, t]);
 
   useFocusEffect(
     useCallback(() => {
@@ -62,16 +62,17 @@ export default function EcranDetailCourse() {
 
   if (!course) {
     return erreur ? (
-      <Ecran>
+      <Ecran fond="vagues">
         <TexteErreur>{erreur}</TexteErreur>
       </Ecran>
     ) : (
-      <ChargementCentre message="Chargement de la course…" />
+      <ChargementCentre message={t('course_chargement')} />
     );
   }
 
   const statut = champ<StatutTrajet>(course, 'status', 'statut');
   const typeTrajet = champ<TypeTrajet>(course, 'trip_type', 'tripType');
+  const nomClient = champ<string>(course, 'client_name', 'clientName');
   // Règles serveur : départ uniquement sur une course payée, arrivée sur une
   // course en cours.
   const peutDemarrer = statut === 'paid';
@@ -98,9 +99,9 @@ export default function EcranDetailCourse() {
       await charger();
     } catch (e) {
       if (e instanceof ErreurApi && e.code === 'qr_mismatch') {
-        setErreur('Ce QR ne correspond pas au véhicule assigné à cette course.');
+        setErreur(t('course_erreur_qr'));
       } else {
-        setErreur(e instanceof ErreurApi ? e.message : 'Action refusée pour cette course.');
+        setErreur(e instanceof ErreurApi ? e.message : t('course_erreur_action'));
       }
     } finally {
       setChargeAction(false);
@@ -108,25 +109,35 @@ export default function EcranDetailCourse() {
   };
 
   return (
-    <Ecran>
+    <Ecran fond="vagues">
       <Carte>
-        <Titre>Course</Titre>
+        <Titre>{t('titre_course')}</Titre>
         <BadgeStatutTrajet statut={statut} />
         {typeTrajet && (
-          <LigneInfo label="Type" valeur={LIBELLES_TYPE_TRAJET[typeTrajet] ?? typeTrajet} />
+          <LigneInfo label={t('commun_type')} valeur={libelleTypeTrajet(typeTrajet, t)} />
         )}
-        <LigneInfo label="Départ" valeur={String(champ(course, 'pickup_location', 'pickupLocation') ?? '—')} />
-        <LigneInfo label="Arrivée" valeur={String(champ(course, 'dropoff_location', 'dropoffLocation') ?? '—')} />
+        {!!nomClient && <LigneInfo label={t('commun_client')} valeur={String(nomClient)} />}
+        <LigneInfo
+          label={t('commun_depart')}
+          valeur={String(champ(course, 'pickup_location', 'pickupLocation') ?? '—')}
+        />
+        <LigneInfo
+          label={t('commun_arrivee')}
+          valeur={String(champ(course, 'dropoff_location', 'dropoffLocation') ?? '—')}
+        />
         {!!champ(course, 'scheduled_at', 'scheduledAt') && (
-          <LigneInfo label="Programmé le" valeur={formaterDate(champ(course, 'scheduled_at', 'scheduledAt'))} />
+          <LigneInfo
+            label={t('trip_programme_le')}
+            valeur={formaterDate(champ(course, 'scheduled_at', 'scheduledAt'))}
+          />
         )}
-        <LigneInfo label="Prix" valeur={formaterPrix(course)} />
+        <LigneInfo label={t('commun_prix')} valeur={formaterPrix(course)} />
       </Carte>
 
       <Carte>
-        <SousTitre>Progression</SousTitre>
+        <SousTitre>{t('course_progression')}</SousTitre>
         <TimelineStatut
-          etapes={ETAPES_TRAJET.map((cle) => ({ cle, label: LIBELLES_STATUT_TRAJET[cle] }))}
+          etapes={ETAPES_TRAJET.map((cle) => ({ cle, label: libelleStatutTrajet(cle, t) }))}
           statutCourant={statut}
           annule={statut === 'cancelled'}
         />
@@ -135,13 +146,13 @@ export default function EcranDetailCourse() {
       {peutDemarrer && (
         <>
           <Bouton
-            titre="Scanner le QR véhicule — démarrer"
+            titre={t('course_scanner_demarrer')}
             icone="qr-code-outline"
             onPress={() => allerAuScan('start')}
           />
           {monQrVehicule && (
             <Bouton
-              titre="Utiliser mon QR véhicule"
+              titre={t('course_mon_qr')}
               icone="car-outline"
               variante="secondaire"
               onPress={() => utiliserMonQr('start')}
@@ -153,13 +164,13 @@ export default function EcranDetailCourse() {
       {peutTerminer && (
         <>
           <Bouton
-            titre="Scanner le QR véhicule — terminer"
+            titre={t('course_scanner_terminer')}
             icone="qr-code-outline"
             onPress={() => allerAuScan('complete')}
           />
           {monQrVehicule && (
             <Bouton
-              titre="Utiliser mon QR véhicule"
+              titre={t('course_mon_qr')}
               icone="car-outline"
               variante="secondaire"
               onPress={() => utiliserMonQr('complete')}
@@ -170,18 +181,22 @@ export default function EcranDetailCourse() {
       )}
       {statut === 'requested' && (
         <EncartInfo icone="time-outline" ton="attente">
-          Course demandée — pas encore confirmée par l&apos;équipe.
+          {t('course_demandee')}
         </EncartInfo>
       )}
       {statut === 'driver_confirmed' && (
         <EncartInfo icone="card-outline" ton="attente">
-          En attente du paiement du client. Le départ pourra être scanné une fois la course
-          payée.
+          {t('course_attente_paiement')}
         </EncartInfo>
       )}
 
       <TexteErreur>{erreur}</TexteErreur>
-      <Bouton titre="Actualiser" icone="refresh-outline" variante="secondaire" onPress={charger} />
+      <Bouton
+        titre={t('commun_actualiser')}
+        icone="refresh-outline"
+        variante="secondaire"
+        onPress={charger}
+      />
     </Ecran>
   );
 }

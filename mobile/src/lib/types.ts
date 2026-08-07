@@ -18,7 +18,7 @@ export type StatutColis = 'created' | 'paid' | 'picked_up' | 'delivered';
 /** Statut d'un trajet partagé posté par un chauffeur (table rides). */
 export type StatutRide = 'open' | 'closed' | 'cancelled';
 
-export type TypeCompte = 'tourist' | 'resident';
+export type TypeCompte = 'tourist' | 'resident' | 'local';
 export type StatutVerification = 'pending' | 'verified' | 'rejected';
 export type Devise = 'USD' | 'TZS';
 
@@ -119,8 +119,8 @@ export const ETAPES_TRAJET: StatutTrajet[] = [
 /** Libellés français des types de course (trip_type). */
 export const LIBELLES_TYPE_TRAJET: Record<TypeTrajet, string> = {
   private: 'Course privée',
-  shared_tourist: 'Navette partagée (touristes)',
-  shared_local: 'Partagée locale',
+  shared_tourist: 'Navette partagée',
+  shared_local: 'Navette locale',
   posted_return: 'Retour affiché',
 };
 
@@ -165,25 +165,48 @@ export const DESTINATIONS_RIDES: string[] = [
   'Fumba',
 ];
 
-/** Devise du compte utilisateur ('USD' touriste, 'TZS' résident). */
+/**
+ * Devise du compte utilisateur : TZS pour un compte local (carte tanzanienne),
+ * USD pour tous les autres (touristes ET résidents).
+ */
 export function deviseUtilisateur(utilisateur: Utilisateur | null | undefined): Devise {
-  return champ<Devise>(utilisateur, 'currency', 'devise') === 'TZS' ? 'TZS' : 'USD';
+  return champ<TypeCompte>(utilisateur, 'account_type', 'accountType') === 'local'
+    ? 'TZS'
+    : 'USD';
 }
 
-/** Vrai si le compte est résident ET vérifié par l'équipe (tarif local). */
-export function residentVerifie(utilisateur: Utilisateur | null | undefined): boolean {
+/** Vrai si les documents du compte ont été validés par l'équipe. */
+export function compteVerifie(utilisateur: Utilisateur | null | undefined): boolean {
   return (
-    champ<TypeCompte>(utilisateur, 'account_type', 'accountType') === 'resident' &&
     champ<StatutVerification>(utilisateur, 'verification_status', 'verificationStatus') ===
-      'verified'
+    'verified'
   );
 }
 
-/** Formate un montant dans une devise (1 500 TZS / 35 USD). */
+/** Vrai si le compte est résident ET vérifié (remise de 10 % sur les prix USD). */
+export function residentVerifie(utilisateur: Utilisateur | null | undefined): boolean {
+  return (
+    champ<TypeCompte>(utilisateur, 'account_type', 'accountType') === 'resident' &&
+    compteVerifie(utilisateur)
+  );
+}
+
+/** Vrai si le compte est local (carte tanzanienne) ET vérifié (tarif 15 000 TZS). */
+export function localVerifie(utilisateur: Utilisateur | null | undefined): boolean {
+  return (
+    champ<TypeCompte>(utilisateur, 'account_type', 'accountType') === 'local' &&
+    compteVerifie(utilisateur)
+  );
+}
+
+/** Formate un montant dans une devise (15 000 TZS / 50 USD / 15,30 USD). */
 export function formaterMontant(montant: number | string, devise: string): string {
   const nombre = typeof montant === 'string' ? Number(montant) : montant;
   if (Number.isFinite(nombre)) {
-    return `${nombre.toLocaleString('fr-FR')} ${devise}`.trim();
+    const options = Number.isInteger(nombre)
+      ? undefined
+      : ({ minimumFractionDigits: 2, maximumFractionDigits: 2 } as const);
+    return `${nombre.toLocaleString('fr-FR', options)} ${devise}`.trim();
   }
   return `${montant} ${devise}`.trim();
 }
@@ -196,26 +219,7 @@ export function formaterPrix(objet: Record<string, unknown> | null | undefined):
   return formaterMontant(prix, devise);
 }
 
-/**
- * Formate une date ISO en relatif français (« il y a 5 min », « hier »…),
- * ou en date courte au-delà d'une semaine. '' si absente/invalide.
- */
-export function formaterDateRelative(iso: unknown): string {
-  if (typeof iso !== 'string' || !iso) return '';
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return '';
-  const ecartMs = Date.now() - date.getTime();
-  const futur = ecartMs < 0;
-  const minutes = Math.round(Math.abs(ecartMs) / 60000);
-  const heures = Math.round(minutes / 60);
-  const jours = Math.round(heures / 24);
-  if (minutes < 1) return futur ? 'dans un instant' : "à l'instant";
-  if (minutes < 60) return futur ? `dans ${minutes} min` : `il y a ${minutes} min`;
-  if (heures < 24) return futur ? `dans ${heures} h` : `il y a ${heures} h`;
-  if (jours === 1) return futur ? 'demain' : 'hier';
-  if (jours < 7) return futur ? `dans ${jours} jours` : `il y a ${jours} jours`;
-  return formaterDate(iso);
-}
+// NB : la date relative traduite vit dans i18n.tsx (formaterDateRelativeI18n).
 
 /** Formate une date ISO en français court, ou '' si absente/invalide. */
 export function formaterDate(iso: unknown): string {
@@ -232,25 +236,72 @@ export function formaterDate(iso: unknown): string {
 
 // ---------------------------------------------------------------------------
 // Grille tarifaire — miroir de backend/src/services/pricingService.js.
-// Tarifs plats par type de course : le prix officiel est TOUJOURS calculé et
-// FIGÉ côté serveur à la création ; cette grille sert uniquement à afficher
-// le prix au client avant de réserver.
+// Le prix officiel est TOUJOURS calculé et FIGÉ côté serveur à la création ;
+// cette grille sert uniquement à afficher le prix avant de réserver.
+// Segmentation : touriste USD plein tarif ; résident USD (−10 % une fois
+// vérifié) ; local (carte tanzanienne) 15 000 TZS partout une fois vérifié ;
+// hôtel TZS (grille dédiée). Un touriste/résident ne voit JAMAIS de TZS,
+// un local ne voit JAMAIS d'USD.
 // ---------------------------------------------------------------------------
 
-export const TARIFS_TRAJET: Record<TypeTrajet, Partial<Record<Devise, number>>> = {
-  private: { USD: 50, TZS: 90000 },
-  shared_tourist: { USD: 17, TZS: 40000 },
-  // Tarif local : réservé aux résidents vérifiés, toujours en TZS.
-  shared_local: { TZS: 8000 },
-  posted_return: { USD: 17, TZS: 65000 },
+/** Profil tarifaire effectif au moment de l'affichage des prix. */
+export type ProfilTarifaire = 'tourist' | 'resident' | 'resident_verifie' | 'local' | 'hotel';
+
+/** Plein tarif USD (touristes, résidents non vérifiés). Pas de navette locale. */
+export const TARIFS_TRAJET_USD: Partial<Record<TypeTrajet, number>> = {
+  private: 50,
+  shared_tourist: 17,
+  posted_return: 17,
 };
 
-export const TARIFS_COLIS: Record<Devise, number> = { USD: 10, TZS: 25000 };
+/** Remise résident (documents de résidence validés) sur tous les prix USD. */
+export const REMISE_RESIDENT = 0.1;
 
-/** Tarif d'une course pour une devise, ou null si indisponible dans cette devise. */
-export function tarifTrajet(type: TypeTrajet, devise: Devise): number | null {
-  return TARIFS_TRAJET[type][devise] ?? null;
+/** Tarif unique local (carte tanzanienne vérifiée) — tous types de trajets. */
+export const TARIF_LOCAL_TZS = 15000;
+
+/** Grille hôtel partenaire, en TZS (inchangée). Pas de navette locale. */
+export const TARIFS_TRAJET_HOTEL_TZS: Partial<Record<TypeTrajet, number>> = {
+  private: 90000,
+  shared_tourist: 40000,
+  posted_return: 65000,
+};
+
+/** Profil tarifaire d'un compte client (hors hôtel). */
+export function profilTarifaireUtilisateur(
+  utilisateur: Utilisateur | null | undefined
+): ProfilTarifaire {
+  const type = champ<TypeCompte>(utilisateur, 'account_type', 'accountType');
+  if (type === 'local') return 'local';
+  if (type === 'resident') return compteVerifie(utilisateur) ? 'resident_verifie' : 'resident';
+  return 'tourist';
 }
+
+/**
+ * Tarif affiché d'une course selon le profil, ou null si ce type de course
+ * n'est pas proposé à ce profil (ex. navette locale hors comptes locaux).
+ */
+export function tarifTrajetProfil(
+  type: TypeTrajet,
+  profil: ProfilTarifaire
+): { montant: number; devise: Devise } | null {
+  if (profil === 'local') {
+    return { montant: TARIF_LOCAL_TZS, devise: 'TZS' };
+  }
+  if (profil === 'hotel') {
+    const montant = TARIFS_TRAJET_HOTEL_TZS[type];
+    return montant === undefined ? null : { montant, devise: 'TZS' };
+  }
+  const plein = TARIFS_TRAJET_USD[type];
+  if (plein === undefined) return null;
+  const montant =
+    profil === 'resident_verifie'
+      ? Math.round(plein * (1 - REMISE_RESIDENT) * 100) / 100
+      : plein;
+  return { montant, devise: 'USD' };
+}
+
+export const TARIFS_COLIS: Record<Devise, number> = { USD: 10, TZS: 25000 };
 
 /** Tarif d'un envoi de colis pour une devise. */
 export function tarifColis(devise: Devise): number {
