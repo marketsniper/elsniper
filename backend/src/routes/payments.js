@@ -76,8 +76,12 @@ router.post(
       );
     }
 
-    // En mode réel, ne confirmer que si Pesapal confirme la transaction.
-    const status = await getTransactionStatus(payment.pesapal_reference);
+    // Paiements manuels via WhatsApp (colis) : pas de vérification Pesapal —
+    // c'est l'équipe (ou le payeur en phase pilote) qui confirme à la main.
+    // Sinon, en mode réel, ne confirmer que si Pesapal confirme la transaction.
+    const status = payment.pesapal_reference?.startsWith('WHATSAPP-')
+      ? 'COMPLETED'
+      : await getTransactionStatus(payment.pesapal_reference);
     if (status !== 'COMPLETED') {
       throw new HttpError(409, 'payment_not_completed', `Transaction non aboutie côté Pesapal (${status})`);
     }

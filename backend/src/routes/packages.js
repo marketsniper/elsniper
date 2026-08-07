@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { Router } from 'express';
 import { z } from 'zod';
 import { query } from '../db.js';
@@ -5,7 +6,6 @@ import { HttpError, notFound } from '../errors.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { isAdmin, requireAuth } from '../middleware/auth.js';
 import { pricePackage } from '../services/pricingService.js';
-import { createPaymentOrder } from '../services/pesapalService.js';
 import { generatePackageQr } from '../services/qrService.js';
 import { buildTeamNotificationLink, packageRequestMessage } from '../services/whatsappService.js';
 
@@ -167,11 +167,20 @@ router.post(
       );
     }
 
-    const { reference, paymentLink } = await createPaymentOrder({
-      amount: pkg.price,
-      currency: pkg.currency,
-      description: `zanziGo colis ${pkg.id}`,
-    });
+    // Paiement MANUEL des colis : le lien ouvre WhatsApp vers l'équipe, qui
+    // crée alors un lien de paiement à la main et confirme une fois payé.
+    const reference = `WHATSAPP-${randomUUID()}`;
+    const paymentLink = buildTeamNotificationLink(
+      [
+        '💳 Paiement colis zanziGo',
+        `Réf: ${pkg.id}`,
+        `QR: ${pkg.qr_code}`,
+        `Taille: ${pkg.size}`,
+        `Montant: ${pkg.price} ${pkg.currency}`,
+        `Trajet: ${pkg.pickup_location} → ${pkg.dropoff_location}`,
+        'Bonjour, je souhaite régler ce colis — merci de m’envoyer le lien de paiement.',
+      ].join('\n')
+    );
 
     const { rows } = await query(
       `INSERT INTO payments (package_id, amount, currency, pesapal_reference, payment_link)
