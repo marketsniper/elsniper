@@ -10,6 +10,7 @@ import hotelsRouter from './routes/hotels.js';
 import tripsRouter from './routes/trips.js';
 import packagesRouter from './routes/packages.js';
 import paymentsRouter from './routes/payments.js';
+import ridesRouter from './routes/rides.js';
 import { uploadsRouter } from './routes/uploads.js';
 import { localUploadsDir } from './services/storageService.js';
 
@@ -86,6 +87,7 @@ p{color:#6B7280;max-width:42ch}code{background:#CCFBF1;color:#0B7C72;padding:2px
   app.use('/api/trips', tripsRouter);
   app.use('/api/packages', packagesRouter);
   app.use('/api/payments', paymentsRouter);
+  app.use('/api/rides', ridesRouter);
   app.use('/api/uploads', uploadsRouter);
 
   app.use((req, res) => {
