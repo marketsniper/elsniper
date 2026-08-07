@@ -69,9 +69,6 @@ export default function EcranAccueil() {
   const { session } = useAuth();
   const { t } = useT();
 
-  const prixPrive = formaterMontant(TARIFS_TRAJET_USD.private ?? 50, 'USD');
-  const prixLocal = formaterMontant(TARIF_LOCAL_TZS, 'TZS');
-
   // Visiteurs (touriste/résident) et locaux : flux téléphone → OTP.
   // Hôtel : connexion e-mail + mot de passe (pas d'OTP).
   // Connecté sans profil : on va directement au bon formulaire.
@@ -116,13 +113,13 @@ export default function EcranAccueil() {
           <CarteProfil
             icone="airplane-outline"
             titre={t('accueil_visiteur_titre')}
-            sousTitre={t('accueil_visiteur_soustitre', { prix: prixPrive })}
+            sousTitre={t('accueil_visiteur_soustitre')}
             onPress={() => choisir('visitor')}
           />
           <CarteProfil
             icone="id-card-outline"
             titre={t('accueil_local_titre')}
-            sousTitre={t('accueil_local_soustitre', { prix: prixLocal })}
+            sousTitre={t('accueil_local_soustitre')}
             mention={t('accueil_local_mention')}
             onPress={() => choisir('local')}
           />

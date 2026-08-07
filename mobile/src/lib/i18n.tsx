@@ -140,9 +140,9 @@ const CHAINES = {
     sw: 'Mgeni · Mtalii au Mkazi',
   },
   accueil_visiteur_soustitre: {
-    fr: 'Prix en USD — Course privée {prix} · Résident vérifié −10 %',
-    en: 'Prices in USD — Private ride {prix} · Verified resident −10%',
-    sw: 'Bei kwa USD — Safari binafsi {prix} · Mkazi aliyethibitishwa −10%',
+    fr: 'Prix en USD',
+    en: 'Prices in USD',
+    sw: 'Bei kwa USD',
   },
   accueil_local_titre: {
     fr: 'Locaux · Carte tanzanienne',
@@ -150,9 +150,9 @@ const CHAINES = {
     sw: 'Wazawa · Kitambulisho cha NIDA',
   },
   accueil_local_soustitre: {
-    fr: "Tous les trajets à {prix} — réservé aux détenteurs d'une carte d'identité tanzanienne",
-    en: 'All rides at {prix} — for holders of a Tanzanian ID card',
-    sw: 'Safari zote kwa {prix} — kwa wenye kitambulisho cha Taifa (NIDA)',
+    fr: 'Prix en TZS',
+    en: 'Prices in TZS',
+    sw: 'Bei kwa TZS',
   },
   accueil_local_mention: {
     fr: 'Carte vérifiée par l’équipe avant la première réservation',
