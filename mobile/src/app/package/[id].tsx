@@ -19,7 +19,7 @@ import {
   Titre,
 } from '@/components/ui';
 import { api, ErreurApi } from '@/lib/api';
-import { libelleStatutColis, useT } from '@/lib/i18n';
+import { libelleStatutColis, libelleTailleColis, useT } from '@/lib/i18n';
 import { couleurs, espaces, ombres, rayons } from '@/lib/theme';
 import {
   champ,
@@ -27,6 +27,7 @@ import {
   formaterPrix,
   type Colis,
   type StatutColis,
+  type TailleColis,
 } from '@/lib/types';
 
 // Contact WhatsApp de l'équipe zanziGo (secours si whatsapp_link absent).
@@ -133,6 +134,12 @@ export default function EcranDetailColis() {
       </Carte>
 
       <Carte>
+        {!!champ<TailleColis>(colis, 'size', 'taille') && (
+          <LigneInfo
+            label={t('dcolis_taille')}
+            valeur={libelleTailleColis(champ<TailleColis>(colis, 'size', 'taille'), t)}
+          />
+        )}
         <LigneInfo
           label={t('dcolis_collecte')}
           valeur={String(champ(colis, 'pickup_location', 'pickupLocation') ?? '—')}
@@ -164,12 +171,15 @@ export default function EcranDetailColis() {
       </Carte>
 
       {peutPayer && (
-        <Bouton
-          titre={t('dcolis_payer')}
-          icone="card-outline"
-          onPress={payer}
-          charge={chargePaiement}
-        />
+        <>
+          <EncartInfo icone="card-outline">{t('ncolis_paye_expediteur')}</EncartInfo>
+          <Bouton
+            titre={t('dcolis_payer')}
+            icone="card-outline"
+            onPress={payer}
+            charge={chargePaiement}
+          />
+        </>
       )}
       {__DEV__ && peutPayer && paiementId && (
         <Bouton

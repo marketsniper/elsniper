@@ -18,6 +18,7 @@ import {
   type StatutColis,
   type StatutRide,
   type StatutTrajet,
+  type TailleColis,
   type TypeTrajet,
 } from './types';
 
@@ -542,6 +543,11 @@ const CHAINES = {
     en: 'In Shared mode, book a seat on a driver-posted ride — pick one below.',
     sw: 'Katika hali ya Pamoja, hifadhi kiti kwenye safari iliyotangazwa na dereva — chagua hapa chini.',
   },
+  reserver_clim: {
+    fr: 'Climatisation incluse',
+    en: 'Air conditioning included',
+    sw: 'Kiyoyozi kimejumuishwa',
+  },
   reserver_votre_client: { fr: 'Votre client', en: 'Your guest', sw: 'Mteja wako' },
   reserver_nom_client: { fr: 'Nom du client', en: 'Guest name', sw: 'Jina la mteja' },
   reserver_nom_client_placeholder: {
@@ -776,6 +782,36 @@ const CHAINES = {
     en: 'E.g. documents, fragile…',
     sw: 'Mf. nyaraka, dhaifu…',
   },
+  ncolis_taille_titre: { fr: 'Taille du colis', en: 'Parcel size', sw: 'Ukubwa wa mzigo' },
+  ncolis_taille_petit: { fr: 'Petit', en: 'Small', sw: 'Ndogo' },
+  ncolis_taille_petit_ex: {
+    fr: 'Enveloppe, clés, passeport, documents, médicaments',
+    en: 'Envelope, keys, passport, documents, medicine',
+    sw: 'Bahasha, funguo, pasipoti, nyaraka, dawa',
+  },
+  ncolis_taille_moyen: { fr: 'Moyen', en: 'Medium', sw: 'Wastani' },
+  ncolis_taille_moyen_ex: {
+    fr: 'Sac à dos, petit carton, bouteilles, épices',
+    en: 'Backpack, small box, bottles, spices',
+    sw: 'Begi la mgongoni, kasha dogo, chupa, viungo',
+  },
+  ncolis_taille_grand: { fr: 'Grand', en: 'Large', sw: 'Kubwa' },
+  ncolis_taille_grand_ex: {
+    fr: 'Grosse valise, caisse de ravitaillement',
+    en: 'Large suitcase, supply crate',
+    sw: 'Sanduku kubwa, kreti la vifaa',
+  },
+  ncolis_erreur_taille: {
+    fr: 'Choisissez la taille du colis.',
+    en: 'Choose the parcel size.',
+    sw: 'Chagua ukubwa wa mzigo.',
+  },
+  ncolis_paye_expediteur: {
+    fr: "Payé en ligne à 100 % par l'expéditeur",
+    en: 'Paid 100% online by the sender',
+    sw: 'Hulipwa mtandaoni 100% na mtumaji',
+  },
+  dcolis_taille: { fr: 'Taille', en: 'Size', sw: 'Ukubwa' },
   ncolis_prix_envoi: { fr: "Prix de l'envoi", en: 'Delivery price', sw: 'Bei ya kutuma' },
   ncolis_note_prix: {
     fr: "Tarif plat zanziGo, quel que soit le trajet sur l'île. Le prix officiel est figé à la création de l'envoi.",
@@ -1233,6 +1269,14 @@ export function libelleStatutRide(statut: StatutRide | undefined, t: FonctionT):
 export function libelleTypeTrajet(type: TypeTrajet | undefined, t: FonctionT): string {
   if (!type) return '';
   return t(`type_trajet_${type}` as CleChaine);
+}
+
+/** Libellé traduit d'une taille de colis (small/medium/large). */
+export function libelleTailleColis(taille: TailleColis | undefined, t: FonctionT): string {
+  if (taille === 'small') return t('ncolis_taille_petit');
+  if (taille === 'medium') return t('ncolis_taille_moyen');
+  if (taille === 'large') return t('ncolis_taille_grand');
+  return '';
 }
 
 /**

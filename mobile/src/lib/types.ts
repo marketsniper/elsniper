@@ -281,8 +281,85 @@ export function tarifSpecialPrive(depart: string, arrivee: string): number | nul
 /** Remise résident (documents de résidence validés) sur tous les prix USD. */
 export const REMISE_RESIDENT = 0.1;
 
-/** Tarif unique local (carte tanzanienne vérifiée) — tous types de trajets. */
+/** Tarif local par défaut (zone inconnue) — affiché aussi sur l'accueil. */
 export const TARIF_LOCAL_TZS = 15000;
+
+// ---------------------------------------------------------------------------
+// Grille PAR ZONE — courses depuis/vers la ville ou l'aéroport. La zone est
+// déterminée par la ville zonée de l'itinéraire (les hubs et Stone Town ne
+// sont pas zonés) ; si les deux bouts sont zonés : zone au privé le plus
+// cher. « Ville (précision) » est normalisé. Défaut sans ville zonée :
+// privé 50 USD · partagé 18 USD · local 15 000 TZS.
+// ---------------------------------------------------------------------------
+
+export type ZoneTarifaire = 'nord' | 'nord_est' | 'est' | 'est_pointe' | 'sud';
+
+export interface TarifsZone {
+  priveUsd: number;
+  partageUsd: number;
+  localTzs: number;
+}
+
+export const TARIFS_ZONE: Record<ZoneTarifaire, TarifsZone> = {
+  nord: { priveUsd: 50, partageUsd: 18, localTzs: 15000 }, // Nungwi, Kendwa
+  nord_est: { priveUsd: 45, partageUsd: 16, localTzs: 12000 }, // Matemwe → Chwaka
+  est: { priveUsd: 50, partageUsd: 15, localTzs: 12000 }, // Paje, Jambiani, Bwejuu
+  est_pointe: { priveUsd: 50, partageUsd: 18, localTzs: 15000 }, // Michamvi
+  sud: { priveUsd: 45, partageUsd: 14, localTzs: 12000 }, // Kizimkazi, Makunduchi, Fumba
+};
+
+/** Tarifs appliqués quand aucune ville zonée n'apparaît dans l'itinéraire. */
+export const TARIFS_ZONE_DEFAUT: TarifsZone = {
+  priveUsd: 50,
+  partageUsd: 18,
+  localTzs: TARIF_LOCAL_TZS,
+};
+
+/** Ville (minuscules) → zone tarifaire. */
+export const VILLES_ZONE: Record<string, ZoneTarifaire> = {
+  nungwi: 'nord',
+  kendwa: 'nord',
+  matemwe: 'nord_est',
+  kiwengwa: 'nord_est',
+  'pwani mchangani': 'nord_est',
+  uroa: 'nord_est',
+  pongwe: 'nord_est',
+  chwaka: 'nord_est',
+  paje: 'est',
+  jambiani: 'est',
+  bwejuu: 'est',
+  michamvi: 'est_pointe',
+  kizimkazi: 'sud',
+  makunduchi: 'sud',
+  fumba: 'sud',
+};
+
+/** Normalise un lieu : retire la précision « (…) » finale, casse ignorée. */
+function normaliserLieu(lieu: string): string {
+  return lieu
+    .replace(/\s*\([^)]*\)\s*$/, '')
+    .trim()
+    .toLowerCase();
+}
+
+/**
+ * Zone tarifaire d'un itinéraire, ou null si aucune ville zonée. Si les deux
+ * bouts sont zonés, on retient la zone au tarif privé le plus cher.
+ */
+export function zoneItineraire(depart: string, arrivee: string): ZoneTarifaire | null {
+  const zones = [VILLES_ZONE[normaliserLieu(depart)], VILLES_ZONE[normaliserLieu(arrivee)]].filter(
+    (zone): zone is ZoneTarifaire => zone !== undefined
+  );
+  if (zones.length === 0) return null;
+  if (zones.length === 1) return zones[0];
+  return TARIFS_ZONE[zones[0]].priveUsd >= TARIFS_ZONE[zones[1]].priveUsd ? zones[0] : zones[1];
+}
+
+/** Tarifs de zone d'un itinéraire (défaut 50/18 USD, 15 000 TZS). */
+export function tarifsZoneItineraire(depart: string, arrivee: string): TarifsZone {
+  const zone = zoneItineraire(depart, arrivee);
+  return zone ? TARIFS_ZONE[zone] : TARIFS_ZONE_DEFAUT;
+}
 
 /** Grille hôtel partenaire, en TZS (inchangée). Pas de navette locale. */
 export const TARIFS_TRAJET_HOTEL_TZS: Partial<Record<TypeTrajet, number>> = {
@@ -302,28 +379,36 @@ export function profilTarifaireUtilisateur(
 }
 
 /**
- * Tarif affiché d'une course selon le profil, ou null si ce type de course
- * n'est pas proposé à ce profil (ex. navette locale hors comptes locaux).
- * `itineraire` (optionnel) active les trajets spéciaux privés en USD
- * (ex. Nungwi ↔ Paje 65 USD, 58,50 USD résident vérifié).
+ * Tarif affiché d'une course selon le profil et l'itinéraire (grille par
+ * zone). Le trajet spécial Nungwi ↔ Paje (privé 65 USD) reste prioritaire
+ * sur la zone ; la remise résident vérifié (×0,9) s'applique au prix retenu.
  */
 export function tarifTrajetProfil(
   type: TypeTrajet,
   profil: ProfilTarifaire,
   itineraire?: { depart: string; arrivee: string }
 ): { montant: number; devise: Devise } | null {
+  const zone = itineraire
+    ? tarifsZoneItineraire(itineraire.depart, itineraire.arrivee)
+    : TARIFS_ZONE_DEFAUT;
   if (profil === 'local') {
-    return { montant: TARIF_LOCAL_TZS, devise: 'TZS' };
+    return { montant: zone.localTzs, devise: 'TZS' };
   }
   if (profil === 'hotel') {
     const montant = TARIFS_TRAJET_HOTEL_TZS[type];
     return montant === undefined ? null : { montant, devise: 'TZS' };
   }
-  const special =
-    type === 'private' && itineraire
+  let plein: number | undefined;
+  if (type === 'private') {
+    const special = itineraire
       ? tarifSpecialPrive(itineraire.depart, itineraire.arrivee)
       : null;
-  const plein = special ?? TARIFS_TRAJET_USD[type];
+    plein = special ?? zone.priveUsd;
+  } else if (type === 'shared_tourist' || type === 'shared_local') {
+    plein = zone.partageUsd;
+  } else {
+    plein = TARIFS_TRAJET_USD[type];
+  }
   if (plein === undefined) return null;
   const montant =
     profil === 'resident_verifie'
@@ -332,9 +417,23 @@ export function tarifTrajetProfil(
   return { montant, devise: 'USD' };
 }
 
-export const TARIFS_COLIS: Record<Devise, number> = { USD: 10, TZS: 25000 };
+// ---------------------------------------------------------------------------
+// Colis — 3 tailles, payées en ligne à 100 % par l'expéditeur. Prix par
+// devise du profil : USD touristes/résidents (aucune remise sur les colis),
+// TZS hôtels/locaux.
+// ---------------------------------------------------------------------------
 
-/** Tarif d'un envoi de colis pour une devise. */
-export function tarifColis(devise: Devise): number {
-  return TARIFS_COLIS[devise];
+export type TailleColis = 'small' | 'medium' | 'large';
+
+export const TAILLES_COLIS: TailleColis[] = ['small', 'medium', 'large'];
+
+export const TARIFS_COLIS_TAILLE: Record<TailleColis, Record<Devise, number>> = {
+  small: { USD: 5, TZS: 13000 },
+  medium: { USD: 10, TZS: 26000 },
+  large: { USD: 18, TZS: 47000 },
+};
+
+/** Tarif d'un envoi de colis pour une taille et une devise. */
+export function tarifColisTaille(taille: TailleColis, devise: Devise): number {
+  return TARIFS_COLIS_TAILLE[taille][devise];
 }

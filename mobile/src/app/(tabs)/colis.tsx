@@ -11,9 +11,15 @@ import { BadgeStatutColis, Bouton, EtatVide } from '@/components/ui';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { listerColisLocaux } from '@/lib/colisLocal';
-import { useT } from '@/lib/i18n';
+import { libelleTailleColis, useT } from '@/lib/i18n';
 import { couleurs, espaces, ombres, rayons } from '@/lib/theme';
-import { champ, formaterPrix, type Colis, type StatutColis } from '@/lib/types';
+import {
+  champ,
+  formaterPrix,
+  type Colis,
+  type StatutColis,
+  type TailleColis,
+} from '@/lib/types';
 
 export default function EcranColis() {
   const router = useRouter();
@@ -80,6 +86,7 @@ export default function EcranColis() {
         }
         renderItem={({ item }) => {
           const statut = champ<StatutColis>(item, 'status', 'statut');
+          const taille = libelleTailleColis(champ<TailleColis>(item, 'size', 'taille'), t);
           return (
             <Pressable
               onPress={() => router.push(`/package/${item.id}`)}
@@ -97,7 +104,10 @@ export default function EcranColis() {
                 {champ(item, 'dropoff_location', 'dropoffLocation') ?? '?'}
               </Text>
               <View style={styles.pied}>
-                <Text style={styles.code}>{champ(item, 'qr_code', 'qrCode') ?? ''}</Text>
+                <Text style={styles.code}>
+                  {taille ? `${taille} · ` : ''}
+                  {champ(item, 'qr_code', 'qrCode') ?? ''}
+                </Text>
                 <Text style={styles.prix}>{formaterPrix(item)}</Text>
               </View>
             </Pressable>

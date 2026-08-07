@@ -53,6 +53,9 @@ export default function EcranReserver() {
 
   // Profil tarifaire : détermine devise et montants affichés.
   const profil: ProfilTarifaire = modeHotel ? 'hotel' : profilTarifaireUtilisateur(utilisateur);
+  // Profils touristes/résidents (USD) : mention « Climatisation incluse ».
+  const profilUsd =
+    profil === 'tourist' || profil === 'resident' || profil === 'resident_verifie';
 
   const [mode, setMode] = useState<ModeCourse>('prive');
   const [depart, setDepart] = useState('');
@@ -259,6 +262,12 @@ export default function EcranReserver() {
                   {formaterMontant(tarif.montant, tarif.devise)}
                 </Text>
               )}
+              {profilUsd && (
+                <View style={styles.ligneClim}>
+                  <Ionicons name="snow-outline" size={13} color={couleurs.primaireFonce} />
+                  <Text style={styles.texteClim}>{t('reserver_clim')}</Text>
+                </View>
+              )}
             </Pressable>
           );
         })}
@@ -390,6 +399,21 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: couleurs.primaire,
     marginTop: espaces.xs,
+  },
+  ligneClim: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: espaces.xs,
+    backgroundColor: couleurs.primaireClair,
+    borderRadius: rayons.pastille,
+    paddingHorizontal: espaces.s,
+    paddingVertical: 2,
+    marginTop: espaces.xs,
+  },
+  texteClim: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: couleurs.primaireFonce,
   },
   cartePrix: {
     backgroundColor: couleurs.carteTranslucide,

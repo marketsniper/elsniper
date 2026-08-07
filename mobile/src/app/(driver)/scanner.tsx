@@ -28,9 +28,9 @@ import {
 } from '@/components/ui';
 import { api, ErreurApi, prochaineActionColis } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import { useT } from '@/lib/i18n';
+import { libelleTailleColis, useT } from '@/lib/i18n';
 import { couleurs, espaces, rayons } from '@/lib/theme';
-import { champ, type Colis, type StatutColis } from '@/lib/types';
+import { champ, type Colis, type StatutColis, type TailleColis } from '@/lib/types';
 
 /** Vrai si la chaîne scannée ressemble à un QR de colis zanziGo (PKG-…). */
 function estQrColis(data: string): boolean {
@@ -200,6 +200,12 @@ export default function EcranScanner() {
             <BadgeStatutColis statut={statut} />
           </View>
           <Text style={styles.codeColis}>{qrColis}</Text>
+          {!!champ<TailleColis>(colis, 'size', 'taille') && (
+            <LigneInfo
+              label={t('dcolis_taille')}
+              valeur={libelleTailleColis(champ<TailleColis>(colis, 'size', 'taille'), t)}
+            />
+          )}
           <LigneInfo
             label={t('dcolis_collecte')}
             valeur={String(champ(colis, 'pickup_location', 'pickupLocation') ?? '—')}

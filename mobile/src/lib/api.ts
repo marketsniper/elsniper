@@ -10,6 +10,7 @@ import type {
   ReponseVerifieOtp,
   Ride,
   StatutColis,
+  TailleColis,
   Trajet,
   TypeCompte,
   TypeTrajet,
@@ -388,6 +389,8 @@ export interface CreationColis {
   senderType: 'user' | 'hotel';
   senderUserId?: string; // requis quand senderType = 'user' (user.id du jeton)
   senderHotelId?: string; // requis quand senderType = 'hotel'
+  /** Taille du colis — REQUISE par l'API (détermine le prix). */
+  size: TailleColis;
   pickupLocation: string;
   dropoffLocation: string;
   recipientName: string;
