@@ -189,6 +189,35 @@ export async function createResident({
   return { token, user };
 }
 
+// Local (carte d'identité tanzanienne) : OTP → profil (TZS, pending) →
+// validation équipe (sauf verify: false). Retour : {token, user}
+export async function createLocal({
+  phone = nextPhone(),
+  fullName = 'Juma Local',
+  verify = true,
+} = {}) {
+  const { token } = await authenticate(phone);
+  const res = await request(app)
+    .post('/api/users')
+    .set(authHeaders(token))
+    .send({ fullName, phone, accountType: 'local', idDocumentUrl: DOC_URL });
+  if (res.status !== 201) {
+    throw new Error(`création local échouée : ${JSON.stringify(res.body)}`);
+  }
+  let user = res.body;
+  if (verify) {
+    const verifyRes = await request(app)
+      .patch(`/api/users/${user.id}/verify`)
+      .set(adminHeaders())
+      .send({ status: 'verified' });
+    if (verifyRes.status !== 200) {
+      throw new Error(`vérification local échouée : ${JSON.stringify(verifyRes.body)}`);
+    }
+    user = verifyRes.body;
+  }
+  return { token, user };
+}
+
 // Candidature chauffeur (pending, sans QR véhicule).
 // Retour : {token, driver}
 export async function createDriverApplication({

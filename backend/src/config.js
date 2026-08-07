@@ -38,6 +38,11 @@ export const config = {
   // Prix touriste d'une place en taxi partagé (USD, fixe) — les chauffeurs
   // postent leur prix local en TZS, les visiteurs voient ce tarif-ci.
   sharedRideUsdPerSeat: Number(env.RIDES_USD_PER_SEAT) || 17,
+  // Remise accordée aux résidents vérifiés (sur les prix USD).
+  residentDiscountRate: Number(env.RESIDENT_DISCOUNT_RATE) || 0.1,
+  // Tarif local unique (TZS) — réservé aux locaux à carte d'identité
+  // tanzanienne vérifiée, pour TOUS les types de trajets.
+  localTripPriceTzs: Number(env.LOCAL_TRIP_PRICE_TZS) || 15000,
 
   // Pesapal (paiements) — sans clés, le service tourne en mode stub
   pesapal: {

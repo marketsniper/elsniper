@@ -7,18 +7,22 @@ import { isAdmin, requireAuth, requireAdmin } from '../middleware/auth.js';
 
 const router = Router();
 
+// Trois types de comptes :
+//  - tourist  : aucun document, USD plein tarif, vérifié d'office ;
+//  - resident : documents de résidence à valider → remise en USD ;
+//  - local    : carte d'identité TANZANIENNE à valider → tarif unique en TZS.
 const createUserSchema = z
   .object({
     fullName: z.string().min(2),
     phone: z.string().min(6),
     email: z.string().email().optional(),
-    accountType: z.enum(['tourist', 'resident']),
-    // Document d'identité : requis pour un résident (tarif local).
+    accountType: z.enum(['tourist', 'resident', 'local']),
     idDocumentUrl: z.string().url().optional(),
   })
-  .refine((d) => d.accountType !== 'resident' || d.idDocumentUrl, {
+  .refine((d) => d.accountType === 'tourist' || d.idDocumentUrl, {
     path: ['idDocumentUrl'],
-    message: "Document d'identité requis pour un compte résident",
+    message:
+      'Document requis : preuve de résidence (résident) ou carte d’identité tanzanienne (local)',
   });
 
 const verifySchema = z.object({
@@ -38,7 +42,7 @@ router.post(
     if (!isAdmin(req) && data.phone !== req.auth.phone) {
       throw new HttpError(403, 'phone_mismatch', 'Le téléphone doit être celui vérifié par OTP (jeton)');
     }
-    const isResident = data.accountType === 'resident';
+    const needsVerification = data.accountType !== 'tourist';
 
     const { rows } = await query(
       `INSERT INTO users (full_name, phone, email, account_type, currency, verification_status, id_document_url)
@@ -49,8 +53,8 @@ router.post(
         data.phone,
         data.email ?? null,
         data.accountType,
-        isResident ? 'TZS' : 'USD',
-        isResident ? 'pending' : 'verified',
+        data.accountType === 'local' ? 'TZS' : 'USD',
+        needsVerification ? 'pending' : 'verified',
         data.idDocumentUrl ?? null,
       ]
     );

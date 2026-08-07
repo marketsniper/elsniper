@@ -57,6 +57,7 @@ const PHONES = {
   noDoc: `+25572${run}`,
   driver: `+25573${run}`,
   hotel: `+25574${run}`,
+  local: `+25575${run}`,
 };
 
 async function main() {
@@ -112,7 +113,7 @@ async function main() {
       bearer(residentToken)
     )
   ).body;
-  check('résident créé en TZS, en attente de vérification', resident.currency === 'TZS' && resident.verification_status === 'pending', resident);
+  check('résident créé en USD, en attente de vérification', resident.currency === 'USD' && resident.verification_status === 'pending', resident);
 
   const noDocToken = (await authenticate(PHONES.noDoc)).token;
   const residentNoDoc = await call(
@@ -123,14 +124,14 @@ async function main() {
   );
   check('résident sans document -> 400 validation_error', residentNoDoc.status === 400 && residentNoDoc.body.error.code === 'validation_error', residentNoDoc);
 
-  console.log('— Règle métier : tarif local bloqué avant vérification');
-  const blockedTrip = await call(
+  console.log('— Segmentation tarifaire : résident (USD -10 %) et local (TZS)');
+  const sharedLocalResident = await call(
     'POST',
     '/trips',
     { userId: resident.id, tripType: 'shared_local', pickupLocation: 'Stone Town', dropoffLocation: 'Bububu' },
     bearer(residentToken)
   );
-  check('shared_local refusé tant que non vérifié (403 resident_not_verified)', blockedTrip.status === 403 && blockedTrip.body.error.code === 'resident_not_verified', blockedTrip);
+  check('navette locale refusée à un résident (403 local_only)', sharedLocalResident.status === 403 && sharedLocalResident.body.error.code === 'local_only', sharedLocalResident);
 
   const verifyNoAdmin = await call('PATCH', `/users/${resident.id}/verify`, { status: 'verified' }, bearer(residentToken));
   check('validation de compte sans clé équipe -> 401 admin_required', verifyNoAdmin.status === 401 && verifyNoAdmin.body.error.code === 'admin_required', verifyNoAdmin);
@@ -138,13 +139,41 @@ async function main() {
   const residentVerified = (await call('PATCH', `/users/${resident.id}/verify`, { status: 'verified' }, ADMIN)).body;
   check('validation manuelle du résident (équipe)', residentVerified.verification_status === 'verified', residentVerified);
 
+  const residentTrip = await call(
+    'POST',
+    '/trips',
+    { userId: resident.id, tripType: 'private', pickupLocation: 'Stone Town', dropoffLocation: 'Bububu' },
+    bearer(residentToken)
+  );
+  check('résident vérifié : course privée à 45 USD (remise 10 %)', residentTrip.status === 201 && residentTrip.body.currency === 'USD' && Number(residentTrip.body.price) === 45, residentTrip);
+
+  const localToken = (await authenticate(PHONES.local)).token;
+  const localUser = (
+    await call(
+      'POST',
+      '/users',
+      { fullName: 'Asha Local', phone: PHONES.local, accountType: 'local', idDocumentUrl: 'https://files.example.com/nida-asha.jpg' },
+      bearer(localToken)
+    )
+  ).body;
+  check('local créé en TZS (carte tanzanienne à valider)', localUser.currency === 'TZS' && localUser.verification_status === 'pending', localUser);
+
+  const blockedLocal = await call(
+    'POST',
+    '/trips',
+    { userId: localUser.id, tripType: 'private', pickupLocation: 'Stone Town', dropoffLocation: 'Bububu' },
+    bearer(localToken)
+  );
+  check('local non vérifié bloqué (403 local_not_verified)', blockedLocal.status === 403 && blockedLocal.body.error.code === 'local_not_verified', blockedLocal);
+
+  await call('PATCH', `/users/${localUser.id}/verify`, { status: 'verified' }, ADMIN);
   const localTrip = await call(
     'POST',
     '/trips',
-    { userId: resident.id, tripType: 'shared_local', pickupLocation: 'Stone Town', dropoffLocation: 'Bububu' },
-    bearer(residentToken)
+    { userId: localUser.id, tripType: 'shared_local', pickupLocation: 'Stone Town', dropoffLocation: 'Bububu' },
+    bearer(localToken)
   );
-  check('shared_local accepté après vérification (prix TZS figé)', localTrip.status === 201 && localTrip.body.currency === 'TZS', localTrip);
+  check('local vérifié : tarif unique 15 000 TZS', localTrip.status === 201 && localTrip.body.currency === 'TZS' && Number(localTrip.body.price) === 15000, localTrip);
 
   console.log('— Chauffeur : candidature puis validation (QR véhicule)');
   const driverToken = (await authenticate(PHONES.driver)).token;

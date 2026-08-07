@@ -38,7 +38,7 @@ describe('Utilisateurs (users)', () => {
     assert.equal(res.body.email, 'alice@example.com');
   });
 
-  it('résident créé en TZS, en attente de vérification', async () => {
+  it('résident créé en USD (remise après validation), en attente de vérification', async () => {
     const phone = nextPhone();
     const { token } = await authenticate(phone);
     const res = await request(app)
@@ -46,7 +46,7 @@ describe('Utilisateurs (users)', () => {
       .set(authHeaders(token))
       .send({ fullName: 'Bakari Resident', phone, accountType: 'resident', idDocumentUrl: DOC_URL });
     assert.equal(res.status, 201);
-    assert.equal(res.body.currency, 'TZS');
+    assert.equal(res.body.currency, 'USD');
     assert.equal(res.body.verification_status, 'pending');
     assert.equal(res.body.id_document_url, DOC_URL);
   });

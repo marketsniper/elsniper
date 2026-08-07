@@ -57,7 +57,7 @@ router.post(
     const data = createTripSchema.parse(req.body);
 
     let bookerLabel;
-    let currency;
+    let audience;
 
     if (data.userId) {
       // ----- Réservation par un compte client -----
@@ -68,19 +68,31 @@ router.post(
       const user = userRows[0];
       if (!user) throw notFound('Utilisateur');
 
-      if (data.tripType === 'shared_local') {
-        if (user.account_type !== 'resident') {
-          throw new HttpError(403, 'resident_only', 'Le tarif local est réservé aux comptes résidents');
-        }
+      if (user.account_type === 'local') {
+        // Le tarif local (TZS) exige une carte d'identité tanzanienne validée.
         if (user.verification_status !== 'verified') {
           throw new HttpError(
             403,
-            'resident_not_verified',
-            "Le tarif local nécessite un compte résident vérifié (document en cours de validation)"
+            'local_not_verified',
+            "Le tarif local nécessite une carte d'identité tanzanienne vérifiée (validation en cours)"
           );
         }
+        audience = 'local';
+      } else {
+        if (data.tripType === 'shared_local') {
+          throw new HttpError(
+            403,
+            'local_only',
+            "La navette locale est réservée aux locaux munis d'une carte d'identité tanzanienne"
+          );
+        }
+        // La remise résident (-10 %) ne s'applique qu'une fois les documents
+        // de résidence validés — en attendant, plein tarif touriste.
+        audience =
+          user.account_type === 'resident' && user.verification_status === 'verified'
+            ? 'resident'
+            : 'tourist';
       }
-      currency = user.currency;
       bookerLabel = `${user.full_name} (${user.phone})`;
     } else {
       // ----- Réservation par un hôtel partenaire, pour son client -----
@@ -92,19 +104,22 @@ router.post(
       if (!hotel) throw notFound('Hôtel');
 
       if (data.tripType === 'shared_local') {
-        throw new HttpError(403, 'resident_only', 'Le tarif local est réservé aux comptes résidents');
+        throw new HttpError(
+          403,
+          'local_only',
+          "La navette locale est réservée aux locaux munis d'une carte d'identité tanzanienne"
+        );
       }
-      // Les hôtels partenaires sont facturés en shillings.
-      currency = 'TZS';
+      audience = 'hotel';
       bookerLabel = `${hotel.name} (hôtel) pour ${data.clientName} (${data.clientPhone})`;
     }
 
-    const pricing = priceTrip(data.tripType, currency);
+    const pricing = priceTrip(data.tripType, audience);
     if (!pricing) {
       throw new HttpError(
         400,
         'unsupported_trip_type',
-        `Le type de trajet ${data.tripType} n'est pas disponible en ${currency}`
+        `Le type de trajet ${data.tripType} n'est pas disponible pour ce profil`
       );
     }
 

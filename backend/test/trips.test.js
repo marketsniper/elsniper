@@ -8,6 +8,7 @@ import {
   adminHeaders,
   app,
   authHeaders,
+  createLocal,
   createResident,
   createTourist,
   createDriverApplication,
@@ -121,9 +122,24 @@ describe('Courses taxi (trips)', () => {
     const posted = await createTrip(touristToken, tourist.id, { tripType: 'posted_return' });
     assert.equal(Number(posted.price), 17);
 
-    const privateTzs = await createTrip(residentToken, resident.id);
-    assert.equal(Number(privateTzs.price), 90000);
-    assert.equal(privateTzs.currency, 'TZS');
+    // Résident vérifié : remise de 10 % sur le tarif touriste, en USD.
+    const privateResident = await createTrip(residentToken, resident.id);
+    assert.equal(Number(privateResident.price), 45);
+    assert.equal(privateResident.currency, 'USD');
+
+    // Résident NON vérifié : plein tarif touriste tant que les documents
+    // de résidence ne sont pas validés.
+    const { token: pendingToken, user: pending } = await createResident({ verify: false });
+    const privatePending = await createTrip(pendingToken, pending.id);
+    assert.equal(Number(privatePending.price), 50);
+
+    // Local vérifié (carte tanzanienne) : tarif unique 15 000 TZS partout.
+    const { token: localToken, user: local } = await createLocal();
+    const privateLocal = await createTrip(localToken, local.id);
+    assert.equal(Number(privateLocal.price), 15000);
+    assert.equal(privateLocal.currency, 'TZS');
+    const sharedLocalFlat = await createTrip(localToken, local.id, { tripType: 'shared_tourist' });
+    assert.equal(Number(sharedLocalFlat.price), 15000);
   });
 
   it('scheduledAt (ISO avec offset) accepté et stocké', async () => {
@@ -132,31 +148,39 @@ describe('Courses taxi (trips)', () => {
     assert.ok(trip.scheduled_at);
   });
 
-  it('shared_local par un touriste → 403 resident_only', async () => {
+  it('shared_local par un touriste ou un résident → 403 local_only', async () => {
     const { token, user } = await createTourist();
     const res = await request(app)
       .post('/api/trips')
       .set(authHeaders(token))
       .send({ userId: user.id, tripType: 'shared_local', pickupLocation: 'Stone Town', dropoffLocation: 'Bububu' });
     assert.equal(res.status, 403);
-    assert.equal(res.body.error.code, 'resident_only');
+    assert.equal(res.body.error.code, 'local_only');
+
+    const { token: resToken, user: resident } = await createResident();
+    const asResident = await request(app)
+      .post('/api/trips')
+      .set(authHeaders(resToken))
+      .send({ userId: resident.id, tripType: 'shared_local', pickupLocation: 'Stone Town', dropoffLocation: 'Bububu' });
+    assert.equal(asResident.status, 403);
+    assert.equal(asResident.body.error.code, 'local_only');
   });
 
-  it('shared_local par un résident non vérifié → 403 resident_not_verified', async () => {
-    const { token, user } = await createResident({ verify: false });
+  it('local non vérifié → 403 local_not_verified (toute réservation)', async () => {
+    const { token, user } = await createLocal({ verify: false });
     const res = await request(app)
       .post('/api/trips')
       .set(authHeaders(token))
-      .send({ userId: user.id, tripType: 'shared_local', pickupLocation: 'Stone Town', dropoffLocation: 'Bububu' });
+      .send({ userId: user.id, tripType: 'private', pickupLocation: 'Stone Town', dropoffLocation: 'Bububu' });
     assert.equal(res.status, 403);
-    assert.equal(res.body.error.code, 'resident_not_verified');
+    assert.equal(res.body.error.code, 'local_not_verified');
   });
 
-  it('shared_local par un résident vérifié → 201, tarif local TZS figé', async () => {
-    const { token, user } = await createResident();
+  it('shared_local par un local vérifié → 201, tarif unique 15 000 TZS figé', async () => {
+    const { token, user } = await createLocal();
     const trip = await createTrip(token, user.id, { tripType: 'shared_local' });
     assert.equal(trip.currency, 'TZS');
-    assert.equal(Number(trip.price), 8000);
+    assert.equal(Number(trip.price), 15000);
   });
 
   it('création pour un autre userId que le jeton → 403 forbidden', async () => {

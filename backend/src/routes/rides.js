@@ -43,12 +43,23 @@ const updateRideSchema = z
 // les résidents, hôtels et chauffeurs voient UNIQUEMENT le prix local en
 // shillings posté par le chauffeur. L'équipe voit les deux.
 async function viewerPricing(req) {
-  if (isAdmin(req)) return 'both';
+  if (isAdmin(req)) return { mode: 'both', usd: config.sharedRideUsdPerSeat };
   if (req.auth.userId) {
-    const { rows } = await query('SELECT currency FROM users WHERE id = $1', [req.auth.userId]);
-    if (rows[0]?.currency === 'USD') return 'USD';
+    const { rows } = await query(
+      'SELECT account_type, verification_status FROM users WHERE id = $1',
+      [req.auth.userId]
+    );
+    const user = rows[0];
+    if (user && user.account_type !== 'local') {
+      // Touristes : tarif plein ; résidents vérifiés : remise appliquée.
+      const remise = user.account_type === 'resident' && user.verification_status === 'verified';
+      const usd = remise
+        ? Math.round(config.sharedRideUsdPerSeat * (1 - config.residentDiscountRate) * 100) / 100
+        : config.sharedRideUsdPerSeat;
+      return { mode: 'USD', usd };
+    }
   }
-  return 'TZS';
+  return { mode: 'TZS' };
 }
 
 // Lien WhatsApp de demande de place — le prix affiché suit la même cloison.
@@ -59,8 +70,8 @@ function rideWhatsappLink(ride, pricing) {
     timeStyle: 'short',
   });
   const prix =
-    pricing === 'USD'
-      ? `${config.sharedRideUsdPerSeat} USD`
+    pricing.mode === 'USD'
+      ? `${pricing.usd} USD`
       : `${ride.price_per_seat} ${ride.currency}`;
   return buildTeamNotificationLink(
     [
@@ -75,16 +86,18 @@ function rideWhatsappLink(ride, pricing) {
 
 function serializeRide(ride, pricing) {
   const out = { ...ride, whatsapp_link: rideWhatsappLink(ride, pricing) };
-  if (pricing === 'USD') {
-    // Jamais le prix local sous les yeux d'un touriste.
+  if (pricing.mode === 'USD') {
+    // Jamais le prix local sous les yeux d'un touriste ou d'un résident.
     delete out.price_per_seat;
     out.currency = 'USD';
-    out.price_per_seat_usd = config.sharedRideUsdPerSeat;
-  } else if (pricing === 'both') {
-    out.price_per_seat_usd = config.sharedRideUsdPerSeat;
+    out.price_per_seat_usd = pricing.usd;
+  } else if (pricing.mode === 'both') {
+    out.price_per_seat_usd = pricing.usd;
   }
   return out;
 }
+
+const PRICING_TZS = { mode: 'TZS' };
 
 // GET /rides/locations — listes officielles pour les menus déroulants
 // de l'app (départs limités aux deux hubs, arrivées de l'île).
@@ -129,7 +142,7 @@ router.post(
       ]
     );
     // Le chauffeur qui publie voit son prix local (TZS).
-    res.status(201).json(serializeRide(rows[0], 'TZS'));
+    res.status(201).json(serializeRide(rows[0], PRICING_TZS));
   })
 );
 
@@ -164,7 +177,7 @@ router.get(
       `SELECT * FROM posted_rides WHERE driver_id = $1 ORDER BY departure_at DESC`,
       [req.auth.driverId]
     );
-    res.json(rows.map((r) => serializeRide(r, 'TZS')));
+    res.json(rows.map((r) => serializeRide(r, PRICING_TZS)));
   })
 );
 
@@ -195,7 +208,7 @@ router.patch(
        RETURNING *`,
       [data.seatsAvailable ?? null, data.status ?? null, req.params.id]
     );
-    res.json(serializeRide(rows[0], isAdmin(req) ? 'both' : 'TZS'));
+    res.json(serializeRide(rows[0], isAdmin(req) ? { mode: 'both', usd: config.sharedRideUsdPerSeat } : PRICING_TZS));
   })
 );
 

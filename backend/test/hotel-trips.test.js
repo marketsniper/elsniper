@@ -46,11 +46,11 @@ describe('Hôtel — réservation de taxi pour un client', () => {
     assert.ok(res.body.whatsapp_link.includes('wa.me'));
   });
 
-  it('le tarif local (shared_local) est refusé à un hôtel → 403 resident_only', async () => {
+  it('le tarif local (shared_local) est refusé à un hôtel → 403 local_only', async () => {
     const { token, hotel } = await createHotel();
     const res = await bookHotelTrip(token, hotel.id, { tripType: 'shared_local' });
     assert.equal(res.status, 403);
-    assert.equal(res.body.error.code, 'resident_only');
+    assert.equal(res.body.error.code, 'local_only');
   });
 
   it('un hôtel ne peut pas réserver au nom d’un autre hôtel → 403', async () => {

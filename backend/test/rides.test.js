@@ -102,7 +102,7 @@ describe('Trajets partagés (rides)', () => {
     assert.equal(anonymous.status, 401);
   });
 
-  it('cloison tarifaire : touriste → 17 USD sans prix local ; résident → TZS sans prix touriste', async () => {
+  it('cloison tarifaire : touriste 17 USD, résident vérifié 15,30 USD, local TZS', async () => {
     const { token } = await createVerifiedDriver();
     const ride = (await postRide(token)).body;
 
@@ -114,13 +114,23 @@ describe('Trajets partagés (rides)', () => {
     assert.equal(t.price_per_seat, undefined, 'le prix local ne doit pas fuiter vers un touriste');
     assert.ok(t.whatsapp_link.includes(encodeURIComponent('17 USD')));
 
-    const { createResident } = await import('./setup.js');
+    const { createResident, createLocal } = await import('./setup.js');
+
+    // Résident vérifié : remise de 10 % → 15,3 USD, jamais le prix local.
     const { token: residentToken } = await createResident();
     const forResident = await request(app).get('/api/rides').set(authHeaders(residentToken));
     const r = forResident.body.find((x) => x.id === ride.id);
-    assert.equal(Number(r.price_per_seat), 10000);
-    assert.equal(r.currency, 'TZS');
-    assert.equal(r.price_per_seat_usd, undefined, 'le tarif touriste ne s’affiche pas aux résidents');
+    assert.equal(r.price_per_seat_usd, 15.3);
+    assert.equal(r.currency, 'USD');
+    assert.equal(r.price_per_seat, undefined);
+
+    // Local (carte tanzanienne) : le prix TZS du chauffeur, jamais l'USD.
+    const { token: localToken } = await createLocal();
+    const forLocal = await request(app).get('/api/rides').set(authHeaders(localToken));
+    const l = forLocal.body.find((x) => x.id === ride.id);
+    assert.equal(Number(l.price_per_seat), 10000);
+    assert.equal(l.currency, 'TZS');
+    assert.equal(l.price_per_seat_usd, undefined, 'le tarif touriste ne s’affiche pas aux locaux');
   });
 
   it('un trajet clôturé ou sans places disparaît de la liste publique', async () => {
