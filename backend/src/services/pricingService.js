@@ -1,26 +1,83 @@
 import { config } from '../config.js';
 
-// Grille tarifaire MVP — prix figés sur chaque trip/package à la création :
-// modifier cette grille ne réécrit jamais l'historique.
+// Grille tarifaire PAR ZONE — prix figés sur chaque trip/package à la
+// création : modifier cette grille ne réécrit jamais l'historique.
 //
 // Segmentation (cloison stricte, appliquée aussi à l'affichage côté app) :
-//  - tourist  : USD plein tarif ;
-//  - resident : USD avec remise (config.residentDiscountRate, 10 % par défaut) ;
-//  - local    : TZS — TOUS les trajets au tarif unique config.localTripPriceTzs ;
+//  - tourist  : USD plein tarif (AC incluse sur les options touristes) ;
+//  - resident : USD avec remise (config.residentDiscountRate, 10 %) ;
+//  - local    : TZS — tarif de la zone (carte tanzanienne vérifiée) ;
 //  - hotel    : TZS, grille commerciale (réserve pour ses clients).
-const TOURIST_FARES_USD = {
-  private: 50,
-  shared_tourist: 18,
-  posted_return: 18,
+//
+// Zones (depuis/vers la ville ou l'aéroport) :
+const ZONE_TIERS = {
+  nord: { privateUsd: 50, sharedUsd: 18, localTzs: 15000 }, // Nungwi / Kendwa
+  nordEst: { privateUsd: 45, sharedUsd: 16, localTzs: 12000 }, // Matemwe / Kiwengwa
+  est: { privateUsd: 50, sharedUsd: 15, localTzs: 12000 }, // Paje / Jambiani
+  estPointe: { privateUsd: 50, sharedUsd: 18, localTzs: 15000 }, // Michamvi (route directe)
+  sud: { privateUsd: 45, sharedUsd: 14, localTzs: 12000 }, // Kizimkazi / Makunduchi
 };
 
-// Trajets spéciaux à prix fixe (USD, courses privées), valables dans les
-// deux sens — comparaison insensible à la casse sur les villes des menus.
+// Rattachement des villes aux zones. Les villes de la côte centre-est et
+// Fumba sont assimilées aux zones voisines (ajustable sur demande).
+const CITY_ZONES = {
+  nungwi: 'nord',
+  kendwa: 'nord',
+  matemwe: 'nordEst',
+  kiwengwa: 'nordEst',
+  'pwani mchangani': 'nordEst',
+  uroa: 'nordEst',
+  pongwe: 'nordEst',
+  chwaka: 'nordEst',
+  paje: 'est',
+  jambiani: 'est',
+  bwejuu: 'est',
+  michamvi: 'estPointe',
+  kizimkazi: 'sud',
+  makunduchi: 'sud',
+  fumba: 'sud',
+};
+
+// Trajets spéciaux à prix fixe (USD, courses privées), deux sens.
 const SPECIAL_PRIVATE_ROUTES_USD = [{ a: 'Nungwi', b: 'Paje', usd: 65 }];
 
+// Colis : forfait par taille (Stone Town → n'importe quelle plage),
+// payé en ligne à 100 % par l'expéditeur.
+const PACKAGE_FARES = {
+  small: { USD: 5, TZS: 13000 }, // enveloppe, clés, passeport, documents
+  medium: { USD: 10, TZS: 26000 }, // sac à dos, petit carton, épices
+  large: { USD: 18, TZS: 47000 }, // grosse valise, caisse de ravitaillement
+};
+
+const HOTEL_FARES_TZS = {
+  private: 90000,
+  shared_tourist: 40000,
+  posted_return: 65000,
+};
+
+const round2 = (n) => Math.round(n * 100) / 100;
+
+// « Ville (précision) » → « ville » ; insensible à la casse.
+const normCity = (s) => (s || '').replace(/\s*\(.*\)\s*$/, '').trim().toLowerCase();
+
+// Zone tarifaire d'un itinéraire : la ville zonée du trajet (l'autre bout
+// étant en général la ville/l'aéroport). Si les deux bouts sont zonés,
+// on retient la zone au tarif privé le plus élevé.
+function tierForRoute(pickup, dropoff) {
+  const z1 = ZONE_TIERS[CITY_ZONES[normCity(pickup)]];
+  const z2 = ZONE_TIERS[CITY_ZONES[normCity(dropoff)]];
+  const fallback = {
+    privateUsd: 50,
+    sharedUsd: config.sharedRideUsdPerSeat,
+    localTzs: config.localTripPriceTzs,
+  };
+  if (z1 && z2) return z1.privateUsd >= z2.privateUsd ? z1 : z2;
+  return z1 ?? z2 ?? fallback;
+}
+
 function specialPrivateRouteUsd(pickup, dropoff) {
-  const p = (pickup || '').trim().toLowerCase();
-  const d = (dropoff || '').trim().toLowerCase();
+  const p = normCity(pickup);
+  const d = normCity(dropoff);
   const route = SPECIAL_PRIVATE_ROUTES_USD.find((r) => {
     const a = r.a.toLowerCase();
     const b = r.b.toLowerCase();
@@ -29,22 +86,20 @@ function specialPrivateRouteUsd(pickup, dropoff) {
   return route?.usd;
 }
 
-const HOTEL_FARES_TZS = {
-  private: 90000,
-  shared_tourist: 40000,
-  posted_return: 65000,
-};
-
-const PACKAGE_FARES = { USD: 10, TZS: 25000 };
-
-const round2 = (n) => Math.round(n * 100) / 100;
+// Prix touriste (USD) d'une place en trajet partagé selon l'itinéraire —
+// utilisé aussi pour l'affichage des trajets postés par les chauffeurs.
+export function sharedSeatUsdForRoute(pickup, dropoff) {
+  return tierForRoute(pickup, dropoff).sharedUsd;
+}
 
 // audience : 'tourist' | 'resident' | 'local' | 'hotel'
-// route : { pickup, dropoff } — active les trajets spéciaux (ex. Nungwi ↔ Paje).
+// route : { pickup, dropoff } — détermine la zone et les trajets spéciaux.
 export function priceTrip(tripType, audience, route = {}) {
+  const tier = tierForRoute(route.pickup, route.dropoff);
+
   if (audience === 'local') {
-    // Tarif local unique, quel que soit le type de trajet (shared_local inclus).
-    const price = config.localTripPriceTzs;
+    // Tarif local de la zone, quel que soit le type de trajet.
+    const price = tier.localTzs;
     return { price, commission: round2(price * config.commissionRate), currency: 'TZS' };
   }
 
@@ -54,17 +109,22 @@ export function priceTrip(tripType, audience, route = {}) {
     return { price: fare, commission: round2(fare * config.commissionRate), currency: 'TZS' };
   }
 
-  let usd = TOURIST_FARES_USD[tripType];
-  if (usd === undefined) return null;
+  let usd;
   if (tripType === 'private') {
-    usd = specialPrivateRouteUsd(route.pickup, route.dropoff) ?? usd;
+    usd = specialPrivateRouteUsd(route.pickup, route.dropoff) ?? tier.privateUsd;
+  } else if (tripType === 'shared_tourist' || tripType === 'posted_return') {
+    usd = tier.sharedUsd;
+  } else {
+    return null; // shared_local n'existe pas en USD
   }
   const price = audience === 'resident' ? round2(usd * (1 - config.residentDiscountRate)) : usd;
   return { price, commission: round2(price * config.commissionRate), currency: 'USD' };
 }
 
-export function pricePackage(currency) {
-  const fare = PACKAGE_FARES[currency];
+// size : 'small' | 'medium' | 'large'
+export function pricePackage(currency, size = 'medium') {
+  const fare = PACKAGE_FARES[size]?.[currency];
+  if (fare === undefined) return null;
   return {
     price: fare,
     commission: round2(fare * config.commissionRate),

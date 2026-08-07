@@ -16,6 +16,7 @@ import { asyncHandler } from '../middleware/errorHandler.js';
 import { isAdmin, requireAuth } from '../middleware/auth.js';
 import { buildTeamNotificationLink } from '../services/whatsappService.js';
 import { config } from '../config.js';
+import { sharedSeatUsdForRoute } from '../services/pricingService.js';
 import { RIDE_DESTINATIONS, RIDE_ORIGINS } from '../services/locations.js';
 
 const router = Router();
@@ -43,7 +44,7 @@ const updateRideSchema = z
 // les résidents, hôtels et chauffeurs voient UNIQUEMENT le prix local en
 // shillings posté par le chauffeur. L'équipe voit les deux.
 async function viewerPricing(req) {
-  if (isAdmin(req)) return { mode: 'both', usd: config.sharedRideUsdPerSeat };
+  if (isAdmin(req)) return { mode: 'both', remise: false };
   if (req.auth.userId) {
     const { rows } = await query(
       'SELECT account_type, verification_status FROM users WHERE id = $1',
@@ -53,13 +54,18 @@ async function viewerPricing(req) {
     if (user && user.account_type !== 'local') {
       // Touristes : tarif plein ; résidents vérifiés : remise appliquée.
       const remise = user.account_type === 'resident' && user.verification_status === 'verified';
-      const usd = remise
-        ? Math.round(config.sharedRideUsdPerSeat * (1 - config.residentDiscountRate) * 100) / 100
-        : config.sharedRideUsdPerSeat;
-      return { mode: 'USD', usd };
+      return { mode: 'USD', remise };
     }
   }
   return { mode: 'TZS' };
+}
+
+// Prix USD d'une place pour CE trajet (grille par zone) selon le profil.
+function rideUsd(ride, pricing) {
+  const base = sharedSeatUsdForRoute(ride.origin, ride.destination);
+  return pricing.remise
+    ? Math.round(base * (1 - config.residentDiscountRate) * 100) / 100
+    : base;
 }
 
 // Lien WhatsApp de demande de place — le prix affiché suit la même cloison.
@@ -71,7 +77,7 @@ function rideWhatsappLink(ride, pricing) {
   });
   const prix =
     pricing.mode === 'USD'
-      ? `${pricing.usd} USD`
+      ? `${rideUsd(ride, pricing)} USD`
       : `${ride.price_per_seat} ${ride.currency}`;
   return buildTeamNotificationLink(
     [
@@ -90,9 +96,9 @@ function serializeRide(ride, pricing) {
     // Jamais le prix local sous les yeux d'un touriste ou d'un résident.
     delete out.price_per_seat;
     out.currency = 'USD';
-    out.price_per_seat_usd = pricing.usd;
+    out.price_per_seat_usd = rideUsd(out, pricing);
   } else if (pricing.mode === 'both') {
-    out.price_per_seat_usd = pricing.usd;
+    out.price_per_seat_usd = rideUsd(out, pricing);
   }
   return out;
 }

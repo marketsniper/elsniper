@@ -27,6 +27,7 @@ async function createUserPackage(token, userId, overrides = {}) {
     .set(authHeaders(token))
     .send({
       senderType: 'user',
+      size: 'medium',
       senderUserId: userId,
       pickupLocation: 'Stone Town',
       dropoffLocation: 'Paje',
@@ -45,6 +46,7 @@ async function createHotelPackage(token, hotelId, overrides = {}) {
     .set(authHeaders(token))
     .send({
       senderType: 'hotel',
+      size: 'medium',
       senderHotelId: hotelId,
       pickupLocation: 'Hotel Baraka, Nungwi',
       dropoffLocation: 'Marché de Stone Town',
@@ -86,7 +88,7 @@ describe('Colis (packages)', () => {
     const { token, hotel } = await createHotel();
     const pkg = await createHotelPackage(token, hotel.id);
     assert.equal(pkg.currency, 'TZS');
-    assert.equal(Number(pkg.price), 25000);
+    assert.equal(Number(pkg.price), 26000); // taille medium en TZS
     assert.equal(pkg.sender_hotel_id, hotel.id);
     assert.equal(pkg.sender_user_id, null);
   });
@@ -101,6 +103,7 @@ describe('Colis (packages)', () => {
       .set(authHeaders(token))
       .send({
         senderType: 'hotel',
+      size: 'medium',
         senderUserId: user.id,
         pickupLocation: 'Hotel Baraka',
         dropoffLocation: 'Stone Town',
@@ -116,6 +119,7 @@ describe('Colis (packages)', () => {
       .set(authHeaders(userToken))
       .send({
         senderType: 'user',
+      size: 'medium',
         senderUserId: user.id,
         senderHotelId: hotel.id,
         pickupLocation: 'Stone Town',
@@ -138,6 +142,7 @@ describe('Colis (packages)', () => {
       .set(authHeaders(otherUserToken))
       .send({
         senderType: 'user',
+      size: 'medium',
         senderUserId: user.id,
         pickupLocation: 'Stone Town',
         dropoffLocation: 'Paje',
@@ -152,6 +157,7 @@ describe('Colis (packages)', () => {
       .set(authHeaders(otherHotelToken))
       .send({
         senderType: 'hotel',
+      size: 'medium',
         senderHotelId: hotel.id,
         pickupLocation: 'Hotel Baraka',
         dropoffLocation: 'Stone Town',

@@ -134,6 +134,7 @@ describe('Hôtels (hotels)', () => {
       .set(authHeaders(token))
       .send({
         senderType: 'hotel',
+      size: 'medium',
         senderHotelId: hotel.id,
         pickupLocation: 'Hotel Baraka, Nungwi',
         dropoffLocation: 'Marché de Stone Town',

@@ -312,6 +312,7 @@ async function main() {
     '/packages',
     {
       senderType: 'hotel',
+      size: 'medium',
       senderUserId: tourist.id,
       pickupLocation: 'Hotel Baraka',
       dropoffLocation: 'Stone Town',
@@ -328,6 +329,7 @@ async function main() {
       '/packages',
       {
         senderType: 'hotel',
+      size: 'medium',
         senderHotelId: hotel.id,
         pickupLocation: 'Hotel Baraka, Nungwi',
         dropoffLocation: 'Marché de Stone Town',

@@ -58,6 +58,7 @@ async function createPackagePayment() {
     .set(authHeaders(token))
     .send({
       senderType: 'hotel',
+      size: 'medium',
       senderHotelId: hotel.id,
       pickupLocation: 'Hôtel Test, Nungwi',
       dropoffLocation: 'Stone Town',

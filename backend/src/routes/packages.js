@@ -16,6 +16,9 @@ const createPackageSchema = z
     senderType: z.enum(['user', 'hotel']),
     senderUserId: z.string().uuid().optional(),
     senderHotelId: z.string().uuid().optional(),
+    // Forfait par taille : small (enveloppe/documents), medium (sac à dos),
+    // large (grosse valise/caisse).
+    size: z.enum(['small', 'medium', 'large']),
     pickupLocation: z.string().min(2),
     dropoffLocation: z.string().min(2),
     recipientName: z.string().min(2),
@@ -81,18 +84,19 @@ router.post(
       senderLabel = `${rows[0].name} (hôtel, ${rows[0].phone})`;
     }
 
-    const pricing = pricePackage(currency);
+    const pricing = pricePackage(currency, data.size);
     const qrCode = generatePackageQr();
 
     const { rows } = await query(
-      `INSERT INTO packages (sender_type, sender_user_id, sender_hotel_id, qr_code, pickup_location,
+      `INSERT INTO packages (sender_type, sender_user_id, sender_hotel_id, size, qr_code, pickup_location,
                              dropoff_location, recipient_name, recipient_phone, description, price, commission, currency)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
        RETURNING *`,
       [
         data.senderType,
         data.senderUserId ?? null,
         data.senderHotelId ?? null,
+        data.size,
         qrCode,
         data.pickupLocation,
         data.dropoffLocation,
