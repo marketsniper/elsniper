@@ -73,6 +73,39 @@ p{color:#6B7280;max-width:42ch}code{background:#CCFBF1;color:#0B7C72;padding:2px
       );
   });
 
+  // Pages de retour PayPal : après approbation (ou annulation) dans le
+  // navigateur, on guide le client vers l'app pour finaliser.
+  const pagePaypal = (titre, message, emoji) =>
+    `<!doctype html><html lang="fr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>zanziGo — ${titre}</title>
+<style>body{font-family:system-ui,sans-serif;background:#F5F0E8;color:#1F2937;display:flex;min-height:100vh;align-items:center;justify-content:center;margin:0}
+main{text-align:center;padding:32px}h1{color:#0D9488;font-size:40px;margin:0 0 8px}
+p{color:#6B7280;max-width:44ch;margin:8px auto}</style>
+</head><body><main><h1>${emoji} ${titre}</h1><p>${message}</p></main></body></html>`;
+  app.get('/api/paypal/retour', (_req, res) => {
+    res
+      .type('html')
+      .send(
+        pagePaypal(
+          'Paiement approuvé',
+          'Retournez dans l\'app zanziGo et touchez « J\'ai payé — vérifier » pour finaliser. Asante !',
+          '✅'
+        )
+      );
+  });
+  app.get('/api/paypal/annule', (_req, res) => {
+    res
+      .type('html')
+      .send(
+        pagePaypal(
+          'Paiement annulé',
+          'Aucun montant n\'a été débité. Vous pouvez relancer le paiement depuis l\'app zanziGo quand vous voulez.',
+          '↩️'
+        )
+      );
+  });
+
   // Limiteurs : OTP d'abord (plus strict), puis routes publiques POST
   app.use('/api/auth/request-otp', otpLimiter);
   app.use('/api/auth', publicPostLimiter);

@@ -5,6 +5,8 @@ import { HttpError, notFound } from '../errors.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { isAdmin, requireAdmin, requireAuth } from '../middleware/auth.js';
 import { getTransactionStatus, isStubMode } from '../services/pesapalService.js';
+import { capturePaypalOrder } from '../services/paypalService.js';
+import { config } from '../config.js';
 
 const router = Router();
 
@@ -107,14 +109,34 @@ router.post(
       );
     }
 
-    // Paiements manuels via WhatsApp (colis) : pas de vérification Pesapal —
-    // c'est l'équipe (ou le payeur en phase pilote) qui confirme à la main.
-    // Sinon, en mode réel, ne confirmer que si Pesapal confirme la transaction.
-    const status = payment.pesapal_reference?.startsWith('WHATSAPP-')
-      ? 'COMPLETED'
-      : await getTransactionStatus(payment.pesapal_reference);
+    // Trois familles de références :
+    //  - PAYPAL-…  : capture + vérification RÉELLE auprès de PayPal — le
+    //    payeur peut déclencher, la vérité vient de PayPal, pas du client ;
+    //  - WHATSAPP-… / PAYPALME-… : validation manuelle après réception de
+    //    l'argent — réservée à l'équipe en production (tableau de bord) ;
+    //  - sinon : Pesapal (stub sans clés, vérification réelle avec).
+    const reference = payment.pesapal_reference ?? '';
+    let status;
+    if (reference.startsWith('PAYPAL-')) {
+      status = await capturePaypalOrder(reference.slice('PAYPAL-'.length));
+    } else if (reference.startsWith('WHATSAPP-') || reference.startsWith('PAYPALME-')) {
+      if (config.env === 'production' && !isAdmin(req)) {
+        throw new HttpError(
+          403,
+          'manual_confirm_admin_only',
+          "Paiement manuel : c'est l'équipe qui valide après réception de l'argent"
+        );
+      }
+      status = 'COMPLETED';
+    } else {
+      status = await getTransactionStatus(reference);
+    }
     if (status !== 'COMPLETED') {
-      throw new HttpError(409, 'payment_not_completed', `Transaction non aboutie côté Pesapal (${status})`);
+      throw new HttpError(
+        409,
+        'payment_not_completed',
+        `Paiement non abouti pour le moment (${status}) — terminez le paiement puis réessayez`
+      );
     }
 
     const updated = await withTransaction(async (client) => {

@@ -42,6 +42,8 @@ export default function EcranDetailColis() {
   const [chargePaiement, setChargePaiement] = useState(false);
   // Paiement créé sur cet écran (pour la simulation de confirmation en dev).
   const [paiementId, setPaiementId] = useState<string | null>(null);
+  // 'paypal' = circuit automatique (bouton « J'ai payé — vérifier »).
+  const [methodePaiement, setMethodePaiement] = useState<string>('manual');
   const [chargeConfirmation, setChargeConfirmation] = useState(false);
   const [chargeAnnulation, setChargeAnnulation] = useState(false);
   const [chargePosition, setChargePosition] = useState(false);
@@ -87,6 +89,7 @@ export default function EcranDetailColis() {
     try {
       const paiement = await api.payerColis(colis.id);
       setPaiementId(paiement.id ?? null);
+      setMethodePaiement(String(paiement.payment_method ?? 'manual'));
       if (paiement.payment_link) {
         await Linking.openURL(paiement.payment_link);
       } else {
@@ -253,7 +256,16 @@ export default function EcranDetailColis() {
           />
         </>
       )}
-      {__DEV__ && peutPayer && paiementId && (
+      {peutPayer && paiementId && methodePaiement === 'paypal' && (
+        <Bouton
+          titre={t('trip_verifier_paiement')}
+          icone="shield-checkmark-outline"
+          variante="secondaire"
+          onPress={simulerConfirmation}
+          charge={chargeConfirmation}
+        />
+      )}
+      {__DEV__ && peutPayer && paiementId && methodePaiement !== 'paypal' && (
         <Bouton
           titre={t('trip_confirm_dev')}
           variante="secondaire"

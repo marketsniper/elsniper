@@ -7,6 +7,7 @@ import { HttpError, notFound } from '../errors.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { isAdmin, requireAuth } from '../middleware/auth.js';
 import { pricePackage } from '../services/pricingService.js';
+import { circuitPaiementUsd } from '../services/paypalService.js';
 import { generatePackageQr } from '../services/qrService.js';
 import { buildTeamNotificationLink, packageRequestMessage } from '../services/whatsappService.js';
 
@@ -171,20 +172,28 @@ router.post(
       );
     }
 
-    // Paiement MANUEL des colis : le lien ouvre WhatsApp vers l'équipe, qui
+    // Circuit USD automatique (PayPal) ou lien PayPal.Me si configurés ;
+    // sinon paiement MANUEL : le lien ouvre WhatsApp vers l'équipe, qui
     // crée alors un lien de paiement à la main et confirme une fois payé.
-    const reference = `WHATSAPP-${randomUUID()}`;
-    const paymentLink = buildTeamNotificationLink(
-      [
-        '💳 Paiement colis zanziGo',
-        `Réf: ${pkg.id}`,
-        `QR: ${pkg.qr_code}`,
-        `Taille: ${pkg.size}`,
-        `Montant: ${pkg.price} ${pkg.currency}`,
-        `Trajet: ${pkg.pickup_location} → ${pkg.dropoff_location}`,
-        'Bonjour, je souhaite régler ce colis — merci de m’envoyer le lien de paiement.',
-      ].join('\n')
-    );
+    const paypal = await circuitPaiementUsd({
+      amount: pkg.price,
+      currency: pkg.currency,
+      description: `zanziGo colis ${pkg.qr_code}`,
+    });
+    const reference = paypal?.reference ?? `WHATSAPP-${randomUUID()}`;
+    const paymentLink =
+      paypal?.paymentLink ??
+      buildTeamNotificationLink(
+        [
+          '💳 Paiement colis zanziGo',
+          `Réf: ${pkg.id}`,
+          `QR: ${pkg.qr_code}`,
+          `Taille: ${pkg.size}`,
+          `Montant: ${pkg.price} ${pkg.currency}`,
+          `Trajet: ${pkg.pickup_location} → ${pkg.dropoff_location}`,
+          'Bonjour, je souhaite régler ce colis — merci de m’envoyer le lien de paiement.',
+        ].join('\n')
+      );
 
     const { rows } = await query(
       `INSERT INTO payments (package_id, amount, currency, pesapal_reference, payment_link)
@@ -192,7 +201,7 @@ router.post(
        RETURNING *`,
       [pkg.id, pkg.price, pkg.currency, reference, paymentLink]
     );
-    res.status(201).json(rows[0]);
+    res.status(201).json({ ...rows[0], payment_method: paypal?.method ?? 'manual' });
   })
 );
 

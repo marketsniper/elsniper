@@ -6,6 +6,7 @@ import { asyncHandler } from '../middleware/errorHandler.js';
 import { isAdmin, requireAuth, requireAdmin } from '../middleware/auth.js';
 import { priceTrip } from '../services/pricingService.js';
 import { createPaymentOrder } from '../services/pesapalService.js';
+import { circuitPaiementUsd } from '../services/paypalService.js';
 import { buildTeamNotificationLink, tripRequestMessage } from '../services/whatsappService.js';
 
 const router = Router();
@@ -267,9 +268,9 @@ router.patch(
   })
 );
 
-// POST /trips/:id/payment — génère le lien de paiement Pesapal (client ou équipe).
-// Règle métier : le paiement ne peut être demandé qu'après confirmation
-// d'un chauffeur — jamais avant.
+// POST /trips/:id/payment — lien de paiement (client ou équipe) : PayPal si
+// configuré (USD), sinon Pesapal/stub. Règle métier : le paiement ne peut
+// être demandé qu'après confirmation d'un chauffeur — jamais avant.
 router.post(
   '/:id/payment',
   requireAuth,
@@ -290,11 +291,18 @@ router.post(
       );
     }
 
-    const { reference, paymentLink } = await createPaymentOrder({
+    const paypal = await circuitPaiementUsd({
       amount: trip.price,
       currency: trip.currency,
       description: `zanziGo trajet ${trip.id}`,
     });
+    const { reference, paymentLink } =
+      paypal ??
+      (await createPaymentOrder({
+        amount: trip.price,
+        currency: trip.currency,
+        description: `zanziGo trajet ${trip.id}`,
+      }));
 
     const { rows } = await query(
       `INSERT INTO payments (trip_id, amount, currency, pesapal_reference, payment_link)
@@ -302,7 +310,9 @@ router.post(
        RETURNING *`,
       [trip.id, trip.price, trip.currency, reference, paymentLink]
     );
-    res.status(201).json(rows[0]);
+    // payment_method (non stocké) : l'app affiche « J'ai payé — vérifier »
+    // uniquement pour le circuit PayPal complet (capture vérifiable).
+    res.status(201).json({ ...rows[0], payment_method: paypal?.method ?? 'manual' });
   })
 );
 

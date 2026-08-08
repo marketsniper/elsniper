@@ -45,6 +45,24 @@ export const config = {
   // tanzanienne vérifiée, pour TOUS les types de trajets.
   localTripPriceTzs: Number(env.LOCAL_TRIP_PRICE_TZS) || 15000,
 
+  // PayPal (paiements USD dans l'app) — trois niveaux, du plus automatique
+  // au plus manuel :
+  //  1. clientId + clientSecret présents → PayPal Checkout complet : le
+  //     serveur crée l'ordre, le client approuve, le serveur capture et
+  //     vérifie — AUCUNE action de l'équipe ;
+  //  2. sinon, meUsername présent → lien PayPal.Me à montant exact, l'équipe
+  //     valide dans le tableau de bord après réception de l'argent ;
+  //  3. sinon → circuits actuels (WhatsApp pour les colis, Pesapal/stub).
+  // URL publique de l'API (pages de retour PayPal).
+  publicApiUrl: env.PUBLIC_API_URL || 'https://zanzigo-api.onrender.com',
+
+  paypal: {
+    env: env.PAYPAL_ENV === 'live' ? 'live' : 'sandbox',
+    clientId: env.PAYPAL_CLIENT_ID || '',
+    clientSecret: env.PAYPAL_CLIENT_SECRET || '',
+    meUsername: env.PAYPAL_ME_USERNAME || '',
+  },
+
   // Pesapal (paiements) — sans clés, le service tourne en mode stub
   pesapal: {
     env: env.PESAPAL_ENV || 'sandbox',

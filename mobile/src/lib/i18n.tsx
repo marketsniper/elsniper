@@ -785,6 +785,11 @@ const CHAINES = {
     sw: 'Ombi limetumwa — timu ya zanziGo itathibitisha dereva, kisha malipo yataonekana hapa.',
   },
   trip_payer: { fr: 'Payer la course', en: 'Pay for the ride', sw: 'Lipia safari' },
+  trip_verifier_paiement: {
+    fr: "J'ai payé — vérifier le paiement",
+    en: "I've paid — verify payment",
+    sw: 'Nimelipa — hakiki malipo',
+  },
   trip_annuler: { fr: 'Annuler la course', en: 'Cancel the ride', sw: 'Ghairi safari' },
   trip_annuler_confirm: {
     fr: 'Annuler cette course ?',
