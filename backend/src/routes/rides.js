@@ -44,9 +44,9 @@ const updateRideSchema = z
 // les résidents, hôtels et chauffeurs voient UNIQUEMENT le prix local en
 // shillings posté par le chauffeur. L'équipe voit les deux.
 async function viewerPricing(req) {
-  if (isAdmin(req)) return { mode: 'both', remise: false };
-  // Hôtel partenaire : même grille USD que les touristes, avec −10 %.
-  if (req.auth.hotelId) return { mode: 'USD', remise: true };
+  if (isAdmin(req)) return { mode: 'both', remise: 0 };
+  // Hôtel partenaire : même grille USD que les touristes, avec −5 %.
+  if (req.auth.hotelId) return { mode: 'USD', remise: config.hotelDiscountRate };
   if (req.auth.userId) {
     const { rows } = await query(
       'SELECT account_type, verification_status FROM users WHERE id = $1',
@@ -54,9 +54,9 @@ async function viewerPricing(req) {
     );
     const user = rows[0];
     if (user && user.account_type !== 'local') {
-      // Touristes : tarif plein ; résidents vérifiés : remise appliquée.
-      const remise = user.account_type === 'resident' && user.verification_status === 'verified';
-      return { mode: 'USD', remise };
+      // Touristes : tarif plein ; résidents vérifiés : −10 %.
+      const verifie = user.account_type === 'resident' && user.verification_status === 'verified';
+      return { mode: 'USD', remise: verifie ? config.residentDiscountRate : 0 };
     }
   }
   return { mode: 'TZS' };
@@ -66,7 +66,7 @@ async function viewerPricing(req) {
 function rideUsd(ride, pricing) {
   const base = sharedSeatUsdForRoute(ride.origin, ride.destination);
   return pricing.remise
-    ? Math.round(base * (1 - config.residentDiscountRate) * 100) / 100
+    ? Math.round(base * (1 - pricing.remise) * 100) / 100
     : base;
 }
 

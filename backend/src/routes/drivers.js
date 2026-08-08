@@ -94,6 +94,33 @@ router.get(
   })
 );
 
+// PATCH /drivers/:id/location {lat, lng} — le chauffeur envoie sa position
+// (lui-même uniquement, ou l'équipe). Une seule ligne par chauffeur, écrasée
+// à chaque envoi : aucune trace d'historique n'est conservée.
+router.patch(
+  '/:id/location',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const { lat, lng } = z
+      .object({ lat: z.number().min(-90).max(90), lng: z.number().min(-180).max(180) })
+      .parse(req.body);
+    if (!isAdmin(req) && req.auth.driverId !== req.params.id) {
+      throw new HttpError(403, 'forbidden', 'Un chauffeur ne peut envoyer que sa propre position');
+    }
+    const { rows: driverRows } = await query('SELECT id FROM drivers WHERE id = $1', [req.params.id]);
+    if (!driverRows[0]) throw notFound('Chauffeur');
+
+    const { rows } = await query(
+      `INSERT INTO driver_positions (driver_id, lat, lng)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (driver_id) DO UPDATE SET lat = $2, lng = $3, updated_at = now()
+       RETURNING *`,
+      [req.params.id, lat, lng]
+    );
+    res.json(rows[0]);
+  })
+);
+
 // GET /drivers/:id — détail chauffeur (lui-même ou l'équipe).
 router.get(
   '/:id',

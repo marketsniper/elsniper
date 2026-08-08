@@ -7,8 +7,8 @@ import { config } from '../config.js';
 //  - tourist  : USD plein tarif (AC incluse sur les options touristes) ;
 //  - resident : USD avec remise (config.residentDiscountRate, 10 %) ;
 //  - local    : TZS — tarif de la zone (carte tanzanienne vérifiée) ;
-//  - hotel    : USD — même grille que les touristes avec remise 10 %
-//               (partenaire qui réserve pour ses clients).
+//  - hotel    : USD — même grille que les touristes avec remise partenaire
+//               (config.hotelDiscountRate, 5 %).
 //
 // Zones (depuis/vers la ville ou l'aéroport) :
 const ZONE_TIERS = {
@@ -122,14 +122,19 @@ export function priceTrip(tripType, audience, route = {}) {
   } else {
     return null; // shared_local n'existe pas en USD
   }
-  // Résidents vérifiés ET hôtels partenaires : grille touriste avec −10 %.
-  const remise = audience === 'resident' || audience === 'hotel';
-  const price = remise ? round2(usd * (1 - config.residentDiscountRate)) : usd;
+  // Grille touriste remisée : résident vérifié −10 %, hôtel partenaire −5 %.
+  const tauxRemise =
+    audience === 'resident'
+      ? config.residentDiscountRate
+      : audience === 'hotel'
+        ? config.hotelDiscountRate
+        : 0;
+  const price = tauxRemise ? round2(usd * (1 - tauxRemise)) : usd;
   return { price, commission: round2(price * taux), currency: 'USD' };
 }
 
-// size : 'small' | 'medium' | 'large' ; remise : ex. 0.1 pour un hôtel
-// partenaire (même grille que les touristes avec −10 %).
+// size : 'small' | 'medium' | 'large' ; remise : ex. 0.05 pour un hôtel
+// partenaire (même grille que les touristes avec −5 %).
 export function pricePackage(currency, size = 'medium', remise = 0) {
   const fare = PACKAGE_FARES[size]?.[currency];
   if (fare === undefined) return null;

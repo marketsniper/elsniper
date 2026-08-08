@@ -293,6 +293,8 @@ export function tarifSpecialPrive(depart: string, arrivee: string): number | nul
 
 /** Remise résident (documents de résidence validés) sur tous les prix USD. */
 export const REMISE_RESIDENT = 0.1;
+/** Remise hôtel partenaire (−5 % sur la grille touriste). */
+export const REMISE_HOTEL = 0.05;
 
 /** Tarif local par défaut (zone inconnue) — affiché aussi sur l'accueil. */
 export const TARIF_LOCAL_TZS = 15000;
@@ -374,8 +376,8 @@ export function tarifsZoneItineraire(depart: string, arrivee: string): TarifsZon
   return zone ? TARIFS_ZONE[zone] : TARIFS_ZONE_DEFAUT;
 }
 
-// Hôtel partenaire : même grille USD que les touristes avec −10 %
-// (appliqué dans tarifTrajetProfil, comme pour un résident vérifié).
+// Hôtel partenaire : même grille USD que les touristes avec −5 %
+// (appliqué dans tarifTrajetProfil).
 
 /** Profil tarifaire d'un compte client (hors hôtel). */
 export function profilTarifaireUtilisateur(
@@ -415,11 +417,10 @@ export function tarifTrajetProfil(
     plein = TARIFS_TRAJET_USD[type];
   }
   if (plein === undefined) return null;
-  // Résident vérifié ET hôtel partenaire : −10 % sur la grille touriste.
-  const montant =
-    profil === 'resident_verifie' || profil === 'hotel'
-      ? Math.round(plein * (1 - REMISE_RESIDENT) * 100) / 100
-      : plein;
+  // Grille touriste remisée : résident vérifié −10 %, hôtel partenaire −5 %.
+  const remise =
+    profil === 'resident_verifie' ? REMISE_RESIDENT : profil === 'hotel' ? REMISE_HOTEL : 0;
+  const montant = remise ? Math.round(plein * (1 - remise) * 100) / 100 : plein;
   return { montant, devise: 'USD' };
 }
 

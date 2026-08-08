@@ -57,7 +57,7 @@ function isSender(pkg, auth) {
 // POST /packages — création de la demande (utilisateur ou hôtel).
 // L'expéditeur ne peut créer que pour lui-même (id du jeton).
 // Génère le QR colis unique et fige le prix. La devise suit l'expéditeur :
-// celle du compte pour un user ; USD avec −10 % pour un hôtel partenaire
+// celle du compte pour un user ; USD avec −5 % pour un hôtel partenaire
 // (même grille que les touristes).
 router.post(
   '/',
@@ -84,7 +84,7 @@ router.post(
     } else {
       const { rows } = await query('SELECT * FROM hotels WHERE id = $1', [data.senderHotelId]);
       if (!rows[0]) throw notFound('Hôtel expéditeur');
-      remise = config.residentDiscountRate; // hôtel : grille touriste −10 %
+      remise = config.hotelDiscountRate; // hôtel : grille touriste −5 %
       senderLabel = `${rows[0].name} (hôtel, ${rows[0].phone})`;
     }
 
@@ -193,6 +193,43 @@ router.post(
       [pkg.id, pkg.price, pkg.currency, reference, paymentLink]
     );
     res.status(201).json(rows[0]);
+  })
+);
+
+// GET /packages/:id/position — position GPS du chauffeur pendant la
+// livraison (expéditeur, chauffeur assigné ou équipe). Disponible uniquement
+// quand le colis est en route (picked_up) et que le chauffeur partage sa
+// position depuis son app (écran chauffeur ouvert).
+router.get(
+  '/:id/position',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const pkg = await getPackage(req.params.id);
+    const allowed =
+      isAdmin(req) ||
+      isSender(pkg, req.auth) ||
+      (pkg.driver_id !== null && pkg.driver_id === req.auth.driverId);
+    if (!allowed) {
+      throw new HttpError(403, 'forbidden', "Accès réservé à l'expéditeur, au chauffeur ou à l'équipe");
+    }
+    if (pkg.status !== 'picked_up' || !pkg.driver_id) {
+      throw new HttpError(
+        409,
+        'not_in_transit',
+        'Le suivi GPS n\'est disponible que pendant la livraison (colis ramassé)'
+      );
+    }
+    const { rows } = await query('SELECT * FROM driver_positions WHERE driver_id = $1', [
+      pkg.driver_id,
+    ]);
+    if (!rows[0]) {
+      throw new HttpError(
+        404,
+        'position_unavailable',
+        "Le chauffeur n'a pas encore partagé sa position"
+      );
+    }
+    res.json(rows[0]);
   })
 );
 

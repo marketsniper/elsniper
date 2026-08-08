@@ -145,6 +145,11 @@ const CHAINES = {
   titre_pro: { fr: 'Devenir chauffeur', en: 'Become a driver', sw: 'Kuwa dereva' },
   titre_trajet: { fr: 'Trajet', en: 'Ride', sw: 'Safari' },
   titre_equipe: { fr: 'Équipe zanziGo', en: 'zanziGo team', sw: 'Timu ya zanziGo' },
+  courses_position_active: {
+    fr: 'Position partagée pendant vos livraisons — gardez l\'app ouverte en roulant.',
+    en: 'Location shared during your deliveries — keep the app open while driving.',
+    sw: 'Mahali pako panashirikiwa wakati wa usafirishaji — acha programu wazi unapoendesha.',
+  },
 
   // --- Tableau de bord équipe ----------------------------------------------
   equipe_lien_accueil: {
@@ -448,9 +453,9 @@ const CHAINES = {
     sw: 'Imeshindikana kuingia. Jaribu tena.',
   },
   hotelins_intro: {
-    fr: 'Créez le compte de votre établissement pour réserver des taxis pour vos clients et envoyer leurs colis — tarif touriste avec −10 % partenaire.',
-    en: 'Create your property account to book taxis for your guests and send their parcels — tourist rates with a 10% partner discount.',
-    sw: 'Fungua akaunti ya hoteli yako kuweka teksi kwa wageni wako na kutuma mizigo yao — bei ya watalii ukiwa na punguzo la 10%.',
+    fr: 'Créez le compte de votre établissement pour réserver des taxis pour vos clients et envoyer leurs colis — tarif touriste avec −5 % partenaire.',
+    en: 'Create your property account to book taxis for your guests and send their parcels — tourist rates with a 5% partner discount.',
+    sw: 'Fungua akaunti ya hoteli yako kuweka teksi kwa wageni wako na kutuma mizigo yao — bei ya watalii ukiwa na punguzo la 5%.',
   },
   hotelins_nom: { fr: "Nom de l'hôtel", en: 'Hotel name', sw: 'Jina la hoteli' },
   hotelins_contact: { fr: 'Personne de contact', en: 'Contact person', sw: 'Mtu wa mawasiliano' },
@@ -590,9 +595,9 @@ const CHAINES = {
 
   // --- Réserver ---------------------------------------------------------------
   reserver_mode_hotel_info: {
-    fr: 'Mode hôtel — réservez un taxi pour votre client : tarif touriste avec −10 % partenaire.',
-    en: 'Hotel mode — book a taxi for your guest: tourist rate with a 10% partner discount.',
-    sw: 'Hali ya hoteli — weka teksi kwa mteja wako: bei ya watalii ukiwa na punguzo la 10%.',
+    fr: 'Mode hôtel — réservez un taxi pour votre client : tarif touriste avec −5 % partenaire.',
+    en: 'Hotel mode — book a taxi for your guest: tourist rate with a 5% partner discount.',
+    sw: 'Hali ya hoteli — weka teksi kwa mteja wako: bei ya watalii ukiwa na punguzo la 5%.',
   },
   reserver_itineraire: { fr: 'Itinéraire', en: 'Route', sw: 'Njia' },
   reserver_depart_placeholder: {
@@ -959,6 +964,21 @@ const CHAINES = {
     sw: 'Ughairi utumaji huu wa mzigo?',
   },
   dcolis_partager: { fr: 'Partager le suivi', en: 'Share tracking', sw: 'Shiriki ufuatiliaji' },
+  dcolis_position_bouton: {
+    fr: 'Voir la position du chauffeur 📍',
+    en: 'See driver location 📍',
+    sw: 'Ona mahali dereva alipo 📍',
+  },
+  dcolis_position_maj: {
+    fr: 'Position du chauffeur : {quand} — elle s\'ouvre dans votre app de cartes.',
+    en: 'Driver location: {quand} — it opens in your maps app.',
+    sw: 'Mahali pa dereva: {quand} — inafunguka kwenye programu yako ya ramani.',
+  },
+  dcolis_position_indispo: {
+    fr: "Le chauffeur n'a pas encore partagé sa position — réessayez dans une minute.",
+    en: "The driver hasn't shared their location yet — try again in a minute.",
+    sw: 'Dereva bado hajashiriki mahali alipo — jaribu tena baada ya dakika.',
+  },
   dcolis_partage_message: {
     fr: 'Suivi de votre colis zanziGo 📦\nTrajet : {trajet}\nCode : {qr}\nStatut : {statut}\nPrésentez ce code au chauffeur à la livraison.',
     en: 'Your zanziGo parcel tracking 📦\nRoute: {trajet}\nCode: {qr}\nStatus: {statut}\nShow this code to the driver on delivery.',

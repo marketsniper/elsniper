@@ -19,7 +19,7 @@ import {
   Titre,
 } from '@/components/ui';
 import { api, ErreurApi } from '@/lib/api';
-import { libelleStatutColis, libelleTailleColis, useT } from '@/lib/i18n';
+import { formaterDateRelativeI18n, libelleStatutColis, libelleTailleColis, useT } from '@/lib/i18n';
 
 import { couleurs, espaces, ombres, rayons } from '@/lib/theme';
 import {
@@ -44,6 +44,8 @@ export default function EcranDetailColis() {
   const [paiementId, setPaiementId] = useState<string | null>(null);
   const [chargeConfirmation, setChargeConfirmation] = useState(false);
   const [chargeAnnulation, setChargeAnnulation] = useState(false);
+  const [chargePosition, setChargePosition] = useState(false);
+  const [infoPosition, setInfoPosition] = useState('');
 
   const charger = useCallback(async () => {
     if (!id) return;
@@ -118,6 +120,29 @@ export default function EcranDetailColis() {
         },
       },
     ]);
+  };
+
+  // Suivi GPS pendant la livraison : récupère la dernière position du
+  // chauffeur et l'ouvre dans l'app de cartes du téléphone.
+  const voirPosition = async () => {
+    setChargePosition(true);
+    setErreur('');
+    setInfoPosition('');
+    try {
+      const position = await api.positionColis(colis.id);
+      setInfoPosition(
+        t('dcolis_position_maj', { quand: formaterDateRelativeI18n(position.updated_at, t) })
+      );
+      await Linking.openURL(`https://maps.google.com/?q=${position.lat},${position.lng}`);
+    } catch (e) {
+      if (e instanceof ErreurApi && e.code === 'position_unavailable') {
+        setInfoPosition(t('dcolis_position_indispo'));
+      } else {
+        setErreur(e instanceof ErreurApi ? e.message : t('dcolis_position_indispo'));
+      }
+    } finally {
+      setChargePosition(false);
+    }
   };
 
   // Partage du suivi (feuille de partage native → WhatsApp, SMS…), pour que
@@ -238,6 +263,19 @@ export default function EcranDetailColis() {
       )}
       {statut === 'paid' && (
         <EncartInfo icone="checkmark-circle-outline">{t('dcolis_paiement_recu')}</EncartInfo>
+      )}
+      {statut === 'picked_up' && (
+        <>
+          <Bouton
+            titre={t('dcolis_position_bouton')}
+            icone="navigate-outline"
+            onPress={voirPosition}
+            charge={chargePosition}
+          />
+          {!!infoPosition && (
+            <EncartInfo icone="location-outline">{infoPosition}</EncartInfo>
+          )}
+        </>
       )}
       {peutAnnuler && (
         <Bouton

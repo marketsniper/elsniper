@@ -479,6 +479,38 @@ export async function annulerColis(id: string): Promise<Colis> {
   return requete<Colis>(`/packages/${id}/cancel`, { methode: 'POST' });
 }
 
+/** Position GPS d'un chauffeur (table driver_positions). */
+export interface PositionChauffeur {
+  driver_id: string;
+  lat: number;
+  lng: number;
+  updated_at: string;
+}
+
+/**
+ * PATCH /drivers/:id/location {lat, lng} — le chauffeur envoie sa position
+ * (écrasée à chaque envoi, aucune trace d'historique).
+ */
+export async function envoyerPositionChauffeur(
+  driverId: string,
+  lat: number,
+  lng: number
+): Promise<PositionChauffeur> {
+  return requete<PositionChauffeur>(`/drivers/${driverId}/location`, {
+    methode: 'PATCH',
+    corps: { lat, lng },
+  });
+}
+
+/**
+ * GET /packages/:id/position — position du chauffeur pendant la livraison
+ * (409 not_in_transit hors livraison, 404 position_unavailable si le
+ * chauffeur n'a pas encore partagé).
+ */
+export async function positionColis(id: string): Promise<PositionChauffeur> {
+  return requete<PositionChauffeur>(`/packages/${id}/position`);
+}
+
 /** GET /packages/by-qr/:qrCode — scan d'un QR colis PKG-… (chauffeurs et équipe). */
 export async function colisParQr(qrCode: string): Promise<Colis> {
   return requete<Colis>(`/packages/by-qr/${encodeURIComponent(qrCode)}`);
@@ -622,6 +654,8 @@ export const api = {
   listerColisHotel,
   payerColis,
   annulerColis,
+  envoyerPositionChauffeur,
+  positionColis,
   colisParQr,
   recupererColis,
   livrerColis,

@@ -48,6 +48,12 @@
       ],
       "expo-secure-store",
       [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "zanziGo partage votre position pendant vos livraisons pour informer l'expéditeur de l'avancée du colis."
+        }
+      ],
+      [
         "expo-camera",
         {
           "cameraPermission": "zanziGo utilise la caméra pour scanner les QR codes des véhicules et des colis."

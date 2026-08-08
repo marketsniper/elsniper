@@ -36,6 +36,49 @@ export default function EcranCourses() {
 
   const chauffeurId = session?.driver?.id ?? null;
 
+  // Partage de position pendant les livraisons : tant qu'un écran chauffeur
+  // est ouvert, la position part au serveur toutes les 45 s — c'est elle que
+  // voit l'expéditeur d'un colis en route (« position du chauffeur »).
+  const [partagePosition, setPartagePosition] = useState(false);
+  useFocusEffect(
+    useCallback(() => {
+      if (!chauffeurId) return undefined;
+      let actif = true;
+      let minuteur: ReturnType<typeof setInterval> | null = null;
+      (async () => {
+        try {
+          const Location = await import('expo-location');
+          const { granted } = await Location.requestForegroundPermissionsAsync();
+          if (!granted || !actif) return;
+          setPartagePosition(true);
+          const envoyer = async () => {
+            try {
+              const pos = await Location.getCurrentPositionAsync({
+                accuracy: Location.Accuracy.Balanced,
+              });
+              await api.envoyerPositionChauffeur(
+                chauffeurId,
+                pos.coords.latitude,
+                pos.coords.longitude
+              );
+            } catch {
+              // silencieux : GPS coupé ou réseau absent, on réessaiera.
+            }
+          };
+          envoyer();
+          minuteur = setInterval(envoyer, 45000);
+        } catch {
+          // Module de localisation indisponible (ancienne version installée).
+        }
+      })();
+      return () => {
+        actif = false;
+        if (minuteur) clearInterval(minuteur);
+        setPartagePosition(false);
+      };
+    }, [chauffeurId])
+  );
+
   const rafraichir = useCallback(async () => {
     if (!chauffeurId) return;
     const ids = await listerCoursesLocales(chauffeurId);
@@ -78,6 +121,11 @@ export default function EcranCourses() {
   return (
     <Ecran fond="vagues" onRefresh={rafraichir}>
       <EncartInfo icone="logo-whatsapp">{t('courses_info')}</EncartInfo>
+      {partagePosition && (
+        <EncartInfo icone="location-outline" ton="succes">
+          {t('courses_position_active')}
+        </EncartInfo>
+      )}
 
       <Carte>
         <Titre>{t('courses_ouvrir_titre')}</Titre>

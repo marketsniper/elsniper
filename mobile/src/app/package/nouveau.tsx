@@ -2,8 +2,8 @@
 // Payload backend : {senderType, senderUserId | senderHotelId, size (REQUIS :
 // small | medium | large — détermine le prix), pickupLocation,
 // dropoffLocation, recipientName, recipientPhone, description?}.
-// Prix par taille figé côté serveur : 5/10/18 USD (touristes/résidents, pas
-// de remise sur les colis) ou 13 000/26 000/47 000 TZS (hôtels/locaux).
+// Prix par taille figé côté serveur : 5/10/18 USD (touristes/résidents ;
+// hôtel partenaire −5 %) ou 13 000/26 000/47 000 TZS (locaux).
 // Payé en ligne à 100 % par l'expéditeur.
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -29,7 +29,7 @@ import {
   deviseUtilisateur,
   formaterMontant,
   TAILLES_COLIS,
-  REMISE_RESIDENT,
+  REMISE_HOTEL,
   tarifColisTaille,
   type Devise,
   type TailleColis,
@@ -66,11 +66,11 @@ export default function EcranNouveauColis() {
   const expediteurUser = session?.user ?? null;
   const expediteurHotel = session?.hotel ?? null;
   // Devise de l'expéditeur : USD touriste/résident/hôtel, TZS local.
-  // Hôtel partenaire : même grille USD que les touristes avec −10 %.
+  // Hôtel partenaire : même grille USD que les touristes avec −5 %.
   const devise: Devise = expediteurHotel ? 'USD' : deviseUtilisateur(expediteurUser);
   const tarifAffiche = (laTaille: TailleColis): number => {
     const brut = tarifColisTaille(laTaille, devise);
-    return expediteurHotel ? Math.round(brut * (1 - REMISE_RESIDENT) * 100) / 100 : brut;
+    return expediteurHotel ? Math.round(brut * (1 - REMISE_HOTEL) * 100) / 100 : brut;
   };
   const prix = taille ? tarifAffiche(taille) : null;
 

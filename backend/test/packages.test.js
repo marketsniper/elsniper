@@ -88,7 +88,7 @@ describe('Colis (packages)', () => {
     const { token, hotel } = await createHotel();
     const pkg = await createHotelPackage(token, hotel.id);
     assert.equal(pkg.currency, 'USD');
-    assert.equal(Number(pkg.price), 9); // medium 10 USD → −10 % hôtel
+    assert.equal(Number(pkg.price), 9.5); // medium 10 USD → −5 % hôtel
     assert.equal(pkg.sender_hotel_id, hotel.id);
     assert.equal(pkg.sender_user_id, null);
   });
@@ -416,5 +416,74 @@ describe('Colis — annulation', () => {
       .set(authHeaders(otherToken));
     assert.equal(res.status, 403);
     assert.equal(res.body.error.code, 'forbidden');
+  });
+});
+
+describe('Colis — suivi GPS pendant la livraison', () => {
+  it("chauffeur envoie sa position ; l'expéditeur la lit quand le colis est en route", async () => {
+    const { token, user } = await createTourist();
+    const { token: driverToken, driver } = await createVerifiedDriver();
+    const pkg = await createUserPackage(token, user.id);
+    await payPackage(token, pkg.id);
+
+    // Avant le ramassage : pas de suivi.
+    const tropTot = await request(app)
+      .get(`/api/packages/${pkg.id}/position`)
+      .set(authHeaders(token));
+    assert.equal(tropTot.status, 409);
+    assert.equal(tropTot.body.error.code, 'not_in_transit');
+
+    const pickup = await request(app)
+      .patch(`/api/packages/${pkg.id}/pickup`)
+      .set(authHeaders(driverToken))
+      .send({ qrCode: pkg.qr_code, photoUrl: PHOTO_URL });
+    assert.equal(pickup.status, 200);
+
+    // Chauffeur pas encore localisé → 404 position_unavailable.
+    const sansPosition = await request(app)
+      .get(`/api/packages/${pkg.id}/position`)
+      .set(authHeaders(token));
+    assert.equal(sansPosition.status, 404);
+    assert.equal(sansPosition.body.error.code, 'position_unavailable');
+
+    // Le chauffeur envoie sa position (upsert idempotent).
+    const envoi = await request(app)
+      .patch(`/api/drivers/${driver.id}/location`)
+      .set(authHeaders(driverToken))
+      .send({ lat: -6.1659, lng: 39.1988 });
+    assert.equal(envoi.status, 200);
+    const envoi2 = await request(app)
+      .patch(`/api/drivers/${driver.id}/location`)
+      .set(authHeaders(driverToken))
+      .send({ lat: -6.13, lng: 39.21 });
+    assert.equal(envoi2.status, 200);
+
+    const position = await request(app)
+      .get(`/api/packages/${pkg.id}/position`)
+      .set(authHeaders(token));
+    assert.equal(position.status, 200);
+    assert.equal(position.body.lat, -6.13);
+    assert.equal(position.body.lng, 39.21);
+    assert.ok(position.body.updated_at);
+  });
+
+  it("un chauffeur ne peut pas envoyer la position d'un autre → 403 ; tiers sans accès → 403", async () => {
+    const { token, user } = await createTourist();
+    const { driver } = await createVerifiedDriver();
+    const { token: otherDriverToken } = await createVerifiedDriver({ fullName: 'Autre Chauffeur' });
+
+    const res = await request(app)
+      .patch(`/api/drivers/${driver.id}/location`)
+      .set(authHeaders(otherDriverToken))
+      .send({ lat: -6.16, lng: 39.19 });
+    assert.equal(res.status, 403);
+    assert.equal(res.body.error.code, 'forbidden');
+
+    const pkg = await createUserPackage(token, user.id);
+    const { token: tiersToken } = await createTourist({ fullName: 'Tiers Curieux' });
+    const lecture = await request(app)
+      .get(`/api/packages/${pkg.id}/position`)
+      .set(authHeaders(tiersToken));
+    assert.equal(lecture.status, 403);
   });
 });
