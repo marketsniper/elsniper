@@ -172,10 +172,10 @@ export default function EcranDetailColis() {
 
       {peutPayer && (
         <>
-          <EncartInfo icone="card-outline">{t('ncolis_paye_expediteur')}</EncartInfo>
+          <EncartInfo icone="logo-whatsapp">{t('dcolis_whatsapp_aide')}</EncartInfo>
           <Bouton
-            titre={t('dcolis_payer')}
-            icone="card-outline"
+            titre={t('dcolis_payer_whatsapp')}
+            icone="logo-whatsapp"
             onPress={payer}
             charge={chargePaiement}
           />

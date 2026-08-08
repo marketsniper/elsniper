@@ -68,6 +68,21 @@ const CHAINES = {
   commun_langue: { fr: 'Langue', en: 'Language', sw: 'Lugha' },
   commun_choisir: { fr: 'Choisir…', en: 'Choose…', sw: 'Chagua…' },
   timeline_annule: { fr: 'Annulé', en: 'Cancelled', sw: 'Imeghairiwa' },
+  // Sélecteurs de date / heure (aucun date-picker natif).
+  sel_date: { fr: 'Date', en: 'Date', sw: 'Tarehe' },
+  sel_heure: { fr: 'Heure', en: 'Time', sw: 'Saa' },
+  sel_aujourdhui: { fr: "Aujourd'hui", en: 'Today', sw: 'Leo' },
+  sel_demain: { fr: 'Demain', en: 'Tomorrow', sw: 'Kesho' },
+  sel_maintenant: {
+    fr: 'Maintenant — pas de programmation',
+    en: 'Now — no scheduling',
+    sw: 'Sasa — bila kupanga',
+  },
+  sel_erreur_datetime: {
+    fr: "Choisissez la date et l'heure de départ.",
+    en: 'Choose the departure date and time.',
+    sw: 'Chagua tarehe na saa ya kuondoka.',
+  },
 
   // --- Statuts de trajet ---------------------------------------------------
   statut_trajet_requested: { fr: 'Demandée', en: 'Requested', sw: 'Imeombwa' },
@@ -557,14 +572,9 @@ const CHAINES = {
   },
   reserver_tel_client: { fr: 'Téléphone du client', en: 'Guest phone', sw: 'Simu ya mteja' },
   reserver_programmer: {
-    fr: 'Programmer (optionnel, AAAA-MM-JJ HH:MM)',
-    en: 'Schedule (optional, YYYY-MM-DD HH:MM)',
-    sw: 'Panga mapema (hiari, YYYY-MM-DD HH:MM)',
-  },
-  reserver_programmer_placeholder: {
-    fr: 'Laisser vide pour partir dès que possible',
-    en: 'Leave empty to leave as soon as possible',
-    sw: 'Acha wazi ili kuondoka mapema iwezekanavyo',
+    fr: 'Programmer le départ (optionnel)',
+    en: 'Schedule departure (optional)',
+    sw: 'Panga kuondoka (hiari)',
   },
   reserver_prix_course: { fr: 'Prix de la course', en: 'Ride price', sw: 'Bei ya safari' },
   reserver_note_prix: {
@@ -613,11 +623,6 @@ const CHAINES = {
     fr: 'Téléphone du client invalide (format international +255…).',
     en: 'Invalid guest phone (international format +255…).',
     sw: 'Simu ya mteja si sahihi (muundo wa kimataifa +255…).',
-  },
-  reserver_erreur_date: {
-    fr: 'Date programmée invalide. Format attendu : AAAA-MM-JJ HH:MM.',
-    en: 'Invalid scheduled date. Expected format: YYYY-MM-DD HH:MM.',
-    sw: 'Tarehe si sahihi. Muundo unaotakiwa: YYYY-MM-DD HH:MM.',
   },
   reserver_erreur_local_only: {
     fr: 'La navette locale est réservée aux locaux vérifiés (carte tanzanienne).',
@@ -854,6 +859,12 @@ const CHAINES = {
   dcolis_destinataire: { fr: 'Destinataire', en: 'Recipient', sw: 'Mpokeaji' },
   dcolis_suivi: { fr: 'Suivi du colis', en: 'Parcel status', sw: 'Mwenendo wa mzigo' },
   dcolis_payer: { fr: "Payer l'envoi", en: 'Pay for delivery', sw: 'Lipia utumaji' },
+  dcolis_payer_whatsapp: { fr: 'Payer via WhatsApp', en: 'Pay via WhatsApp', sw: 'Lipa kupitia WhatsApp' },
+  dcolis_whatsapp_aide: {
+    fr: "L'équipe vous enverra le lien de paiement sur WhatsApp.",
+    en: 'The team will send you the payment link on WhatsApp.',
+    sw: 'Timu itakutumia kiungo cha malipo kwenye WhatsApp.',
+  },
   dcolis_paiement_recu: {
     fr: 'Paiement reçu — un chauffeur va ramasser votre colis.',
     en: 'Payment received — a driver will pick up your parcel.',
@@ -993,11 +1004,6 @@ const CHAINES = {
     en: 'Choose the destination…',
     sw: 'Chagua mji wa kufika…',
   },
-  annonces_depart_champ: {
-    fr: 'Départ (AAAA-MM-JJ HH:MM)',
-    en: 'Departure (YYYY-MM-DD HH:MM)',
-    sw: 'Kuondoka (YYYY-MM-DD HH:MM)',
-  },
   annonces_places: { fr: 'Places (1 à {max})', en: 'Seats (1 to {max})', sw: 'Viti (1 hadi {max})' },
   annonces_prix_place: { fr: 'Prix par place (TZS)', en: 'Price per seat (TZS)', sw: 'Bei kwa kiti (TZS)' },
   annonces_notes: { fr: 'Notes (optionnel)', en: 'Notes (optional)', sw: 'Maelezo (hiari)' },
@@ -1024,11 +1030,6 @@ const CHAINES = {
     fr: 'Choisissez le hub de départ et la ville de destination.',
     en: 'Choose the departure hub and the destination town.',
     sw: 'Chagua kituo cha kuondoka na mji wa kufika.',
-  },
-  annonces_erreur_date: {
-    fr: 'Date de départ invalide. Format attendu : AAAA-MM-JJ HH:MM.',
-    en: 'Invalid departure date. Expected format: YYYY-MM-DD HH:MM.',
-    sw: 'Tarehe ya kuondoka si sahihi. Muundo: YYYY-MM-DD HH:MM.',
   },
   annonces_erreur_futur: {
     fr: "L'heure de départ doit être dans le futur.",
@@ -1298,4 +1299,61 @@ export function formaterDateRelativeI18n(iso: unknown, t: FonctionT): string {
   if (jours === 1) return t(futur ? 'date_demain' : 'date_hier');
   if (jours < 7) return t(futur ? 'date_jours_futur' : 'date_jours_passe', { n: jours });
   return formaterDate(iso);
+}
+
+// ---------------------------------------------------------------------------
+// Sélecteurs de date / heure de départ (menus déroulants, aucun date-picker
+// natif) : dates = aujourd'hui + 7 jours, heures = 05:00 → 22:00 par 30 min.
+// ---------------------------------------------------------------------------
+
+const LOCALES_INTL: Record<Langue, string> = { fr: 'fr-FR', en: 'en-GB', sw: 'sw-TZ' };
+
+/** Choix d'heure proposés : « 05:00 », « 05:30 », …, « 22:00 ». */
+export const HEURES_CHOIX: string[] = (() => {
+  const heures: string[] = [];
+  for (let h = 5; h <= 22; h += 1) {
+    heures.push(`${String(h).padStart(2, '0')}:00`);
+    if (h < 22) heures.push(`${String(h).padStart(2, '0')}:30`);
+  }
+  return heures;
+})();
+
+/**
+ * Libellés des dates proposées, dans la langue active : Aujourd'hui, Demain,
+ * puis les 6 jours suivants formatés (ex. « ven. 14 août »). L'index dans la
+ * liste correspond au décalage en jours par rapport à aujourd'hui.
+ */
+export function libellesDates(t: FonctionT, langue: Langue): string[] {
+  const libelles = [t('sel_aujourdhui'), t('sel_demain')];
+  for (let i = 2; i <= 7; i += 1) {
+    const date = new Date();
+    date.setDate(date.getDate() + i);
+    libelles.push(
+      date.toLocaleDateString(LOCALES_INTL[langue], {
+        weekday: 'short',
+        day: 'numeric',
+        month: 'short',
+      })
+    );
+  }
+  return libelles;
+}
+
+/**
+ * Combine un libellé de date (issu de libellesDates) et une heure « HH:MM »
+ * en ISO 8601 (heure locale de l'appareil), ou null si la sélection est
+ * incomplète ou inconnue.
+ */
+export function isoDepuisChoix(
+  libelles: string[],
+  libelleDate: string,
+  heure: string
+): string | null {
+  const index = libelles.indexOf(libelleDate);
+  const [h, m] = heure.split(':').map(Number);
+  if (index < 0 || !Number.isInteger(h) || !Number.isInteger(m)) return null;
+  const date = new Date();
+  date.setDate(date.getDate() + index);
+  date.setHours(h, m, 0, 0);
+  return date.toISOString();
 }

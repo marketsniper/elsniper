@@ -21,7 +21,13 @@ import { Selecteur } from '@/components/Selecteur';
 import { Bouton, Champ, Ecran, EncartInfo, EtatVide, TexteErreur } from '@/components/ui';
 import { api, ErreurApi } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import { libelleTypeTrajet, useT } from '@/lib/i18n';
+import {
+  HEURES_CHOIX,
+  isoDepuisChoix,
+  libellesDates,
+  libelleTypeTrajet,
+  useT,
+} from '@/lib/i18n';
 import { couleurs, espaces, ombres, rayons } from '@/lib/theme';
 import {
   champ,
@@ -41,7 +47,7 @@ type ModeCourse = 'prive' | 'partage';
 export default function EcranReserver() {
   const router = useRouter();
   const { session } = useAuth();
-  const { t } = useT();
+  const { t, langue } = useT();
   const utilisateur = session?.user ?? null;
   const hotel = session?.hotel ?? null;
   // Mode hôtel : le profil hôtel réserve des taxis pour ses clients.
@@ -61,7 +67,11 @@ export default function EcranReserver() {
   const [depart, setDepart] = useState('');
   const [arrivee, setArrivee] = useState('');
   const [precision, setPrecision] = useState('');
-  const [programme, setProgramme] = useState('');
+  // Programmation optionnelle : date + heure en menus déroulants ; date vide
+  // = départ dès que possible (option « Maintenant »).
+  const [dateProgramme, setDateProgramme] = useState('');
+  const [heureProgramme, setHeureProgramme] = useState('');
+  const choixDates = libellesDates(t, langue);
   const [nomClient, setNomClient] = useState('');
   const [telClient, setTelClient] = useState('+255');
   const [erreur, setErreur] = useState('');
@@ -114,13 +124,15 @@ export default function EcranReserver() {
       }
     }
     let scheduledAt: string | undefined;
-    if (programme.trim()) {
-      const date = new Date(programme.trim().replace(' ', 'T'));
-      if (Number.isNaN(date.getTime())) {
-        setErreur(t('reserver_erreur_date'));
+    if (dateProgramme) {
+      const iso = heureProgramme
+        ? isoDepuisChoix(choixDates, dateProgramme, heureProgramme)
+        : null;
+      if (!iso) {
+        setErreur(t('sel_erreur_datetime'));
         return;
       }
-      scheduledAt = date.toISOString();
+      scheduledAt = iso;
     }
     // Trajet spécial : villes SEULES pour que le serveur applique le tarif
     // dédié. Sinon, la précision optionnelle est ajoutée entre parenthèses.
@@ -150,7 +162,8 @@ export default function EcranReserver() {
       setDepart('');
       setArrivee('');
       setPrecision('');
-      setProgramme('');
+      setDateProgramme('');
+      setHeureProgramme('');
       setNomClient('');
       setTelClient('+255');
       router.push(`/trip/${trajet.id}`);
@@ -306,12 +319,28 @@ export default function EcranReserver() {
             </>
           )}
 
-          <Champ
+          <Selecteur
             label={t('reserver_programmer')}
-            value={programme}
-            onChangeText={setProgramme}
-            placeholder={t('reserver_programmer_placeholder')}
+            valeur={dateProgramme}
+            options={[t('sel_maintenant'), ...choixDates]}
+            placeholder={t('sel_maintenant')}
+            onChange={(choix) => {
+              if (choix === t('sel_maintenant')) {
+                setDateProgramme('');
+                setHeureProgramme('');
+              } else {
+                setDateProgramme(choix);
+              }
+            }}
           />
+          {!!dateProgramme && (
+            <Selecteur
+              label={t('sel_heure')}
+              valeur={heureProgramme}
+              options={HEURES_CHOIX}
+              onChange={setHeureProgramme}
+            />
+          )}
 
           <View style={styles.cartePrix}>
             <View style={styles.lignePrix}>

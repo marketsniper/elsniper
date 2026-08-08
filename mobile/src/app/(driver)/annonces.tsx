@@ -24,7 +24,13 @@ import {
 } from '@/components/ui';
 import { api, ErreurApi } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import { libelleStatutRide, useT } from '@/lib/i18n';
+import {
+  HEURES_CHOIX,
+  isoDepuisChoix,
+  libellesDates,
+  libelleStatutRide,
+  useT,
+} from '@/lib/i18n';
 import { couleurs, espaces, ombres, rayons } from '@/lib/theme';
 import {
   champ,
@@ -52,15 +58,19 @@ function tonStatut(statut: StatutRide | undefined) {
 
 export default function EcranAnnonces() {
   const { session } = useAuth();
-  const { t } = useT();
+  const { t, langue } = useT();
   const chauffeur = session?.driver ?? null;
   const verifie =
     champ<StatutVerification>(chauffeur, 'verification_status', 'verificationStatus') ===
     'verified';
 
+  // Dates proposées au départ (Aujourd'hui, Demain, +6 jours), langue active.
+  const choixDates = libellesDates(t, langue);
+
   const [origine, setOrigine] = useState('');
   const [destination, setDestination] = useState('');
-  const [depart, setDepart] = useState('');
+  const [dateDepart, setDateDepart] = useState('');
+  const [heureDepart, setHeureDepart] = useState('');
   const [places, setPlaces] = useState('4');
   const [prixPlace, setPrixPlace] = useState('');
   const [notes, setNotes] = useState('');
@@ -106,12 +116,13 @@ export default function EcranAnnonces() {
       setErreur(t('annonces_erreur_lieux'));
       return;
     }
-    const date = new Date(depart.trim().replace(' ', 'T'));
-    if (!depart.trim() || Number.isNaN(date.getTime())) {
-      setErreur(t('annonces_erreur_date'));
+    const departIso =
+      dateDepart && heureDepart ? isoDepuisChoix(choixDates, dateDepart, heureDepart) : null;
+    if (!departIso) {
+      setErreur(t('sel_erreur_datetime'));
       return;
     }
-    if (date.getTime() <= Date.now()) {
+    if (new Date(departIso).getTime() <= Date.now()) {
       setErreur(t('annonces_erreur_futur'));
       return;
     }
@@ -130,14 +141,15 @@ export default function EcranAnnonces() {
       await api.creerRide({
         origin: origine,
         destination: destination,
-        departureAt: date.toISOString(),
+        departureAt: departIso,
         seatsTotal: nbPlaces,
         pricePerSeat: prix,
         notes: notes.trim() || undefined,
       });
       setOrigine('');
       setDestination('');
-      setDepart('');
+      setDateDepart('');
+      setHeureDepart('');
       setPlaces('4');
       setPrixPlace('');
       setNotes('');
@@ -211,12 +223,24 @@ export default function EcranAnnonces() {
           placeholder={t('annonces_destination_placeholder')}
           onChange={setDestination}
         />
-        <Champ
-          label={t('annonces_depart_champ')}
-          value={depart}
-          onChangeText={setDepart}
-          placeholder="2026-08-10 14:30"
-        />
+        <View style={styles.rangeeChamps}>
+          <View style={styles.demiChamp}>
+            <Selecteur
+              label={t('sel_date')}
+              valeur={dateDepart}
+              options={choixDates}
+              onChange={setDateDepart}
+            />
+          </View>
+          <View style={styles.demiChamp}>
+            <Selecteur
+              label={t('sel_heure')}
+              valeur={heureDepart}
+              options={HEURES_CHOIX}
+              onChange={setHeureDepart}
+            />
+          </View>
+        </View>
         <View style={styles.rangeeChamps}>
           <View style={styles.demiChamp}>
             <Champ
