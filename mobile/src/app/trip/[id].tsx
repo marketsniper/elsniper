@@ -5,7 +5,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useState } from 'react';
-import { Linking, StyleSheet, Text, View } from 'react-native';
+import { Alert, Linking, StyleSheet, Text, View } from 'react-native';
 
 import { Etoiles } from '@/components/Etoiles';
 import { TimelineStatut } from '@/components/TimelineStatut';
@@ -51,6 +51,7 @@ export default function EcranTrajet() {
   const [commentaire, setCommentaire] = useState('');
   const [chargeNote, setChargeNote] = useState(false);
   const [noteEnvoyee, setNoteEnvoyee] = useState(false);
+  const [chargeAnnulation, setChargeAnnulation] = useState(false);
 
   const charger = useCallback(async () => {
     if (!id) return;
@@ -85,6 +86,9 @@ export default function EcranTrajet() {
   const annule = statut === 'cancelled';
   // Règle serveur : le paiement n'est possible qu'après confirmation d'un chauffeur.
   const peutPayer = statut === 'driver_confirmed';
+  // Annulation par le réservateur : uniquement avant paiement (ensuite,
+  // passer par l'équipe sur WhatsApp).
+  const peutAnnuler = statut === 'requested' || statut === 'driver_confirmed';
   // Notation : course terminée, jamais notée (rating null côté serveur).
   const dejaNotee = champ<number>(trajet, 'rating') !== undefined;
   const peutNoter = statut === 'completed' && !dejaNotee && !noteEnvoyee;
@@ -123,6 +127,29 @@ export default function EcranTrajet() {
     }
   };
 
+  // Annulation avec confirmation (dialogue natif) — irréversible.
+  const annuler = () => {
+    Alert.alert(t('trip_annuler'), t('trip_annuler_confirm'), [
+      { text: t('commun_confirmer_non'), style: 'cancel' },
+      {
+        text: t('commun_confirmer_oui'),
+        style: 'destructive',
+        onPress: async () => {
+          setChargeAnnulation(true);
+          setErreur('');
+          try {
+            await api.annulerTrajet(trajet.id);
+            await charger();
+          } catch (e) {
+            setErreur(e instanceof ErreurApi ? e.message : t('commun_annulation_impossible'));
+          } finally {
+            setChargeAnnulation(false);
+          }
+        },
+      },
+    ]);
+  };
+
   const envoyerNote = async () => {
     if (note < 1) {
       setErreur(t('trip_note_erreur'));
@@ -145,7 +172,7 @@ export default function EcranTrajet() {
   };
 
   return (
-    <Ecran fond="palmiers">
+    <Ecran fond="palmiers" onRefresh={charger}>
       <Carte>
         <View style={styles.enTete}>
           <Titre>{t('trip_titre')}</Titre>
@@ -203,6 +230,15 @@ export default function EcranTrajet() {
           variante="secondaire"
           onPress={simulerConfirmation}
           charge={chargeConfirmation}
+        />
+      )}
+      {peutAnnuler && (
+        <Bouton
+          titre={t('trip_annuler')}
+          icone="close-circle-outline"
+          variante="danger"
+          onPress={annuler}
+          charge={chargeAnnulation}
         />
       )}
       {statut === 'paid' && (

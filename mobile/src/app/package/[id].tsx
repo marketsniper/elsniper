@@ -2,7 +2,7 @@
 // Créé → Payé → Ramassé → Livré, paiement quand le colis vient d'être créé.
 import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useState } from 'react';
-import { Linking, StyleSheet, Text, View } from 'react-native';
+import { Alert, Linking, Share, StyleSheet, Text, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 
 import { TimelineStatut } from '@/components/TimelineStatut';
@@ -20,6 +20,7 @@ import {
 } from '@/components/ui';
 import { api, ErreurApi } from '@/lib/api';
 import { libelleStatutColis, libelleTailleColis, useT } from '@/lib/i18n';
+
 import { couleurs, espaces, ombres, rayons } from '@/lib/theme';
 import {
   champ,
@@ -42,6 +43,7 @@ export default function EcranDetailColis() {
   // Paiement créé sur cet écran (pour la simulation de confirmation en dev).
   const [paiementId, setPaiementId] = useState<string | null>(null);
   const [chargeConfirmation, setChargeConfirmation] = useState(false);
+  const [chargeAnnulation, setChargeAnnulation] = useState(false);
 
   const charger = useCallback(async () => {
     if (!id) return;
@@ -74,6 +76,8 @@ export default function EcranDetailColis() {
   const lienWhatsapp = champ<string>(colis, 'whatsapp_link', 'whatsappLink') ?? WHATSAPP_EQUIPE;
   // Règle serveur : le paiement n'est possible que sur un colis nouvellement créé.
   const peutPayer = statut === 'created';
+  // Annulation par l'expéditeur : uniquement avant paiement.
+  const peutAnnuler = statut === 'created';
 
   const payer = async () => {
     setChargePaiement(true);
@@ -90,6 +94,48 @@ export default function EcranDetailColis() {
       setErreur(e instanceof ErreurApi ? e.message : t('trip_paiement_indisponible'));
     } finally {
       setChargePaiement(false);
+    }
+  };
+
+  // Annulation avec confirmation (dialogue natif) — irréversible.
+  const annuler = () => {
+    Alert.alert(t('dcolis_annuler'), t('dcolis_annuler_confirm'), [
+      { text: t('commun_confirmer_non'), style: 'cancel' },
+      {
+        text: t('commun_confirmer_oui'),
+        style: 'destructive',
+        onPress: async () => {
+          setChargeAnnulation(true);
+          setErreur('');
+          try {
+            await api.annulerColis(colis.id);
+            await charger();
+          } catch (e) {
+            setErreur(e instanceof ErreurApi ? e.message : t('commun_annulation_impossible'));
+          } finally {
+            setChargeAnnulation(false);
+          }
+        },
+      },
+    ]);
+  };
+
+  // Partage du suivi (feuille de partage native → WhatsApp, SMS…), pour que
+  // l'expéditeur transmette le code au destinataire.
+  const partager = async () => {
+    const trajet = `${champ(colis, 'pickup_location', 'pickupLocation') ?? '?'} → ${
+      champ(colis, 'dropoff_location', 'dropoffLocation') ?? '?'
+    }`;
+    try {
+      await Share.share({
+        message: t('dcolis_partage_message', {
+          trajet,
+          qr: codeQr ?? '—',
+          statut: libelleStatutColis(statut, t),
+        }),
+      });
+    } catch {
+      // Partage annulé par l'utilisateur : rien à faire.
     }
   };
 
@@ -110,7 +156,7 @@ export default function EcranDetailColis() {
   };
 
   return (
-    <Ecran fond="lagon">
+    <Ecran fond="lagon" onRefresh={charger}>
       <Carte style={styles.carteQr}>
         <View style={styles.enTeteQr}>
           <Titre>{t('dcolis_titre')}</Titre>
@@ -167,6 +213,7 @@ export default function EcranDetailColis() {
         <TimelineStatut
           etapes={ETAPES_COLIS.map((cle) => ({ cle, label: libelleStatutColis(cle, t) }))}
           statutCourant={statut}
+          annule={statut === 'cancelled'}
         />
       </Carte>
 
@@ -192,7 +239,24 @@ export default function EcranDetailColis() {
       {statut === 'paid' && (
         <EncartInfo icone="checkmark-circle-outline">{t('dcolis_paiement_recu')}</EncartInfo>
       )}
+      {peutAnnuler && (
+        <Bouton
+          titre={t('dcolis_annuler')}
+          icone="close-circle-outline"
+          variante="danger"
+          onPress={annuler}
+          charge={chargeAnnulation}
+        />
+      )}
 
+      {!!codeQr && statut !== 'cancelled' && (
+        <Bouton
+          titre={t('dcolis_partager')}
+          icone="share-social-outline"
+          variante="secondaire"
+          onPress={partager}
+        />
+      )}
       <Bouton
         titre={t('commun_contact_whatsapp')}
         icone="logo-whatsapp"

@@ -101,6 +101,7 @@ const CHAINES = {
   statut_colis_paid: { fr: 'Payé', en: 'Paid', sw: 'Umelipwa' },
   statut_colis_picked_up: { fr: 'Ramassé', en: 'Picked up', sw: 'Umechukuliwa' },
   statut_colis_delivered: { fr: 'Livré', en: 'Delivered', sw: 'Umefikishwa' },
+  statut_colis_cancelled: { fr: 'Annulé', en: 'Cancelled', sw: 'Umeghairiwa' },
 
   // --- Statuts d'annonce (rides) -------------------------------------------
   statut_ride_open: { fr: 'Ouvert', en: 'Open', sw: 'Wazi' },
@@ -700,6 +701,19 @@ const CHAINES = {
     sw: 'Ombi limetumwa — timu ya zanziGo itathibitisha dereva, kisha malipo yataonekana hapa.',
   },
   trip_payer: { fr: 'Payer la course', en: 'Pay for the ride', sw: 'Lipia safari' },
+  trip_annuler: { fr: 'Annuler la course', en: 'Cancel the ride', sw: 'Ghairi safari' },
+  trip_annuler_confirm: {
+    fr: 'Annuler cette course ?',
+    en: 'Cancel this ride?',
+    sw: 'Ughairi safari hii?',
+  },
+  commun_confirmer_oui: { fr: 'Oui, annuler', en: 'Yes, cancel', sw: 'Ndiyo, ghairi' },
+  commun_confirmer_non: { fr: 'Non, garder', en: 'No, keep it', sw: 'Hapana, baki nayo' },
+  commun_annulation_impossible: {
+    fr: "Annulation impossible pour le moment.",
+    en: 'Cancellation is not possible right now.',
+    sw: 'Kughairi hakuwezekani kwa sasa.',
+  },
   trip_paiement_recu: {
     fr: 'Paiement reçu — votre chauffeur scanne le QR de son véhicule au départ.',
     en: 'Payment received — your driver scans their vehicle QR at departure.',
@@ -859,6 +873,18 @@ const CHAINES = {
   dcolis_destinataire: { fr: 'Destinataire', en: 'Recipient', sw: 'Mpokeaji' },
   dcolis_suivi: { fr: 'Suivi du colis', en: 'Parcel status', sw: 'Mwenendo wa mzigo' },
   dcolis_payer: { fr: "Payer l'envoi", en: 'Pay for delivery', sw: 'Lipia utumaji' },
+  dcolis_annuler: { fr: "Annuler l'envoi", en: 'Cancel this delivery', sw: 'Ghairi utumaji' },
+  dcolis_annuler_confirm: {
+    fr: 'Annuler cet envoi de colis ?',
+    en: 'Cancel this parcel delivery?',
+    sw: 'Ughairi utumaji huu wa mzigo?',
+  },
+  dcolis_partager: { fr: 'Partager le suivi', en: 'Share tracking', sw: 'Shiriki ufuatiliaji' },
+  dcolis_partage_message: {
+    fr: 'Suivi de votre colis zanziGo 📦\nTrajet : {trajet}\nCode : {qr}\nStatut : {statut}\nPrésentez ce code au chauffeur à la livraison.',
+    en: 'Your zanziGo parcel tracking 📦\nRoute: {trajet}\nCode: {qr}\nStatus: {statut}\nShow this code to the driver on delivery.',
+    sw: 'Ufuatiliaji wa mzigo wako wa zanziGo 📦\nNjia: {trajet}\nMsimbo: {qr}\nHali: {statut}\nOnyesha msimbo huu kwa dereva wakati wa kufikisha.',
+  },
   dcolis_payer_whatsapp: { fr: 'Payer via WhatsApp', en: 'Pay via WhatsApp', sw: 'Lipa kupitia WhatsApp' },
   dcolis_whatsapp_aide: {
     fr: "L'équipe vous enverra le lien de paiement sur WhatsApp.",

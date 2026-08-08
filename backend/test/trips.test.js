@@ -477,3 +477,84 @@ describe('Courses taxi (trips)', () => {
     assert.equal(notFoundRes.body.error.code, 'not_found');
   });
 });
+
+describe('Courses — annulation', () => {
+  it('le client annule une course demandée → cancelled', async () => {
+    const { token, user } = await createTourist();
+    const trip = await createTrip(token, user.id);
+
+    const res = await request(app)
+      .post(`/api/trips/${trip.id}/cancel`)
+      .set(authHeaders(token));
+    assert.equal(res.status, 200, JSON.stringify(res.body));
+    assert.equal(res.body.status, 'cancelled');
+  });
+
+  it('annulation après confirmation du chauffeur : le paiement en attente passe à failed', async () => {
+    const { token, user } = await createTourist();
+    const { driver } = await createVerifiedDriver();
+    const trip = await createTrip(token, user.id);
+    await assignDriver(trip.id, driver.id);
+
+    const payment = await request(app)
+      .post(`/api/trips/${trip.id}/payment`)
+      .set(authHeaders(token));
+    assert.equal(payment.status, 201);
+
+    const cancel = await request(app)
+      .post(`/api/trips/${trip.id}/cancel`)
+      .set(authHeaders(token));
+    assert.equal(cancel.status, 200);
+    assert.equal(cancel.body.status, 'cancelled');
+
+    // Le paiement orphelin n'est plus confirmable.
+    const detail = await request(app)
+      .get(`/api/payments/${payment.body.id}`)
+      .set(authHeaders(token));
+    assert.equal(detail.body.status, 'failed');
+    const confirm = await request(app)
+      .post(`/api/payments/${payment.body.id}/confirm`)
+      .set(authHeaders(token));
+    assert.equal(confirm.status, 409);
+    assert.equal(confirm.body.error.code, 'payment_already_processed');
+  });
+
+  it('course payée : client → 409, équipe → 200 cancelled', async () => {
+    const { token, user } = await createTourist();
+    const { driver } = await createVerifiedDriver();
+    const trip = await createTrip(token, user.id);
+    await assignDriver(trip.id, driver.id);
+    await payTrip(token, trip.id);
+
+    const byClient = await request(app)
+      .post(`/api/trips/${trip.id}/cancel`)
+      .set(authHeaders(token));
+    assert.equal(byClient.status, 409);
+    assert.equal(byClient.body.error.code, 'invalid_status');
+
+    const byTeam = await request(app)
+      .post(`/api/trips/${trip.id}/cancel`)
+      .set(adminHeaders());
+    assert.equal(byTeam.status, 200);
+    assert.equal(byTeam.body.status, 'cancelled');
+  });
+
+  it('un tiers ne peut pas annuler → 403 ; double annulation → 409', async () => {
+    const { token, user } = await createTourist();
+    const { token: otherToken } = await createTourist({ fullName: 'Autre Cliente' });
+    const trip = await createTrip(token, user.id);
+
+    const tiers = await request(app)
+      .post(`/api/trips/${trip.id}/cancel`)
+      .set(authHeaders(otherToken));
+    assert.equal(tiers.status, 403);
+    assert.equal(tiers.body.error.code, 'forbidden');
+
+    await request(app).post(`/api/trips/${trip.id}/cancel`).set(authHeaders(token));
+    const encore = await request(app)
+      .post(`/api/trips/${trip.id}/cancel`)
+      .set(authHeaders(token));
+    assert.equal(encore.status, 409);
+    assert.equal(encore.body.error.code, 'invalid_status');
+  });
+});

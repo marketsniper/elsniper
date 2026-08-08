@@ -76,7 +76,7 @@ export default function EcranCourses() {
   };
 
   return (
-    <Ecran fond="vagues">
+    <Ecran fond="vagues" onRefresh={rafraichir}>
       <EncartInfo icone="logo-whatsapp">{t('courses_info')}</EncartInfo>
 
       <Carte>

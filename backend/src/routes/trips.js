@@ -363,6 +363,51 @@ router.patch(
   })
 );
 
+// POST /trips/:id/cancel — annulation par le réservateur (client ou hôtel)
+// tant que la course n'est pas payée. L'équipe peut aussi annuler une course
+// déjà payée (le remboursement se règle à la main, via WhatsApp). Les
+// paiements encore en attente sont marqués 'failed' pour ne pas rester
+// confirmables sur une course morte.
+router.post(
+  '/:id/cancel',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const trip = await getTrip(req.params.id);
+    const isBooker =
+      (trip.user_id !== null && trip.user_id === req.auth.userId) ||
+      (trip.hotel_id !== null && trip.hotel_id === req.auth.hotelId);
+    if (!isAdmin(req) && !isBooker) {
+      throw new HttpError(403, 'forbidden', 'Seul le réservateur de la course peut l\'annuler');
+    }
+
+    const annulables = isAdmin(req)
+      ? ['requested', 'driver_confirmed', 'paid']
+      : ['requested', 'driver_confirmed'];
+    if (!annulables.includes(trip.status)) {
+      throw new HttpError(
+        409,
+        'invalid_status',
+        trip.status === 'paid'
+          ? "Course déjà payée — contactez l'équipe sur WhatsApp pour l'annuler et être remboursé"
+          : `Cette course ne peut plus être annulée (statut actuel: ${trip.status})`
+      );
+    }
+
+    const updated = await withTransaction(async (client) => {
+      await client.query(
+        `UPDATE payments SET status = 'failed' WHERE trip_id = $1 AND status = 'pending'`,
+        [req.params.id]
+      );
+      const { rows } = await client.query(
+        `UPDATE trips SET status = 'cancelled' WHERE id = $1 RETURNING *`,
+        [req.params.id]
+      );
+      return rows[0];
+    });
+    res.json(updated);
+  })
+);
+
 // POST /trips/:id/rating — note du chauffeur (1-5), à sens unique :
 // une course déjà notée renvoie 409 Conflict. Réservé au client de la course.
 router.post(

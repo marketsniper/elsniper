@@ -86,4 +86,5 @@ export const couleursStatutColis: Record<StatutColis, { fond: string; texte: str
   paid: { fond: couleurs.primaireClair, texte: couleurs.primaireFonce },
   picked_up: { fond: couleurs.primaire, texte: couleurs.blanc },
   delivered: { fond: couleurs.succesFond, texte: couleurs.succes },
+  cancelled: { fond: couleurs.bordure, texte: couleurs.texteSecondaire }, // gris
 };

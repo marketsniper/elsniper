@@ -13,7 +13,7 @@ export type StatutTrajet =
 
 export type TypeTrajet = 'private' | 'shared_tourist' | 'shared_local' | 'posted_return';
 
-export type StatutColis = 'created' | 'paid' | 'picked_up' | 'delivered';
+export type StatutColis = 'created' | 'paid' | 'picked_up' | 'delivered' | 'cancelled';
 
 /** Statut d'un trajet partagé posté par un chauffeur (table rides). */
 export type StatutRide = 'open' | 'closed' | 'cancelled';
@@ -130,6 +130,7 @@ export const LIBELLES_STATUT_COLIS: Record<StatutColis, string> = {
   paid: 'Payé',
   picked_up: 'Ramassé',
   delivered: 'Livré',
+  cancelled: 'Annulé',
 };
 
 /** Étapes d'un colis, dans l'ordre. */

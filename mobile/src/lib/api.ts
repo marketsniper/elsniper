@@ -44,6 +44,28 @@ interface OptionsRequete {
   formData?: FormData;
 }
 
+// Le serveur gratuit (Render) s'endort après 15 min sans visite : la première
+// requête le réveille, ce qui peut prendre 30-60 s. Les GET (chargements
+// d'écran) sont réessayés automatiquement pendant ce réveil ; les écritures
+// (POST/PATCH) ne sont jamais rejouées pour ne pas créer de doublons.
+const DELAIS_REVEIL_MS = [4000, 10000, 20000];
+const TIMEOUT_REQUETE_MS = 30000;
+const MESSAGE_RESEAU =
+  'Le serveur se réveille (il se met en veille quand personne ne l\'utilise). ' +
+  'Réessayez dans quelques secondes.';
+
+const attendre = (ms: number) => new Promise((resoudre) => setTimeout(resoudre, ms));
+
+async function fetchAvecTimeout(url: string, init: RequestInit): Promise<Response> {
+  const controleur = new AbortController();
+  const minuteur = setTimeout(() => controleur.abort(), TIMEOUT_REQUETE_MS);
+  try {
+    return await fetch(url, { ...init, signal: controleur.signal });
+  } finally {
+    clearTimeout(minuteur);
+  }
+}
+
 async function requete<T>(chemin: string, options: OptionsRequete = {}): Promise<T> {
   const entetes: Record<string, string> = {};
   if (jetonCourant) entetes.Authorization = `Bearer ${jetonCourant}`;
@@ -57,19 +79,27 @@ async function requete<T>(chemin: string, options: OptionsRequete = {}): Promise
     body = JSON.stringify(options.corps);
   }
 
-  let reponse: Response;
-  try {
-    reponse = await fetch(`${BASE_URL}${chemin}`, {
-      method: options.methode ?? 'GET',
-      headers: entetes,
-      body,
-    });
-  } catch {
-    throw new ErreurApi(
-      0,
-      'RESEAU',
-      `Impossible de joindre le serveur (${BASE_URL}). Vérifiez EXPO_PUBLIC_API_URL et que le backend tourne.`
-    );
+  const methode = options.methode ?? 'GET';
+  const init: RequestInit = { method: methode, headers: entetes, body };
+  const relanceable = methode === 'GET';
+
+  let reponse: Response | null = null;
+  for (let essai = 0; ; essai += 1) {
+    try {
+      reponse = await fetchAvecTimeout(`${BASE_URL}${chemin}`, init);
+      // 502/503/504 : le proxy répond mais le serveur dort encore.
+      if (relanceable && [502, 503, 504].includes(reponse.status) && essai < DELAIS_REVEIL_MS.length) {
+        await attendre(DELAIS_REVEIL_MS[essai]);
+        continue;
+      }
+      break;
+    } catch {
+      if (relanceable && essai < DELAIS_REVEIL_MS.length) {
+        await attendre(DELAIS_REVEIL_MS[essai]);
+        continue;
+      }
+      throw new ErreurApi(0, 'RESEAU', MESSAGE_RESEAU);
+    }
   }
 
   const texte = await reponse.text();
@@ -305,6 +335,14 @@ export async function confirmerPaiement(paiementId: string): Promise<Paiement> {
 }
 
 /**
+ * POST /trips/:id/cancel — annulation par le réservateur tant que la course
+ * n'est pas payée (sinon 409 : passer par l'équipe sur WhatsApp).
+ */
+export async function annulerTrajet(id: string): Promise<Trajet> {
+  return requete<Trajet>(`/trips/${id}/cancel`, { methode: 'POST' });
+}
+
+/**
  * POST /trips/:id/rating {rating: 1-5, comment?} — uniquement quand la course
  * est 'completed', une seule fois (sinon 409 already_rated).
  */
@@ -422,6 +460,14 @@ export async function payerColis(id: string): Promise<Paiement> {
   return requete<Paiement>(`/packages/${id}/payment`, { methode: 'POST' });
 }
 
+/**
+ * POST /packages/:id/cancel — annulation par l'expéditeur tant que le colis
+ * n'est pas payé (sinon 409 : passer par l'équipe sur WhatsApp).
+ */
+export async function annulerColis(id: string): Promise<Colis> {
+  return requete<Colis>(`/packages/${id}/cancel`, { methode: 'POST' });
+}
+
 /** GET /packages/by-qr/:qrCode — scan d'un QR colis PKG-… (chauffeurs et équipe). */
 export async function colisParQr(qrCode: string): Promise<Colis> {
   return requete<Colis>(`/packages/by-qr/${encodeURIComponent(qrCode)}`);
@@ -492,6 +538,7 @@ export const api = {
   listerTrajetsHotel,
   obtenirTrajet,
   payerTrajet,
+  annulerTrajet,
   confirmerPaiement,
   noterTrajet,
   demarrerCourse,
@@ -505,6 +552,7 @@ export const api = {
   obtenirColis,
   listerColisHotel,
   payerColis,
+  annulerColis,
   colisParQr,
   recupererColis,
   livrerColis,

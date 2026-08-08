@@ -109,7 +109,7 @@ export default function EcranDetailCourse() {
   };
 
   return (
-    <Ecran fond="vagues">
+    <Ecran fond="vagues" onRefresh={charger}>
       <Carte>
         <Titre>{t('titre_course')}</Titre>
         <BadgeStatutTrajet statut={statut} />

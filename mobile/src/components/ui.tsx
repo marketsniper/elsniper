@@ -6,6 +6,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -35,17 +36,30 @@ type NomIonicons = React.ComponentProps<typeof Ionicons>['name'];
 
 /**
  * Conteneur d'écran : photo de plage en fond (voile blanc de lisibilité),
- * zone sûre, clavier géré, défilement optionnel.
+ * zone sûre, clavier géré, défilement optionnel, tirer-pour-rafraîchir
+ * optionnel (onRefresh).
  */
 export function Ecran({
   children,
   defiler = true,
   fond = 'lagon',
+  onRefresh,
 }: {
   children: React.ReactNode;
   defiler?: boolean;
   fond?: NomFond;
+  onRefresh?: () => Promise<unknown> | void;
 }) {
+  const [rafraichit, setRafraichit] = React.useState(false);
+  const rafraichir = async () => {
+    if (!onRefresh) return;
+    setRafraichit(true);
+    try {
+      await onRefresh();
+    } finally {
+      setRafraichit(false);
+    }
+  };
   return (
     <FondPlage fond={fond} voile="clair">
       <SafeAreaView style={styles.ecran} edges={['top', 'left', 'right']}>
@@ -58,6 +72,15 @@ export function Ecran({
               contentContainerStyle={styles.contenuDefilant}
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}
+              refreshControl={
+                onRefresh ? (
+                  <RefreshControl
+                    refreshing={rafraichit}
+                    onRefresh={rafraichir}
+                    tintColor={couleurs.primaire}
+                  />
+                ) : undefined
+              }
             >
               {children}
             </ScrollView>

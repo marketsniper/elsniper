@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { Router } from 'express';
 import { z } from 'zod';
-import { query } from '../db.js';
+import { query, withTransaction } from '../db.js';
 import { HttpError, notFound } from '../errors.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { isAdmin, requireAuth } from '../middleware/auth.js';
@@ -189,6 +189,45 @@ router.post(
       [pkg.id, pkg.price, pkg.currency, reference, paymentLink]
     );
     res.status(201).json(rows[0]);
+  })
+);
+
+// POST /packages/:id/cancel — annulation par l'expéditeur tant que le colis
+// n'est pas payé. L'équipe peut aussi annuler un colis payé non ramassé
+// (remboursement géré à la main via WhatsApp). Les paiements en attente
+// passent à 'failed'.
+router.post(
+  '/:id/cancel',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const pkg = await getPackage(req.params.id);
+    if (!isAdmin(req) && !isSender(pkg, req.auth)) {
+      throw new HttpError(403, 'forbidden', "Seul l'expéditeur du colis peut l'annuler");
+    }
+
+    const annulables = isAdmin(req) ? ['created', 'paid'] : ['created'];
+    if (!annulables.includes(pkg.status)) {
+      throw new HttpError(
+        409,
+        'invalid_status',
+        pkg.status === 'paid'
+          ? "Colis déjà payé — contactez l'équipe sur WhatsApp pour l'annuler et être remboursé"
+          : `Ce colis ne peut plus être annulé (statut actuel: ${pkg.status})`
+      );
+    }
+
+    const updated = await withTransaction(async (client) => {
+      await client.query(
+        `UPDATE payments SET status = 'failed' WHERE package_id = $1 AND status = 'pending'`,
+        [req.params.id]
+      );
+      const { rows } = await client.query(
+        `UPDATE packages SET status = 'cancelled' WHERE id = $1 RETURNING *`,
+        [req.params.id]
+      );
+      return rows[0];
+    });
+    res.json(updated);
   })
 );
 

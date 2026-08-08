@@ -199,7 +199,7 @@ export default function EcranAnnonces() {
   };
 
   return (
-    <Ecran fond="vagues">
+    <Ecran fond="vagues" onRefresh={rafraichir}>
       {!verifie && (
         <EncartInfo icone="hourglass-outline" ton="attente">
           {t('annonces_attente')}

@@ -1,0 +1,17 @@
+# Le plan gratuit Render endort le serveur après 15 min sans visite, et le
+# réveil prend 30 à 60 s. Ce ping toutes les 10 minutes le garde éveillé aux
+# heures d'activité de Zanzibar (≈ 7 h - 23 h, heure d'Afrique de l'Est,
+# soit 4 h - 20 h UTC) pour que l'app réponde immédiatement.
+name: Réveil du serveur
+
+on:
+  schedule:
+    - cron: '*/10 4-19 * * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping /health
+        run: curl -fsS --max-time 90 --retry 2 https://zanzigo-api.onrender.com/health

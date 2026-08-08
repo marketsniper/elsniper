@@ -365,3 +365,56 @@ describe('Colis (packages)', () => {
     assert.equal(unknown.body.error.code, 'not_found');
   });
 });
+
+describe('Colis — annulation', () => {
+  it("l'expéditeur annule un colis non payé → cancelled, paiement en attente → failed", async () => {
+    const { token, user } = await createTourist();
+    const pkg = await createUserPackage(token, user.id);
+
+    const payment = await request(app)
+      .post(`/api/packages/${pkg.id}/payment`)
+      .set(authHeaders(token));
+    assert.equal(payment.status, 201);
+
+    const cancel = await request(app)
+      .post(`/api/packages/${pkg.id}/cancel`)
+      .set(authHeaders(token));
+    assert.equal(cancel.status, 200, JSON.stringify(cancel.body));
+    assert.equal(cancel.body.status, 'cancelled');
+
+    const detail = await request(app)
+      .get(`/api/payments/${payment.body.id}`)
+      .set(authHeaders(token));
+    assert.equal(detail.body.status, 'failed');
+  });
+
+  it('colis payé : expéditeur → 409, équipe → 200 cancelled', async () => {
+    const { token, hotel } = await createHotel();
+    const pkg = await createHotelPackage(token, hotel.id);
+    await payPackage(token, pkg.id);
+
+    const bySender = await request(app)
+      .post(`/api/packages/${pkg.id}/cancel`)
+      .set(authHeaders(token));
+    assert.equal(bySender.status, 409);
+    assert.equal(bySender.body.error.code, 'invalid_status');
+
+    const byTeam = await request(app)
+      .post(`/api/packages/${pkg.id}/cancel`)
+      .set(adminHeaders());
+    assert.equal(byTeam.status, 200);
+    assert.equal(byTeam.body.status, 'cancelled');
+  });
+
+  it("un tiers ne peut pas annuler le colis d'autrui → 403", async () => {
+    const { token, user } = await createTourist();
+    const { token: otherToken } = await createTourist({ fullName: 'Autre Cliente' });
+    const pkg = await createUserPackage(token, user.id);
+
+    const res = await request(app)
+      .post(`/api/packages/${pkg.id}/cancel`)
+      .set(authHeaders(otherToken));
+    assert.equal(res.status, 403);
+    assert.equal(res.body.error.code, 'forbidden');
+  });
+});
