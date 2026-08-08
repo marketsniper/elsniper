@@ -36,7 +36,7 @@ import {
 } from '@/lib/types';
 
 // Contact WhatsApp de l'équipe zanziGo (secours si whatsapp_link absent).
-const WHATSAPP_EQUIPE = 'https://wa.me/255779000000';
+const WHATSAPP_EQUIPE = 'https://wa.me/255666241749';
 
 export default function EcranTrajet() {
   const { id } = useLocalSearchParams<{ id: string }>();

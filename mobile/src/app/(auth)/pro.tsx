@@ -27,7 +27,7 @@ import { couleurs, espaces } from '@/lib/theme';
 import { champ, type StatutVerification } from '@/lib/types';
 
 // Numéro WhatsApp de l'équipe zanziGo (placeholder MVP).
-const WHATSAPP_EQUIPE = 'https://wa.me/255779000000';
+const WHATSAPP_EQUIPE = 'https://wa.me/255666241749';
 
 /** Ligne de sélection d'un document (permis, pièce d'identité). */
 function LigneDocument({

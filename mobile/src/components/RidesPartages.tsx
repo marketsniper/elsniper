@@ -16,7 +16,7 @@ import { couleurs, espaces, ombres, rayons } from '@/lib/theme';
 import { champ, DESTINATIONS_RIDES, formaterDate, formaterMontant, type Ride } from '@/lib/types';
 
 // Contact WhatsApp de l'équipe zanziGo (secours si whatsapp_link absent).
-const WHATSAPP_EQUIPE = 'https://wa.me/255779000000';
+const WHATSAPP_EQUIPE = 'https://wa.me/255666241749';
 
 export function RidesPartages() {
   const { t } = useT();
