@@ -64,12 +64,12 @@ describe('Courses taxi (trips)', () => {
     const { token: userToken, user } = await createTourist();
     const { token: driverToken, driver } = await createVerifiedDriver();
 
-    // Création : prix USD figé côté serveur (private → 50 USD, commission 15 %)
+    // Création : prix USD figé côté serveur (private → 50 USD, commission 10 %)
     const trip = await createTrip(userToken, user.id);
     assert.equal(trip.status, 'requested');
     assert.equal(trip.currency, 'USD');
     assert.equal(Number(trip.price), 50);
-    assert.equal(Number(trip.commission), 7.5);
+    assert.equal(Number(trip.commission), 5); // 10 % — le chauffeur reçoit 45 USD
     assert.match(trip.whatsapp_link, /wa\.me/);
     assert.equal(trip.driver_id, null);
 

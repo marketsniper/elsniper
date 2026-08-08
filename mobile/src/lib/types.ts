@@ -316,9 +316,9 @@ export interface TarifsZone {
 export const TARIFS_ZONE: Record<ZoneTarifaire, TarifsZone> = {
   nord: { priveUsd: 50, partageUsd: 18, localTzs: 15000 }, // Nungwi, Kendwa
   nord_est: { priveUsd: 45, partageUsd: 16, localTzs: 12000 }, // Matemwe → Chwaka
-  est: { priveUsd: 50, partageUsd: 15, localTzs: 12000 }, // Paje, Jambiani, Bwejuu
+  est: { priveUsd: 45, partageUsd: 15, localTzs: 12000 }, // Paje, Jambiani, Bwejuu
   est_pointe: { priveUsd: 50, partageUsd: 18, localTzs: 15000 }, // Michamvi
-  sud: { priveUsd: 45, partageUsd: 14, localTzs: 12000 }, // Kizimkazi, Makunduchi, Fumba
+  sud: { priveUsd: 35, partageUsd: 12, localTzs: 10000 }, // Kizimkazi, Makunduchi, Fumba
 };
 
 /** Tarifs appliqués quand aucune ville zonée n'apparaît dans l'itinéraire. */
@@ -441,9 +441,9 @@ export type TailleColis = 'small' | 'medium' | 'large';
 export const TAILLES_COLIS: TailleColis[] = ['small', 'medium', 'large'];
 
 export const TARIFS_COLIS_TAILLE: Record<TailleColis, Record<Devise, number>> = {
-  small: { USD: 5, TZS: 13000 },
-  medium: { USD: 10, TZS: 26000 },
-  large: { USD: 18, TZS: 47000 },
+  small: { USD: 5, TZS: 11000 },
+  medium: { USD: 10, TZS: 22000 },
+  large: { USD: 18, TZS: 40000 },
 };
 
 /** Tarif d'un envoi de colis pour une taille et une devise. */

@@ -79,7 +79,7 @@ describe('Colis (packages)', () => {
     assert.equal(pkg.status, 'created');
     assert.equal(pkg.currency, 'USD', 'la devise suit le compte de l\'expéditeur');
     assert.equal(Number(pkg.price), 10);
-    assert.equal(Number(pkg.commission), 1.5);
+    assert.equal(Number(pkg.commission), 2); // 20 %
     assert.match(pkg.qr_code, /^PKG-/);
     assert.match(pkg.whatsapp_link, /wa\.me/);
   });
@@ -88,7 +88,7 @@ describe('Colis (packages)', () => {
     const { token, hotel } = await createHotel();
     const pkg = await createHotelPackage(token, hotel.id);
     assert.equal(pkg.currency, 'TZS');
-    assert.equal(Number(pkg.price), 26000); // taille medium en TZS
+    assert.equal(Number(pkg.price), 22000); // taille medium en TZS
     assert.equal(pkg.sender_hotel_id, hotel.id);
     assert.equal(pkg.sender_user_id, null);
   });

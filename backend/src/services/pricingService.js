@@ -13,9 +13,22 @@ import { config } from '../config.js';
 const ZONE_TIERS = {
   nord: { privateUsd: 50, sharedUsd: 18, localTzs: 15000 }, // Nungwi / Kendwa
   nordEst: { privateUsd: 45, sharedUsd: 16, localTzs: 12000 }, // Matemwe / Kiwengwa
-  est: { privateUsd: 50, sharedUsd: 15, localTzs: 12000 }, // Paje / Jambiani
+  est: { privateUsd: 45, sharedUsd: 15, localTzs: 12000 }, // Paje / Jambiani
   estPointe: { privateUsd: 50, sharedUsd: 18, localTzs: 15000 }, // Michamvi (route directe)
-  sud: { privateUsd: 45, sharedUsd: 14, localTzs: 12000 }, // Kizimkazi / Makunduchi
+  sud: { privateUsd: 35, sharedUsd: 12, localTzs: 10000 }, // Kizimkazi / Makunduchi
+};
+
+// Commissions zanziGo par service (grille « Chauffeur reçoit ») :
+//  - privé 10 % (50 → 45,00 chez le chauffeur) ;
+//  - partagé touriste 20 % (18 → 14,40) ;
+//  - local 10 % (15 000 → 13 500) ;
+//  - colis 20 % (5 → 4,00).
+// Les réservations d'hôtel restent sur le taux général config.commissionRate.
+const COMMISSION_RATES = {
+  private: 0.1,
+  shared: 0.2,
+  local: 0.1,
+  package: 0.2,
 };
 
 // Rattachement des villes aux zones. Les villes de la côte centre-est et
@@ -44,9 +57,9 @@ const SPECIAL_PRIVATE_ROUTES_USD = [{ a: 'Nungwi', b: 'Paje', usd: 65 }];
 // Colis : forfait par taille (Stone Town → n'importe quelle plage),
 // payé en ligne à 100 % par l'expéditeur.
 const PACKAGE_FARES = {
-  small: { USD: 5, TZS: 13000 }, // enveloppe, clés, passeport, documents
-  medium: { USD: 10, TZS: 26000 }, // sac à dos, petit carton, épices
-  large: { USD: 18, TZS: 47000 }, // grosse valise, caisse de ravitaillement
+  small: { USD: 5, TZS: 11000 }, // enveloppe, clés, passeport, documents
+  medium: { USD: 10, TZS: 22000 }, // sac à dos, petit carton, épices
+  large: { USD: 18, TZS: 40000 }, // grosse valise, caisse de ravitaillement
 };
 
 const HOTEL_FARES_TZS = {
@@ -98,9 +111,9 @@ export function priceTrip(tripType, audience, route = {}) {
   const tier = tierForRoute(route.pickup, route.dropoff);
 
   if (audience === 'local') {
-    // Tarif local de la zone, quel que soit le type de trajet.
+    // Tarif local de la zone, quel que soit le type de trajet — commission 10 %.
     const price = tier.localTzs;
-    return { price, commission: round2(price * config.commissionRate), currency: 'TZS' };
+    return { price, commission: round2(price * COMMISSION_RATES.local), currency: 'TZS' };
   }
 
   if (audience === 'hotel') {
@@ -110,15 +123,18 @@ export function priceTrip(tripType, audience, route = {}) {
   }
 
   let usd;
+  let taux;
   if (tripType === 'private') {
     usd = specialPrivateRouteUsd(route.pickup, route.dropoff) ?? tier.privateUsd;
+    taux = COMMISSION_RATES.private; // 10 % — le chauffeur reçoit 90 %
   } else if (tripType === 'shared_tourist' || tripType === 'posted_return') {
     usd = tier.sharedUsd;
+    taux = COMMISSION_RATES.shared; // 20 % — le chauffeur reçoit 80 %
   } else {
     return null; // shared_local n'existe pas en USD
   }
   const price = audience === 'resident' ? round2(usd * (1 - config.residentDiscountRate)) : usd;
-  return { price, commission: round2(price * config.commissionRate), currency: 'USD' };
+  return { price, commission: round2(price * taux), currency: 'USD' };
 }
 
 // size : 'small' | 'medium' | 'large'
@@ -127,7 +143,7 @@ export function pricePackage(currency, size = 'medium') {
   if (fare === undefined) return null;
   return {
     price: fare,
-    commission: round2(fare * config.commissionRate),
+    commission: round2(fare * COMMISSION_RATES.package), // 20 % — chauffeur 80 %
     currency,
   };
 }
