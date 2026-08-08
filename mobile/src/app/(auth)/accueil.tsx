@@ -4,7 +4,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FondPlage } from '@/components/FondPlage';
@@ -104,6 +104,11 @@ export default function EcranAccueil() {
         >
           <SelecteurLangue />
           <View style={styles.entete}>
+            <Image
+              source={require('../../../assets/images/logo-app.png')}
+              style={styles.logoImage}
+              accessibilityLabel="zanziGo"
+            />
             <LogoZanziGo taille={48} surFonce />
             <Text style={styles.tagline}>{t('app_tagline')}</Text>
           </View>
@@ -164,6 +169,13 @@ const styles = StyleSheet.create({
     paddingTop: espaces.xl,
     paddingBottom: espaces.xl,
     gap: espaces.s,
+  },
+  logoImage: {
+    width: 92,
+    height: 92,
+    borderRadius: 24,
+    marginBottom: espaces.xs,
+    ...ombres.carte,
   },
   tagline: {
     fontSize: 16,
