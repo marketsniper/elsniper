@@ -1,5 +1,5 @@
 // Tests des réservations de taxi par un hôtel partenaire POUR SES CLIENTS
-// (migration 003) : création en TZS avec coordonnées du client, règles
+// (migration 003) : création en USD (grille touriste −10 %) avec coordonnées du client, règles
 // d'accès, historique, flux complet jusqu'à la notation par l'hôtel.
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
@@ -32,7 +32,7 @@ async function bookHotelTrip(token, hotelId, extra = {}) {
 }
 
 describe('Hôtel — réservation de taxi pour un client', () => {
-  it('création : 201, prix TZS figé, coordonnées du client enregistrées', async () => {
+  it('création : 201, prix USD figé (grille touriste −10 %), coordonnées du client', async () => {
     const { token, hotel } = await createHotel();
     const res = await bookHotelTrip(token, hotel.id);
     assert.equal(res.status, 201);
@@ -40,8 +40,9 @@ describe('Hôtel — réservation de taxi pour un client', () => {
     assert.equal(res.body.user_id, null);
     assert.equal(res.body.client_name, 'M. Dupont');
     assert.equal(res.body.client_phone, '+33612345678');
-    assert.equal(res.body.currency, 'TZS');
-    assert.equal(Number(res.body.price), 90000);
+    assert.equal(res.body.currency, 'USD');
+    // Zone Nord (Nungwi) : privé 50 USD → 45 USD pour l'hôtel (−10 %).
+    assert.equal(Number(res.body.price), 45);
     assert.equal(res.body.status, 'requested');
     assert.ok(res.body.whatsapp_link.includes('wa.me'));
   });

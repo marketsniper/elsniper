@@ -29,6 +29,7 @@ import {
   deviseUtilisateur,
   formaterMontant,
   TAILLES_COLIS,
+  REMISE_RESIDENT,
   tarifColisTaille,
   type Devise,
   type TailleColis,
@@ -64,9 +65,14 @@ export default function EcranNouveauColis() {
 
   const expediteurUser = session?.user ?? null;
   const expediteurHotel = session?.hotel ?? null;
-  // Devise de l'expéditeur : USD touriste/résident, TZS hôtel/local.
-  const devise: Devise = expediteurHotel ? 'TZS' : deviseUtilisateur(expediteurUser);
-  const prix = taille ? tarifColisTaille(taille, devise) : null;
+  // Devise de l'expéditeur : USD touriste/résident/hôtel, TZS local.
+  // Hôtel partenaire : même grille USD que les touristes avec −10 %.
+  const devise: Devise = expediteurHotel ? 'USD' : deviseUtilisateur(expediteurUser);
+  const tarifAffiche = (laTaille: TailleColis): number => {
+    const brut = tarifColisTaille(laTaille, devise);
+    return expediteurHotel ? Math.round(brut * (1 - REMISE_RESIDENT) * 100) / 100 : brut;
+  };
+  const prix = taille ? tarifAffiche(taille) : null;
 
   const envoyer = async () => {
     setErreur('');
@@ -140,7 +146,7 @@ export default function EcranNouveauColis() {
                     {t(presentation.titre)}
                   </Text>
                   <Text style={styles.prixTaille}>
-                    {formaterMontant(tarifColisTaille(cle, devise), devise)}
+                    {formaterMontant(tarifAffiche(cle), devise)}
                   </Text>
                 </View>
                 <Text style={styles.exemplesTaille}>{t(presentation.exemples)}</Text>

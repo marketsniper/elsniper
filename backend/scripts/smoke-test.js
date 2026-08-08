@@ -305,7 +305,7 @@ async function main() {
     },
     bearer(hotelToken)
   );
-  check('hôtel réserve un taxi pour son client (prix TZS figé)', hotelTrip.status === 201 && hotelTrip.body.currency === 'TZS' && hotelTrip.body.client_name === 'M. Dupont', hotelTrip);
+  check('hôtel réserve un taxi pour son client (USD, grille touriste −10 %)', hotelTrip.status === 201 && hotelTrip.body.currency === 'USD' && hotelTrip.body.client_name === 'M. Dupont', hotelTrip);
 
   const badSender = await call(
     'POST',

@@ -45,6 +45,8 @@ const updateRideSchema = z
 // shillings posté par le chauffeur. L'équipe voit les deux.
 async function viewerPricing(req) {
   if (isAdmin(req)) return { mode: 'both', remise: false };
+  // Hôtel partenaire : même grille USD que les touristes, avec −10 %.
+  if (req.auth.hotelId) return { mode: 'USD', remise: true };
   if (req.auth.userId) {
     const { rows } = await query(
       'SELECT account_type, verification_status FROM users WHERE id = $1',

@@ -374,12 +374,8 @@ export function tarifsZoneItineraire(depart: string, arrivee: string): TarifsZon
   return zone ? TARIFS_ZONE[zone] : TARIFS_ZONE_DEFAUT;
 }
 
-/** Grille hôtel partenaire, en TZS (inchangée). Pas de navette locale. */
-export const TARIFS_TRAJET_HOTEL_TZS: Partial<Record<TypeTrajet, number>> = {
-  private: 90000,
-  shared_tourist: 40000,
-  posted_return: 65000,
-};
+// Hôtel partenaire : même grille USD que les touristes avec −10 %
+// (appliqué dans tarifTrajetProfil, comme pour un résident vérifié).
 
 /** Profil tarifaire d'un compte client (hors hôtel). */
 export function profilTarifaireUtilisateur(
@@ -407,10 +403,6 @@ export function tarifTrajetProfil(
   if (profil === 'local') {
     return { montant: zone.localTzs, devise: 'TZS' };
   }
-  if (profil === 'hotel') {
-    const montant = TARIFS_TRAJET_HOTEL_TZS[type];
-    return montant === undefined ? null : { montant, devise: 'TZS' };
-  }
   let plein: number | undefined;
   if (type === 'private') {
     const special = itineraire
@@ -423,8 +415,9 @@ export function tarifTrajetProfil(
     plein = TARIFS_TRAJET_USD[type];
   }
   if (plein === undefined) return null;
+  // Résident vérifié ET hôtel partenaire : −10 % sur la grille touriste.
   const montant =
-    profil === 'resident_verifie'
+    profil === 'resident_verifie' || profil === 'hotel'
       ? Math.round(plein * (1 - REMISE_RESIDENT) * 100) / 100
       : plein;
   return { montant, devise: 'USD' };

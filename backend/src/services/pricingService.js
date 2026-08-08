@@ -7,7 +7,8 @@ import { config } from '../config.js';
 //  - tourist  : USD plein tarif (AC incluse sur les options touristes) ;
 //  - resident : USD avec remise (config.residentDiscountRate, 10 %) ;
 //  - local    : TZS — tarif de la zone (carte tanzanienne vérifiée) ;
-//  - hotel    : TZS, grille commerciale (réserve pour ses clients).
+//  - hotel    : USD — même grille que les touristes avec remise 10 %
+//               (partenaire qui réserve pour ses clients).
 //
 // Zones (depuis/vers la ville ou l'aéroport) :
 const ZONE_TIERS = {
@@ -62,12 +63,6 @@ const PACKAGE_FARES = {
   large: { USD: 18, TZS: 47000 }, // grosse valise, caisse de ravitaillement
 };
 
-const HOTEL_FARES_TZS = {
-  private: 90000,
-  shared_tourist: 40000,
-  posted_return: 65000,
-};
-
 const round2 = (n) => Math.round(n * 100) / 100;
 
 // « Ville (précision) » → « ville » ; insensible à la casse.
@@ -116,12 +111,6 @@ export function priceTrip(tripType, audience, route = {}) {
     return { price, commission: round2(price * COMMISSION_RATES.local), currency: 'TZS' };
   }
 
-  if (audience === 'hotel') {
-    const fare = HOTEL_FARES_TZS[tripType];
-    if (fare === undefined) return null;
-    return { price: fare, commission: round2(fare * config.commissionRate), currency: 'TZS' };
-  }
-
   let usd;
   let taux;
   if (tripType === 'private') {
@@ -133,17 +122,21 @@ export function priceTrip(tripType, audience, route = {}) {
   } else {
     return null; // shared_local n'existe pas en USD
   }
-  const price = audience === 'resident' ? round2(usd * (1 - config.residentDiscountRate)) : usd;
+  // Résidents vérifiés ET hôtels partenaires : grille touriste avec −10 %.
+  const remise = audience === 'resident' || audience === 'hotel';
+  const price = remise ? round2(usd * (1 - config.residentDiscountRate)) : usd;
   return { price, commission: round2(price * taux), currency: 'USD' };
 }
 
-// size : 'small' | 'medium' | 'large'
-export function pricePackage(currency, size = 'medium') {
+// size : 'small' | 'medium' | 'large' ; remise : ex. 0.1 pour un hôtel
+// partenaire (même grille que les touristes avec −10 %).
+export function pricePackage(currency, size = 'medium', remise = 0) {
   const fare = PACKAGE_FARES[size]?.[currency];
   if (fare === undefined) return null;
+  const price = remise ? round2(fare * (1 - remise)) : fare;
   return {
-    price: fare,
-    commission: round2(fare * COMMISSION_RATES.package), // 20 % — chauffeur 80 %
+    price,
+    commission: round2(price * COMMISSION_RATES.package), // 20 % — chauffeur 80 %
     currency,
   };
 }

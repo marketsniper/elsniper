@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { Router } from 'express';
 import { z } from 'zod';
+import { config } from '../config.js';
 import { query, withTransaction } from '../db.js';
 import { HttpError, notFound } from '../errors.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
@@ -56,7 +57,8 @@ function isSender(pkg, auth) {
 // POST /packages — création de la demande (utilisateur ou hôtel).
 // L'expéditeur ne peut créer que pour lui-même (id du jeton).
 // Génère le QR colis unique et fige le prix. La devise suit l'expéditeur :
-// celle du compte pour un user, TZS pour un hôtel partenaire.
+// celle du compte pour un user ; USD avec −10 % pour un hôtel partenaire
+// (même grille que les touristes).
 router.post(
   '/',
   requireAuth,
@@ -71,7 +73,8 @@ router.post(
       }
     }
 
-    let currency = 'TZS';
+    let currency = 'USD';
+    let remise = 0;
     let senderLabel;
     if (data.senderType === 'user') {
       const { rows } = await query('SELECT * FROM users WHERE id = $1', [data.senderUserId]);
@@ -81,10 +84,11 @@ router.post(
     } else {
       const { rows } = await query('SELECT * FROM hotels WHERE id = $1', [data.senderHotelId]);
       if (!rows[0]) throw notFound('Hôtel expéditeur');
+      remise = config.residentDiscountRate; // hôtel : grille touriste −10 %
       senderLabel = `${rows[0].name} (hôtel, ${rows[0].phone})`;
     }
 
-    const pricing = pricePackage(currency, data.size);
+    const pricing = pricePackage(currency, data.size, remise);
     const qrCode = generatePackageQr();
 
     const { rows } = await query(

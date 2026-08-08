@@ -448,9 +448,9 @@ const CHAINES = {
     sw: 'Imeshindikana kuingia. Jaribu tena.',
   },
   hotelins_intro: {
-    fr: 'Créez le compte de votre établissement pour réserver des taxis pour vos clients et envoyer leurs colis — tarifs en TZS.',
-    en: 'Create your property account to book taxis for your guests and send their parcels — prices in TZS.',
-    sw: 'Fungua akaunti ya hoteli yako kuweka teksi kwa wageni wako na kutuma mizigo yao — bei kwa TZS.',
+    fr: 'Créez le compte de votre établissement pour réserver des taxis pour vos clients et envoyer leurs colis — tarif touriste avec −10 % partenaire.',
+    en: 'Create your property account to book taxis for your guests and send their parcels — tourist rates with a 10% partner discount.',
+    sw: 'Fungua akaunti ya hoteli yako kuweka teksi kwa wageni wako na kutuma mizigo yao — bei ya watalii ukiwa na punguzo la 10%.',
   },
   hotelins_nom: { fr: "Nom de l'hôtel", en: 'Hotel name', sw: 'Jina la hoteli' },
   hotelins_contact: { fr: 'Personne de contact', en: 'Contact person', sw: 'Mtu wa mawasiliano' },
@@ -590,9 +590,9 @@ const CHAINES = {
 
   // --- Réserver ---------------------------------------------------------------
   reserver_mode_hotel_info: {
-    fr: 'Mode hôtel — réservez un taxi pour votre client, tarifs en TZS.',
-    en: 'Hotel mode — book a taxi for your guest, prices in TZS.',
-    sw: 'Hali ya hoteli — weka teksi kwa mteja wako, bei kwa TZS.',
+    fr: 'Mode hôtel — réservez un taxi pour votre client : tarif touriste avec −10 % partenaire.',
+    en: 'Hotel mode — book a taxi for your guest: tourist rate with a 10% partner discount.',
+    sw: 'Hali ya hoteli — weka teksi kwa mteja wako: bei ya watalii ukiwa na punguzo la 10%.',
   },
   reserver_itineraire: { fr: 'Itinéraire', en: 'Route', sw: 'Njia' },
   reserver_depart_placeholder: {
