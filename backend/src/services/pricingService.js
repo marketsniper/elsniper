@@ -13,9 +13,9 @@ import { config } from '../config.js';
 const ZONE_TIERS = {
   nord: { privateUsd: 50, sharedUsd: 18, localTzs: 15000 }, // Nungwi / Kendwa
   nordEst: { privateUsd: 45, sharedUsd: 16, localTzs: 12000 }, // Matemwe / Kiwengwa
-  est: { privateUsd: 45, sharedUsd: 15, localTzs: 12000 }, // Paje / Jambiani
+  est: { privateUsd: 50, sharedUsd: 15, localTzs: 12000 }, // Paje / Jambiani
   estPointe: { privateUsd: 50, sharedUsd: 18, localTzs: 15000 }, // Michamvi (route directe)
-  sud: { privateUsd: 35, sharedUsd: 12, localTzs: 10000 }, // Kizimkazi / Makunduchi
+  sud: { privateUsd: 45, sharedUsd: 14, localTzs: 12000 }, // Kizimkazi / Makunduchi
 };
 
 // Commissions zanziGo par service (grille « Chauffeur reçoit ») :
@@ -57,9 +57,9 @@ const SPECIAL_PRIVATE_ROUTES_USD = [{ a: 'Nungwi', b: 'Paje', usd: 65 }];
 // Colis : forfait par taille (Stone Town → n'importe quelle plage),
 // payé en ligne à 100 % par l'expéditeur.
 const PACKAGE_FARES = {
-  small: { USD: 5, TZS: 11000 }, // enveloppe, clés, passeport, documents
-  medium: { USD: 10, TZS: 22000 }, // sac à dos, petit carton, épices
-  large: { USD: 18, TZS: 40000 }, // grosse valise, caisse de ravitaillement
+  small: { USD: 5, TZS: 13000 }, // enveloppe, clés, passeport, documents
+  medium: { USD: 10, TZS: 26000 }, // sac à dos, petit carton, épices
+  large: { USD: 18, TZS: 47000 }, // grosse valise, caisse de ravitaillement
 };
 
 const HOTEL_FARES_TZS = {

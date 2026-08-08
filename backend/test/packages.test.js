@@ -88,7 +88,7 @@ describe('Colis (packages)', () => {
     const { token, hotel } = await createHotel();
     const pkg = await createHotelPackage(token, hotel.id);
     assert.equal(pkg.currency, 'TZS');
-    assert.equal(Number(pkg.price), 22000); // taille medium en TZS
+    assert.equal(Number(pkg.price), 26000); // taille medium en TZS
     assert.equal(pkg.sender_hotel_id, hotel.id);
     assert.equal(pkg.sender_user_id, null);
   });
