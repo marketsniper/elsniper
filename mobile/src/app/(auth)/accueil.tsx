@@ -149,6 +149,15 @@ export default function EcranAccueil() {
           </View>
 
           <Text style={styles.pied}>{t('accueil_pied')}</Text>
+
+          <Pressable
+            onPress={() => router.push('/equipe')}
+            accessibilityRole="button"
+            style={({ pressed }) => [styles.lienEquipe, pressed && { opacity: 0.7 }]}
+          >
+            <Ionicons name="key-outline" size={13} color="rgba(255,255,255,0.75)" />
+            <Text style={styles.texteLienEquipe}>{t('equipe_lien_accueil')}</Text>
+          </Pressable>
         </ScrollView>
       </SafeAreaView>
     </FondPlage>
@@ -256,6 +265,19 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(0, 0, 0, 0.4)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 4,
+  },
+  lienEquipe: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: espaces.xs,
+    marginTop: espaces.l,
+    paddingVertical: espaces.s,
+  },
+  texteLienEquipe: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.75)',
   },
   pied: {
     fontSize: 13,

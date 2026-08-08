@@ -156,17 +156,42 @@ router.post(
 );
 
 // GET /trips?userId= ou ?hotelId= — historique (le titulaire ou l'équipe).
+// Sans userId ni hotelId : liste globale, réservée à l'équipe (tableau de
+// bord), avec filtre optionnel ?status= (ex. requested = à traiter).
 router.get(
   '/',
   requireAuth,
   asyncHandler(async (req, res) => {
-    const { userId, hotelId } = z
-      .object({ userId: z.string().uuid().optional(), hotelId: z.string().uuid().optional() })
-      .refine((d) => Boolean(d.userId) !== Boolean(d.hotelId), {
+    const { userId, hotelId, status } = z
+      .object({
+        userId: z.string().uuid().optional(),
+        hotelId: z.string().uuid().optional(),
+        status: z
+          .enum(['requested', 'driver_confirmed', 'paid', 'in_progress', 'completed', 'cancelled'])
+          .optional(),
+      })
+      .refine((d) => !(d.userId && d.hotelId), {
         path: ['userId'],
-        message: 'Fournir userId ou hotelId',
+        message: 'Fournir userId ou hotelId, pas les deux',
       })
       .parse(req.query);
+
+    if (!userId && !hotelId) {
+      if (!isAdmin(req)) {
+        throw new HttpError(403, 'forbidden', 'Fournir userId ou hotelId (liste globale réservée à l\'équipe)');
+      }
+      const params = [];
+      let where = '';
+      if (status) {
+        params.push(status);
+        where = 'WHERE status = $1';
+      }
+      const { rows } = await query(
+        `SELECT * FROM trips ${where} ORDER BY created_at DESC LIMIT 200`,
+        params
+      );
+      return res.json(rows);
+    }
 
     if (userId) {
       if (!isAdmin(req) && userId !== req.auth.userId) {

@@ -1,0 +1,464 @@
+// Tableau de bord équipe : protégé par la clé secrète (X-Admin-Key), sans
+// compte client. Quatre sections d'action :
+//  1. Courses « Demandées » → choisir un chauffeur vérifié et le confirmer ;
+//  2. Paiements en attente → « Marquer payé » après réception de l'argent
+//     (lien manuel WhatsApp/PayPal) ;
+//  3. Candidatures chauffeurs → documents + Valider / Refuser (le QR véhicule
+//     est généré à la validation) ;
+//  4. Comptes résidents/locaux → document + Valider / Refuser.
+// La clé est persistée dans SecureStore et vérifiée par un premier appel.
+import { Ionicons } from '@expo/vector-icons';
+import * as SecureStore from 'expo-secure-store';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Linking, StyleSheet, Text, View } from 'react-native';
+
+import { Selecteur } from '@/components/Selecteur';
+import {
+  Badge,
+  Bouton,
+  Carte,
+  Champ,
+  ChargementCentre,
+  Ecran,
+  EncartInfo,
+  TexteErreur,
+  Titre,
+} from '@/components/ui';
+import { api, definirCleEquipe, ErreurApi } from '@/lib/api';
+import { libelleTypeTrajet, useT } from '@/lib/i18n';
+import { couleurs, espaces } from '@/lib/theme';
+import {
+  champ,
+  formaterMontant,
+  formaterPrix,
+  type Chauffeur,
+  type PaiementEquipe,
+  type Trajet,
+  type TypeTrajet,
+  type Utilisateur,
+} from '@/lib/types';
+
+const CLE_STOCKAGE = 'zanzigo.cle_equipe';
+
+// Libellé d'un chauffeur dans le sélecteur d'assignation.
+function libelleChauffeur(chauffeur: Chauffeur): string {
+  const nom = champ<string>(chauffeur, 'full_name', 'fullName') ?? '?';
+  const plaque = champ<string>(chauffeur, 'vehicle_plate', 'vehiclePlate');
+  return plaque ? `${nom} · ${plaque}` : nom;
+}
+
+export default function EcranEquipe() {
+  const { t } = useT();
+  // null = lecture de SecureStore en cours ; '' = pas de clé enregistrée.
+  const [cle, setCle] = useState<string | null>(null);
+  const [saisie, setSaisie] = useState('');
+  const [chargeActivation, setChargeActivation] = useState(false);
+  const [erreur, setErreur] = useState('');
+
+  const [courses, setCourses] = useState<Trajet[]>([]);
+  const [paiements, setPaiements] = useState<PaiementEquipe[]>([]);
+  const [candidats, setCandidats] = useState<Chauffeur[]>([]);
+  const [clients, setClients] = useState<Utilisateur[]>([]);
+  const [chauffeurs, setChauffeurs] = useState<Chauffeur[]>([]);
+  // Chauffeur choisi par course (libellé du sélecteur), avant confirmation.
+  const [choixChauffeur, setChoixChauffeur] = useState<Record<string, string>>({});
+  // Id de l'élément dont l'action est en cours (bouton en chargement).
+  const [actionEnCours, setActionEnCours] = useState<string | null>(null);
+
+  const charger = useCallback(async () => {
+    setErreur('');
+    try {
+      const [lesCourses, lesPaiements, lesCandidats, lesClients, lesChauffeurs] =
+        await Promise.all([
+          api.listerCoursesEquipe('requested'),
+          api.listerPaiementsEquipe(),
+          api.listerCandidaturesChauffeurs(),
+          api.listerClientsEnAttente(),
+          api.listerChauffeursVerifies(),
+        ]);
+      setCourses(lesCourses);
+      setPaiements(lesPaiements);
+      setCandidats(lesCandidats);
+      setClients(lesClients);
+      setChauffeurs(lesChauffeurs);
+    } catch (e) {
+      setErreur(e instanceof ErreurApi ? e.message : t('equipe_action_erreur'));
+    }
+  }, [t]);
+
+  // Lecture de la clé enregistrée au montage ; si présente, mode actif direct.
+  useEffect(() => {
+    (async () => {
+      const enregistree = (await SecureStore.getItemAsync(CLE_STOCKAGE)) ?? '';
+      if (enregistree) definirCleEquipe(enregistree);
+      setCle(enregistree);
+    })();
+  }, []);
+
+  useEffect(() => {
+    if (cle) charger();
+  }, [cle, charger]);
+
+  const activer = async () => {
+    const candidate = saisie.trim();
+    if (!candidate) return;
+    setChargeActivation(true);
+    setErreur('');
+    definirCleEquipe(candidate);
+    try {
+      await api.listerCoursesEquipe('requested');
+      await SecureStore.setItemAsync(CLE_STOCKAGE, candidate);
+      setCle(candidate);
+      setSaisie('');
+    } catch (e) {
+      definirCleEquipe(null);
+      const nonAutorise =
+        e instanceof ErreurApi && (e.status === 401 || e.status === 403);
+      setErreur(nonAutorise ? t('equipe_cle_invalide') : e instanceof ErreurApi ? e.message : t('equipe_action_erreur'));
+    } finally {
+      setChargeActivation(false);
+    }
+  };
+
+  const quitter = async () => {
+    await SecureStore.deleteItemAsync(CLE_STOCKAGE);
+    definirCleEquipe(null);
+    setCle('');
+    setCourses([]);
+    setPaiements([]);
+    setCandidats([]);
+    setClients([]);
+  };
+
+  // Enveloppe commune des actions : verrouille le bouton, recharge après.
+  const agir = async (id: string, action: () => Promise<unknown>) => {
+    setActionEnCours(id);
+    setErreur('');
+    try {
+      await action();
+      await charger();
+    } catch (e) {
+      setErreur(e instanceof ErreurApi ? e.message : t('equipe_action_erreur'));
+    } finally {
+      setActionEnCours(null);
+    }
+  };
+
+  const confirmerChauffeur = (course: Trajet) => {
+    const libelle = choixChauffeur[course.id];
+    const chauffeur = chauffeurs.find((c) => libelleChauffeur(c) === libelle);
+    if (!chauffeur) {
+      setErreur(t('equipe_erreur_chauffeur'));
+      return;
+    }
+    agir(course.id, () => api.assignerChauffeur(course.id, chauffeur.id));
+  };
+
+  if (cle === null) {
+    return <ChargementCentre message="…" />;
+  }
+
+  // ----- Écran de saisie de la clé -----------------------------------------
+  if (!cle) {
+    return (
+      <Ecran fond="vagues">
+        <Carte>
+          <Titre>{t('titre_equipe')}</Titre>
+          <Text style={styles.explication}>{t('equipe_intro')}</Text>
+          <Champ
+            label={t('equipe_cle')}
+            value={saisie}
+            onChangeText={setSaisie}
+            secureTextEntry
+            autoCapitalize="none"
+          />
+          <TexteErreur>{erreur}</TexteErreur>
+          <Bouton
+            titre={t('equipe_activer')}
+            icone="key-outline"
+            onPress={activer}
+            charge={chargeActivation}
+          />
+        </Carte>
+      </Ecran>
+    );
+  }
+
+  // ----- Tableau de bord ----------------------------------------------------
+  return (
+    <Ecran fond="vagues" onRefresh={charger}>
+      <TexteErreur>{erreur}</TexteErreur>
+
+      {/* 1. Courses à traiter */}
+      <Text style={styles.titreSection}>
+        {t('equipe_courses')} ({courses.length})
+      </Text>
+      {courses.length === 0 && (
+        <EncartInfo icone="checkmark-circle-outline" ton="succes">
+          {t('equipe_courses_vide')}
+        </EncartInfo>
+      )}
+      {courses.map((course) => {
+        const type = champ<TypeTrajet>(course, 'trip_type', 'tripType');
+        const nomClient = champ<string>(course, 'client_name', 'clientName');
+        return (
+          <Carte key={course.id}>
+            <Text style={styles.itineraire}>
+              {String(champ(course, 'pickup_location', 'pickupLocation') ?? '?')}{'  '}
+              <Text style={styles.fleche}>→</Text>{'  '}
+              {String(champ(course, 'dropoff_location', 'dropoffLocation') ?? '?')}
+            </Text>
+            <View style={styles.ligneDetails}>
+              <Badge texte={type ? libelleTypeTrajet(type, t) : '—'} ton="primaire" />
+              <Text style={styles.prix}>{formaterPrix(course)}</Text>
+            </View>
+            {!!nomClient && (
+              <View style={styles.ligneDetail}>
+                <Ionicons name="person-outline" size={14} color={couleurs.texteSecondaire} />
+                <Text style={styles.detail}>{String(nomClient)}</Text>
+              </View>
+            )}
+            {chauffeurs.length === 0 ? (
+              <EncartInfo icone="alert-circle-outline" ton="attente">
+                {t('equipe_aucun_chauffeur')}
+              </EncartInfo>
+            ) : (
+              <>
+                <Selecteur
+                  label={t('equipe_choisir_chauffeur')}
+                  valeur={choixChauffeur[course.id] ?? ''}
+                  options={chauffeurs.map(libelleChauffeur)}
+                  onChange={(libelle) =>
+                    setChoixChauffeur((prev) => ({ ...prev, [course.id]: libelle }))
+                  }
+                />
+                <Bouton
+                  titre={t('equipe_confirmer_chauffeur')}
+                  icone="checkmark-circle-outline"
+                  onPress={() => confirmerChauffeur(course)}
+                  charge={actionEnCours === course.id}
+                />
+              </>
+            )}
+          </Carte>
+        );
+      })}
+
+      {/* 2. Paiements en attente */}
+      <Text style={styles.titreSection}>
+        {t('equipe_paiements')} ({paiements.length})
+      </Text>
+      {paiements.length === 0 && (
+        <EncartInfo icone="checkmark-circle-outline" ton="succes">
+          {t('equipe_paiements_vide')}
+        </EncartInfo>
+      )}
+      {paiements.map((paiement) => {
+        const estColis = !!paiement.package_id;
+        const depart = estColis ? paiement.package_pickup : paiement.trip_pickup;
+        const arrivee = estColis ? paiement.package_dropoff : paiement.trip_dropoff;
+        const montant = formaterMontant(
+          Number(champ(paiement, 'amount') ?? 0),
+          String(champ(paiement, 'currency') ?? 'TZS')
+        );
+        return (
+          <Carte key={paiement.id}>
+            <View style={styles.ligneDetails}>
+              <Badge
+                texte={estColis ? t('equipe_paiement_colis') : t('equipe_paiement_course')}
+                ton="primaire"
+              />
+              <Text style={styles.prix}>{montant}</Text>
+            </View>
+            <Text style={styles.itineraire}>
+              {depart ?? '?'}{'  '}
+              <Text style={styles.fleche}>→</Text>{'  '}
+              {arrivee ?? '?'}
+            </Text>
+            {estColis && !!paiement.package_qr && (
+              <Text style={styles.detail}>{paiement.package_qr}</Text>
+            )}
+            {!estColis && !!paiement.trip_client_name && (
+              <Text style={styles.detail}>{paiement.trip_client_name}</Text>
+            )}
+            <Bouton
+              titre={t('equipe_marquer_paye')}
+              icone="cash-outline"
+              onPress={() => agir(paiement.id, () => api.confirmerPaiement(paiement.id))}
+              charge={actionEnCours === paiement.id}
+            />
+          </Carte>
+        );
+      })}
+
+      {/* 3. Candidatures chauffeurs */}
+      <Text style={styles.titreSection}>
+        {t('equipe_candidatures')} ({candidats.length})
+      </Text>
+      {candidats.length === 0 && (
+        <EncartInfo icone="checkmark-circle-outline" ton="succes">
+          {t('equipe_candidatures_vide')}
+        </EncartInfo>
+      )}
+      {candidats.map((candidat) => {
+        const documents: Array<[string, unknown]> = [
+          [t('equipe_doc_permis'), champ(candidat, 'license_document_url', 'licenseDocumentUrl')],
+          [t('equipe_doc_assurance'), champ(candidat, 'insurance_document_url', 'insuranceDocumentUrl')],
+          [t('equipe_doc_vehicule'), champ(candidat, 'vehicle_photo_url', 'vehiclePhotoUrl')],
+        ];
+        return (
+          <Carte key={candidat.id}>
+            <Text style={styles.itineraire}>{libelleChauffeur(candidat)}</Text>
+            <Text style={styles.detail}>
+              {String(champ(candidat, 'vehicle_model', 'vehicleModel') ?? '—')} ·{' '}
+              {String(champ(candidat, 'zone') ?? '—')} ·{' '}
+              {String(champ(candidat, 'phone') ?? '')}
+            </Text>
+            <View style={styles.rangeeDocs}>
+              {documents.map(
+                ([libelle, url]) =>
+                  typeof url === 'string' &&
+                  !!url && (
+                    <Bouton
+                      key={libelle}
+                      titre={libelle}
+                      icone="document-attach-outline"
+                      variante="secondaire"
+                      onPress={() => Linking.openURL(url)}
+                    />
+                  )
+              )}
+            </View>
+            <View style={styles.rangeeActions}>
+              <View style={styles.demiAction}>
+                <Bouton
+                  titre={t('equipe_valider')}
+                  onPress={() => agir(candidat.id, () => api.verifierChauffeur(candidat.id, 'verified'))}
+                  charge={actionEnCours === candidat.id}
+                />
+              </View>
+              <View style={styles.demiAction}>
+                <Bouton
+                  titre={t('equipe_refuser')}
+                  variante="danger"
+                  onPress={() => agir(candidat.id, () => api.verifierChauffeur(candidat.id, 'rejected'))}
+                  charge={actionEnCours === candidat.id}
+                />
+              </View>
+            </View>
+          </Carte>
+        );
+      })}
+
+      {/* 4. Comptes clients à valider */}
+      <Text style={styles.titreSection}>
+        {t('equipe_comptes')} ({clients.length})
+      </Text>
+      {clients.length === 0 && (
+        <EncartInfo icone="checkmark-circle-outline" ton="succes">
+          {t('equipe_comptes_vide')}
+        </EncartInfo>
+      )}
+      {clients.map((client) => {
+        const document = champ(client, 'id_document_url', 'idDocumentUrl');
+        return (
+          <Carte key={client.id}>
+            <Text style={styles.itineraire}>
+              {String(champ(client, 'full_name', 'fullName') ?? '?')}
+            </Text>
+            <Text style={styles.detail}>
+              {String(champ(client, 'account_type', 'accountType') ?? '—')} ·{' '}
+              {String(champ(client, 'phone') ?? '')}
+            </Text>
+            {typeof document === 'string' && !!document && (
+              <Bouton
+                titre={t('equipe_document')}
+                icone="document-attach-outline"
+                variante="secondaire"
+                onPress={() => Linking.openURL(document)}
+              />
+            )}
+            <View style={styles.rangeeActions}>
+              <View style={styles.demiAction}>
+                <Bouton
+                  titre={t('equipe_valider')}
+                  onPress={() => agir(client.id, () => api.verifierClient(client.id, 'verified'))}
+                  charge={actionEnCours === client.id}
+                />
+              </View>
+              <View style={styles.demiAction}>
+                <Bouton
+                  titre={t('equipe_refuser')}
+                  variante="danger"
+                  onPress={() => agir(client.id, () => api.verifierClient(client.id, 'rejected'))}
+                  charge={actionEnCours === client.id}
+                />
+              </View>
+            </View>
+          </Carte>
+        );
+      })}
+
+      <Bouton
+        titre={t('equipe_quitter')}
+        icone="log-out-outline"
+        variante="secondaire"
+        onPress={quitter}
+      />
+    </Ecran>
+  );
+}
+
+const styles = StyleSheet.create({
+  explication: {
+    fontSize: 14,
+    color: couleurs.texteSecondaire,
+    lineHeight: 20,
+  },
+  titreSection: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: couleurs.encre,
+    marginTop: espaces.m,
+  },
+  itineraire: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: couleurs.encre,
+    lineHeight: 21,
+  },
+  fleche: {
+    color: couleurs.primaire,
+    fontWeight: '800',
+  },
+  ligneDetails: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: espaces.m,
+  },
+  ligneDetail: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: espaces.xs,
+  },
+  detail: {
+    fontSize: 13,
+    color: couleurs.texteSecondaire,
+  },
+  prix: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: couleurs.primaire,
+  },
+  rangeeDocs: {
+    gap: espaces.s,
+  },
+  rangeeActions: {
+    flexDirection: 'row',
+    gap: espaces.m,
+  },
+  demiAction: {
+    flex: 1,
+  },
+});

@@ -62,6 +62,30 @@ router.post(
   })
 );
 
+// GET /users?verificationStatus= — liste pour le tableau de bord équipe
+// (ex. pending = résidents et locaux dont le document attend validation).
+router.get(
+  '/',
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    const { verificationStatus } = z
+      .object({ verificationStatus: z.enum(['pending', 'verified', 'rejected']).optional() })
+      .parse(req.query);
+
+    const params = [];
+    let where = '';
+    if (verificationStatus) {
+      params.push(verificationStatus);
+      where = 'WHERE verification_status = $1';
+    }
+    const { rows } = await query(
+      `SELECT * FROM users ${where} ORDER BY created_at DESC LIMIT 200`,
+      params
+    );
+    res.json(rows);
+  })
+);
+
 // GET /users/:id — détail utilisateur (lui-même ou l'équipe).
 router.get(
   '/:id',

@@ -7,9 +7,11 @@ import type {
   Colis,
   Hotel,
   Paiement,
+  PaiementEquipe,
   ReponseVerifieOtp,
   Ride,
   StatutColis,
+  StatutTrajet,
   TailleColis,
   Trajet,
   TypeCompte,
@@ -36,6 +38,14 @@ let jetonCourant: string | null = null;
 
 export function definirJeton(jeton: string | null): void {
   jetonCourant = jeton;
+}
+
+// Clé équipe (header X-Admin-Key) — activée depuis l'écran Équipe. Le serveur
+// laisse passer la clé seule, sans jeton client.
+let cleEquipeCourante: string | null = null;
+
+export function definirCleEquipe(cle: string | null): void {
+  cleEquipeCourante = cle;
 }
 
 interface OptionsRequete {
@@ -69,6 +79,7 @@ async function fetchAvecTimeout(url: string, init: RequestInit): Promise<Respons
 async function requete<T>(chemin: string, options: OptionsRequete = {}): Promise<T> {
   const entetes: Record<string, string> = {};
   if (jetonCourant) entetes.Authorization = `Bearer ${jetonCourant}`;
+  if (cleEquipeCourante) entetes['X-Admin-Key'] = cleEquipeCourante;
 
   let body: string | FormData | undefined;
   if (options.formData) {
@@ -500,6 +511,64 @@ export function prochaineActionColis(statut: StatutColis | undefined): 'pickup' 
 }
 
 // ---------------------------------------------------------------------------
+// Tableau de bord équipe (clé X-Admin-Key requise — definirCleEquipe)
+// ---------------------------------------------------------------------------
+
+/** GET /trips?status= — toutes les courses d'un statut donné (équipe). */
+export async function listerCoursesEquipe(statut: StatutTrajet): Promise<Trajet[]> {
+  const reponse = await requete<unknown>(`/trips?status=${statut}`);
+  return commeListe<Trajet>(reponse, 'trips');
+}
+
+/** GET /payments?status=pending — paiements en attente + contexte (équipe). */
+export async function listerPaiementsEquipe(): Promise<PaiementEquipe[]> {
+  const reponse = await requete<unknown>('/payments?status=pending');
+  return commeListe<PaiementEquipe>(reponse, 'payments');
+}
+
+/** GET /drivers — chauffeurs vérifiés (recherche d'assignation, équipe). */
+export async function listerChauffeursVerifies(): Promise<Chauffeur[]> {
+  const reponse = await requete<unknown>('/drivers');
+  return commeListe<Chauffeur>(reponse, 'drivers');
+}
+
+/** GET /drivers?verificationStatus=pending — candidatures à traiter (équipe). */
+export async function listerCandidaturesChauffeurs(): Promise<Chauffeur[]> {
+  const reponse = await requete<unknown>('/drivers?verificationStatus=pending');
+  return commeListe<Chauffeur>(reponse, 'drivers');
+}
+
+/** GET /users?verificationStatus=pending — documents clients à valider (équipe). */
+export async function listerClientsEnAttente(): Promise<Utilisateur[]> {
+  const reponse = await requete<unknown>('/users?verificationStatus=pending');
+  return commeListe<Utilisateur>(reponse, 'users');
+}
+
+/** PATCH /trips/:id/assign-driver — l'équipe confirme un chauffeur. */
+export async function assignerChauffeur(tripId: string, driverId: string): Promise<Trajet> {
+  return requete<Trajet>(`/trips/${tripId}/assign-driver`, {
+    methode: 'PATCH',
+    corps: { driverId },
+  });
+}
+
+/** PATCH /drivers/:id/verify — valider/refuser une candidature (équipe). */
+export async function verifierChauffeur(
+  id: string,
+  statut: 'verified' | 'rejected'
+): Promise<Chauffeur> {
+  return requete<Chauffeur>(`/drivers/${id}/verify`, { methode: 'PATCH', corps: { status: statut } });
+}
+
+/** PATCH /users/:id/verify — valider/refuser un document client (équipe). */
+export async function verifierClient(
+  id: string,
+  statut: 'verified' | 'rejected'
+): Promise<Utilisateur> {
+  return requete<Utilisateur>(`/users/${id}/verify`, { methode: 'PATCH', corps: { status: statut } });
+}
+
+// ---------------------------------------------------------------------------
 // Upload (backend/src/routes/uploads.js)
 // ---------------------------------------------------------------------------
 
@@ -556,6 +625,14 @@ export const api = {
   colisParQr,
   recupererColis,
   livrerColis,
+  listerCoursesEquipe,
+  listerPaiementsEquipe,
+  listerChauffeursVerifies,
+  listerCandidaturesChauffeurs,
+  listerClientsEnAttente,
+  assignerChauffeur,
+  verifierChauffeur,
+  verifierClient,
   televerser,
 };
 

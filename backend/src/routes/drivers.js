@@ -30,6 +30,10 @@ const verifySchema = z.object({
 const searchSchema = z.object({
   zone: z.string().optional(),
   available: z.enum(['true', 'false']).optional(),
+  // Par défaut, seuls les chauffeurs vérifiés sortent (recherche d'assignation) ;
+  // le tableau de bord équipe demande verificationStatus=pending pour les
+  // candidatures à traiter.
+  verificationStatus: z.enum(['pending', 'verified', 'rejected']).optional(),
 });
 
 // POST /drivers — candidature Taxi Partner (avec documents).
@@ -69,10 +73,10 @@ router.get(
   '/',
   requireAdmin,
   asyncHandler(async (req, res) => {
-    const { zone, available } = searchSchema.parse(req.query);
+    const { zone, available, verificationStatus } = searchSchema.parse(req.query);
 
-    const conditions = [`verification_status = 'verified'`];
-    const params = [];
+    const params = [verificationStatus ?? 'verified'];
+    const conditions = ['verification_status = $1'];
     if (zone) {
       params.push(zone);
       conditions.push(`zone = $${params.length}`);

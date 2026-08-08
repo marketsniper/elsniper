@@ -1,11 +1,42 @@
 import { Router } from 'express';
+import { z } from 'zod';
 import { query, withTransaction } from '../db.js';
 import { HttpError, notFound } from '../errors.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
-import { isAdmin, requireAuth } from '../middleware/auth.js';
+import { isAdmin, requireAdmin, requireAuth } from '../middleware/auth.js';
 import { getTransactionStatus, isStubMode } from '../services/pesapalService.js';
 
 const router = Router();
+
+// GET /payments?status=pending — liste pour le tableau de bord équipe, avec
+// le contexte de la cible (trajet ou colis) pour un affichage lisible.
+router.get(
+  '/',
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    const { status } = z
+      .object({ status: z.enum(['pending', 'confirmed', 'failed']).optional() })
+      .parse(req.query);
+
+    const { rows } = await query(
+      `SELECT p.*,
+              t.pickup_location  AS trip_pickup,
+              t.dropoff_location AS trip_dropoff,
+              t.client_name      AS trip_client_name,
+              pk.pickup_location  AS package_pickup,
+              pk.dropoff_location AS package_dropoff,
+              pk.qr_code          AS package_qr
+       FROM payments p
+       LEFT JOIN trips t ON t.id = p.trip_id
+       LEFT JOIN packages pk ON pk.id = p.package_id
+       WHERE p.status = $1
+       ORDER BY p.created_at DESC
+       LIMIT 200`,
+      [status ?? 'pending']
+    );
+    res.json(rows);
+  })
+);
 
 async function getPayment(id) {
   const { rows } = await query('SELECT * FROM payments WHERE id = $1', [id]);

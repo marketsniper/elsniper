@@ -63,6 +63,18 @@ export interface Paiement {
   [cle: string]: unknown;
 }
 
+/** Paiement enrichi du contexte cible (GET /payments, tableau de bord équipe). */
+export interface PaiementEquipe extends Paiement {
+  trip_id?: string | null;
+  package_id?: string | null;
+  trip_pickup?: string | null;
+  trip_dropoff?: string | null;
+  trip_client_name?: string | null;
+  package_pickup?: string | null;
+  package_dropoff?: string | null;
+  package_qr?: string | null;
+}
+
 /** Session authentifiée persistée dans SecureStore. */
 export interface SessionAuth {
   token: string;
