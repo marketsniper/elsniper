@@ -94,6 +94,72 @@ router.get(
   })
 );
 
+// GET /drivers/:id/stats — compteur de gains du chauffeur (lui-même ou
+// l'équipe) : courses terminées et colis livrés sur trois fenêtres
+// (aujourd'hui depuis minuit à Zanzibar, 7 et 30 derniers jours), avec les
+// gains NETS (prix − commission zanziGo) totalisés par devise. Sert le
+// modèle « payé après chaque course ».
+router.get(
+  '/:id/stats',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    if (!isAdmin(req) && req.auth.driverId !== req.params.id) {
+      throw new HttpError(403, 'forbidden', 'Accès réservé au chauffeur concerné');
+    }
+
+    // Minuit local à Zanzibar (UTC+3, pas d'heure d'été).
+    const EAT_MS = 3 * 3600 * 1000;
+    const maintenantEat = new Date(Date.now() + EAT_MS);
+    const minuitEat =
+      Date.UTC(
+        maintenantEat.getUTCFullYear(),
+        maintenantEat.getUTCMonth(),
+        maintenantEat.getUTCDate()
+      ) - EAT_MS;
+    const JOUR_MS = 24 * 3600 * 1000;
+    const debuts = {
+      today: new Date(minuitEat),
+      week: new Date(minuitEat - 6 * JOUR_MS),
+      month: new Date(minuitEat - 29 * JOUR_MS),
+    };
+
+    const [{ rows: courses }, { rows: colis }] = await Promise.all([
+      query(
+        `SELECT completed_at AS quand, price, commission, currency
+         FROM trips
+         WHERE driver_id = $1 AND status = 'completed' AND completed_at >= $2`,
+        [req.params.id, debuts.month]
+      ),
+      query(
+        `SELECT delivered_at AS quand, price, commission, currency
+         FROM packages
+         WHERE driver_id = $1 AND status = 'delivered' AND delivered_at >= $2`,
+        [req.params.id, debuts.month]
+      ),
+    ]);
+
+    const round2 = (n) => Math.round(n * 100) / 100;
+    const fenetreVide = () => ({ courses: 0, colis: 0, gains: {} });
+    const stats = { today: fenetreVide(), week: fenetreVide(), month: fenetreVide() };
+    const ajouter = (ligne, type) => {
+      const quand = new Date(ligne.quand).getTime();
+      const net = Number(ligne.price) - Number(ligne.commission);
+      for (const cle of ['today', 'week', 'month']) {
+        if (quand >= debuts[cle].getTime()) {
+          stats[cle][type] += 1;
+          stats[cle].gains[ligne.currency] = round2(
+            (stats[cle].gains[ligne.currency] ?? 0) + net
+          );
+        }
+      }
+    };
+    for (const ligne of courses) ajouter(ligne, 'courses');
+    for (const ligne of colis) ajouter(ligne, 'colis');
+
+    res.json(stats);
+  })
+);
+
 // PATCH /drivers/:id/location {lat, lng} — le chauffeur envoie sa position
 // (lui-même uniquement, ou l'équipe). Une seule ligne par chauffeur, écrasée
 // à chaque envoi : aucune trace d'historique n'est conservée.

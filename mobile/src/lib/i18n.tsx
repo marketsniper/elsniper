@@ -145,6 +145,20 @@ const CHAINES = {
   titre_pro: { fr: 'Devenir chauffeur', en: 'Become a driver', sw: 'Kuwa dereva' },
   titre_trajet: { fr: 'Trajet', en: 'Ride', sw: 'Safari' },
   titre_equipe: { fr: 'Équipe zanziGo', en: 'zanziGo team', sw: 'Timu ya zanziGo' },
+  gains_titre: { fr: 'Mes gains', en: 'My earnings', sw: 'Mapato yangu' },
+  gains_aujourdhui: { fr: "Aujourd'hui", en: 'Today', sw: 'Leo' },
+  gains_7j: { fr: '7 derniers jours', en: 'Last 7 days', sw: 'Siku 7 zilizopita' },
+  gains_30j: { fr: '30 derniers jours', en: 'Last 30 days', sw: 'Siku 30 zilizopita' },
+  gains_detail_compte: {
+    fr: '{courses} course·s · {colis} colis',
+    en: '{courses} ride·s · {colis} parcel·s',
+    sw: 'safari {courses} · mizigo {colis}',
+  },
+  gains_note_paiement: {
+    fr: 'Gains nets, commission zanziGo déjà déduite — vous êtes payé après chaque course.',
+    en: 'Net earnings, zanziGo commission already deducted — you are paid after each ride.',
+    sw: 'Mapato halisi, kamisheni ya zanziGo imeshatolewa — unalipwa baada ya kila safari.',
+  },
   courses_colis_titre: {
     fr: 'Colis à ramasser',
     en: 'Parcels to pick up',

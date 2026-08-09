@@ -11,6 +11,7 @@ import {
   authHeaders,
   authenticate,
   createDriverApplication,
+  createTourist,
   createVerifiedDriver,
   nextPhone,
   nextPlate,
@@ -183,5 +184,62 @@ describe('Chauffeurs (drivers)', () => {
     const res = await request(app).get(`/api/drivers/${UNKNOWN_ID}`).set(adminHeaders());
     assert.equal(res.status, 404);
     assert.equal(res.body.error.code, 'not_found');
+  });
+});
+
+describe('Chauffeur — compteur de gains', () => {
+  it('courses terminées et colis livrés comptés avec gains nets ; autre chauffeur → 403', async () => {
+    const { token, user } = await createTourist();
+    const { token: driverToken, driver } = await createVerifiedDriver();
+
+    // Course complète : création → assignation → paiement → départ → arrivée.
+    const trip = await request(app)
+      .post('/api/trips')
+      .set(authHeaders(token))
+      .send({
+        userId: user.id,
+        tripType: 'private',
+        pickupLocation: 'Stone Town',
+        dropoffLocation: 'Kendwa',
+      });
+    assert.equal(trip.status, 201);
+    await request(app)
+      .patch(`/api/trips/${trip.body.id}/assign-driver`)
+      .set(adminHeaders())
+      .send({ driverId: driver.id });
+    const paiement = await request(app)
+      .post(`/api/trips/${trip.body.id}/payment`)
+      .set(authHeaders(token));
+    await request(app)
+      .post(`/api/payments/${paiement.body.id}/confirm`)
+      .set(authHeaders(token));
+    const qr = (await request(app).get(`/api/drivers/${driver.id}`).set(adminHeaders())).body
+      .vehicle_qr_code;
+    await request(app)
+      .patch(`/api/trips/${trip.body.id}/start`)
+      .set(authHeaders(driverToken))
+      .send({ qrCode: qr });
+    const fin = await request(app)
+      .patch(`/api/trips/${trip.body.id}/complete`)
+      .set(authHeaders(driverToken))
+      .send({ qrCode: qr });
+    assert.equal(fin.status, 200);
+
+    const stats = await request(app)
+      .get(`/api/drivers/${driver.id}/stats`)
+      .set(authHeaders(driverToken));
+    assert.equal(stats.status, 200);
+    assert.equal(stats.body.today.courses, 1);
+    // Kendwa (Nord) privé 50 USD, commission 10 % → net 45 USD.
+    assert.equal(stats.body.today.gains.USD, 45);
+    assert.equal(stats.body.week.courses, 1);
+    assert.equal(stats.body.month.courses, 1);
+    assert.equal(stats.body.today.colis, 0);
+
+    const { token: autreToken } = await createVerifiedDriver({ fullName: 'Autre Chauffeur' });
+    const interdit = await request(app)
+      .get(`/api/drivers/${driver.id}/stats`)
+      .set(authHeaders(autreToken));
+    assert.equal(interdit.status, 403);
   });
 });

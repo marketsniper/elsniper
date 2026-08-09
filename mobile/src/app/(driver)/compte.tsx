@@ -1,7 +1,7 @@
 // Mode chauffeur — profil, QR véhicule fixe (VEH-…), langue et déconnexion.
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import React from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import React, { useCallback, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 
@@ -13,10 +13,11 @@ import {
   SelecteurLangue,
   SousTitre,
 } from '@/components/ui';
+import { api, type StatsChauffeur } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useT } from '@/lib/i18n';
 import { couleurs, espaces, ombres, rayons, tailles } from '@/lib/theme';
-import { champ, type StatutVerification } from '@/lib/types';
+import { champ, formaterMontant, type StatutVerification } from '@/lib/types';
 
 /** Initiales (2 lettres max) d'un nom complet. */
 function initiales(nom: string): string {
@@ -32,6 +33,22 @@ export default function EcranCompteChauffeur() {
   const { session, deconnexion } = useAuth();
   const { t } = useT();
   const chauffeur = session?.driver ?? null;
+
+  // Compteur de gains (courses terminées + colis livrés, nets de commission).
+  const [stats, setStats] = useState<StatsChauffeur | null>(null);
+  const chargerStats = useCallback(async () => {
+    if (!chauffeur?.id) return;
+    try {
+      setStats(await api.statsChauffeur(chauffeur.id));
+    } catch {
+      // silencieux : la carte gains reste vide
+    }
+  }, [chauffeur?.id]);
+  useFocusEffect(
+    useCallback(() => {
+      chargerStats();
+    }, [chargerStats])
+  );
 
   const statutVerif =
     champ<StatutVerification>(chauffeur, 'verification_status', 'verificationStatus') ?? 'pending';
@@ -74,6 +91,37 @@ export default function EcranCompteChauffeur() {
           <Badge texte={t('compte_avis', { note: moyenne, n: nbNotes })} ton="primaire" />
         )}
       </Carte>
+
+      {/* Compteur de gains : aujourd'hui / 7 jours / 30 jours. */}
+      {verifie && stats && (
+        <Carte>
+          <Text style={styles.titreGains}>{t('gains_titre')}</Text>
+          {(
+            [
+              ['gains_aujourdhui', stats.today],
+              ['gains_7j', stats.week],
+              ['gains_30j', stats.month],
+            ] as const
+          ).map(([cle, fenetre]) => (
+            <View key={cle} style={styles.ligneGains}>
+              <View style={styles.colonneGains}>
+                <Text style={styles.labelGains}>{t(cle)}</Text>
+                <Text style={styles.detailGains}>
+                  {t('gains_detail_compte', { courses: fenetre.courses, colis: fenetre.colis })}
+                </Text>
+              </View>
+              <Text style={styles.montantGains}>
+                {Object.keys(fenetre.gains).length > 0
+                  ? Object.entries(fenetre.gains)
+                      .map(([devise, montant]) => formaterMontant(montant, devise))
+                      .join(' + ')
+                  : '—'}
+              </Text>
+            </View>
+          ))}
+          <Text style={styles.noteGains}>{t('gains_note_paiement')}</Text>
+        </Carte>
+      )}
 
       {qrVehicule && (
         <Carte style={styles.carteQr}>
@@ -125,6 +173,45 @@ export default function EcranCompteChauffeur() {
 }
 
 const styles = StyleSheet.create({
+  titreGains: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: couleurs.encre,
+  },
+  ligneGains: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: espaces.m,
+    paddingVertical: espaces.xs,
+    borderBottomWidth: 1,
+    borderBottomColor: couleurs.bordure,
+  },
+  colonneGains: {
+    flex: 1,
+    gap: 2,
+  },
+  labelGains: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: couleurs.encre,
+  },
+  detailGains: {
+    fontSize: 12.5,
+    color: couleurs.texteSecondaire,
+  },
+  montantGains: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: couleurs.primaire,
+    textAlign: 'right',
+    flexShrink: 1,
+  },
+  noteGains: {
+    fontSize: 12.5,
+    color: couleurs.texteSecondaire,
+    lineHeight: 18,
+  },
   carteIdentite: {
     alignItems: 'center',
     gap: espaces.s,

@@ -498,6 +498,26 @@ export async function reserverPlacesRide(id: string, seats: number): Promise<Rid
   return requete<Ride>(`/rides/${id}/book`, { methode: 'POST', corps: { seats } });
 }
 
+/** Compteur de gains d'un chauffeur (GET /drivers/:id/stats). */
+export interface StatsChauffeur {
+  today: FenetreStats;
+  week: FenetreStats;
+  month: FenetreStats;
+}
+export interface FenetreStats {
+  courses: number;
+  colis: number;
+  gains: Record<string, number>;
+}
+
+/**
+ * GET /drivers/:id/stats — courses terminées, colis livrés et gains NETS
+ * (commission déduite) sur aujourd'hui / 7 jours / 30 jours.
+ */
+export async function statsChauffeur(driverId: string): Promise<StatsChauffeur> {
+  return requete<StatsChauffeur>(`/drivers/${driverId}/stats`);
+}
+
 /** Position GPS d'un chauffeur (table driver_positions). */
 export interface PositionChauffeur {
   driver_id: string;
@@ -676,6 +696,7 @@ export const api = {
   payerColis,
   annulerColis,
   envoyerPositionChauffeur,
+  statsChauffeur,
   positionColis,
   colisParQr,
   recupererColis,
