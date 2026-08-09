@@ -472,6 +472,16 @@ export async function payerColis(id: string): Promise<Paiement> {
 }
 
 /**
+ * GET /packages — la « bourse aux colis » du mode chauffeur : colis payés en
+ * attente de ramassage (hôtels partenaires et clients), sans QR ni
+ * coordonnées du destinataire avant le scan de ramassage.
+ */
+export async function listerColisARamasser(): Promise<Colis[]> {
+  const reponse = await requete<unknown>('/packages');
+  return commeListe<Colis>(reponse, 'packages');
+}
+
+/**
  * POST /packages/:id/cancel — annulation par l'expéditeur tant que le colis
  * n'est pas payé (sinon 409 : passer par l'équipe sur WhatsApp).
  */
@@ -662,6 +672,7 @@ export const api = {
   creerColis,
   obtenirColis,
   listerColisHotel,
+  listerColisARamasser,
   payerColis,
   annulerColis,
   envoyerPositionChauffeur,

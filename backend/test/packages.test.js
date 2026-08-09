@@ -487,3 +487,47 @@ describe('Colis — suivi GPS pendant la livraison', () => {
     assert.equal(lecture.status, 403);
   });
 });
+
+describe('Colis — bourse aux colis (mode chauffeur)', () => {
+  it('un chauffeur liste les colis payés sans chauffeur ; un client → 403', async () => {
+    const { token, user } = await createTourist();
+    const { token: hotelToken, hotel } = await createHotel();
+    const { token: driverToken } = await createVerifiedDriver();
+
+    const pkgHotel = await createHotelPackage(hotelToken, hotel.id);
+    await payPackage(hotelToken, pkgHotel.id);
+    const pkgNonPaye = await createUserPackage(token, user.id);
+
+    const liste = await request(app).get('/api/packages').set(authHeaders(driverToken));
+    assert.equal(liste.status, 200);
+    const ligne = liste.body.find((p) => p.id === pkgHotel.id);
+    assert.ok(ligne, 'le colis hôtel payé est proposé aux chauffeurs');
+    assert.equal(ligne.sender_hotel_name, ligne.sender_hotel_name); // présent
+    assert.ok(ligne.sender_hotel_name);
+    assert.equal(ligne.qr_code, undefined, 'pas de QR avant le ramassage');
+    assert.equal(ligne.recipient_phone, undefined, 'pas de coordonnées avant le ramassage');
+    assert.ok(!liste.body.some((p) => p.id === pkgNonPaye.id), 'les colis non payés sont absents');
+
+    const interdit = await request(app).get('/api/packages').set(authHeaders(token));
+    assert.equal(interdit.status, 403);
+  });
+
+  it('un colis ramassé disparaît de la bourse', async () => {
+    const { token, user } = await createTourist();
+    const { token: driverToken } = await createVerifiedDriver();
+    const pkg = await createUserPackage(token, user.id);
+    await payPackage(token, pkg.id);
+
+    const avant = await request(app).get('/api/packages').set(authHeaders(driverToken));
+    assert.ok(avant.body.some((p) => p.id === pkg.id));
+
+    const pickup = await request(app)
+      .patch(`/api/packages/${pkg.id}/pickup`)
+      .set(authHeaders(driverToken))
+      .send({ qrCode: pkg.qr_code, photoUrl: PHOTO_URL });
+    assert.equal(pickup.status, 200);
+
+    const apres = await request(app).get('/api/packages').set(authHeaders(driverToken));
+    assert.ok(!apres.body.some((p) => p.id === pkg.id));
+  });
+});

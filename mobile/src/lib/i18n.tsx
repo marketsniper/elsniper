@@ -145,6 +145,22 @@ const CHAINES = {
   titre_pro: { fr: 'Devenir chauffeur', en: 'Become a driver', sw: 'Kuwa dereva' },
   titre_trajet: { fr: 'Trajet', en: 'Ride', sw: 'Safari' },
   titre_equipe: { fr: 'Équipe zanziGo', en: 'zanziGo team', sw: 'Timu ya zanziGo' },
+  courses_colis_titre: {
+    fr: 'Colis à ramasser',
+    en: 'Parcels to pick up',
+    sw: 'Mizigo ya kuchukua',
+  },
+  courses_colis_vide: {
+    fr: 'Aucun colis en attente de ramassage pour le moment — les envois payés des hôtels et des clients apparaîtront ici.',
+    en: 'No parcels awaiting pickup right now — paid deliveries from hotels and customers will appear here.',
+    sw: 'Hakuna mizigo inayosubiri kuchukuliwa kwa sasa — mizigo iliyolipiwa ya hoteli na wateja itaonekana hapa.',
+  },
+  courses_colis_client: { fr: 'Client', en: 'Customer', sw: 'Mteja' },
+  courses_colis_scanner: {
+    fr: 'Scanner le colis au ramassage',
+    en: 'Scan the parcel at pickup',
+    sw: 'Skani mzigo wakati wa kuchukua',
+  },
   courses_position_active: {
     fr: 'Position partagée pendant vos livraisons — gardez l\'app ouverte en roulant.',
     en: 'Location shared during your deliveries — keep the app open while driving.',

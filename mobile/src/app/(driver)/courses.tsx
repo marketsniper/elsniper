@@ -21,9 +21,9 @@ import {
 import { api, ErreurApi } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { ajouterCourseLocale, listerCoursesLocales } from '@/lib/colisLocal';
-import { formaterDateRelativeI18n, useT } from '@/lib/i18n';
+import { formaterDateRelativeI18n, libelleTailleColis, useT } from '@/lib/i18n';
 import { couleurs, espaces, ombres, rayons } from '@/lib/theme';
-import { champ, formaterPrix, type StatutTrajet, type Trajet } from '@/lib/types';
+import { champ, formaterMontant, formaterPrix, type Colis, type StatutTrajet, type Trajet } from '@/lib/types';
 
 export default function EcranCourses() {
   const router = useRouter();
@@ -31,6 +31,8 @@ export default function EcranCourses() {
   const { t } = useT();
   const [idSaisi, setIdSaisi] = useState('');
   const [recentes, setRecentes] = useState<Trajet[]>([]);
+  // Bourse aux colis : colis payés en attente de ramassage (hôtels en tête).
+  const [colisDispo, setColisDispo] = useState<Colis[]>([]);
   const [erreur, setErreur] = useState('');
   const [charge, setCharge] = useState(false);
 
@@ -86,6 +88,11 @@ export default function EcranCourses() {
       ids.map((courseId) => api.obtenirTrajet(courseId).catch(() => null))
     );
     setRecentes(resultats.filter((trajet): trajet is Trajet => trajet !== null));
+    try {
+      setColisDispo(await api.listerColisARamasser());
+    } catch {
+      // silencieux : la section colis reste vide
+    }
   }, [chauffeurId]);
 
   useFocusEffect(
@@ -150,6 +157,61 @@ export default function EcranCourses() {
           onPress={() => router.push('/(driver)/scanner')}
         />
       </Carte>
+
+      {/* Bourse aux colis : colis payés à ramasser (envois des hôtels en tête).
+          Ramassage via l'onglet Scanner — le QR est sur le colis. */}
+      <Text style={styles.titreSection}>
+        {t('courses_colis_titre')} ({colisDispo.length})
+      </Text>
+      {colisDispo.length === 0 && (
+        <EncartInfo icone="cube-outline">{t('courses_colis_vide')}</EncartInfo>
+      )}
+      {colisDispo.map((colis) => {
+        const nomHotel = champ<string>(colis, 'sender_hotel_name');
+        const nomClient = champ<string>(colis, 'sender_user_name');
+        const prix = Number(champ(colis, 'price') ?? NaN);
+        const commission = Number(champ(colis, 'commission') ?? NaN);
+        const devise = String(champ(colis, 'currency') ?? '');
+        const net =
+          Number.isFinite(prix) && Number.isFinite(commission)
+            ? Math.round((prix - commission) * 100) / 100
+            : null;
+        return (
+          <View key={colis.id} style={styles.carte}>
+            <View style={styles.enTete}>
+              <Text style={styles.type}>
+                {nomHotel
+                  ? `🏨 ${nomHotel}`
+                  : `${t('courses_colis_client')}${nomClient ? ` · ${nomClient}` : ''}`}
+              </Text>
+              <Text style={styles.type}>
+                {libelleTailleColis(champ(colis, 'size'), t)}
+              </Text>
+            </View>
+            <Text style={styles.itineraire}>
+              {champ(colis, 'pickup_location', 'pickupLocation') ?? '?'}{'  '}
+              <Text style={styles.fleche}>→</Text>{'  '}
+              {champ(colis, 'dropoff_location', 'dropoffLocation') ?? '?'}
+            </Text>
+            <View style={styles.pied}>
+              <Text style={styles.date}>
+                {formaterDateRelativeI18n(champ(colis, 'created_at', 'createdAt'), t)}
+              </Text>
+              {net !== null && (
+                <Text style={styles.prix}>
+                  {t('gain_net')} : {formaterMontant(net, devise)}
+                </Text>
+              )}
+            </View>
+            <Bouton
+              titre={t('courses_colis_scanner')}
+              icone="qr-code-outline"
+              variante="secondaire"
+              onPress={() => router.push('/(driver)/scanner')}
+            />
+          </View>
+        );
+      })}
 
       <Text style={styles.titreSection}>{t('courses_recentes')}</Text>
       {recentes.length === 0 && (

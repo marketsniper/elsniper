@@ -122,6 +122,33 @@ router.post(
   })
 );
 
+// GET /packages — la « bourse aux colis » du mode chauffeur : tous les colis
+// PAYÉS en attente de ramassage (aucun chauffeur assigné), notamment les
+// envois programmés par les hôtels partenaires. Chauffeurs et équipe
+// uniquement. Volontairement minimal : ni QR ni coordonnées du destinataire
+// avant le ramassage (le chauffeur les obtient en scannant le colis).
+router.get(
+  '/',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    if (!isAdmin(req) && !req.auth.driverId) {
+      throw new HttpError(403, 'forbidden', 'Accès réservé aux chauffeurs');
+    }
+    const { rows } = await query(
+      `SELECT p.id, p.size, p.status, p.sender_type, p.pickup_location, p.dropoff_location,
+              p.price, p.commission, p.currency, p.created_at,
+              h.name AS sender_hotel_name, u.full_name AS sender_user_name
+       FROM packages p
+       LEFT JOIN hotels h ON h.id = p.sender_hotel_id
+       LEFT JOIN users u ON u.id = p.sender_user_id
+       WHERE p.status = 'paid' AND p.driver_id IS NULL
+       ORDER BY p.created_at ASC
+       LIMIT 100`
+    );
+    res.json(rows);
+  })
+);
+
 // GET /packages/by-qr/:qrCode — lookup par QR (chauffeur authentifié ou équipe).
 // Déclarée avant /:id pour ne pas être interceptée par la route paramétrée.
 router.get(
