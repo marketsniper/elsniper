@@ -203,3 +203,67 @@ describe('Trajets partagés (rides)', () => {
     assert.equal(byAdmin.status, 200);
   });
 });
+
+describe('Trajets partagés — réservation de places dans l\'app', () => {
+  it('un touriste réserve 2 places → décompte automatique, trace et notification', async () => {
+    const { token: driverToken } = await createVerifiedDriver();
+    const ride = (await postRide(driverToken)).body;
+    const { token } = await createTourist();
+
+    const res = await request(app)
+      .post(`/api/rides/${ride.id}/book`)
+      .set(authHeaders(token))
+      .send({ seats: 2 });
+    assert.equal(res.status, 201, JSON.stringify(res.body));
+    assert.equal(res.body.seats_available, 2, '4 places − 2 réservées');
+    assert.equal(res.body.booked_seats, 2);
+    assert.match(res.body.whatsapp_link, /wa\.me/);
+    assert.match(decodeURIComponent(res.body.whatsapp_link), /Places réservées: 2/);
+    // Cloison touriste : jamais le prix TZS du chauffeur.
+    assert.equal(res.body.price_per_seat, undefined);
+
+    // Le chauffeur voit ses places restantes à jour.
+    const mine = await request(app).get('/api/rides/mine').set(authHeaders(driverToken));
+    assert.equal(Number(mine.body[0].seats_available), 2);
+  });
+
+  it('surréservation → 409 not_enough_seats, places inchangées', async () => {
+    const { token: driverToken } = await createVerifiedDriver();
+    const ride = (await postRide(driverToken, { seatsTotal: 2 })).body;
+    const { token } = await createTourist();
+
+    const trop = await request(app)
+      .post(`/api/rides/${ride.id}/book`)
+      .set(authHeaders(token))
+      .send({ seats: 3 });
+    assert.equal(trop.status, 409);
+    assert.equal(trop.body.error.code, 'not_enough_seats');
+
+    const ok = await request(app)
+      .post(`/api/rides/${ride.id}/book`)
+      .set(authHeaders(token))
+      .send({ seats: 2 });
+    assert.equal(ok.status, 201);
+    assert.equal(ok.body.seats_available, 0);
+  });
+
+  it('trajet clôturé ou passé → 409 ride_closed ; sans jeton → 401', async () => {
+    const { token: driverToken } = await createVerifiedDriver();
+    const ride = (await postRide(driverToken)).body;
+    await request(app)
+      .patch(`/api/rides/${ride.id}`)
+      .set(authHeaders(driverToken))
+      .send({ status: 'closed' });
+    const { token } = await createTourist();
+
+    const ferme = await request(app)
+      .post(`/api/rides/${ride.id}/book`)
+      .set(authHeaders(token))
+      .send({ seats: 1 });
+    assert.equal(ferme.status, 409);
+    assert.equal(ferme.body.error.code, 'ride_closed');
+
+    const sansJeton = await request(app).post(`/api/rides/${ride.id}/book`).send({ seats: 1 });
+    assert.equal(sansJeton.status, 401);
+  });
+});

@@ -748,7 +748,27 @@ const CHAINES = {
   rides_places_restantes: { fr: '{n} places restantes', en: '{n} seats left', sw: 'Viti {n} vimebaki' },
   rides_chauffeur_defaut: { fr: 'Chauffeur zanziGo', en: 'zanziGo driver', sw: 'Dereva wa zanziGo' },
   rides_par_place: { fr: '/ place', en: '/ seat', sw: '/ kiti' },
-  rides_reserver: { fr: 'Réserver une place', en: 'Book a seat', sw: 'Hifadhi kiti' },
+  rides_reserver: { fr: 'Réserver', en: 'Book', sw: 'Hifadhi' },
+  rides_reservation_ok: {
+    fr: 'Réservation confirmée ({n} place·s) — envoyez le message WhatsApp qui s\'ouvre pour prévenir l\'équipe. 🎉',
+    en: 'Booking confirmed ({n} seat·s) — send the WhatsApp message that opens to notify the team. 🎉',
+    sw: 'Uhifadhi umethibitishwa (viti {n}) — tuma ujumbe wa WhatsApp unaofunguka kuijulisha timu. 🎉',
+  },
+  rides_erreur_places: {
+    fr: 'Plus assez de places disponibles sur ce trajet.',
+    en: 'Not enough seats left on this ride.',
+    sw: 'Viti havitoshi tena kwenye safari hii.',
+  },
+  rides_erreur_ferme: {
+    fr: 'Ce trajet n\'est plus ouvert à la réservation.',
+    en: 'This ride is no longer open for booking.',
+    sw: 'Safari hii haipokei uhifadhi tena.',
+  },
+  rides_erreur_reservation: {
+    fr: 'Réservation impossible pour le moment — réessayez.',
+    en: 'Booking failed for now — try again.',
+    sw: 'Uhifadhi umeshindikana kwa sasa — jaribu tena.',
+  },
 
   // --- Mes trajets --------------------------------------------------------------
   trajets_vide_titre: { fr: "Aucun trajet pour l'instant", en: 'No rides yet', sw: 'Hakuna safari bado' },

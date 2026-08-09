@@ -1,22 +1,20 @@
 // Section « Trajets partagés à venir » : trajets ouverts postés par les
-// chauffeurs (GET /rides). Réservation d'une place via WhatsApp (lien
-// whatsapp_link pré-rempli vers l'équipe).
+// chauffeurs (GET /rides). Réservation de place(s) DANS L'APP : choix du
+// nombre de places (− / +), POST /rides/:id/book décompte automatiquement
+// les places sur l'annonce du chauffeur, puis WhatsApp s'ouvre avec la
+// notification pré-remplie pour l'équipe.
 // Devise affichée : le serveur envoie price_per_seat_usd aux profils USD
-// (17 USD touriste, 15,30 USD résident vérifié) et price_per_seat (TZS) aux
-// locaux/hôtels/chauffeurs — on affiche simplement le champ présent.
+// et price_per_seat (TZS) aux locaux/chauffeurs — on affiche le champ présent.
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Selecteur } from '@/components/Selecteur';
-import { api } from '@/lib/api';
+import { api, ErreurApi } from '@/lib/api';
 import { useT } from '@/lib/i18n';
 import { couleurs, espaces, ombres, rayons } from '@/lib/theme';
 import { champ, DESTINATIONS_RIDES, formaterDate, formaterMontant, type Ride } from '@/lib/types';
-
-// Contact WhatsApp de l'équipe zanziGo (secours si whatsapp_link absent).
-const WHATSAPP_EQUIPE = 'https://wa.me/255666241749';
 
 export function RidesPartages() {
   const { t } = useT();
@@ -26,6 +24,38 @@ export function RidesPartages() {
   const toutesDestinations = t('rides_toutes');
   const [filtreDestination, setFiltreDestination] = useState('');
   const [destinations, setDestinations] = useState<string[]>(DESTINATIONS_RIDES);
+  // Nombre de places choisi par trajet (défaut 1) et réservation en cours.
+  const [placesChoisies, setPlacesChoisies] = useState<Record<string, number>>({});
+  const [reservationEnCours, setReservationEnCours] = useState<string | null>(null);
+  const [messageOk, setMessageOk] = useState('');
+  const [erreur, setErreur] = useState('');
+
+  const reserver = async (ride: Ride, places: number) => {
+    setReservationEnCours(ride.id);
+    setErreur('');
+    setMessageOk('');
+    try {
+      const reponse = await api.reserverPlacesRide(ride.id, places);
+      setMessageOk(t('rides_reservation_ok', { n: places }));
+      setPlacesChoisies((prev) => ({ ...prev, [ride.id]: 1 }));
+      await rafraichir();
+      // Notification WhatsApp pré-remplie vers l'équipe.
+      const lien = champ<string>(reponse, 'whatsapp_link', 'whatsappLink');
+      if (lien) await Linking.openURL(lien);
+    } catch (e) {
+      if (e instanceof ErreurApi && e.code === 'not_enough_seats') {
+        setErreur(t('rides_erreur_places'));
+        await rafraichir();
+      } else if (e instanceof ErreurApi && e.code === 'ride_closed') {
+        setErreur(t('rides_erreur_ferme'));
+        await rafraichir();
+      } else {
+        setErreur(e instanceof ErreurApi ? e.message : t('rides_erreur_reservation'));
+      }
+    } finally {
+      setReservationEnCours(null);
+    }
+  };
 
   const rafraichir = useCallback(async () => {
     setCharge(true);
@@ -70,6 +100,19 @@ export function RidesPartages() {
         />
       )}
 
+      {!!messageOk && (
+        <View style={styles.encartOk}>
+          <Ionicons name="checkmark-circle" size={18} color={couleurs.succes} />
+          <Text style={styles.texteOk}>{messageOk}</Text>
+        </View>
+      )}
+      {!!erreur && (
+        <View style={styles.encartErreur}>
+          <Ionicons name="alert-circle" size={18} color={couleurs.danger} />
+          <Text style={styles.texteErreur}>{erreur}</Text>
+        </View>
+      )}
+
       {chargeInitiale && charge && (
         <ActivityIndicator color={couleurs.primaire} style={styles.chargement} />
       )}
@@ -103,7 +146,8 @@ export function RidesPartages() {
           noteBrute !== undefined && Number.isFinite(Number(noteBrute))
             ? Number(noteBrute).toFixed(1)
             : null;
-        const lien = champ<string>(ride, 'whatsapp_link', 'whatsappLink') ?? WHATSAPP_EQUIPE;
+        const places = Math.min(placesChoisies[ride.id] ?? 1, Math.max(placesRestantes, 1));
+        const enCours = reservationEnCours === ride.id;
         return (
           <View key={ride.id} style={styles.carte}>
             <Text style={styles.itineraire}>
@@ -148,14 +192,50 @@ export function RidesPartages() {
                   ? `${formaterMontant(prixPlace, devise)} ${t('rides_par_place')}`
                   : '—'}
               </Text>
-              <Pressable
-                onPress={() => Linking.openURL(lien)}
-                accessibilityRole="button"
-                style={({ pressed }) => [styles.boutonReserver, pressed && { opacity: 0.7 }]}
-              >
-                <Ionicons name="logo-whatsapp" size={16} color={couleurs.blanc} />
-                <Text style={styles.texteReserver}>{t('rides_reserver')}</Text>
-              </Pressable>
+              <View style={styles.zoneReservation}>
+                <View style={styles.compteur}>
+                  <Pressable
+                    onPress={() =>
+                      setPlacesChoisies((prev) => ({ ...prev, [ride.id]: Math.max(1, places - 1) }))
+                    }
+                    hitSlop={8}
+                    accessibilityRole="button"
+                    style={({ pressed }) => [styles.boutonCompteur, pressed && { opacity: 0.6 }]}
+                  >
+                    <Ionicons name="remove" size={16} color={couleurs.primaireFonce} />
+                  </Pressable>
+                  <Text style={styles.nbPlaces}>{places}</Text>
+                  <Pressable
+                    onPress={() =>
+                      setPlacesChoisies((prev) => ({
+                        ...prev,
+                        [ride.id]: Math.min(placesRestantes, places + 1),
+                      }))
+                    }
+                    hitSlop={8}
+                    accessibilityRole="button"
+                    style={({ pressed }) => [styles.boutonCompteur, pressed && { opacity: 0.6 }]}
+                  >
+                    <Ionicons name="add" size={16} color={couleurs.primaireFonce} />
+                  </Pressable>
+                </View>
+                <Pressable
+                  onPress={() => reserver(ride, places)}
+                  disabled={enCours || placesRestantes < 1}
+                  accessibilityRole="button"
+                  style={({ pressed }) => [
+                    styles.boutonReserver,
+                    (pressed || enCours) && { opacity: 0.7 },
+                  ]}
+                >
+                  {enCours ? (
+                    <ActivityIndicator size="small" color={couleurs.blanc} />
+                  ) : (
+                    <Ionicons name="checkmark-circle-outline" size={16} color={couleurs.blanc} />
+                  )}
+                  <Text style={styles.texteReserver}>{t('rides_reserver')}</Text>
+                </Pressable>
+              </View>
             </View>
           </View>
         );
@@ -235,6 +315,66 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: espaces.m,
     marginTop: espaces.xs,
+    flexWrap: 'wrap',
+  },
+  zoneReservation: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: espaces.s,
+  },
+  compteur: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: espaces.s,
+    backgroundColor: couleurs.blanc,
+    borderRadius: rayons.pastille,
+    borderWidth: 1,
+    borderColor: couleurs.bordure,
+    paddingHorizontal: espaces.s,
+    paddingVertical: 4,
+  },
+  boutonCompteur: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: couleurs.primaireClair,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  nbPlaces: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: couleurs.encre,
+    minWidth: 18,
+    textAlign: 'center',
+  },
+  encartOk: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: espaces.s,
+    backgroundColor: couleurs.succesFond,
+    borderRadius: rayons.carte,
+    padding: espaces.m,
+  },
+  texteOk: {
+    flex: 1,
+    fontSize: 13,
+    color: couleurs.succes,
+    fontWeight: '600',
+  },
+  encartErreur: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: espaces.s,
+    backgroundColor: couleurs.dangerFond,
+    borderRadius: rayons.carte,
+    padding: espaces.m,
+  },
+  texteErreur: {
+    flex: 1,
+    fontSize: 13,
+    color: couleurs.danger,
+    fontWeight: '600',
   },
   prix: {
     fontSize: 15,

@@ -479,6 +479,15 @@ export async function annulerColis(id: string): Promise<Colis> {
   return requete<Colis>(`/packages/${id}/cancel`, { methode: 'POST' });
 }
 
+/**
+ * POST /rides/:id/book {seats} — réserve des places sur un trajet partagé :
+ * décompte automatique côté serveur (409 not_enough_seats / ride_closed),
+ * renvoie le trajet à jour + whatsapp_link de notification pour l'équipe.
+ */
+export async function reserverPlacesRide(id: string, seats: number): Promise<Ride> {
+  return requete<Ride>(`/rides/${id}/book`, { methode: 'POST', corps: { seats } });
+}
+
 /** Position GPS d'un chauffeur (table driver_positions). */
 export interface PositionChauffeur {
   driver_id: string;
@@ -648,6 +657,7 @@ export const api = {
   listerRides,
   listerMesRides,
   modifierRide,
+  reserverPlacesRide,
   lieuxRides,
   creerColis,
   obtenirColis,

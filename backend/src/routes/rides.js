@@ -189,6 +189,94 @@ router.get(
   })
 );
 
+// POST /rides/:id/book {seats} — réservation de place(s) DANS L'APP :
+// décompte atomique des places restantes sur l'annonce du chauffeur (le
+// chauffeur voit ses places baisser en direct), trace en ride_bookings, et
+// lien WhatsApp pré-rempli vers l'équipe pour l'avertir de la réservation.
+router.post(
+  '/:id/book',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const { seats } = z
+      .object({ seats: z.number().int().min(1).max(8) })
+      .parse(req.body);
+    if (!req.auth.userId && !req.auth.hotelId && !isAdmin(req)) {
+      throw new HttpError(403, 'forbidden', 'Réservé aux clients et aux hôtels partenaires');
+    }
+
+    const { rows: rideRows } = await query('SELECT * FROM posted_rides WHERE id = $1', [
+      req.params.id,
+    ]);
+    const ride = rideRows[0];
+    if (!ride) throw notFound('Trajet partagé');
+    if (ride.status !== 'open' || new Date(ride.departure_at).getTime() <= Date.now()) {
+      throw new HttpError(409, 'ride_closed', 'Ce trajet n\'est plus ouvert à la réservation');
+    }
+
+    // Décrément ATOMIQUE : la condition seats_available >= N dans le UPDATE
+    // empêche deux clients de prendre les mêmes places en même temps.
+    const { rows: updated } = await query(
+      `UPDATE posted_rides
+       SET seats_available = seats_available - $2
+       WHERE id = $1 AND status = 'open' AND seats_available >= $2
+       RETURNING *`,
+      [req.params.id, seats]
+    );
+    if (!updated[0]) {
+      throw new HttpError(
+        409,
+        'not_enough_seats',
+        `Plus assez de places disponibles (demandées: ${seats}, restantes: ${ride.seats_available})`
+      );
+    }
+    const rideMaj = updated[0];
+
+    // Étiquette du réservateur pour le message à l'équipe.
+    let booker = 'équipe zanziGo';
+    if (req.auth.userId) {
+      const { rows } = await query('SELECT full_name, phone FROM users WHERE id = $1', [
+        req.auth.userId,
+      ]);
+      if (rows[0]) booker = `${rows[0].full_name} (${rows[0].phone})`;
+    } else if (req.auth.hotelId) {
+      const { rows } = await query('SELECT name, phone FROM hotels WHERE id = $1', [
+        req.auth.hotelId,
+      ]);
+      if (rows[0]) booker = `${rows[0].name} (hôtel, ${rows[0].phone})`;
+    }
+
+    await query(
+      `INSERT INTO ride_bookings (ride_id, user_id, hotel_id, seats)
+       VALUES ($1, $2, $3, $4)`,
+      [rideMaj.id, req.auth.userId ?? null, req.auth.hotelId ?? null, seats]
+    );
+
+    const depart = new Date(rideMaj.departure_at).toLocaleString('fr-FR', {
+      timeZone: 'Africa/Dar_es_Salaam',
+      dateStyle: 'short',
+      timeStyle: 'short',
+    });
+    const notification = buildTeamNotificationLink(
+      [
+        '🚌 Réservation confirmée — trajet partagé zanziGo',
+        `Trajet: ${rideMaj.origin} → ${rideMaj.destination}`,
+        `Départ: ${depart}`,
+        `Places réservées: ${seats} (restantes: ${rideMaj.seats_available})`,
+        `Client: ${booker}`,
+        `Réf: ${rideMaj.id}`,
+      ].join('\n')
+    );
+
+    const pricing = await viewerPricing(req);
+    const sortie = serializeRide(rideMaj, pricing);
+    // Le lien de CETTE réponse notifie la réservation (et remplace le lien
+    // générique « demande de place »).
+    sortie.whatsapp_link = notification;
+    sortie.booked_seats = seats;
+    res.status(201).json(sortie);
+  })
+);
+
 // PATCH /rides/:id — mise à jour par le chauffeur propriétaire (ou l'équipe) :
 // places restantes après une réservation, clôture ou annulation.
 router.patch(
