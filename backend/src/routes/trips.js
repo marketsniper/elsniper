@@ -5,9 +5,10 @@ import { HttpError, notFound } from '../errors.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { isAdmin, requireAuth, requireAdmin } from '../middleware/auth.js';
 import { priceTrip } from '../services/pricingService.js';
-import { createPaymentOrder } from '../services/pesapalService.js';
+import { createPaymentOrder, isStubMode } from '../services/pesapalService.js';
 import { circuitPaiementUsd } from '../services/paypalService.js';
 import { buildTeamNotificationLink, tripRequestMessage } from '../services/whatsappService.js';
+import { randomUUID } from 'node:crypto';
 
 const router = Router();
 
@@ -296,8 +297,27 @@ router.post(
       currency: trip.currency,
       description: `zanziGo trajet ${trip.id}`,
     });
+    // Sans PayPal ni clés Pesapal : lien WhatsApp vers l'équipe (montant et
+    // référence pré-remplis), validation dans le tableau de bord — même
+    // circuit manuel que les colis. Avec clés Pesapal : lien Pesapal réel.
+    let circuit = paypal;
+    if (!circuit && isStubMode()) {
+      circuit = {
+        reference: `WHATSAPP-${randomUUID()}`,
+        paymentLink: buildTeamNotificationLink(
+          [
+            '💳 Paiement course zanziGo',
+            `Réf: ${trip.id}`,
+            `Trajet: ${trip.pickup_location} → ${trip.dropoff_location}`,
+            `Montant: ${trip.price} ${trip.currency}`,
+            'Bonjour, je souhaite régler cette course — merci de m\'envoyer le lien de paiement.',
+          ].join('\n')
+        ),
+        method: 'manual',
+      };
+    }
     const { reference, paymentLink } =
-      paypal ??
+      circuit ??
       (await createPaymentOrder({
         amount: trip.price,
         currency: trip.currency,
