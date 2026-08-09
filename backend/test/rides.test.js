@@ -221,9 +221,15 @@ describe('Trajets partagés — réservation de places dans l\'app', () => {
     // Cloison touriste : jamais le prix TZS du chauffeur.
     assert.equal(res.body.price_per_seat, undefined);
 
-    // Le chauffeur voit ses places restantes à jour.
+    // Le chauffeur voit ses places restantes à jour ET le détail de la
+    // réservation : type de client et prix de la place selon ce type.
     const mine = await request(app).get('/api/rides/mine').set(authHeaders(driverToken));
     assert.equal(Number(mine.body[0].seats_available), 2);
+    assert.equal(mine.body[0].bookings.length, 1);
+    assert.equal(mine.body[0].bookings[0].seats, 2);
+    assert.equal(mine.body[0].bookings[0].client_type, 'tourist');
+    assert.equal(mine.body[0].bookings[0].price_per_seat, 18); // zone Nord, USD touriste
+    assert.equal(mine.body[0].bookings[0].currency, 'USD');
   });
 
   it('surréservation → 409 not_enough_seats, places inchangées', async () => {

@@ -176,7 +176,10 @@ router.get(
   })
 );
 
-// GET /rides/mine — les trajets du chauffeur connecté (tous statuts).
+// GET /rides/mine — les trajets du chauffeur connecté (tous statuts), avec le
+// détail des réservations : qui a réservé, combien de places, et le PRIX PAR
+// PLACE SELON LE TYPE DE CLIENT (touriste/résident/hôtel en USD, local en
+// TZS) — c'est ainsi que le chauffeur connaît la valeur de chaque place.
 router.get(
   '/mine',
   requireAuth,
@@ -188,7 +191,61 @@ router.get(
       `SELECT * FROM posted_rides WHERE driver_id = $1 ORDER BY departure_at DESC`,
       [req.auth.driverId]
     );
-    res.json(rows.map((r) => serializeRide(r, PRICING_TZS)));
+
+    const round2 = (n) => Math.round(n * 100) / 100;
+    const parRide = {};
+    if (rows.length > 0) {
+      const { rows: reservations } = await query(
+        `SELECT b.ride_id, b.seats, b.created_at,
+                u.full_name AS user_name, u.account_type, u.verification_status,
+                h.name AS hotel_name
+         FROM ride_bookings b
+         LEFT JOIN users u ON u.id = b.user_id
+         LEFT JOIN hotels h ON h.id = b.hotel_id
+         WHERE b.ride_id = ANY($1)
+         ORDER BY b.created_at ASC`,
+        [rows.map((r) => r.id)]
+      );
+      for (const b of reservations) {
+        (parRide[b.ride_id] ??= []).push(b);
+      }
+    }
+
+    res.json(
+      rows.map((r) => {
+        const out = serializeRide(r, PRICING_TZS);
+        const usd = sharedSeatUsdForRoute(r.origin, r.destination);
+        out.bookings = (parRide[r.id] ?? []).map((b) => {
+          if (b.hotel_name) {
+            return {
+              seats: b.seats,
+              client_type: 'hotel',
+              client_name: b.hotel_name,
+              price_per_seat: round2(usd * (1 - config.hotelDiscountRate)),
+              currency: 'USD',
+            };
+          }
+          if (b.account_type === 'local') {
+            return {
+              seats: b.seats,
+              client_type: 'local',
+              client_name: b.user_name ?? null,
+              price_per_seat: Number(r.price_per_seat),
+              currency: 'TZS',
+            };
+          }
+          const resident = b.account_type === 'resident' && b.verification_status === 'verified';
+          return {
+            seats: b.seats,
+            client_type: resident ? 'resident' : 'tourist',
+            client_name: b.user_name ?? null,
+            price_per_seat: resident ? round2(usd * (1 - config.residentDiscountRate)) : usd,
+            currency: 'USD',
+          };
+        });
+        return out;
+      })
+    );
   })
 );
 

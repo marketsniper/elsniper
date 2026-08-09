@@ -56,6 +56,17 @@ export interface Ride {
   [cle: string]: unknown;
 }
 
+/** Réservation vue par le chauffeur (GET /rides/mine → bookings[]) :
+ * prix par place selon le type de client (touriste/résident/hôtel en USD,
+ * local en TZS). */
+export interface ReservationRide {
+  seats: number;
+  client_type: 'tourist' | 'resident' | 'local' | 'hotel';
+  client_name?: string | null;
+  price_per_seat: number;
+  currency: string;
+}
+
 /** Ligne payments renvoyée par POST /trips/:id/payment et /packages/:id/payment. */
 export interface Paiement {
   id: string;

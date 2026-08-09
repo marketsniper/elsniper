@@ -39,7 +39,7 @@ import {
   formaterDate,
   formaterMontant,
   ORIGINES_RIDES,
-  tarifsZoneItineraire,
+  type ReservationRide,
   type Ride,
   type StatutRide,
   type StatutVerification,
@@ -245,24 +245,7 @@ export default function EcranAnnonces() {
               placeholder="4"
             />
           </View>
-          <View style={styles.demiChamp}>
-            <View style={styles.blocPrixAuto}>
-              <Text style={styles.labelPrixAuto}>{t('annonces_prix_auto_label')}</Text>
-              <Text style={styles.valeurPrixAuto}>
-                {origine && destination
-                  ? formaterMontant(tarifsZoneItineraire(origine, destination).localTzs, 'TZS')
-                  : '—'}
-              </Text>
-            </View>
-          </View>
         </View>
-        {!!origine && !!destination && (
-          <Text style={styles.notePrixAuto}>
-            {t('annonces_prix_auto_note', {
-              usd: formaterMontant(tarifsZoneItineraire(origine, destination).partageUsd, 'USD'),
-            })}
-          </Text>
-        )}
         <Champ
           label={t('annonces_notes')}
           value={notes}
@@ -298,8 +281,7 @@ export default function EcranAnnonces() {
         const statut = champ<StatutRide>(ride, 'status', 'statut');
         const total = Number(champ(ride, 'seats_total', 'seatsTotal') ?? 0);
         const restantes = Number(champ(ride, 'seats_available', 'seatsAvailable') ?? 0);
-        const prix = champ<number | string>(ride, 'price_per_seat', 'pricePerSeat');
-        const devise = champ<string>(ride, 'currency') ?? 'TZS';
+        const reservations = champ<ReservationRide[]>(ride, 'bookings') ?? [];
         const ouvert = statut === 'open';
         const occupe = actionEnCours === ride.id;
         return (
@@ -319,12 +301,18 @@ export default function EcranAnnonces() {
                   {formaterDate(champ(ride, 'departure_at', 'departureAt'))}
                 </Text>
               </View>
-              <Text style={styles.prixRide}>
-                {prix !== undefined
-                  ? `${formaterMontant(prix, devise)} ${t('rides_par_place')}`
-                  : '—'}
-              </Text>
             </View>
+            {reservations.length > 0 && (
+              <View style={styles.blocReservations}>
+                <Text style={styles.titreReservations}>{t('annonces_resa_titre')}</Text>
+                {reservations.map((resa, index) => (
+                  <Text key={index} style={styles.ligneReservation}>
+                    • {resa.client_name ?? '—'} — {resa.seats} × {t(`resa_type_${resa.client_type}`)}{' '}
+                    · {formaterMontant(resa.price_per_seat, resa.currency)} {t('rides_par_place')}
+                  </Text>
+                ))}
+              </View>
+            )}
             <View style={styles.rangeePlaces}>
               <Text style={styles.textePlaces}>
                 {t(total > 1 ? 'rides_places_restantes' : 'rides_place_restante', {
@@ -398,31 +386,6 @@ const styles = StyleSheet.create({
     color: couleurs.texteSecondaire,
     lineHeight: 20,
   },
-  blocPrixAuto: {
-    gap: espaces.xs,
-  },
-  labelPrixAuto: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: couleurs.texteSecondaire,
-  },
-  valeurPrixAuto: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: couleurs.primaire,
-    backgroundColor: couleurs.blanc,
-    borderWidth: 1,
-    borderColor: couleurs.bordure,
-    borderRadius: rayons.bouton,
-    paddingHorizontal: espaces.m,
-    paddingVertical: espaces.m,
-    overflow: 'hidden',
-  },
-  notePrixAuto: {
-    fontSize: 12.5,
-    color: couleurs.texteSecondaire,
-    marginTop: -espaces.s,
-  },
   rangeeChamps: {
     flexDirection: 'row',
     gap: espaces.m,
@@ -480,6 +443,24 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '800',
     color: couleurs.primaire,
+  },
+  blocReservations: {
+    backgroundColor: couleurs.blanc,
+    borderRadius: rayons.bouton,
+    borderWidth: 1,
+    borderColor: couleurs.bordure,
+    padding: espaces.m,
+    gap: espaces.xs,
+  },
+  titreReservations: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: couleurs.encre,
+  },
+  ligneReservation: {
+    fontSize: 13,
+    color: couleurs.texteSecondaire,
+    lineHeight: 19,
   },
   rangeePlaces: {
     flexDirection: 'row',
