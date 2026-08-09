@@ -17,7 +17,7 @@ import { api, ErreurApi } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useT } from '@/lib/i18n';
 import { couleurs, espaces, rayons } from '@/lib/theme';
-import type { ReponseVerifieOtp } from '@/lib/types';
+import { champ, type ReponseVerifieOtp, type StatutVerification } from '@/lib/types';
 
 const LONGUEUR_CODE = 6;
 
@@ -35,25 +35,44 @@ export default function EcranOtp() {
   const [erreur, setErreur] = useState('');
   const [charge, setCharge] = useState(false);
 
-  // Oriente vers le bon écran selon le profil choisi et les profils existants.
+  // Oriente selon la RUBRIQUE CHOISIE sur la page d'accueil, pas seulement
+  // selon les profils existants : un même numéro peut être à la fois client
+  // et chauffeur — « Chauffeur » doit toujours mener à l'espace chauffeur
+  // (compte, courses, trajets publiés), « Visiteur »/« Locaux » aux menus
+  // de réservation, même si l'autre profil existe aussi.
   const orienter = (reponse: ReponseVerifieOtp) => {
-    const dejaProfil = !!(reponse.user || reponse.driver || reponse.hotel);
-    if (dejaProfil) {
-      // L'index route selon les profils de la session (client, chauffeur, hôtel).
-      router.replace('/');
+    if (profil === 'driver') {
+      if (!reponse.driver) {
+        // Numéro inconnu comme chauffeur : formulaire de candidature.
+        router.replace('/(auth)/pro');
+        return;
+      }
+      const verifie =
+        champ<StatutVerification>(reponse.driver, 'verification_status', 'verificationStatus') ===
+        'verified';
+      // Chauffeur validé → espace chauffeur ; sinon suivi de candidature.
+      router.replace(verifie ? '/(driver)/courses' : '/(auth)/pro');
       return;
     }
-    if (profil === 'driver') {
-      router.replace('/(auth)/pro');
-    } else if (profil === 'local') {
-      router.replace({ pathname: '/(auth)/client', params: { type: 'local' } });
-    } else if (profil === 'visitor') {
-      router.replace('/(auth)/client');
-    } else if (profil === 'hotel') {
-      router.replace('/(auth)/hotel');
-    } else {
-      router.replace('/');
+    if (profil === 'visitor' || profil === 'local') {
+      if (!reponse.user) {
+        router.replace(
+          profil === 'local'
+            ? { pathname: '/(auth)/client', params: { type: 'local' } }
+            : '/(auth)/client'
+        );
+        return;
+      }
+      // Compte client existant : directement les menus de réservation.
+      router.replace('/(tabs)/reserver');
+      return;
     }
+    if (profil === 'hotel') {
+      router.replace(reponse.hotel ? '/(tabs)/reserver' : '/(auth)/hotel');
+      return;
+    }
+    // Pas de rubrique choisie : l'index route selon les profils existants.
+    router.replace('/');
   };
 
   const verifier = async () => {
