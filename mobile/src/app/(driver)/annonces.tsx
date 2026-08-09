@@ -7,7 +7,7 @@
 // clôture/annulation via PATCH /rides/:id. Lieux : listes fermées servies par
 // GET /rides/locations (repli local ORIGINES_RIDES / DESTINATIONS_RIDES).
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -59,6 +59,7 @@ function tonStatut(statut: StatutRide | undefined) {
 }
 
 export default function EcranAnnonces() {
+  const router = useRouter();
   const { session } = useAuth();
   const { t, langue } = useT();
   const chauffeur = session?.driver ?? null;
@@ -81,8 +82,6 @@ export default function EcranAnnonces() {
 
   const [mesRides, setMesRides] = useState<Ride[]>([]);
   const [erreurListe, setErreurListe] = useState('');
-  // Id du trajet dont une action rapide est en cours (places / statut).
-  const [actionEnCours, setActionEnCours] = useState<string | null>(null);
   // Listes fermées des lieux (serveur), avec repli sur les valeurs locales.
   const [origines, setOrigines] = useState<string[]>(ORIGINES_RIDES);
   const [destinations, setDestinations] = useState<string[]>(DESTINATIONS_RIDES);
@@ -159,36 +158,6 @@ export default function EcranAnnonces() {
       }
     } finally {
       setCharge(false);
-    }
-  };
-
-  const ajusterPlaces = async (ride: Ride, delta: number) => {
-    const total = Number(champ(ride, 'seats_total', 'seatsTotal') ?? PLACES_MAX);
-    const actuelles = Number(champ(ride, 'seats_available', 'seatsAvailable') ?? 0);
-    const suivantes = Math.min(Math.max(actuelles + delta, 0), total);
-    if (suivantes === actuelles) return;
-    setActionEnCours(ride.id);
-    setErreurListe('');
-    try {
-      await api.modifierRide(ride.id, { seatsAvailable: suivantes });
-      await rafraichir();
-    } catch {
-      setErreurListe(t('annonces_erreur_places_maj'));
-    } finally {
-      setActionEnCours(null);
-    }
-  };
-
-  const changerStatut = async (ride: Ride, statut: 'closed' | 'cancelled') => {
-    setActionEnCours(ride.id);
-    setErreurListe('');
-    try {
-      await api.modifierRide(ride.id, { status: statut });
-      await rafraichir();
-    } catch {
-      setErreurListe(t('annonces_erreur_statut'));
-    } finally {
-      setActionEnCours(null);
     }
   };
 
@@ -282,10 +251,13 @@ export default function EcranAnnonces() {
         const total = Number(champ(ride, 'seats_total', 'seatsTotal') ?? 0);
         const restantes = Number(champ(ride, 'seats_available', 'seatsAvailable') ?? 0);
         const reservations = champ<ReservationRide[]>(ride, 'bookings') ?? [];
-        const ouvert = statut === 'open';
-        const occupe = actionEnCours === ride.id;
         return (
-          <View key={ride.id} style={styles.carteRide}>
+          <Pressable
+            key={ride.id}
+            onPress={() => router.push(`/annonce/${ride.id}`)}
+            accessibilityRole="button"
+            style={({ pressed }) => [styles.carteRide, pressed && { opacity: 0.75 }]}
+          >
             <View style={styles.enTeteRide}>
               <Text style={styles.itineraire}>
                 {champ(ride, 'origin', 'origine') ?? '?'}{'  '}
@@ -301,79 +273,26 @@ export default function EcranAnnonces() {
                   {formaterDate(champ(ride, 'departure_at', 'departureAt'))}
                 </Text>
               </View>
-            </View>
-            {reservations.length > 0 && (
-              <View style={styles.blocReservations}>
-                <Text style={styles.titreReservations}>{t('annonces_resa_titre')}</Text>
-                {reservations.map((resa, index) => (
-                  <Text key={index} style={styles.ligneReservation}>
-                    • {resa.client_name ?? '—'} — {resa.seats} × {t(`resa_type_${resa.client_type}`)}{' '}
-                    · {formaterMontant(resa.price_per_seat, resa.currency)} {t('rides_par_place')}
-                  </Text>
-                ))}
+              <View style={styles.detail}>
+                <Ionicons name="people-outline" size={14} color={couleurs.texteSecondaire} />
+                <Text style={styles.texteDetail}>
+                  {t(total > 1 ? 'rides_places_restantes' : 'rides_place_restante', {
+                    n: `${restantes}/${total}`,
+                  })}
+                </Text>
               </View>
-            )}
-            <View style={styles.rangeePlaces}>
-              <Text style={styles.textePlaces}>
-                {t(total > 1 ? 'rides_places_restantes' : 'rides_place_restante', {
-                  n: `${restantes}/${total}`,
-                })}
+            </View>
+            <View style={styles.ligneOuvrir}>
+              <Text style={styles.texteOuvrir}>
+                {reservations.length > 0
+                  ? t('annonces_nb_resa', { n: reservations.length })
+                  : t('annonces_aucune_resa')}
+                {'  ·  '}
+                {t('annonces_ouvrir_detail')}
               </Text>
-              {ouvert && (
-                <View style={styles.boutonsPlaces}>
-                  <Pressable
-                    onPress={() => ajusterPlaces(ride, -1)}
-                    disabled={occupe || restantes <= 0}
-                    style={({ pressed }) => [
-                      styles.boutonRond,
-                      (pressed || occupe || restantes <= 0) && { opacity: 0.5 },
-                    ]}
-                  >
-                    <Ionicons name="remove" size={18} color={couleurs.primaireFonce} />
-                  </Pressable>
-                  <Pressable
-                    onPress={() => ajusterPlaces(ride, 1)}
-                    disabled={occupe || restantes >= total}
-                    style={({ pressed }) => [
-                      styles.boutonRond,
-                      (pressed || occupe || restantes >= total) && { opacity: 0.5 },
-                    ]}
-                  >
-                    <Ionicons name="add" size={18} color={couleurs.primaireFonce} />
-                  </Pressable>
-                </View>
-              )}
+              <Ionicons name="chevron-forward" size={18} color={couleurs.primaire} />
             </View>
-            {ouvert && (
-              <View style={styles.rangeeActions}>
-                <Pressable
-                  onPress={() => changerStatut(ride, 'closed')}
-                  disabled={occupe}
-                  style={({ pressed }) => [
-                    styles.boutonAction,
-                    (pressed || occupe) && { opacity: 0.5 },
-                  ]}
-                >
-                  <Ionicons name="lock-closed-outline" size={15} color={couleurs.primaireFonce} />
-                  <Text style={styles.texteAction}>{t('annonces_cloturer')}</Text>
-                </Pressable>
-                <Pressable
-                  onPress={() => changerStatut(ride, 'cancelled')}
-                  disabled={occupe}
-                  style={({ pressed }) => [
-                    styles.boutonAction,
-                    styles.boutonAnnuler,
-                    (pressed || occupe) && { opacity: 0.5 },
-                  ]}
-                >
-                  <Ionicons name="close-circle-outline" size={15} color={couleurs.danger} />
-                  <Text style={[styles.texteAction, { color: couleurs.danger }]}>
-                    {t('commun_annuler')}
-                  </Text>
-                </Pressable>
-              </View>
-            )}
-          </View>
+          </Pressable>
         );
       })}
     </Ecran>
@@ -461,6 +380,19 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: couleurs.texteSecondaire,
     lineHeight: 19,
+  },
+  ligneOuvrir: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: espaces.s,
+    marginTop: espaces.xs,
+  },
+  texteOuvrir: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '600',
+    color: couleurs.primaire,
   },
   rangeePlaces: {
     flexDirection: 'row',

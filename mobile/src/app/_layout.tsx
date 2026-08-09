@@ -29,6 +29,7 @@ function PilesNavigation() {
       <Stack.Screen name="package/[id]" options={{ title: t('titre_colis') }} />
       <Stack.Screen name="course/[id]" options={{ title: t('titre_course') }} />
       <Stack.Screen name="equipe" options={{ title: t('titre_equipe') }} />
+      <Stack.Screen name="annonce/[id]" options={{ title: t('titre_annonce') }} />
     </Stack>
   );
 }
