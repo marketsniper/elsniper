@@ -27,6 +27,7 @@ import {
   champ,
   ETAPES_TRAJET,
   formaterDate,
+  formaterMontant,
   formaterPrix,
   type StatutTrajet,
   type Trajet,
@@ -132,6 +133,25 @@ export default function EcranDetailCourse() {
           />
         )}
         <LigneInfo label={t('commun_prix')} valeur={formaterPrix(course)} />
+        {(() => {
+          // Transparence chauffeur : commission zanziGo et gain net.
+          const prix = Number(champ(course, 'price') ?? NaN);
+          const commission = Number(champ(course, 'commission') ?? NaN);
+          const devise = String(champ(course, 'currency') ?? '');
+          if (!Number.isFinite(prix) || !Number.isFinite(commission)) return null;
+          return (
+            <>
+              <LigneInfo
+                label={t('gain_commission')}
+                valeur={`− ${formaterMontant(commission, devise)}`}
+              />
+              <LigneInfo
+                label={t('gain_net')}
+                valeur={formaterMontant(Math.round((prix - commission) * 100) / 100, devise)}
+              />
+            </>
+          );
+        })()}
       </Carte>
 
       <Carte>

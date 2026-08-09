@@ -65,6 +65,9 @@ export interface ReservationRide {
   client_name?: string | null;
   price_per_seat: number;
   currency: string;
+  /** Commission zanziGo et gain net du chauffeur, par place. */
+  commission_per_seat?: number;
+  net_per_seat?: number;
 }
 
 /** Ligne payments renvoyée par POST /trips/:id/payment et /packages/:id/payment. */
@@ -304,6 +307,8 @@ export function tarifSpecialPrive(depart: string, arrivee: string): number | nul
 
 /** Remise résident (documents de résidence validés) sur tous les prix USD. */
 export const REMISE_RESIDENT = 0.1;
+/** Taux de conversion USD → TZS (courses privées des locaux, grille colis). */
+export const TAUX_USD_TZS = 2600;
 /** Remise hôtel partenaire (−5 % sur la grille touriste). */
 export const REMISE_HOTEL = 0.05;
 
@@ -414,6 +419,12 @@ export function tarifTrajetProfil(
     ? tarifsZoneItineraire(itineraire.depart, itineraire.arrivee)
     : TARIFS_ZONE_DEFAUT;
   if (profil === 'local') {
+    // Course privée : même prix que la grille touriste, converti en TZS.
+    if (type === 'private') {
+      const special = itineraire ? tarifSpecialPrive(itineraire.depart, itineraire.arrivee) : null;
+      const usd = special ?? zone.priveUsd;
+      return { montant: Math.round(usd * TAUX_USD_TZS), devise: 'TZS' };
+    }
     return { montant: zone.localTzs, devise: 'TZS' };
   }
   let plein: number | undefined;

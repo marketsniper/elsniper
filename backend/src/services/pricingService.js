@@ -113,7 +113,14 @@ export function priceTrip(tripType, audience, route = {}) {
   const tier = tierForRoute(route.pickup, route.dropoff);
 
   if (audience === 'local') {
-    // Tarif local de la zone, quel que soit le type de trajet — commission 10 %.
+    // Course PRIVÉE : même prix que la grille touriste (trajet spécial
+    // inclus), converti en shillings — commission privé 10 %.
+    if (tripType === 'private') {
+      const usd = specialPrivateRouteUsd(route.pickup, route.dropoff) ?? tier.privateUsd;
+      const price = Math.round(usd * config.usdToTzsRate);
+      return { price, commission: round2(price * COMMISSION_RATES.private), currency: 'TZS' };
+    }
+    // Navettes : tarif local de la zone, par place — commission 10 %.
     const price = tier.localTzs;
     return { price, commission: round2(price * COMMISSION_RATES.local), currency: 'TZS' };
   }

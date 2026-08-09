@@ -152,9 +152,32 @@ export default function EcranAnnonce() {
               <Text style={styles.texteResa}>
                 {resa.client_name ?? '—'} — {resa.seats} × {t(`resa_type_${resa.client_type}`)} ·{' '}
                 {formaterMontant(resa.price_per_seat, resa.currency)} {t('rides_par_place')}
+                {resa.net_per_seat !== undefined
+                  ? ` (${formaterMontant(resa.net_per_seat, resa.currency)} ${t('gain_net_par_place')})`
+                  : ''}
               </Text>
             </View>
           ))
+        )}
+        {reservations.length > 0 && (
+          <View style={styles.ligneTotal}>
+            <Text style={styles.labelTotal}>{t('annonce_gain_total')}</Text>
+            <Text style={styles.valeurTotal}>
+              {(() => {
+                // Totaux par devise (des places USD et TZS peuvent coexister).
+                const totaux: Record<string, number> = {};
+                for (const resa of reservations) {
+                  if (resa.net_per_seat === undefined) continue;
+                  totaux[resa.currency] =
+                    (totaux[resa.currency] ?? 0) + resa.net_per_seat * resa.seats;
+                }
+                const parts = Object.entries(totaux).map(([devise, montant]) =>
+                  formaterMontant(Math.round(montant * 100) / 100, devise)
+                );
+                return parts.length > 0 ? parts.join(' + ') : '—';
+              })()}
+            </Text>
+          </View>
         )}
       </Carte>
 
@@ -249,6 +272,27 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: couleurs.encre,
     lineHeight: 20,
+  },
+  ligneTotal: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: espaces.m,
+    borderTopWidth: 1,
+    borderTopColor: couleurs.bordure,
+    paddingTop: espaces.s,
+    marginTop: espaces.xs,
+  },
+  labelTotal: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '600',
+    color: couleurs.texteSecondaire,
+  },
+  valeurTotal: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: couleurs.primaire,
   },
   rangeeAjustement: {
     flexDirection: 'row',

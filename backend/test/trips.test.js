@@ -145,10 +145,11 @@ describe('Courses taxi (trips)', () => {
     const privatePending = await createTrip(pendingToken, pending.id);
     assert.equal(Number(privatePending.price), 50);
 
-    // Local vérifié (carte tanzanienne) : tarif unique 15 000 TZS partout.
+    // Local vérifié : course PRIVÉE au tarif touriste converti en TZS
+    // (50 USD × 2 600), navettes au tarif local de la zone.
     const { token: localToken, user: local } = await createLocal();
     const privateLocal = await createTrip(localToken, local.id);
-    assert.equal(Number(privateLocal.price), 15000);
+    assert.equal(Number(privateLocal.price), 130000);
     assert.equal(privateLocal.currency, 'TZS');
     const sharedLocalFlat = await createTrip(localToken, local.id, { tripType: 'shared_tourist' });
     assert.equal(Number(sharedLocalFlat.price), 15000);

@@ -44,6 +44,10 @@ export const config = {
   // Tarif local unique (TZS) — réservé aux locaux à carte d'identité
   // tanzanienne vérifiée, pour TOUS les types de trajets.
   localTripPriceTzs: Number(env.LOCAL_TRIP_PRICE_TZS) || 15000,
+  // Taux de conversion appliqué aux locaux sur les courses PRIVÉES : même
+  // prix que la grille touriste, payé en shillings (aligné sur la grille
+  // colis : 5 USD ↔ 13 000 TZS).
+  usdToTzsRate: Number(env.USD_TO_TZS_RATE) || 2600,
 
   // PayPal (paiements USD dans l'app) — trois niveaux, du plus automatique
   // au plus manuel :

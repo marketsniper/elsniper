@@ -230,6 +230,8 @@ describe('Trajets partagés — réservation de places dans l\'app', () => {
     assert.equal(mine.body[0].bookings[0].client_type, 'tourist');
     assert.equal(mine.body[0].bookings[0].price_per_seat, 18); // zone Nord, USD touriste
     assert.equal(mine.body[0].bookings[0].currency, 'USD');
+    assert.equal(mine.body[0].bookings[0].commission_per_seat, 3.6); // 20 %
+    assert.equal(mine.body[0].bookings[0].net_per_seat, 14.4); // le chauffeur garde 80 %
   });
 
   it('surréservation → 409 not_enough_seats, places inchangées', async () => {

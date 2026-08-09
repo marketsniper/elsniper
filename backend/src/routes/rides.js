@@ -215,33 +215,49 @@ router.get(
       rows.map((r) => {
         const out = serializeRide(r, PRICING_TZS);
         const usd = sharedSeatUsdForRoute(r.origin, r.destination);
+        // Commission zanziGo par place : 10 % sur le tarif local (navette),
+        // 20 % sur les places partagées USD — le chauffeur voit son net.
+        const avecGain = (base, taux) => ({
+          ...base,
+          commission_per_seat: round2(base.price_per_seat * taux),
+          net_per_seat: round2(base.price_per_seat * (1 - taux)),
+        });
         out.bookings = (parRide[r.id] ?? []).map((b) => {
           if (b.hotel_name) {
-            return {
-              seats: b.seats,
-              client_type: 'hotel',
-              client_name: b.hotel_name,
-              price_per_seat: round2(usd * (1 - config.hotelDiscountRate)),
-              currency: 'USD',
-            };
+            return avecGain(
+              {
+                seats: b.seats,
+                client_type: 'hotel',
+                client_name: b.hotel_name,
+                price_per_seat: round2(usd * (1 - config.hotelDiscountRate)),
+                currency: 'USD',
+              },
+              0.2
+            );
           }
           if (b.account_type === 'local') {
-            return {
-              seats: b.seats,
-              client_type: 'local',
-              client_name: b.user_name ?? null,
-              price_per_seat: Number(r.price_per_seat),
-              currency: 'TZS',
-            };
+            return avecGain(
+              {
+                seats: b.seats,
+                client_type: 'local',
+                client_name: b.user_name ?? null,
+                price_per_seat: Number(r.price_per_seat),
+                currency: 'TZS',
+              },
+              0.1
+            );
           }
           const resident = b.account_type === 'resident' && b.verification_status === 'verified';
-          return {
-            seats: b.seats,
-            client_type: resident ? 'resident' : 'tourist',
-            client_name: b.user_name ?? null,
-            price_per_seat: resident ? round2(usd * (1 - config.residentDiscountRate)) : usd,
-            currency: 'USD',
-          };
+          return avecGain(
+            {
+              seats: b.seats,
+              client_type: resident ? 'resident' : 'tourist',
+              client_name: b.user_name ?? null,
+              price_per_seat: resident ? round2(usd * (1 - config.residentDiscountRate)) : usd,
+              currency: 'USD',
+            },
+            0.2
+          );
         });
         return out;
       })
