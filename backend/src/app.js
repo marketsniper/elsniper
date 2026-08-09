@@ -73,6 +73,38 @@ p{color:#6B7280;max-width:42ch}code{background:#CCFBF1;color:#0B7C72;padding:2px
       );
   });
 
+  // Page d'installation / d'ouverture de l'app : lien https STABLE à
+  // partager (QR, WhatsApp…). Le bouton ouvre Expo Go sur le canal preview,
+  // qui charge toujours la dernière version publiée.
+  app.get('/app', (_req, res) => {
+    const lienExpo =
+      'exp://u.expo.dev/df409e04-637b-4287-9e58-e99ea1fa521e?channel-name=preview&runtime-version=exposdk:54.0.0';
+    res
+      .type('html')
+      .send(
+        `<!doctype html><html lang="fr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>zanziGo — Ouvrir l'app</title>
+<style>body{font-family:system-ui,sans-serif;background:#F5F0E8;color:#1F2937;display:flex;min-height:100vh;align-items:center;justify-content:center;margin:0}
+main{text-align:center;padding:28px;max-width:480px}h1{color:#0D9488;font-size:40px;margin:0 0 4px}
+p{color:#6B7280;margin:10px auto;line-height:1.5}
+.bouton{display:block;background:#0D9488;color:#fff;text-decoration:none;font-weight:700;font-size:18px;padding:16px 22px;border-radius:14px;margin:18px auto}
+.secondaire{background:#fff;color:#0D9488;border:2px solid #0D9488}
+small{color:#9CA3AF;display:block;margin-top:14px;line-height:1.5}</style>
+</head><body><main>
+<h1>zanziGo</h1>
+<p><strong>Taxi &amp; colis à Zanzibar</strong> — dernière version, toujours à jour.</p>
+<a class="bouton" href="${lienExpo}">📱 Ouvrir dans Expo Go</a>
+<p>Il faut l'app gratuite <strong>Expo Go</strong> :</p>
+<a class="bouton secondaire" href="https://apps.apple.com/app/expo-go/id982107779">App Store (iPhone)</a>
+<a class="bouton secondaire" href="https://play.google.com/store/apps/details?id=host.exp.exponent">Google Play (Android)</a>
+<small>Android sans Expo Go : installez l'application zanziGo directement —
+<a href="https://expo.dev/artifacts/eas/ni3b39KgIuEO2Ewb3RyfmBBe-chVTGyvN6pb1H7_r78.apk">télécharger l'APK</a>.
+Astuce : si l'app semble en retard, fermez-la complètement et rouvrez-la deux fois.</small>
+</main></body></html>`
+      );
+  });
+
   // Pages de retour PayPal : après approbation (ou annulation) dans le
   // navigateur, on guide le client vers l'app pour finaliser.
   const pagePaypal = (titre, message, emoji) =>
