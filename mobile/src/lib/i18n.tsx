@@ -1155,7 +1155,16 @@ const CHAINES = {
     sw: 'Chagua mji wa kufika…',
   },
   annonces_places: { fr: 'Places (1 à {max})', en: 'Seats (1 to {max})', sw: 'Viti (1 hadi {max})' },
-  annonces_prix_place: { fr: 'Prix par place (TZS)', en: 'Price per seat (TZS)', sw: 'Bei kwa kiti (TZS)' },
+  annonces_prix_auto_label: {
+    fr: 'Prix par place (fixé)',
+    en: 'Price per seat (fixed)',
+    sw: 'Bei kwa kiti (imepangwa)',
+  },
+  annonces_prix_auto_note: {
+    fr: 'Prix fixé par la grille zanziGo selon la zone — les touristes voient {usd} par place.',
+    en: 'Price set by the zanziGo grid for this zone — tourists see {usd} per seat.',
+    sw: 'Bei imepangwa na zanziGo kulingana na eneo — watalii wanaona {usd} kwa kiti.',
+  },
   annonces_notes: { fr: 'Notes (optionnel)', en: 'Notes (optional)', sw: 'Maelezo (hiari)' },
   annonces_notes_placeholder: {
     fr: 'Ex. : départ devant le marché, bagages légers',

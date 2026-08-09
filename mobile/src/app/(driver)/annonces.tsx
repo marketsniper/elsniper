@@ -1,6 +1,7 @@
 // Mode chauffeur — trajets partagés publiés (rides).
 // « Proposer un trajet » : POST /rides {origin, destination, departureAt,
-// seatsTotal (1-8), pricePerSeat (TZS), notes?} — chauffeur VALIDÉ uniquement
+// seatsTotal (1-8), notes?} — le PRIX PAR PLACE est fixé automatiquement par
+// la grille zanziGo selon la zone du trajet. Chauffeur VALIDÉ uniquement
 // (403 driver_not_verified sinon, 400 departure_in_past si l'heure est passée).
 // « Mes trajets publiés » : GET /rides/mine, ajustement des places et
 // clôture/annulation via PATCH /rides/:id. Lieux : listes fermées servies par
@@ -38,6 +39,7 @@ import {
   formaterDate,
   formaterMontant,
   ORIGINES_RIDES,
+  tarifsZoneItineraire,
   type Ride,
   type StatutRide,
   type StatutVerification,
@@ -72,7 +74,6 @@ export default function EcranAnnonces() {
   const [dateDepart, setDateDepart] = useState('');
   const [heureDepart, setHeureDepart] = useState('');
   const [places, setPlaces] = useState('4');
-  const [prixPlace, setPrixPlace] = useState('');
   const [notes, setNotes] = useState('');
   const [erreur, setErreur] = useState('');
   const [messageOk, setMessageOk] = useState('');
@@ -131,11 +132,6 @@ export default function EcranAnnonces() {
       setErreur(t('annonces_erreur_places', { max: PLACES_MAX }));
       return;
     }
-    const prix = Number(prixPlace.replace(/[\s]/g, ''));
-    if (!Number.isFinite(prix) || prix <= 0) {
-      setErreur(t('annonces_erreur_prix'));
-      return;
-    }
     setCharge(true);
     try {
       await api.creerRide({
@@ -143,7 +139,6 @@ export default function EcranAnnonces() {
         destination: destination,
         departureAt: departIso,
         seatsTotal: nbPlaces,
-        pricePerSeat: prix,
         notes: notes.trim() || undefined,
       });
       setOrigine('');
@@ -151,7 +146,6 @@ export default function EcranAnnonces() {
       setDateDepart('');
       setHeureDepart('');
       setPlaces('4');
-      setPrixPlace('');
       setNotes('');
       setMessageOk(t('annonces_publie'));
       await rafraichir();
@@ -252,15 +246,23 @@ export default function EcranAnnonces() {
             />
           </View>
           <View style={styles.demiChamp}>
-            <Champ
-              label={t('annonces_prix_place')}
-              value={prixPlace}
-              onChangeText={setPrixPlace}
-              keyboardType="number-pad"
-              placeholder="8000"
-            />
+            <View style={styles.blocPrixAuto}>
+              <Text style={styles.labelPrixAuto}>{t('annonces_prix_auto_label')}</Text>
+              <Text style={styles.valeurPrixAuto}>
+                {origine && destination
+                  ? formaterMontant(tarifsZoneItineraire(origine, destination).localTzs, 'TZS')
+                  : '—'}
+              </Text>
+            </View>
           </View>
         </View>
+        {!!origine && !!destination && (
+          <Text style={styles.notePrixAuto}>
+            {t('annonces_prix_auto_note', {
+              usd: formaterMontant(tarifsZoneItineraire(origine, destination).partageUsd, 'USD'),
+            })}
+          </Text>
+        )}
         <Champ
           label={t('annonces_notes')}
           value={notes}
@@ -395,6 +397,31 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: couleurs.texteSecondaire,
     lineHeight: 20,
+  },
+  blocPrixAuto: {
+    gap: espaces.xs,
+  },
+  labelPrixAuto: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: couleurs.texteSecondaire,
+  },
+  valeurPrixAuto: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: couleurs.primaire,
+    backgroundColor: couleurs.blanc,
+    borderWidth: 1,
+    borderColor: couleurs.bordure,
+    borderRadius: rayons.bouton,
+    paddingHorizontal: espaces.m,
+    paddingVertical: espaces.m,
+    overflow: 'hidden',
+  },
+  notePrixAuto: {
+    fontSize: 12.5,
+    color: couleurs.texteSecondaire,
+    marginTop: -espaces.s,
   },
   rangeeChamps: {
     flexDirection: 'row',

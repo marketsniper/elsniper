@@ -16,7 +16,7 @@ import { asyncHandler } from '../middleware/errorHandler.js';
 import { isAdmin, requireAuth } from '../middleware/auth.js';
 import { buildTeamNotificationLink } from '../services/whatsappService.js';
 import { config } from '../config.js';
-import { sharedSeatUsdForRoute } from '../services/pricingService.js';
+import { localSeatTzsForRoute, sharedSeatUsdForRoute } from '../services/pricingService.js';
 import { RIDE_DESTINATIONS, RIDE_ORIGINS } from '../services/locations.js';
 
 const router = Router();
@@ -26,7 +26,6 @@ const createRideSchema = z.object({
   destination: z.enum(RIDE_DESTINATIONS, { message: "Ville d'arrivée inconnue" }),
   departureAt: z.string().datetime({ offset: true }),
   seatsTotal: z.number().int().min(1).max(8),
-  pricePerSeat: z.number().positive(),
   notes: z.string().max(500).optional(),
 });
 
@@ -135,6 +134,10 @@ router.post(
       throw new HttpError(400, 'departure_in_past', "L'heure de départ doit être dans le futur");
     }
 
+    // Prix par place FIXÉ PAR LA GRILLE zanziGo selon la zone du trajet —
+    // jamais saisi par le chauffeur (un éventuel pricePerSeat envoyé par une
+    // ancienne version de l'app est ignoré).
+    const pricePerSeat = localSeatTzsForRoute(data.origin, data.destination);
     const { rows } = await query(
       `INSERT INTO posted_rides (driver_id, origin, destination, departure_at, seats_total, seats_available, price_per_seat, notes)
        VALUES ($1, $2, $3, $4, $5, $5, $6, $7)
@@ -145,7 +148,7 @@ router.post(
         data.destination,
         data.departureAt,
         data.seatsTotal,
-        data.pricePerSeat,
+        pricePerSeat,
         data.notes ?? null,
       ]
     );

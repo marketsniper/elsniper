@@ -28,7 +28,6 @@ async function postRide(token, extra = {}) {
       destination: 'Nungwi',
       departureAt: inOneDay(),
       seatsTotal: 4,
-      pricePerSeat: 10000,
       ...extra,
     });
 }
@@ -42,7 +41,7 @@ describe('Trajets partagés (rides)', () => {
     assert.equal(res.body.seats_total, 4);
     assert.equal(res.body.seats_available, 4);
     assert.equal(res.body.currency, 'TZS');
-    assert.equal(Number(res.body.price_per_seat), 10000);
+    assert.equal(Number(res.body.price_per_seat), 15000); // grille Nord, fixée par zanziGo
     // Le chauffeur voit son prix local — jamais le tarif touriste.
     assert.equal(res.body.price_per_seat_usd, undefined);
     assert.ok(res.body.whatsapp_link.includes('wa.me'));
@@ -130,7 +129,7 @@ describe('Trajets partagés (rides)', () => {
     const { token: localToken } = await createLocal();
     const forLocal = await request(app).get('/api/rides').set(authHeaders(localToken));
     const l = forLocal.body.find((x) => x.id === ride.id);
-    assert.equal(Number(l.price_per_seat), 10000);
+    assert.equal(Number(l.price_per_seat), 15000);
     assert.equal(l.currency, 'TZS');
     assert.equal(l.price_per_seat_usd, undefined, 'le tarif touriste ne s’affiche pas aux locaux');
   });

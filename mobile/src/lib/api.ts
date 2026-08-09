@@ -385,7 +385,7 @@ export interface CreationRide {
   destination: string;
   departureAt: string; // ISO 8601 avec offset, dans le futur
   seatsTotal: number; // 1 à 8
-  pricePerSeat: number; // TZS
+  // Le prix par place est fixé par la grille zanziGo côté serveur. // TZS
   notes?: string;
 }
 

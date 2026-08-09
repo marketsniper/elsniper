@@ -100,6 +100,13 @@ export function sharedSeatUsdForRoute(pickup, dropoff) {
   return tierForRoute(pickup, dropoff).sharedUsd;
 }
 
+// Prix local (TZS) d'une place — fixé par la grille zanziGo selon la zone :
+// c'est LUI qui est posé automatiquement sur les trajets partagés postés par
+// les chauffeurs (le chauffeur ne choisit pas son prix).
+export function localSeatTzsForRoute(pickup, dropoff) {
+  return tierForRoute(pickup, dropoff).localTzs;
+}
+
 // audience : 'tourist' | 'resident' | 'local' | 'hotel'
 // route : { pickup, dropoff } — détermine la zone et les trajets spéciaux.
 export function priceTrip(tripType, audience, route = {}) {
