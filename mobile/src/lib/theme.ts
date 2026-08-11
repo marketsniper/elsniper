@@ -1,39 +1,39 @@
-// Palette « Nuit d'océan » de zanziGo : marine profonde, turquoise néon, or.
-// (Direction D choisie par l'équipe — l'océan de nuit, esprit beach club.)
+// Palette « Coucher de soleil » de zanziGo : corail chaud, crème dorée, prune.
+// (Direction B choisie par l'équipe — le ciel de Zanzibar à 18 h 30.)
 import type { StatutColis, StatutTrajet } from './types';
 
 export const couleurs = {
-  primaire: '#35C4B5', // turquoise néon
-  primaireFonce: '#7FE0D5', // texte turquoise clair posé sur les fonds teal sombres
-  primaireClair: '#123A41', // fond teal profond (pastilles, encarts info)
-  sable: '#10222E', // fond principal — marine profonde (nom historique conservé)
+  primaire: '#E4572E', // corail couchant
+  primaireFonce: '#B93C1B', // corail profond (textes sur fonds rosés)
+  primaireClair: '#FFE0D2', // rosé (pastilles, encarts info)
+  sable: '#FBF0E4', // fond principal — crème dorée (nom historique conservé)
   blanc: '#FFFFFF',
-  encre: '#EAF2F4', // texte principal — écume
-  texteSecondaire: '#8FA6B0',
-  bordure: '#29455A',
-  danger: '#E5484D',
-  dangerFonce: '#FCA5A5', // texte des encarts d'erreur
-  dangerFond: '#3B1A1E', // fond rouge sombre (bandeaux d'erreur)
-  dangerBordure: '#7F2E35',
-  succes: '#58D6A8',
-  succesFond: '#14383B',
-  attente: '#E4B95B',
-  attenteFond: '#3E3320',
-  orange: '#F0A24A', // orange doux (statut « Chauffeur confirmé »)
-  orangeFond: '#3D2C18',
-  etoile: '#E4B95B', // étoiles de notation — or
-  voile: 'rgba(4, 10, 15, 0.7)', // voile sombre du scanner
+  encre: '#33222B', // texte principal — prune
+  texteSecondaire: '#8A7168',
+  bordure: '#F0DFD2',
+  danger: '#DC2626',
+  dangerFonce: '#B91C1C', // texte des encarts d'erreur
+  dangerFond: '#FEF2F2', // fond rouge très clair (bandeaux d'erreur)
+  dangerBordure: '#FECACA',
+  succes: '#5A7D2A',
+  succesFond: '#E5EFD8',
+  attente: '#B77A12',
+  attenteFond: '#FCE9C4',
+  orange: '#EA580C', // orange franc (statut « Chauffeur confirmé »)
+  orangeFond: '#FFEDD5',
+  etoile: '#F2B84B', // étoiles de notation — doré
+  voile: 'rgba(30, 15, 22, 0.68)', // voile sombre du scanner (prune translucide)
   succesClair: '#6EE7B7', // texte succès sur fond sombre (scanner)
   dangerClair: '#FCA5A5', // texte erreur sur fond sombre (scanner)
-  // Photos de plage en fond, voilées de marine pour la lisibilité nocturne.
-  voilePhotoClair: 'rgba(16, 34, 46, 0.88)', // voile marine sur les écrans formulaires/listes
-  voilePhotoSombre: 'rgba(4, 10, 15, 0.55)', // assombrissement bas des écrans d'accueil
-  carteTranslucide: 'rgba(26, 50, 66, 0.95)', // cartes marine claire semi-opaques
-  // Rôles propres à « Nuit d'océan »
-  surface: '#1A3242', // surfaces pleines : champs de saisie, menus, barre d'onglets
-  surPrimaire: '#0B1B24', // texte/icônes posés SUR le turquoise (boutons)
-  or: '#D8AE5E', // accent or : logo, touches premium
-  nuit: '#0B1B24', // fonds les plus profonds (carte Chauffeur de l'accueil)
+  // Photos de plage en fond, voilées de crème chaude pour la lisibilité.
+  voilePhotoClair: 'rgba(255, 247, 238, 0.86)', // voile crème sur les écrans formulaires/listes
+  voilePhotoSombre: 'rgba(30, 15, 22, 0.55)', // assombrissement bas des écrans d'accueil
+  carteTranslucide: 'rgba(255, 253, 250, 0.94)', // cartes blanc chaud semi-opaques
+  // Rôles introduits avec les directions B/D
+  surface: '#FFFDFA', // surfaces pleines : champs de saisie, menus, barre d'onglets
+  surPrimaire: '#FFF8F2', // texte/icônes posés SUR le corail (boutons)
+  or: '#F2B84B', // accent doré : étoiles, touches premium
+  nuit: '#33222B', // fonds les plus profonds (carte Chauffeur de l'accueil)
 };
 
 export const rayons = {
@@ -61,15 +61,15 @@ export const tailles = {
 /** Ombres douces réutilisables (iOS + elevation Android). */
 export const ombres = {
   carte: {
-    shadowColor: '#000',
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 3,
+    shadowColor: '#5C3A2E',
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
   douce: {
-    shadowColor: '#35C4B5',
-    shadowOpacity: 0.18,
+    shadowColor: '#E4572E',
+    shadowOpacity: 0.14,
     shadowRadius: 14,
     shadowOffset: { width: 0, height: 6 },
     elevation: 4,

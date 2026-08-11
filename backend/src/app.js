@@ -62,9 +62,9 @@ export function createApp() {
         `<!doctype html><html lang="fr"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>zanziGo — API</title>
-<style>body{font-family:system-ui,sans-serif;background:#10222E;color:#EAF2F4;display:flex;min-height:100vh;align-items:center;justify-content:center;margin:0}
-main{text-align:center;padding:32px}h1{color:#D8AE5E;font-size:44px;margin:0}
-p{color:#8FA6B0;max-width:42ch}code{background:#123A41;color:#7FE0D5;padding:2px 8px;border-radius:8px}</style>
+<style>body{font-family:system-ui,sans-serif;background:#FBF0E4;color:#33222B;display:flex;min-height:100vh;align-items:center;justify-content:center;margin:0}
+main{text-align:center;padding:32px}h1{color:#E4572E;font-size:44px;margin:0}
+p{color:#8A7168;max-width:42ch}code{background:#FFE0D2;color:#B93C1B;padding:2px 8px;border-radius:8px}</style>
 </head><body><main><h1>zanziGo</h1>
 <p><strong>Le serveur est en ligne ✓</strong></p>
 <p>Cette adresse est le moteur de l'application mobile zanziGo (courses taxi et colis à Zanzibar). Il n'y a rien à voir ici : tout se passe dans l'app.</p>
@@ -85,12 +85,12 @@ p{color:#8FA6B0;max-width:42ch}code{background:#123A41;color:#7FE0D5;padding:2px
         `<!doctype html><html lang="fr"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>zanziGo — Ouvrir l'app</title>
-<style>body{font-family:system-ui,sans-serif;background:#10222E;color:#EAF2F4;display:flex;min-height:100vh;align-items:center;justify-content:center;margin:0}
-main{text-align:center;padding:28px;max-width:480px}h1{color:#D8AE5E;font-size:40px;margin:0 0 4px}
-p{color:#8FA6B0;margin:10px auto;line-height:1.5}
-.bouton{display:block;background:#35C4B5;color:#0B1B24;text-decoration:none;font-weight:700;font-size:18px;padding:16px 22px;border-radius:14px;margin:18px auto}
-.secondaire{background:#1A3242;color:#7FE0D5;border:2px solid #35C4B5}
-small{color:#8FA6B0;display:block;margin-top:14px;line-height:1.5}small a{color:#7FE0D5}</style>
+<style>body{font-family:system-ui,sans-serif;background:#FBF0E4;color:#33222B;display:flex;min-height:100vh;align-items:center;justify-content:center;margin:0}
+main{text-align:center;padding:28px;max-width:480px}h1{color:#E4572E;font-size:40px;margin:0 0 4px}
+p{color:#8A7168;margin:10px auto;line-height:1.5}
+.bouton{display:block;background:#E4572E;color:#FFF8F2;text-decoration:none;font-weight:700;font-size:18px;padding:16px 22px;border-radius:14px;margin:18px auto}
+.secondaire{background:#FFFDFA;color:#B93C1B;border:2px solid #E4572E}
+small{color:#8A7168;display:block;margin-top:14px;line-height:1.5}small a{color:#B93C1B}</style>
 </head><body><main>
 <h1>zanziGo</h1>
 <p><strong>Taxi &amp; colis à Zanzibar</strong> — dernière version, toujours à jour.</p>
@@ -111,9 +111,9 @@ Astuce : si l'app semble en retard, fermez-la complètement et rouvrez-la deux f
     `<!doctype html><html lang="fr"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>zanziGo — ${titre}</title>
-<style>body{font-family:system-ui,sans-serif;background:#10222E;color:#EAF2F4;display:flex;min-height:100vh;align-items:center;justify-content:center;margin:0}
-main{text-align:center;padding:32px}h1{color:#D8AE5E;font-size:40px;margin:0 0 8px}
-p{color:#8FA6B0;max-width:44ch;margin:8px auto}</style>
+<style>body{font-family:system-ui,sans-serif;background:#FBF0E4;color:#33222B;display:flex;min-height:100vh;align-items:center;justify-content:center;margin:0}
+main{text-align:center;padding:32px}h1{color:#E4572E;font-size:40px;margin:0 0 8px}
+p{color:#8A7168;max-width:44ch;margin:8px auto}</style>
 </head><body><main><h1>${emoji} ${titre}</h1><p>${message}</p></main></body></html>`;
   app.get('/api/paypal/retour', (_req, res) => {
     res

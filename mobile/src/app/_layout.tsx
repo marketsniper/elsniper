@@ -38,7 +38,7 @@ export default function LayoutRacine() {
   return (
     <LangueProvider>
       <AuthProvider>
-        <StatusBar style="light" />
+        <StatusBar style="dark" />
         <PilesNavigation />
       </AuthProvider>
     </LangueProvider>

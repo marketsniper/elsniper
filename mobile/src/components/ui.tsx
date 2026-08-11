@@ -121,7 +121,7 @@ export function SelecteurLangue({ compact = false }: { compact?: boolean }) {
   );
 }
 
-/** Logotype texte « zanziGo » : zanzi en écume, Go en or (Nuit d'océan). */
+/** Logotype texte « zanziGo » : zanzi en prune, Go en corail (Coucher de soleil). */
 export function LogoZanziGo({
   taille = 40,
   surFonce = false,
@@ -132,7 +132,7 @@ export function LogoZanziGo({
   return (
     <Text style={[styles.logo, { fontSize: taille }]} accessibilityRole="header">
       <Text style={{ color: surFonce ? couleurs.blanc : couleurs.encre }}>zanzi</Text>
-      <Text style={{ color: couleurs.or }}>Go</Text>
+      <Text style={{ color: couleurs.primaire }}>Go</Text>
     </Text>
   );
 }
