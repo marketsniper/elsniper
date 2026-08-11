@@ -5,7 +5,7 @@
 // utilisable en secours pour ouvrir une course directement.
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import {
   BadgeStatutTrajet,
@@ -21,6 +21,7 @@ import {
 import { api, ErreurApi } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { formaterDateRelativeI18n, libelleTailleColis, useT } from '@/lib/i18n';
+import { estBalaye, lireCoupDeBalai, passerCoupDeBalai } from '@/lib/menageLocal';
 import { couleurs, espaces, ombres, rayons } from '@/lib/theme';
 import { champ, formaterMontant, formaterPrix, type Colis, type StatutTrajet, type Trajet } from '@/lib/types';
 
@@ -34,6 +35,7 @@ export default function EcranCourses() {
   const [colisDispo, setColisDispo] = useState<Colis[]>([]);
   const [erreur, setErreur] = useState('');
   const [charge, setCharge] = useState(false);
+  const [balai, setBalai] = useState(0);
 
   const chauffeurId = session?.driver?.id ?? null;
 
@@ -92,7 +94,32 @@ export default function EcranCourses() {
     } catch {
       // silencieux : la section colis reste vide
     }
+    setBalai(await lireCoupDeBalai('courses', chauffeurId));
   }, [chauffeurId]);
+
+  // « Faire le ménage » : masque les courses terminées/annulées antérieures
+  // au coup de balai (local au téléphone — les gains restent comptés).
+  const estFinie = (trajet: Trajet) => {
+    const statut = champ<StatutTrajet>(trajet, 'status', 'statut');
+    return statut === 'completed' || statut === 'cancelled';
+  };
+  const coursesVisibles = recentes.filter(
+    (trajet) =>
+      !estFinie(trajet) || !estBalaye(champ(trajet, 'created_at', 'createdAt'), balai)
+  );
+  const nbNettoyables = coursesVisibles.filter(estFinie).length;
+
+  const faireLeMenage = () => {
+    if (!chauffeurId) return;
+    Alert.alert(t('menage_titre'), t('menage_texte'), [
+      { text: t('commun_annuler'), style: 'cancel' },
+      {
+        text: t('menage_confirmer'),
+        style: 'destructive',
+        onPress: async () => setBalai(await passerCoupDeBalai('courses', chauffeurId)),
+      },
+    ]);
+  };
 
   useFocusEffect(
     useCallback(() => {
@@ -212,14 +239,14 @@ export default function EcranCourses() {
       })}
 
       <Text style={styles.titreSection}>{t('courses_recentes')}</Text>
-      {recentes.length === 0 && (
+      {coursesVisibles.length === 0 && (
         <EtatVide
           icone="car-outline"
           titre={t('courses_vide_titre')}
           message={t('courses_vide_texte')}
         />
       )}
-      {recentes.map((item) => {
+      {coursesVisibles.map((item) => {
         const statut = champ<StatutTrajet>(item, 'status', 'statut');
         return (
           <Pressable
@@ -248,6 +275,15 @@ export default function EcranCourses() {
           </Pressable>
         );
       })}
+
+      {nbNettoyables > 0 && (
+        <Bouton
+          titre={`${t('menage_bouton')} (${nbNettoyables})`}
+          icone="trash-outline"
+          variante="secondaire"
+          onPress={faireLeMenage}
+        />
+      )}
     </Ecran>
   );
 }

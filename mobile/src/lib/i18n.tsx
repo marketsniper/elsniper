@@ -291,6 +291,21 @@ const CHAINES = {
   equipe_stat_comptes: { fr: 'Comptes clients', en: 'Client accounts', sw: 'Akaunti za wateja' },
   equipe_stat_hotels: { fr: 'Hôtels à vérifier', en: 'Hotels to verify', sw: 'Hoteli za kuthibitisha' },
   equipe_stat_taxis: { fr: 'Taxis actifs', en: 'Active taxis', sw: 'Teksi hai' },
+  equipe_retour_menu: { fr: '‹ Retour au menu', en: '‹ Back to menu', sw: '‹ Rudi kwenye menyu' },
+  equipe_menu_intro: {
+    fr: 'Touchez une case pour ouvrir la rubrique.',
+    en: 'Tap a tile to open the section.',
+    sw: 'Gusa kisanduku kufungua sehemu.',
+  },
+  menage_bouton: { fr: '🧹 Effacer les anciennes courses', en: '🧹 Clear old rides', sw: '🧹 Futa safari za zamani' },
+  menage_bouton_colis: { fr: '🧹 Effacer les anciens colis', en: '🧹 Clear old parcels', sw: '🧹 Futa mizigo ya zamani' },
+  menage_titre: { fr: 'Faire le ménage ?', en: 'Clean up?', sw: 'Kufanya usafi?' },
+  menage_texte: {
+    fr: 'Les éléments terminés ou annulés seront masqués de cette liste, sur ce téléphone uniquement. Ils restent enregistrés chez zanziGo (historique et gains).',
+    en: 'Finished or cancelled items will be hidden from this list, on this phone only. They stay recorded at zanziGo (history and earnings).',
+    sw: 'Vitu vilivyokamilika au kughairiwa vitafichwa kwenye orodha hii, kwenye simu hii tu. Vinabaki kumbukumbu kwa zanziGo (historia na mapato).',
+  },
+  menage_confirmer: { fr: 'Effacer', en: 'Clear', sw: 'Futa' },
   annonces_historique: { fr: 'Historique', en: 'History', sw: 'Historia' },
   annonces_ouvertes: { fr: 'Annonces en ligne', en: 'Live listings', sw: 'Matangazo hewani' },
   equipe_action_erreur: {

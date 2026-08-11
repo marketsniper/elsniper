@@ -9,7 +9,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Selecteur } from '@/components/Selecteur';
 import {
@@ -32,6 +32,7 @@ import {
   libelleStatutRide,
   useT,
 } from '@/lib/i18n';
+import { estBalaye, lireCoupDeBalai, passerCoupDeBalai } from '@/lib/menageLocal';
 import { couleurs, espaces, ombres, rayons } from '@/lib/theme';
 import {
   champ,
@@ -82,6 +83,7 @@ export default function EcranAnnonces() {
 
   const [mesRides, setMesRides] = useState<Ride[]>([]);
   const [erreurListe, setErreurListe] = useState('');
+  const [balai, setBalai] = useState(0);
   // Listes fermées des lieux (serveur), avec repli sur les valeurs locales.
   const [origines, setOrigines] = useState<string[]>(ORIGINES_RIDES);
   const [destinations, setDestinations] = useState<string[]>(DESTINATIONS_RIDES);
@@ -101,6 +103,7 @@ export default function EcranAnnonces() {
     } catch {
       // silencieux : repli sur les listes locales
     }
+    if (chauffeur) setBalai(await lireCoupDeBalai('annonces', chauffeur.id));
   }, [chauffeur, t]);
 
   useFocusEffect(
@@ -162,13 +165,28 @@ export default function EcranAnnonces() {
   };
 
   // Annonces encore en ligne d'un côté, historique (clôturées/annulées) de
-  // l'autre — les mélanger rendait la liste illisible.
+  // l'autre — les mélanger rendait la liste illisible. Le ménage masque
+  // l'historique antérieur au coup de balai (local au téléphone).
   const annoncesOuvertes = mesRides.filter(
     (ride) => champ<StatutRide>(ride, 'status', 'statut') === 'open'
   );
   const annoncesPassees = mesRides.filter(
-    (ride) => champ<StatutRide>(ride, 'status', 'statut') !== 'open'
+    (ride) =>
+      champ<StatutRide>(ride, 'status', 'statut') !== 'open' &&
+      !estBalaye(champ(ride, 'departure_at', 'departureAt', 'created_at', 'createdAt'), balai)
   );
+
+  const faireLeMenage = () => {
+    if (!chauffeur) return;
+    Alert.alert(t('menage_titre'), t('menage_texte'), [
+      { text: t('commun_annuler'), style: 'cancel' },
+      {
+        text: t('menage_confirmer'),
+        style: 'destructive',
+        onPress: async () => setBalai(await passerCoupDeBalai('annonces', chauffeur.id)),
+      },
+    ]);
+  };
 
   const carteAnnonce = (ride: Ride) => {
     const statut = champ<StatutRide>(ride, 'status', 'statut');
@@ -322,6 +340,14 @@ export default function EcranAnnonces() {
         </Text>
       )}
       {annoncesPassees.map(carteAnnonce)}
+      {annoncesPassees.length > 0 && (
+        <Bouton
+          titre={`${t('menage_bouton')} (${annoncesPassees.length})`}
+          icone="trash-outline"
+          variante="secondaire"
+          onPress={faireLeMenage}
+        />
+      )}
     </Ecran>
   );
 }

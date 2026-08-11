@@ -13,7 +13,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as SecureStore from 'expo-secure-store';
 import React, { useCallback, useEffect, useState } from 'react';
-import { Alert, Linking, StyleSheet, Text, View } from 'react-native';
+import { Alert, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Selecteur } from '@/components/Selecteur';
 import {
@@ -29,7 +29,7 @@ import {
 } from '@/components/ui';
 import { api, definirCleEquipe, ErreurApi } from '@/lib/api';
 import { formaterDateRelativeI18n, libelleTypeTrajet, useT } from '@/lib/i18n';
-import { couleurs, espaces, rayons } from '@/lib/theme';
+import { couleurs, espaces, ombres, rayons } from '@/lib/theme';
 import {
   champ,
   formaterMontant,
@@ -43,6 +43,10 @@ import {
 } from '@/lib/types';
 
 const CLE_STOCKAGE = 'zanzigo.cle_equipe';
+
+// Rubriques du tableau de bord — le menu est une grille de cases (comme un
+// écran d'accueil de téléphone), chaque case ouvre sa rubrique.
+type SectionEquipe = 'courses' | 'paiements' | 'candidatures' | 'comptes' | 'hotels' | 'taxis';
 
 // Libellé d'un chauffeur dans le sélecteur d'assignation.
 function libelleChauffeur(chauffeur: Chauffeur): string {
@@ -65,6 +69,8 @@ export default function EcranEquipe() {
   const [clients, setClients] = useState<Utilisateur[]>([]);
   const [hotels, setHotels] = useState<Hotel[]>([]);
   const [chauffeurs, setChauffeurs] = useState<Chauffeur[]>([]);
+  // Rubrique ouverte (null = menu en grille de cases).
+  const [section, setSection] = useState<SectionEquipe | null>(null);
   // Chauffeur choisi par course (libellé du sélecteur), avant confirmation.
   const [choixChauffeur, setChoixChauffeur] = useState<Record<string, string>>({});
   // Id de l'élément dont l'action est en cours (bouton en chargement).
@@ -219,14 +225,20 @@ export default function EcranEquipe() {
     else groupesTaxis.push({ ville, liste: [chauffeur] });
   }
 
-  // Vue d'ensemble : six compteurs — en or dès qu'une action attend.
-  const resume: { cle: string; label: string; n: number; action: boolean }[] = [
-    { cle: 'courses', label: t('equipe_stat_courses'), n: courses.length, action: true },
-    { cle: 'paiements', label: t('equipe_stat_paiements'), n: paiements.length, action: true },
-    { cle: 'candidatures', label: t('equipe_stat_candidatures'), n: candidats.length, action: true },
-    { cle: 'comptes', label: t('equipe_stat_comptes'), n: clients.length, action: true },
-    { cle: 'hotels', label: t('equipe_stat_hotels'), n: hotels.length, action: true },
-    { cle: 'taxis', label: t('equipe_stat_taxis'), n: chauffeurs.length, action: false },
+  // Les six cases du menu — compteur en or dès qu'une action attend.
+  const rubriques: {
+    cle: SectionEquipe;
+    label: string;
+    icone: React.ComponentProps<typeof Ionicons>['name'];
+    n: number;
+    action: boolean;
+  }[] = [
+    { cle: 'courses', label: t('equipe_stat_courses'), icone: 'car-outline', n: courses.length, action: true },
+    { cle: 'paiements', label: t('equipe_stat_paiements'), icone: 'cash-outline', n: paiements.length, action: true },
+    { cle: 'candidatures', label: t('equipe_stat_candidatures'), icone: 'document-text-outline', n: candidats.length, action: true },
+    { cle: 'comptes', label: t('equipe_stat_comptes'), icone: 'id-card-outline', n: clients.length, action: true },
+    { cle: 'hotels', label: t('equipe_stat_hotels'), icone: 'business-outline', n: hotels.length, action: true },
+    { cle: 'taxis', label: t('equipe_stat_taxis'), icone: 'location-outline', n: chauffeurs.length, action: false },
   ];
 
   // ----- Tableau de bord ----------------------------------------------------
@@ -234,25 +246,59 @@ export default function EcranEquipe() {
     <Ecran fond="vagues" onRefresh={charger}>
       <TexteErreur>{erreur}</TexteErreur>
 
-      {/* 0. Vue d'ensemble : l'état du jour en un coup d'œil */}
-      <Text style={styles.titreSection}>{t('equipe_resume_titre')}</Text>
-      <View style={styles.resumeGrille}>
-        {resume.map((stat) => (
-          <View key={stat.cle} style={styles.resumeCase}>
-            <Text
-              style={[
-                styles.resumeNombre,
-                stat.action && stat.n > 0 && styles.resumeNombreAction,
-              ]}
-            >
-              {stat.n}
-            </Text>
-            <Text style={styles.resumeLabel}>{stat.label}</Text>
+      {/* Menu principal : grille de cases, chaque case ouvre sa rubrique. */}
+      {section === null && (
+        <>
+          <Text style={styles.titreSection}>{t('equipe_resume_titre')}</Text>
+          <Text style={styles.introMenu}>{t('equipe_menu_intro')}</Text>
+          <View style={styles.grilleMenu}>
+            {rubriques.map((rubrique) => (
+              <Pressable
+                key={rubrique.cle}
+                onPress={() => setSection(rubrique.cle)}
+                accessibilityRole="button"
+                style={({ pressed }) => [styles.caseMenu, pressed && { opacity: 0.75 }]}
+              >
+                <View style={styles.bulleMenu}>
+                  <Ionicons name={rubrique.icone} size={26} color={couleurs.primaire} />
+                </View>
+                <Text style={styles.labelMenu}>{rubrique.label}</Text>
+                <View
+                  style={[
+                    styles.pastilleMenu,
+                    rubrique.action && rubrique.n > 0 && styles.pastilleMenuAction,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.textePastilleMenu,
+                      rubrique.action && rubrique.n > 0 && styles.textePastilleMenuAction,
+                    ]}
+                  >
+                    {rubrique.n}
+                  </Text>
+                </View>
+              </Pressable>
+            ))}
           </View>
-        ))}
-      </View>
+        </>
+      )}
+
+      {/* Dans une rubrique : bouton de retour vers le menu. */}
+      {section !== null && (
+        <Pressable
+          onPress={() => setSection(null)}
+          accessibilityRole="button"
+          style={({ pressed }) => [styles.retourMenu, pressed && { opacity: 0.7 }]}
+        >
+          <Ionicons name="chevron-back" size={18} color={couleurs.primaireFonce} />
+          <Text style={styles.texteRetourMenu}>{t('equipe_retour_menu')}</Text>
+        </Pressable>
+      )}
 
       {/* 1. Courses à traiter */}
+      {section === 'courses' && (
+        <>
       <Text style={styles.titreSection}>
         {t('equipe_courses')} ({courses.length})
       </Text>
@@ -307,7 +353,12 @@ export default function EcranEquipe() {
         );
       })}
 
+        </>
+      )}
+
       {/* 2. Paiements en attente */}
+      {section === 'paiements' && (
+        <>
       <Text style={styles.titreSection}>
         {t('equipe_paiements')} ({paiements.length})
       </Text>
@@ -354,7 +405,12 @@ export default function EcranEquipe() {
         );
       })}
 
+        </>
+      )}
+
       {/* 3. Candidatures chauffeurs */}
+      {section === 'candidatures' && (
+        <>
       <Text style={styles.titreSection}>
         {t('equipe_candidatures')} ({candidats.length})
       </Text>
@@ -413,7 +469,12 @@ export default function EcranEquipe() {
         );
       })}
 
+        </>
+      )}
+
       {/* 4. Comptes clients à valider */}
+      {section === 'comptes' && (
+        <>
       <Text style={styles.titreSection}>
         {t('equipe_comptes')} ({clients.length})
       </Text>
@@ -462,7 +523,12 @@ export default function EcranEquipe() {
         );
       })}
 
+        </>
+      )}
+
       {/* 5. Hôtels à vérifier (anti-usurpation : appeler l'établissement) */}
+      {section === 'hotels' && (
+        <>
       <Text style={styles.titreSection}>
         {t('equipe_hotels')} ({hotels.length})
       </Text>
@@ -517,8 +583,13 @@ export default function EcranEquipe() {
         );
       })}
 
+        </>
+      )}
+
       {/* 6. Mes taxis : chauffeurs vérifiés CLASSÉS PAR VILLE, position GPS,
           radiation avec confirmation. */}
+      {section === 'taxis' && (
+        <>
       <Text style={styles.titreSection}>
         {t('equipe_taxis')} ({chauffeurs.length})
       </Text>
@@ -572,12 +643,17 @@ export default function EcranEquipe() {
         </View>
       ))}
 
-      <Bouton
-        titre={t('equipe_quitter')}
-        icone="log-out-outline"
-        variante="secondaire"
-        onPress={quitter}
-      />
+        </>
+      )}
+
+      {section === null && (
+        <Bouton
+          titre={t('equipe_quitter')}
+          icone="log-out-outline"
+          variante="secondaire"
+          onPress={quitter}
+        />
+      )}
     </Ecran>
   );
 }
@@ -634,34 +710,71 @@ const styles = StyleSheet.create({
   demiAction: {
     flex: 1,
   },
-  resumeGrille: {
+  introMenu: {
+    fontSize: 13,
+    color: couleurs.texteSecondaire,
+    marginTop: -espaces.s,
+  },
+  grilleMenu: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: espaces.s,
+    gap: espaces.m,
   },
-  resumeCase: {
-    flexBasis: '30%',
+  caseMenu: {
+    flexBasis: '45%',
     flexGrow: 1,
     backgroundColor: couleurs.carteTranslucide,
     borderRadius: rayons.carte,
-    paddingVertical: espaces.m,
+    paddingVertical: espaces.xl,
     paddingHorizontal: espaces.m,
     alignItems: 'center',
-    gap: 2,
+    gap: espaces.s,
+    ...ombres.carte,
   },
-  resumeNombre: {
-    fontSize: 22,
+  bulleMenu: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: couleurs.primaireClair,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  labelMenu: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: couleurs.encre,
+    textAlign: 'center',
+  },
+  pastilleMenu: {
+    minWidth: 30,
+    alignItems: 'center',
+    backgroundColor: couleurs.primaireClair,
+    borderRadius: rayons.pastille,
+    paddingHorizontal: espaces.s,
+    paddingVertical: 3,
+  },
+  pastilleMenuAction: {
+    backgroundColor: couleurs.attenteFond,
+  },
+  textePastilleMenu: {
+    fontSize: 14,
     fontWeight: '800',
-    color: couleurs.primaire,
+    color: couleurs.primaireFonce,
   },
-  resumeNombreAction: {
+  textePastilleMenuAction: {
     color: couleurs.attente,
   },
-  resumeLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: couleurs.texteSecondaire,
-    textAlign: 'center',
+  retourMenu: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: espaces.xs,
+    paddingVertical: espaces.s,
+    alignSelf: 'flex-start',
+  },
+  texteRetourMenu: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: couleurs.primaireFonce,
   },
   groupeVille: {
     gap: espaces.m,

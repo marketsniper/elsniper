@@ -2,9 +2,11 @@
 // Hôtel : liste via GET /hotels/:id/packages. Utilisateur : l'API n'expose
 // pas de liste par expéditeur → ids mémorisés localement (lib/colisLocal)
 // puis rechargés via GET /packages/:id.
+// « Faire le ménage » : masque les colis livrés/annulés antérieurs au coup
+// de balai (local à l'appareil — rien n'est supprimé chez zanziGo).
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
-import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { Alert, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 
 import { FondPlage } from '@/components/FondPlage';
 import { BadgeStatutColis, Bouton, EtatVide } from '@/components/ui';
@@ -12,6 +14,7 @@ import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { listerColisLocaux } from '@/lib/colisLocal';
 import { libelleTailleColis, useT } from '@/lib/i18n';
+import { estBalaye, lireCoupDeBalai, passerCoupDeBalai } from '@/lib/menageLocal';
 import { couleurs, espaces, ombres, rayons } from '@/lib/theme';
 import {
   champ,
@@ -21,12 +24,15 @@ import {
   type TailleColis,
 } from '@/lib/types';
 
+const STATUTS_FINIS: StatutColis[] = ['delivered', 'cancelled'];
+
 export default function EcranColis() {
   const router = useRouter();
   const { session } = useAuth();
   const { t } = useT();
   const [colis, setColis] = useState<Colis[]>([]);
   const [charge, setCharge] = useState(false);
+  const [balai, setBalai] = useState(0);
 
   const hotel = session?.hotel ?? null;
   const proprietaireId = session?.user?.id ?? hotel?.id ?? null;
@@ -45,6 +51,7 @@ export default function EcranColis() {
         );
         setColis(resultats.filter((c): c is Colis => c !== null));
       }
+      setBalai(await lireCoupDeBalai('colis', proprietaireId));
     } catch {
       // silencieux : l'écran vide affiche l'invite de création
     } finally {
@@ -58,10 +65,31 @@ export default function EcranColis() {
     }, [rafraichir])
   );
 
+  // Colis affichés : les actifs toujours, les livrés/annulés seulement s'ils
+  // sont postérieurs au dernier coup de balai.
+  const estFini = (c: Colis) =>
+    STATUTS_FINIS.includes(champ<StatutColis>(c, 'status', 'statut') ?? 'created');
+  const visibles = colis.filter(
+    (c) => !estFini(c) || !estBalaye(champ(c, 'created_at', 'createdAt'), balai)
+  );
+  const nbNettoyables = visibles.filter(estFini).length;
+
+  const faireLeMenage = () => {
+    if (!proprietaireId) return;
+    Alert.alert(t('menage_titre'), t('menage_texte'), [
+      { text: t('commun_annuler'), style: 'cancel' },
+      {
+        text: t('menage_confirmer'),
+        style: 'destructive',
+        onPress: async () => setBalai(await passerCoupDeBalai('colis', proprietaireId)),
+      },
+    ]);
+  };
+
   return (
     <FondPlage fond="lagon" voile="clair">
       <FlatList
-        data={colis}
+        data={visibles}
         keyExtractor={(c) => c.id}
         contentContainerStyle={styles.liste}
         refreshControl={
@@ -81,6 +109,17 @@ export default function EcranColis() {
               icone="cube-outline"
               titre={t('colis_vide_titre')}
               message={hotel ? t('colis_vide_texte_hotel') : t('colis_vide_texte')}
+            />
+          ) : null
+        }
+        ListFooterComponent={
+          nbNettoyables > 0 ? (
+            <Bouton
+              titre={`${t('menage_bouton_colis')} (${nbNettoyables})`}
+              icone="trash-outline"
+              variante="secondaire"
+              onPress={faireLeMenage}
+              style={styles.boutonMenage}
             />
           ) : null
         }
@@ -126,6 +165,9 @@ const styles = StyleSheet.create({
   },
   boutonNouveau: {
     marginBottom: espaces.s,
+  },
+  boutonMenage: {
+    marginTop: espaces.m,
   },
   carte: {
     backgroundColor: couleurs.carteTranslucide,

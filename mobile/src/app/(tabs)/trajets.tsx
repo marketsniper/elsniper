@@ -1,10 +1,12 @@
 // Onglet « Mes trajets » : liste des courses de l'utilisateur.
 // Mode hôtel : historique des réservations de l'hôtel (GET /trips?hotelId=),
 // avec le nom du client sur chaque carte.
+// « Faire le ménage » : masque les courses terminées/annulées antérieures au
+// coup de balai (local à l'appareil — rien n'est supprimé chez zanziGo).
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
-import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { Alert, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 
 import { Etoiles } from '@/components/Etoiles';
 import { FondPlage } from '@/components/FondPlage';
@@ -12,6 +14,7 @@ import { BadgeStatutTrajet, Bouton, EtatVide, TexteErreur } from '@/components/u
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { formaterDateRelativeI18n, libelleTypeTrajet, useT } from '@/lib/i18n';
+import { estBalaye, lireCoupDeBalai, passerCoupDeBalai } from '@/lib/menageLocal';
 import { couleurs, espaces, ombres, rayons } from '@/lib/theme';
 import {
   champ,
@@ -21,6 +24,8 @@ import {
   type TypeTrajet,
 } from '@/lib/types';
 
+const STATUTS_FINIS: StatutTrajet[] = ['completed', 'cancelled'];
+
 export default function EcranTrajets() {
   const router = useRouter();
   const { session } = useAuth();
@@ -28,9 +33,11 @@ export default function EcranTrajets() {
   const [trajets, setTrajets] = useState<Trajet[]>([]);
   const [charge, setCharge] = useState(false);
   const [erreur, setErreur] = useState('');
+  const [balai, setBalai] = useState(0);
 
   const hotel = session?.hotel ?? null;
   const modeHotel = !!hotel;
+  const proprietaireId = hotel?.id ?? session?.user?.id ?? null;
 
   const rafraichir = useCallback(async () => {
     const utilisateur = session?.user;
@@ -42,12 +49,13 @@ export default function EcranTrajets() {
         ? await api.listerTrajetsHotel(hotel.id)
         : await api.listerTrajets(utilisateur!.id);
       setTrajets(liste);
+      if (proprietaireId) setBalai(await lireCoupDeBalai('trajets', proprietaireId));
     } catch {
       setErreur(t('trajets_erreur'));
     } finally {
       setCharge(false);
     }
-  }, [session?.user, hotel, t]);
+  }, [session?.user, hotel, proprietaireId, t]);
 
   useFocusEffect(
     useCallback(() => {
@@ -55,16 +63,49 @@ export default function EcranTrajets() {
     }, [rafraichir])
   );
 
+  // Courses affichées : les actives toujours, les terminées/annulées
+  // seulement si elles sont postérieures au dernier coup de balai.
+  const estFinie = (trajet: Trajet) =>
+    STATUTS_FINIS.includes(champ<StatutTrajet>(trajet, 'status', 'statut') ?? 'requested');
+  const visibles = trajets.filter(
+    (trajet) =>
+      !estFinie(trajet) || !estBalaye(champ(trajet, 'created_at', 'createdAt'), balai)
+  );
+  const nbNettoyables = visibles.filter(estFinie).length;
+
+  const faireLeMenage = () => {
+    if (!proprietaireId) return;
+    Alert.alert(t('menage_titre'), t('menage_texte'), [
+      { text: t('commun_annuler'), style: 'cancel' },
+      {
+        text: t('menage_confirmer'),
+        style: 'destructive',
+        onPress: async () => setBalai(await passerCoupDeBalai('trajets', proprietaireId)),
+      },
+    ]);
+  };
+
   return (
     <FondPlage fond="palmiers" voile="clair">
       <FlatList
-        data={trajets}
+        data={visibles}
         keyExtractor={(trajet) => trajet.id}
         contentContainerStyle={styles.liste}
         refreshControl={
           <RefreshControl refreshing={charge} onRefresh={rafraichir} tintColor={couleurs.primaire} />
         }
         ListHeaderComponent={erreur ? <TexteErreur>{erreur}</TexteErreur> : null}
+        ListFooterComponent={
+          nbNettoyables > 0 ? (
+            <Bouton
+              titre={`${t('menage_bouton')} (${nbNettoyables})`}
+              icone="trash-outline"
+              variante="secondaire"
+              onPress={faireLeMenage}
+              style={styles.boutonMenage}
+            />
+          ) : null
+        }
         ListEmptyComponent={
           !charge && !erreur ? (
             <EtatVide
@@ -221,5 +262,8 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: couleurs.attente,
     fontWeight: '600',
+  },
+  boutonMenage: {
+    marginTop: espaces.m,
   },
 });
