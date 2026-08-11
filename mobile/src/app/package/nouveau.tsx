@@ -137,7 +137,7 @@ export default function EcranNouveauColis() {
                 <Ionicons
                   name={presentation.icone}
                   size={22}
-                  color={active ? couleurs.blanc : couleurs.primaire}
+                  color={active ? couleurs.surPrimaire : couleurs.primaire}
                 />
               </View>
               <View style={styles.textesTaille}>
@@ -224,7 +224,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: espaces.m,
-    backgroundColor: couleurs.blanc,
+    backgroundColor: couleurs.surface,
     borderRadius: rayons.carte,
     padding: espaces.m,
     borderWidth: 2,

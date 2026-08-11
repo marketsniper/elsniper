@@ -397,7 +397,7 @@ const styles = StyleSheet.create({
     color: couleurs.primaire,
   },
   blocReservations: {
-    backgroundColor: couleurs.blanc,
+    backgroundColor: couleurs.surface,
     borderRadius: rayons.bouton,
     borderWidth: 1,
     borderColor: couleurs.bordure,

@@ -329,9 +329,9 @@ export function RidesPartages() {
                   ]}
                 >
                   {enCours ? (
-                    <ActivityIndicator size="small" color={couleurs.blanc} />
+                    <ActivityIndicator size="small" color={couleurs.surPrimaire} />
                   ) : (
-                    <Ionicons name="checkmark-circle-outline" size={16} color={couleurs.blanc} />
+                    <Ionicons name="checkmark-circle-outline" size={16} color={couleurs.surPrimaire} />
                   )}
                   <Text style={styles.texteReserver}>{t('rides_reserver')}</Text>
                 </Pressable>
@@ -378,7 +378,7 @@ const styles = StyleSheet.create({
     color: couleurs.texteSecondaire,
   },
   texteChipActif: {
-    color: couleurs.blanc,
+    color: couleurs.surPrimaire,
   },
   groupeJour: {
     gap: espaces.m,
@@ -519,7 +519,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: espaces.s,
-    backgroundColor: couleurs.blanc,
+    backgroundColor: couleurs.surface,
     borderRadius: rayons.pastille,
     borderWidth: 1,
     borderColor: couleurs.bordure,
@@ -585,7 +585,7 @@ const styles = StyleSheet.create({
     paddingVertical: espaces.s + 2,
   },
   texteReserver: {
-    color: couleurs.blanc,
+    color: couleurs.surPrimaire,
     fontSize: 13,
     fontWeight: '700',
   },

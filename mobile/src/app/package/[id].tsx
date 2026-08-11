@@ -339,7 +339,7 @@ const styles = StyleSheet.create({
     gap: espaces.s,
     padding: espaces.l,
     marginVertical: espaces.s,
-    backgroundColor: couleurs.blanc,
+    backgroundColor: couleurs.surface,
     borderRadius: rayons.carte,
     ...ombres.douce,
   },

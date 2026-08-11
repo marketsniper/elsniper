@@ -121,7 +121,7 @@ export function SelecteurLangue({ compact = false }: { compact?: boolean }) {
   );
 }
 
-/** Logotype texte « zanziGo » : zanzi en encre, Go en turquoise. */
+/** Logotype texte « zanziGo » : zanzi en écume, Go en or (Nuit d'océan). */
 export function LogoZanziGo({
   taille = 40,
   surFonce = false,
@@ -132,7 +132,7 @@ export function LogoZanziGo({
   return (
     <Text style={[styles.logo, { fontSize: taille }]} accessibilityRole="header">
       <Text style={{ color: surFonce ? couleurs.blanc : couleurs.encre }}>zanzi</Text>
-      <Text style={{ color: couleurs.primaire }}>Go</Text>
+      <Text style={{ color: couleurs.or }}>Go</Text>
     </Text>
   );
 }
@@ -181,7 +181,14 @@ export function Bouton({
   style?: StyleProp<ViewStyle>;
 }) {
   const inactif = desactive || charge;
-  const couleurContenu = variante === 'secondaire' ? couleurs.primaire : couleurs.blanc;
+  // Sur turquoise néon, un texte marine sombre lit mieux que du blanc ;
+  // les boutons danger (rouge) gardent leur texte blanc.
+  const couleurContenu =
+    variante === 'secondaire'
+      ? couleurs.primaire
+      : variante === 'danger'
+        ? couleurs.blanc
+        : couleurs.surPrimaire;
   return (
     <Pressable
       onPress={onPress}
@@ -244,7 +251,7 @@ export function Badge({
     neutre: couleurs.encre,
     succes: couleurs.succes,
     attente: couleurs.attente,
-    danger: couleurs.danger,
+    danger: couleurs.dangerFonce,
     primaire: couleurs.primaireFonce,
   } as const;
   return (
@@ -407,7 +414,7 @@ const styles = StyleSheet.create({
     color: couleurs.texteSecondaire,
   },
   textePillLangueActif: {
-    color: couleurs.blanc,
+    color: couleurs.surPrimaire,
   },
   contenuDefilant: {
     padding: espaces.l,
@@ -455,7 +462,7 @@ const styles = StyleSheet.create({
     backgroundColor: couleurs.primaire,
   },
   boutonSecondaire: {
-    backgroundColor: couleurs.blanc,
+    backgroundColor: couleurs.surface,
     borderWidth: 1.5,
     borderColor: couleurs.primaire,
   },
@@ -480,7 +487,7 @@ const styles = StyleSheet.create({
     color: couleurs.texteSecondaire,
   },
   champSaisie: {
-    backgroundColor: couleurs.blanc,
+    backgroundColor: couleurs.surface,
     borderWidth: 1,
     borderColor: couleurs.bordure,
     borderRadius: rayons.bouton,

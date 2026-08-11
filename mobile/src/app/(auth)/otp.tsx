@@ -204,7 +204,7 @@ const styles = StyleSheet.create({
     borderRadius: rayons.bouton,
     borderWidth: 1.5,
     borderColor: couleurs.bordure,
-    backgroundColor: couleurs.blanc,
+    backgroundColor: couleurs.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },

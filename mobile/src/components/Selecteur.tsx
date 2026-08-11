@@ -99,7 +99,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: espaces.s,
-    backgroundColor: couleurs.blanc,
+    backgroundColor: couleurs.surface,
     borderWidth: 1,
     borderColor: couleurs.bordure,
     borderRadius: rayons.bouton,
@@ -122,7 +122,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   feuille: {
-    backgroundColor: couleurs.blanc,
+    backgroundColor: couleurs.surface,
     borderTopLeftRadius: rayons.carte,
     borderTopRightRadius: rayons.carte,
     paddingBottom: espaces.xl,

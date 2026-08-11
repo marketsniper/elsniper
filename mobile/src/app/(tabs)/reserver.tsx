@@ -262,7 +262,7 @@ export default function EcranReserver() {
                 <Ionicons
                   name={option.icone}
                   size={24}
-                  color={actif ? couleurs.blanc : couleurs.primaire}
+                  color={actif ? couleurs.surPrimaire : couleurs.primaire}
                 />
               </View>
               <Text style={[styles.titreMode, actif && { color: couleurs.primaireFonce }]}>

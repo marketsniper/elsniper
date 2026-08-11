@@ -29,7 +29,7 @@ import {
 } from '@/components/ui';
 import { api, definirCleEquipe, ErreurApi } from '@/lib/api';
 import { formaterDateRelativeI18n, libelleTypeTrajet, useT } from '@/lib/i18n';
-import { couleurs, espaces } from '@/lib/theme';
+import { couleurs, espaces, rayons } from '@/lib/theme';
 import {
   champ,
   formaterMontant,
@@ -208,10 +208,49 @@ export default function EcranEquipe() {
     );
   }
 
+  // Taxis classés par ville (zone) : tri alphabétique puis regroupement.
+  const groupesTaxis: { ville: string; liste: Chauffeur[] }[] = [];
+  for (const chauffeur of [...chauffeurs].sort((a, b) =>
+    String(champ(a, 'zone') ?? '').localeCompare(String(champ(b, 'zone') ?? ''), 'fr')
+  )) {
+    const ville = String(champ(chauffeur, 'zone') ?? '—');
+    const dernier = groupesTaxis[groupesTaxis.length - 1];
+    if (dernier && dernier.ville === ville) dernier.liste.push(chauffeur);
+    else groupesTaxis.push({ ville, liste: [chauffeur] });
+  }
+
+  // Vue d'ensemble : six compteurs — en or dès qu'une action attend.
+  const resume: { cle: string; label: string; n: number; action: boolean }[] = [
+    { cle: 'courses', label: t('equipe_stat_courses'), n: courses.length, action: true },
+    { cle: 'paiements', label: t('equipe_stat_paiements'), n: paiements.length, action: true },
+    { cle: 'candidatures', label: t('equipe_stat_candidatures'), n: candidats.length, action: true },
+    { cle: 'comptes', label: t('equipe_stat_comptes'), n: clients.length, action: true },
+    { cle: 'hotels', label: t('equipe_stat_hotels'), n: hotels.length, action: true },
+    { cle: 'taxis', label: t('equipe_stat_taxis'), n: chauffeurs.length, action: false },
+  ];
+
   // ----- Tableau de bord ----------------------------------------------------
   return (
     <Ecran fond="vagues" onRefresh={charger}>
       <TexteErreur>{erreur}</TexteErreur>
+
+      {/* 0. Vue d'ensemble : l'état du jour en un coup d'œil */}
+      <Text style={styles.titreSection}>{t('equipe_resume_titre')}</Text>
+      <View style={styles.resumeGrille}>
+        {resume.map((stat) => (
+          <View key={stat.cle} style={styles.resumeCase}>
+            <Text
+              style={[
+                styles.resumeNombre,
+                stat.action && stat.n > 0 && styles.resumeNombreAction,
+              ]}
+            >
+              {stat.n}
+            </Text>
+            <Text style={styles.resumeLabel}>{stat.label}</Text>
+          </View>
+        ))}
+      </View>
 
       {/* 1. Courses à traiter */}
       <Text style={styles.titreSection}>
@@ -478,49 +517,60 @@ export default function EcranEquipe() {
         );
       })}
 
-      {/* 6. Mes taxis : tous les chauffeurs vérifiés, position GPS, radiation */}
+      {/* 6. Mes taxis : chauffeurs vérifiés CLASSÉS PAR VILLE, position GPS,
+          radiation avec confirmation. */}
       <Text style={styles.titreSection}>
         {t('equipe_taxis')} ({chauffeurs.length})
       </Text>
       {chauffeurs.length === 0 && (
         <EncartInfo icone="car-outline">{t('equipe_taxis_vide')}</EncartInfo>
       )}
-      {chauffeurs.map((chauffeur) => {
-        const lat = Number(champ(chauffeur, 'last_lat') ?? NaN);
-        const lng = Number(champ(chauffeur, 'last_lng') ?? NaN);
-        const positionConnue = Number.isFinite(lat) && Number.isFinite(lng);
-        const majPosition = champ(chauffeur, 'position_updated_at');
-        return (
-          <Carte key={chauffeur.id}>
-            <Text style={styles.itineraire}>{libelleChauffeur(chauffeur)}</Text>
-            <Text style={styles.detail}>
-              {String(champ(chauffeur, 'vehicle_model', 'vehicleModel') ?? '—')} ·{' '}
-              {String(champ(chauffeur, 'zone') ?? '—')} ·{' '}
-              {String(champ(chauffeur, 'phone') ?? '')}
+      {groupesTaxis.map((groupe) => (
+        <View key={groupe.ville} style={styles.groupeVille}>
+          <View style={styles.enTeteVille}>
+            <Ionicons name="location" size={14} color={couleurs.primaireFonce} />
+            <Text style={styles.texteVille}>
+              {groupe.ville} ({groupe.liste.length})
             </Text>
-            {positionConnue ? (
-              <Bouton
-                titre={`${t('equipe_position')} · ${formaterDateRelativeI18n(majPosition, t)}`}
-                icone="location-outline"
-                variante="secondaire"
-                onPress={() => Linking.openURL(`https://www.google.com/maps?q=${lat},${lng}`)}
-              />
-            ) : (
-              <View style={styles.ligneDetail}>
-                <Ionicons name="location-outline" size={14} color={couleurs.texteSecondaire} />
-                <Text style={styles.detail}>{t('equipe_position_inconnue')}</Text>
-              </View>
-            )}
-            <Bouton
-              titre={t('equipe_radier')}
-              icone="close-circle-outline"
-              variante="danger"
-              onPress={() => radierChauffeur(chauffeur)}
-              charge={actionEnCours === chauffeur.id}
-            />
-          </Carte>
-        );
-      })}
+            <View style={styles.filetVille} />
+          </View>
+          {groupe.liste.map((chauffeur) => {
+            const lat = Number(champ(chauffeur, 'last_lat') ?? NaN);
+            const lng = Number(champ(chauffeur, 'last_lng') ?? NaN);
+            const positionConnue = Number.isFinite(lat) && Number.isFinite(lng);
+            const majPosition = champ(chauffeur, 'position_updated_at');
+            return (
+              <Carte key={chauffeur.id}>
+                <Text style={styles.itineraire}>{libelleChauffeur(chauffeur)}</Text>
+                <Text style={styles.detail}>
+                  {String(champ(chauffeur, 'vehicle_model', 'vehicleModel') ?? '—')} ·{' '}
+                  {String(champ(chauffeur, 'phone') ?? '')}
+                </Text>
+                {positionConnue ? (
+                  <Bouton
+                    titre={`${t('equipe_position')} · ${formaterDateRelativeI18n(majPosition, t)}`}
+                    icone="location-outline"
+                    variante="secondaire"
+                    onPress={() => Linking.openURL(`https://www.google.com/maps?q=${lat},${lng}`)}
+                  />
+                ) : (
+                  <View style={styles.ligneDetail}>
+                    <Ionicons name="location-outline" size={14} color={couleurs.texteSecondaire} />
+                    <Text style={styles.detail}>{t('equipe_position_inconnue')}</Text>
+                  </View>
+                )}
+                <Bouton
+                  titre={t('equipe_radier')}
+                  icone="close-circle-outline"
+                  variante="danger"
+                  onPress={() => radierChauffeur(chauffeur)}
+                  charge={actionEnCours === chauffeur.id}
+                />
+              </Carte>
+            );
+          })}
+        </View>
+      ))}
 
       <Bouton
         titre={t('equipe_quitter')}
@@ -583,5 +633,54 @@ const styles = StyleSheet.create({
   },
   demiAction: {
     flex: 1,
+  },
+  resumeGrille: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: espaces.s,
+  },
+  resumeCase: {
+    flexBasis: '30%',
+    flexGrow: 1,
+    backgroundColor: couleurs.carteTranslucide,
+    borderRadius: rayons.carte,
+    paddingVertical: espaces.m,
+    paddingHorizontal: espaces.m,
+    alignItems: 'center',
+    gap: 2,
+  },
+  resumeNombre: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: couleurs.primaire,
+  },
+  resumeNombreAction: {
+    color: couleurs.attente,
+  },
+  resumeLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: couleurs.texteSecondaire,
+    textAlign: 'center',
+  },
+  groupeVille: {
+    gap: espaces.m,
+  },
+  enTeteVille: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: espaces.s,
+    marginTop: espaces.xs,
+  },
+  texteVille: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: couleurs.primaireFonce,
+    letterSpacing: 0.3,
+  },
+  filetVille: {
+    flex: 1,
+    height: 1,
+    backgroundColor: couleurs.bordure,
   },
 });

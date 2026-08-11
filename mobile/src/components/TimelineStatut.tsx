@@ -41,7 +41,7 @@ export function TimelineStatut({
                 ]}
               >
                 {atteinte && (
-                  <Ionicons name="checkmark" size={12} color={couleurs.blanc} />
+                  <Ionicons name="checkmark" size={12} color={couleurs.surPrimaire} />
                 )}
               </View>
               {!derniere && (

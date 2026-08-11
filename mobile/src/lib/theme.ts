@@ -1,33 +1,39 @@
-// Palette « Zanzibar » de zanziGo : turquoise océan, sable, blanc.
+// Palette « Nuit d'océan » de zanziGo : marine profonde, turquoise néon, or.
+// (Direction D choisie par l'équipe — l'océan de nuit, esprit beach club.)
 import type { StatutColis, StatutTrajet } from './types';
 
 export const couleurs = {
-  primaire: '#0D9488', // turquoise océan
-  primaireFonce: '#0B7C72',
-  primaireClair: '#CCFBF1',
-  sable: '#F5F0E8',
+  primaire: '#35C4B5', // turquoise néon
+  primaireFonce: '#7FE0D5', // texte turquoise clair posé sur les fonds teal sombres
+  primaireClair: '#123A41', // fond teal profond (pastilles, encarts info)
+  sable: '#10222E', // fond principal — marine profonde (nom historique conservé)
   blanc: '#FFFFFF',
-  encre: '#1F2937',
-  texteSecondaire: '#6B7280',
-  bordure: '#E5E7EB',
-  danger: '#DC2626',
-  dangerFonce: '#B91C1C', // texte des encarts d'erreur
-  dangerFond: '#FEF2F2', // fond rouge très clair (bandeaux d'erreur)
-  dangerBordure: '#FECACA',
-  succes: '#059669',
-  succesFond: '#D1FAE5',
-  attente: '#D97706',
-  attenteFond: '#FEF3C7',
-  orange: '#EA580C', // orange franc (statut « Chauffeur confirmé »)
-  orangeFond: '#FFEDD5',
-  etoile: '#F59E0B', // étoiles de notation
-  voile: 'rgba(31, 41, 55, 0.65)', // voile sombre du scanner (encre translucide)
+  encre: '#EAF2F4', // texte principal — écume
+  texteSecondaire: '#8FA6B0',
+  bordure: '#29455A',
+  danger: '#E5484D',
+  dangerFonce: '#FCA5A5', // texte des encarts d'erreur
+  dangerFond: '#3B1A1E', // fond rouge sombre (bandeaux d'erreur)
+  dangerBordure: '#7F2E35',
+  succes: '#58D6A8',
+  succesFond: '#14383B',
+  attente: '#E4B95B',
+  attenteFond: '#3E3320',
+  orange: '#F0A24A', // orange doux (statut « Chauffeur confirmé »)
+  orangeFond: '#3D2C18',
+  etoile: '#E4B95B', // étoiles de notation — or
+  voile: 'rgba(4, 10, 15, 0.7)', // voile sombre du scanner
   succesClair: '#6EE7B7', // texte succès sur fond sombre (scanner)
   dangerClair: '#FCA5A5', // texte erreur sur fond sombre (scanner)
-  // Design tropical : photos de plage en fond, voiles de lisibilité.
-  voilePhotoClair: 'rgba(255, 250, 244, 0.82)', // voile blanc sur les écrans formulaires/listes
-  voilePhotoSombre: 'rgba(15, 23, 42, 0.55)', // assombrissement bas des écrans d'accueil
-  carteTranslucide: 'rgba(255, 255, 255, 0.94)', // cartes blanches semi-opaques sur photo
+  // Photos de plage en fond, voilées de marine pour la lisibilité nocturne.
+  voilePhotoClair: 'rgba(16, 34, 46, 0.88)', // voile marine sur les écrans formulaires/listes
+  voilePhotoSombre: 'rgba(4, 10, 15, 0.55)', // assombrissement bas des écrans d'accueil
+  carteTranslucide: 'rgba(26, 50, 66, 0.95)', // cartes marine claire semi-opaques
+  // Rôles propres à « Nuit d'océan »
+  surface: '#1A3242', // surfaces pleines : champs de saisie, menus, barre d'onglets
+  surPrimaire: '#0B1B24', // texte/icônes posés SUR le turquoise (boutons)
+  or: '#D8AE5E', // accent or : logo, touches premium
+  nuit: '#0B1B24', // fonds les plus profonds (carte Chauffeur de l'accueil)
 };
 
 export const rayons = {
@@ -56,14 +62,14 @@ export const tailles = {
 export const ombres = {
   carte: {
     shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 3,
   },
   douce: {
-    shadowColor: '#0D9488',
-    shadowOpacity: 0.12,
+    shadowColor: '#35C4B5',
+    shadowOpacity: 0.18,
     shadowRadius: 14,
     shadowOffset: { width: 0, height: 6 },
     elevation: 4,
@@ -75,7 +81,7 @@ export const couleursStatutTrajet: Record<StatutTrajet, { fond: string; texte: s
   requested: { fond: couleurs.attenteFond, texte: couleurs.attente }, // orange doux
   driver_confirmed: { fond: couleurs.orangeFond, texte: couleurs.orange }, // orange
   paid: { fond: couleurs.primaireClair, texte: couleurs.primaireFonce }, // turquoise clair
-  in_progress: { fond: couleurs.primaire, texte: couleurs.blanc }, // turquoise
+  in_progress: { fond: couleurs.primaire, texte: couleurs.surPrimaire }, // turquoise
   completed: { fond: couleurs.succesFond, texte: couleurs.succes }, // vert
   cancelled: { fond: couleurs.bordure, texte: couleurs.texteSecondaire }, // gris
 };
@@ -84,7 +90,7 @@ export const couleursStatutTrajet: Record<StatutTrajet, { fond: string; texte: s
 export const couleursStatutColis: Record<StatutColis, { fond: string; texte: string }> = {
   created: { fond: couleurs.attenteFond, texte: couleurs.attente },
   paid: { fond: couleurs.primaireClair, texte: couleurs.primaireFonce },
-  picked_up: { fond: couleurs.primaire, texte: couleurs.blanc },
+  picked_up: { fond: couleurs.primaire, texte: couleurs.surPrimaire },
   delivered: { fond: couleurs.succesFond, texte: couleurs.succes },
   cancelled: { fond: couleurs.bordure, texte: couleurs.texteSecondaire }, // gris
 };

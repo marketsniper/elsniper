@@ -284,6 +284,13 @@ const CHAINES = {
     sw: '{nom} hatapokea tena safari za zanziGo na matangazo yake yaliyo wazi yatafungwa.',
   },
   equipe_radier_confirmer: { fr: 'Radier', en: 'Remove', sw: 'Ondoa' },
+  equipe_resume_titre: { fr: "Vue d'ensemble", en: 'Overview', sw: 'Muhtasari' },
+  equipe_stat_courses: { fr: 'Courses à traiter', en: 'Rides to handle', sw: 'Safari za kushughulikia' },
+  equipe_stat_paiements: { fr: 'Paiements', en: 'Payments', sw: 'Malipo' },
+  equipe_stat_candidatures: { fr: 'Candidatures', en: 'Applications', sw: 'Maombi' },
+  equipe_stat_comptes: { fr: 'Comptes clients', en: 'Client accounts', sw: 'Akaunti za wateja' },
+  equipe_stat_hotels: { fr: 'Hôtels à vérifier', en: 'Hotels to verify', sw: 'Hoteli za kuthibitisha' },
+  equipe_stat_taxis: { fr: 'Taxis actifs', en: 'Active taxis', sw: 'Teksi hai' },
   annonces_historique: { fr: 'Historique', en: 'History', sw: 'Historia' },
   annonces_ouvertes: { fr: 'Annonces en ligne', en: 'Live listings', sw: 'Matangazo hewani' },
   equipe_action_erreur: {

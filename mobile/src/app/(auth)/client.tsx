@@ -217,7 +217,7 @@ const styles = StyleSheet.create({
     borderRadius: rayons.bouton,
     padding: espaces.m,
     gap: 2,
-    backgroundColor: couleurs.blanc,
+    backgroundColor: couleurs.surface,
   },
   optionActive: {
     borderColor: couleurs.primaire,

@@ -50,7 +50,7 @@ function CarteProfil({
       </View>
       <View style={styles.textes}>
         <Text style={[styles.titreCarte, sombre && { color: couleurs.blanc }]}>{titre}</Text>
-        <Text style={[styles.sousTitreCarte, sombre && { color: couleurs.bordure }]}>
+        <Text style={[styles.sousTitreCarte, sombre && { color: couleurs.texteSecondaire }]}>
           {sousTitre}
         </Text>
         {!!mention && <Text style={styles.mention}>{mention}</Text>}
@@ -215,7 +215,7 @@ const styles = StyleSheet.create({
     ...ombres.carte,
   },
   carteSombre: {
-    backgroundColor: couleurs.encre,
+    backgroundColor: couleurs.nuit,
   },
   bulleIcone: {
     width: 52,

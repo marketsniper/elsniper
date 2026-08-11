@@ -119,7 +119,7 @@ export default function EcranTrajets() {
               {statut === 'driver_confirmed' && (
                 <View style={styles.rangeeAction}>
                   <View style={styles.boutonPayer}>
-                    <Ionicons name="card-outline" size={16} color={couleurs.blanc} />
+                    <Ionicons name="card-outline" size={16} color={couleurs.surPrimaire} />
                     <Text style={styles.textePayer}>{t('trajets_payer')}</Text>
                   </View>
                 </View>
@@ -213,7 +213,7 @@ const styles = StyleSheet.create({
     paddingVertical: espaces.m,
   },
   textePayer: {
-    color: couleurs.blanc,
+    color: couleurs.surPrimaire,
     fontSize: 14,
     fontWeight: '700',
   },

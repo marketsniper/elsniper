@@ -25,7 +25,7 @@ export default function LayoutChauffeur() {
         headerShadowVisible: false,
         tabBarActiveTintColor: couleurs.primaire,
         tabBarInactiveTintColor: couleurs.texteSecondaire,
-        tabBarStyle: { backgroundColor: couleurs.blanc },
+        tabBarStyle: { backgroundColor: couleurs.surface, borderTopColor: couleurs.bordure },
         sceneStyle: { backgroundColor: couleurs.sable },
       }}
     >

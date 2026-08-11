@@ -313,7 +313,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'baseline',
     gap: espaces.xs,
-    backgroundColor: couleurs.blanc,
+    backgroundColor: couleurs.surface,
     borderWidth: 1,
     borderColor: couleurs.bordure,
     borderRadius: rayons.carte,
