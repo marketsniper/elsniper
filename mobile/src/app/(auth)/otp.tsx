@@ -161,7 +161,12 @@ export default function EcranOtp() {
         <Bouton
           titre={t('otp_changer_numero')}
           variante="secondaire"
-          onPress={() => router.back()}
+          onPress={() => {
+            // Retour à la saisie du numéro — même sans historique (lien
+            // direct), on repart sur l'écran téléphone de la même rubrique.
+            if (router.canGoBack()) router.back();
+            else router.replace({ pathname: '/(auth)/telephone', params: { profil } });
+          }}
         />
       </Carte>
     </Ecran>

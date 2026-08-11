@@ -43,6 +43,11 @@ const CHAINES = {
   },
   commun_reessayer: { fr: 'Réessayer', en: 'Try again', sw: 'Jaribu tena' },
   commun_annuler: { fr: 'Annuler', en: 'Cancel', sw: 'Ghairi' },
+  commun_mauvais_numero: {
+    fr: 'Mauvais numéro ? Recommencer avec un autre',
+    en: 'Wrong number? Start over with another',
+    sw: 'Namba si sahihi? Anza upya na nyingine',
+  },
   commun_actualiser: { fr: 'Actualiser', en: 'Refresh', sw: 'Onyesha upya' },
   commun_actualiser_statut: {
     fr: 'Actualiser le statut',

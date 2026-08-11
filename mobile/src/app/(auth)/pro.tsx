@@ -237,6 +237,21 @@ export default function EcranPro() {
       <Carte>
         <Titre>{t('pro_titre')}</Titre>
         <SousTitre>{t('pro_intro')}</SousTitre>
+        <SousTitre>{t('client_numero_verifie', { phone: session?.phone ?? '' })}</SousTitre>
+        {/* Numéro tapé par erreur : on se déconnecte et on repart de la
+            saisie du téléphone, toujours en rubrique chauffeur. */}
+        <Pressable
+          onPress={async () => {
+            await deconnexion();
+            router.replace({ pathname: '/(auth)/telephone', params: { profil: 'driver' } });
+          }}
+          hitSlop={8}
+          accessibilityRole="button"
+          style={({ pressed }) => [styles.lienMauvaisNumero, pressed && { opacity: 0.6 }]}
+        >
+          <Ionicons name="arrow-undo-outline" size={14} color={couleurs.primaireFonce} />
+          <Text style={styles.texteMauvaisNumero}>{t('commun_mauvais_numero')}</Text>
+        </Pressable>
         <Champ label={t('client_nom')} value={nom} onChangeText={setNom} placeholder="Juma Ali" />
         <Champ
           label={t('pro_permis')}
@@ -305,6 +320,16 @@ export default function EcranPro() {
 }
 
 const styles = StyleSheet.create({
+  lienMauvaisNumero: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: espaces.xs,
+  },
+  texteMauvaisNumero: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: couleurs.primaireFonce,
+  },
   carteEtat: {
     alignItems: 'center',
     gap: espaces.m,

@@ -30,7 +30,7 @@ import { formaterMontant, TARIF_LOCAL_TZS, type TypeCompte } from '@/lib/types';
 
 export default function EcranClient() {
   const router = useRouter();
-  const { session, majSession } = useAuth();
+  const { session, majSession, deconnexion } = useAuth();
   const { t } = useT();
   const params = useLocalSearchParams<{ type?: string }>();
   // Type imposé par le flux d'accueil ('local'), ou préréglé (legacy).
@@ -118,6 +118,23 @@ export default function EcranClient() {
       <Carte>
         <Titre>{t('client_titre')}</Titre>
         <SousTitre>{t('client_numero_verifie', { phone: session?.phone ?? '' })}</SousTitre>
+        {/* Numéro tapé par erreur : on se déconnecte et on repart de la
+            saisie du téléphone, dans la même rubrique. */}
+        <Pressable
+          onPress={async () => {
+            await deconnexion();
+            router.replace({
+              pathname: '/(auth)/telephone',
+              params: { profil: typePredefini === 'local' ? 'local' : 'visitor' },
+            });
+          }}
+          hitSlop={8}
+          accessibilityRole="button"
+          style={({ pressed }) => [styles.lienMauvaisNumero, pressed && { opacity: 0.6 }]}
+        >
+          <Ionicons name="arrow-undo-outline" size={14} color={couleurs.primaireFonce} />
+          <Text style={styles.texteMauvaisNumero}>{t('commun_mauvais_numero')}</Text>
+        </Pressable>
 
         {typePredefini === 'tourist' && (
           <EncartInfo icone="airplane-outline">{t('client_info_touriste')}</EncartInfo>
@@ -206,6 +223,16 @@ export default function EcranClient() {
 }
 
 const styles = StyleSheet.create({
+  lienMauvaisNumero: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: espaces.xs,
+  },
+  texteMauvaisNumero: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: couleurs.primaireFonce,
+  },
   labelType: {
     fontSize: 13,
     fontWeight: '600',
