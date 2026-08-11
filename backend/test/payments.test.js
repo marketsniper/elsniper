@@ -150,6 +150,25 @@ describe('Paiements — confirmation (mode stub Pesapal)', () => {
     assert.equal(res.body.error.code, 'payment_already_processed');
   });
 
+  it('confirmer un paiement solde les doublons pending de la même cible en failed', async () => {
+    const { token, trip, payment } = await createTripPayment();
+    // Le client a rappuyé sur « payer » : second paiement en attente.
+    const doublon = await request(app)
+      .post(`/api/trips/${trip.id}/payment`)
+      .set(authHeaders(token));
+    assert.equal(doublon.status, 201);
+
+    await request(app)
+      .post(`/api/payments/${payment.id}/confirm`)
+      .set(authHeaders(token))
+      .send({});
+
+    const releve = await request(app)
+      .get(`/api/payments/${doublon.body.id}`)
+      .set(authHeaders(token));
+    assert.equal(releve.body.status, 'failed', 'le doublon est soldé automatiquement');
+  });
+
   it('un tiers ne peut pas confirmer → 403 forbidden (paiement toujours pending)', async () => {
     const { token, payment } = await createTripPayment();
     const { token: otherToken } = await createTourist();

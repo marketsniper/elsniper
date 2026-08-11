@@ -157,6 +157,17 @@ router.post(
         );
       }
 
+      // Un client qui appuie plusieurs fois sur « payer » crée plusieurs
+      // paiements en attente pour la même cible : une fois l'un confirmé,
+      // les doublons sont soldés en 'failed' pour ne pas encombrer le
+      // tableau de bord équipe.
+      await client.query(
+        `UPDATE payments SET status = 'failed'
+         WHERE id <> $1 AND status = 'pending'
+           AND ((trip_id IS NOT NULL AND trip_id = $2) OR (package_id IS NOT NULL AND package_id = $3))`,
+        [req.params.id, payment.trip_id, payment.package_id]
+      );
+
       return paymentRows[0];
     });
     res.json(updated);
