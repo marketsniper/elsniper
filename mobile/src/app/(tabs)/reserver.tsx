@@ -361,8 +361,9 @@ export default function EcranReserver() {
             onPress={reserver}
             charge={charge}
           />
-
-          <RidesPartages />
+          {/* Les annonces des chauffeurs ne s'affichent QUE dans l'onglet
+              « Partagé » — les mélanger sous le formulaire privé rendait
+              l'écran illisible. */}
         </>
       )}
     </Ecran>

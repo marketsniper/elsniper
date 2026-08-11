@@ -284,6 +284,8 @@ const CHAINES = {
     sw: '{nom} hatapokea tena safari za zanziGo na matangazo yake yaliyo wazi yatafungwa.',
   },
   equipe_radier_confirmer: { fr: 'Radier', en: 'Remove', sw: 'Ondoa' },
+  annonces_historique: { fr: 'Historique', en: 'History', sw: 'Historia' },
+  annonces_ouvertes: { fr: 'Annonces en ligne', en: 'Live listings', sw: 'Matangazo hewani' },
   equipe_action_erreur: {
     fr: "L'action a échoué — réessayez.",
     en: 'The action failed — try again.',
@@ -795,6 +797,7 @@ const CHAINES = {
   },
   rides_filtre: { fr: 'Filtrer par destination', en: 'Filter by destination', sw: 'Chuja kwa unakoenda' },
   rides_toutes: { fr: 'Toutes les destinations', en: 'All destinations', sw: 'Maeneo yote' },
+  rides_complet: { fr: 'Complet', en: 'Full', sw: 'Imejaa' },
   rides_vide: {
     fr: "Aucun trajet partagé pour l'instant — revenez plus tard.",
     en: 'No shared rides yet — check back later.',

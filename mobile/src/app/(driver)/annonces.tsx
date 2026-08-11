@@ -161,6 +161,70 @@ export default function EcranAnnonces() {
     }
   };
 
+  // Annonces encore en ligne d'un côté, historique (clôturées/annulées) de
+  // l'autre — les mélanger rendait la liste illisible.
+  const annoncesOuvertes = mesRides.filter(
+    (ride) => champ<StatutRide>(ride, 'status', 'statut') === 'open'
+  );
+  const annoncesPassees = mesRides.filter(
+    (ride) => champ<StatutRide>(ride, 'status', 'statut') !== 'open'
+  );
+
+  const carteAnnonce = (ride: Ride) => {
+    const statut = champ<StatutRide>(ride, 'status', 'statut');
+    const total = Number(champ(ride, 'seats_total', 'seatsTotal') ?? 0);
+    const restantes = Number(champ(ride, 'seats_available', 'seatsAvailable') ?? 0);
+    const reservations = champ<ReservationRide[]>(ride, 'bookings') ?? [];
+    const estOuverte = statut === 'open';
+    return (
+      <Pressable
+        key={ride.id}
+        onPress={() => router.push(`/annonce/${ride.id}`)}
+        accessibilityRole="button"
+        style={({ pressed }) => [
+          styles.carteRide,
+          !estOuverte && styles.carteRidePassee,
+          pressed && { opacity: 0.75 },
+        ]}
+      >
+        <View style={styles.enTeteRide}>
+          <Text style={styles.itineraire}>
+            {champ(ride, 'origin', 'origine') ?? '?'}{'  '}
+            <Text style={styles.fleche}>→</Text>{'  '}
+            {champ(ride, 'destination') ?? '?'}
+          </Text>
+          <Badge texte={libelleStatutRide(statut, t)} ton={tonStatut(statut)} />
+        </View>
+        <View style={styles.ligneDetails}>
+          <View style={styles.detail}>
+            <Ionicons name="time-outline" size={14} color={couleurs.texteSecondaire} />
+            <Text style={styles.texteDetail}>
+              {formaterDate(champ(ride, 'departure_at', 'departureAt'))}
+            </Text>
+          </View>
+          <View style={styles.detail}>
+            <Ionicons name="people-outline" size={14} color={couleurs.texteSecondaire} />
+            <Text style={styles.texteDetail}>
+              {t(total > 1 ? 'rides_places_restantes' : 'rides_place_restante', {
+                n: `${restantes}/${total}`,
+              })}
+            </Text>
+          </View>
+        </View>
+        <View style={styles.ligneOuvrir}>
+          <Text style={[styles.texteOuvrir, reservations.length > 0 && styles.texteOuvrirFort]}>
+            {reservations.length > 0
+              ? t('annonces_nb_resa', { n: reservations.length })
+              : t('annonces_aucune_resa')}
+            {'  ·  '}
+            {t('annonces_ouvrir_detail')}
+          </Text>
+          <Ionicons name="chevron-forward" size={18} color={couleurs.primaire} />
+        </View>
+      </Pressable>
+    );
+  };
+
   return (
     <Ecran fond="vagues" onRefresh={rafraichir}>
       {!verifie && (
@@ -237,64 +301,27 @@ export default function EcranAnnonces() {
         />
       </Carte>
 
-      <Text style={styles.titreSection}>{t('annonces_mes_trajets')}</Text>
+      <Text style={styles.titreSection}>
+        {t('annonces_ouvertes')} ({annoncesOuvertes.length})
+      </Text>
       <TexteErreur>{erreurListe}</TexteErreur>
-      {mesRides.length === 0 && !erreurListe && (
+      {annoncesOuvertes.length === 0 && !erreurListe && (
         <EtatVide
           icone="megaphone-outline"
           titre={t('annonces_vide_titre')}
           message={t('annonces_vide_texte')}
         />
       )}
-      {mesRides.map((ride) => {
-        const statut = champ<StatutRide>(ride, 'status', 'statut');
-        const total = Number(champ(ride, 'seats_total', 'seatsTotal') ?? 0);
-        const restantes = Number(champ(ride, 'seats_available', 'seatsAvailable') ?? 0);
-        const reservations = champ<ReservationRide[]>(ride, 'bookings') ?? [];
-        return (
-          <Pressable
-            key={ride.id}
-            onPress={() => router.push(`/annonce/${ride.id}`)}
-            accessibilityRole="button"
-            style={({ pressed }) => [styles.carteRide, pressed && { opacity: 0.75 }]}
-          >
-            <View style={styles.enTeteRide}>
-              <Text style={styles.itineraire}>
-                {champ(ride, 'origin', 'origine') ?? '?'}{'  '}
-                <Text style={styles.fleche}>→</Text>{'  '}
-                {champ(ride, 'destination') ?? '?'}
-              </Text>
-              <Badge texte={libelleStatutRide(statut, t)} ton={tonStatut(statut)} />
-            </View>
-            <View style={styles.ligneDetails}>
-              <View style={styles.detail}>
-                <Ionicons name="time-outline" size={14} color={couleurs.texteSecondaire} />
-                <Text style={styles.texteDetail}>
-                  {formaterDate(champ(ride, 'departure_at', 'departureAt'))}
-                </Text>
-              </View>
-              <View style={styles.detail}>
-                <Ionicons name="people-outline" size={14} color={couleurs.texteSecondaire} />
-                <Text style={styles.texteDetail}>
-                  {t(total > 1 ? 'rides_places_restantes' : 'rides_place_restante', {
-                    n: `${restantes}/${total}`,
-                  })}
-                </Text>
-              </View>
-            </View>
-            <View style={styles.ligneOuvrir}>
-              <Text style={styles.texteOuvrir}>
-                {reservations.length > 0
-                  ? t('annonces_nb_resa', { n: reservations.length })
-                  : t('annonces_aucune_resa')}
-                {'  ·  '}
-                {t('annonces_ouvrir_detail')}
-              </Text>
-              <Ionicons name="chevron-forward" size={18} color={couleurs.primaire} />
-            </View>
-          </Pressable>
-        );
-      })}
+      {annoncesOuvertes.map(carteAnnonce)}
+
+      {/* Historique séparé : les annonces clôturées/annulées ne se mélangent
+          plus aux annonces encore réservables. */}
+      {annoncesPassees.length > 0 && (
+        <Text style={styles.titreSection}>
+          {t('annonces_historique')} ({annoncesPassees.length})
+        </Text>
+      )}
+      {annoncesPassees.map(carteAnnonce)}
     </Ecran>
   );
 }
@@ -324,6 +351,12 @@ const styles = StyleSheet.create({
     padding: espaces.l,
     gap: espaces.s,
     ...ombres.carte,
+  },
+  carteRidePassee: {
+    opacity: 0.65,
+  },
+  texteOuvrirFort: {
+    fontWeight: '800',
   },
   enTeteRide: {
     flexDirection: 'row',

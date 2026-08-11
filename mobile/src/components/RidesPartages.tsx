@@ -3,21 +3,56 @@
 // nombre de places (− / +), POST /rides/:id/book décompte automatiquement
 // les places sur l'annonce du chauffeur, puis WhatsApp s'ouvre avec la
 // notification pré-remplie pour l'équipe.
+// Lisibilité : annonces triées par heure de départ et REGROUPÉES PAR JOUR
+// (Aujourd'hui / Demain / date), filtre destination en pastilles, places
+// restantes en couleur (vert = large, orange = presque plein).
 // Devise affichée : le serveur envoie price_per_seat_usd aux profils USD
 // et price_per_seat (TZS) aux locaux/chauffeurs — on affiche le champ présent.
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from 'expo-router';
 import React, { useCallback, useState } from 'react';
-import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Linking,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 
-import { Selecteur } from '@/components/Selecteur';
 import { api, ErreurApi } from '@/lib/api';
-import { useT } from '@/lib/i18n';
+import { useT, type FonctionT, type Langue } from '@/lib/i18n';
 import { couleurs, espaces, ombres, rayons } from '@/lib/theme';
-import { champ, DESTINATIONS_RIDES, formaterDate, formaterMontant, type Ride } from '@/lib/types';
+import { champ, DESTINATIONS_RIDES, formaterMontant, type Ride } from '@/lib/types';
+
+const LOCALES: Record<Langue, string> = { fr: 'fr-FR', en: 'en-GB', sw: 'sw-TZ' };
+
+/** Heure de départ « 14:30 » (le jour est porté par le bandeau de groupe). */
+function heureDepart(valeur: unknown, langue: Langue): string {
+  const d = new Date(String(valeur ?? ''));
+  if (Number.isNaN(d.getTime())) return '—';
+  return d.toLocaleTimeString(LOCALES[langue], { hour: '2-digit', minute: '2-digit' });
+}
+
+/** Bandeau de jour : Aujourd'hui, Demain, sinon « jeudi 13 août ». */
+function libelleJour(valeur: unknown, t: FonctionT, langue: Langue): string {
+  const d = new Date(String(valeur ?? ''));
+  if (Number.isNaN(d.getTime())) return '?';
+  const memeJour = (a: Date, b: Date) =>
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate();
+  const aujourdHui = new Date();
+  const demain = new Date(aujourdHui);
+  demain.setDate(demain.getDate() + 1);
+  if (memeJour(d, aujourdHui)) return t('sel_aujourdhui');
+  if (memeJour(d, demain)) return t('sel_demain');
+  return d.toLocaleDateString(LOCALES[langue], { weekday: 'long', day: 'numeric', month: 'long' });
+}
 
 export function RidesPartages() {
-  const { t } = useT();
+  const { t, langue } = useT();
   const [rides, setRides] = useState<Ride[]>([]);
   const [charge, setCharge] = useState(false);
   const [chargeInitiale, setChargeInitiale] = useState(true);
@@ -86,18 +121,46 @@ export function RidesPartages() {
     ? rides.filter((ride) => champ<string>(ride, 'destination') === filtreDestination)
     : rides;
 
+  // Tri chronologique puis regroupement par jour : un bandeau par journée,
+  // pour que l'œil retrouve d'abord LE JOUR, puis l'heure.
+  const ridesTries = [...ridesFiltres].sort(
+    (a, b) =>
+      new Date(String(champ(a, 'departure_at', 'departureAt') ?? '')).getTime() -
+      new Date(String(champ(b, 'departure_at', 'departureAt') ?? '')).getTime()
+  );
+  const groupesParJour: { jour: string; liste: Ride[] }[] = [];
+  for (const ride of ridesTries) {
+    const jour = libelleJour(champ(ride, 'departure_at', 'departureAt'), t, langue);
+    const dernier = groupesParJour[groupesParJour.length - 1];
+    if (dernier && dernier.jour === jour) dernier.liste.push(ride);
+    else groupesParJour.push({ jour, liste: [ride] });
+  }
+
   return (
     <View style={styles.section}>
       <Text style={styles.titreSection}>{t('rides_titre')}</Text>
       <Text style={styles.sousTitreSection}>{t('rides_soustitre')}</Text>
 
       {rides.length > 0 && (
-        <Selecteur
-          label={t('rides_filtre')}
-          valeur={filtreActif ? filtreDestination : toutesDestinations}
-          options={[toutesDestinations, ...destinations]}
-          onChange={setFiltreDestination}
-        />
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.rangeeChips}
+        >
+          {[toutesDestinations, ...destinations].map((dest) => {
+            const actif = dest === toutesDestinations ? !filtreActif : filtreDestination === dest;
+            return (
+              <Pressable
+                key={dest}
+                onPress={() => setFiltreDestination(dest === toutesDestinations ? '' : dest)}
+                accessibilityRole="button"
+                style={[styles.chip, actif && styles.chipActif]}
+              >
+                <Text style={[styles.texteChip, actif && styles.texteChipActif]}>{dest}</Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
       )}
 
       {!!messageOk && (
@@ -132,7 +195,14 @@ export function RidesPartages() {
         </View>
       )}
 
-      {ridesFiltres.map((ride) => {
+      {groupesParJour.map((groupe) => (
+        <View key={groupe.jour} style={styles.groupeJour}>
+          <View style={styles.enTeteJour}>
+            <Ionicons name="calendar-outline" size={14} color={couleurs.primaireFonce} />
+            <Text style={styles.texteJour}>{groupe.jour}</Text>
+            <View style={styles.filetJour} />
+          </View>
+          {groupe.liste.map((ride) => {
         const placesRestantes = Number(champ(ride, 'seats_available', 'seatsAvailable') ?? 0);
         // Devise selon le champ présent : USD prioritaire s'il est envoyé.
         const prixUsd = champ<number | string>(ride, 'price_per_seat_usd', 'pricePerSeatUsd');
@@ -148,29 +218,56 @@ export function RidesPartages() {
             : null;
         const places = Math.min(placesChoisies[ride.id] ?? 1, Math.max(placesRestantes, 1));
         const enCours = reservationEnCours === ride.id;
+        // Places restantes en couleur : vert = large, orange = presque plein.
+        const complet = placesRestantes < 1;
+        const presquePlein = placesRestantes >= 1 && placesRestantes <= 2;
         return (
           <View key={ride.id} style={styles.carte}>
+            <View style={styles.enTeteCarte}>
+              <View style={styles.pastilleHeure}>
+                <Ionicons name="time-outline" size={13} color={couleurs.primaireFonce} />
+                <Text style={styles.texteHeure}>
+                  {heureDepart(champ(ride, 'departure_at', 'departureAt'), langue)}
+                </Text>
+              </View>
+              <View
+                style={[
+                  styles.pastillePlaces,
+                  presquePlein && styles.pastillePlacesAttente,
+                  complet && styles.pastillePlacesComplet,
+                ]}
+              >
+                <Ionicons
+                  name="people"
+                  size={12}
+                  color={
+                    complet
+                      ? couleurs.texteSecondaire
+                      : presquePlein
+                        ? couleurs.attente
+                        : couleurs.succes
+                  }
+                />
+                <Text
+                  style={[
+                    styles.textePlaces,
+                    presquePlein && { color: couleurs.attente },
+                    complet && { color: couleurs.texteSecondaire },
+                  ]}
+                >
+                  {complet
+                    ? t('rides_complet')
+                    : t(placesRestantes > 1 ? 'rides_places_restantes' : 'rides_place_restante', {
+                        n: placesRestantes,
+                      })}
+                </Text>
+              </View>
+            </View>
             <Text style={styles.itineraire}>
               {champ(ride, 'origin', 'origine') ?? '?'}{'  '}
               <Text style={styles.fleche}>→</Text>{'  '}
               {champ(ride, 'destination') ?? '?'}
             </Text>
-            <View style={styles.ligneDetails}>
-              <View style={styles.detail}>
-                <Ionicons name="time-outline" size={14} color={couleurs.texteSecondaire} />
-                <Text style={styles.texteDetail}>
-                  {formaterDate(champ(ride, 'departure_at', 'departureAt'))}
-                </Text>
-              </View>
-              <View style={styles.detail}>
-                <Ionicons name="people-outline" size={14} color={couleurs.texteSecondaire} />
-                <Text style={styles.texteDetail}>
-                  {t(placesRestantes > 1 ? 'rides_places_restantes' : 'rides_place_restante', {
-                    n: placesRestantes,
-                  })}
-                </Text>
-              </View>
-            </View>
             <View style={styles.ligneDetails}>
               <View style={styles.detail}>
                 <Ionicons name="person-outline" size={14} color={couleurs.texteSecondaire} />
@@ -186,6 +283,7 @@ export function RidesPartages() {
                 </View>
               )}
             </View>
+            <View style={styles.filetCarte} />
             <View style={styles.piedCarte}>
               <Text style={styles.prix}>
                 {prixPlace !== undefined
@@ -193,6 +291,7 @@ export function RidesPartages() {
                   : '—'}
               </Text>
               <View style={styles.zoneReservation}>
+                {!complet && (
                 <View style={styles.compteur}>
                   <Pressable
                     onPress={() =>
@@ -219,6 +318,7 @@ export function RidesPartages() {
                     <Ionicons name="add" size={16} color={couleurs.primaireFonce} />
                   </Pressable>
                 </View>
+                )}
                 <Pressable
                   onPress={() => reserver(ride, places)}
                   disabled={enCours || placesRestantes < 1}
@@ -239,7 +339,9 @@ export function RidesPartages() {
             </View>
           </View>
         );
-      })}
+          })}
+        </View>
+      ))}
     </View>
   );
 }
@@ -253,6 +355,97 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: couleurs.encre,
     marginTop: espaces.s,
+  },
+  rangeeChips: {
+    gap: espaces.s,
+    paddingVertical: espaces.xs,
+  },
+  chip: {
+    borderRadius: rayons.pastille,
+    borderWidth: 1.5,
+    borderColor: couleurs.bordure,
+    backgroundColor: couleurs.carteTranslucide,
+    paddingHorizontal: espaces.m,
+    paddingVertical: espaces.s,
+  },
+  chipActif: {
+    borderColor: couleurs.primaire,
+    backgroundColor: couleurs.primaire,
+  },
+  texteChip: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: couleurs.texteSecondaire,
+  },
+  texteChipActif: {
+    color: couleurs.blanc,
+  },
+  groupeJour: {
+    gap: espaces.m,
+  },
+  enTeteJour: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: espaces.s,
+    marginTop: espaces.xs,
+  },
+  texteJour: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: couleurs.primaireFonce,
+    textTransform: 'capitalize',
+    letterSpacing: 0.3,
+  },
+  filetJour: {
+    flex: 1,
+    height: 1,
+    backgroundColor: couleurs.bordure,
+  },
+  enTeteCarte: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: espaces.s,
+    flexWrap: 'wrap',
+  },
+  pastilleHeure: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: espaces.xs,
+    backgroundColor: couleurs.primaireClair,
+    borderRadius: rayons.pastille,
+    paddingHorizontal: espaces.m,
+    paddingVertical: 4,
+  },
+  texteHeure: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: couleurs.primaireFonce,
+  },
+  pastillePlaces: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: espaces.xs,
+    backgroundColor: couleurs.succesFond,
+    borderRadius: rayons.pastille,
+    paddingHorizontal: espaces.m,
+    paddingVertical: 4,
+  },
+  pastillePlacesAttente: {
+    backgroundColor: couleurs.attenteFond,
+  },
+  pastillePlacesComplet: {
+    backgroundColor: couleurs.bordure,
+  },
+  textePlaces: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: couleurs.succes,
+  },
+  filetCarte: {
+    height: 1,
+    backgroundColor: couleurs.bordure,
+    marginVertical: espaces.xs,
   },
   sousTitreSection: {
     fontSize: 13,
