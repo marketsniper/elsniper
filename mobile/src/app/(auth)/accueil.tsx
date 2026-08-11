@@ -8,7 +8,7 @@ import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FondPlage } from '@/components/FondPlage';
-import { LogoZanziGo, SelecteurLangue } from '@/components/ui';
+import { SelecteurLangue } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { useT } from '@/lib/i18n';
 import { couleurs, espaces, ombres, rayons } from '@/lib/theme';
@@ -104,12 +104,13 @@ export default function EcranAccueil() {
         >
           <SelecteurLangue />
           <View style={styles.entete}>
+            {/* Le logo porte désormais le nom « zanziGo » — plus besoin du
+                logotype texte en dessous. */}
             <Image
               source={require('../../../assets/images/logo-app.png')}
               style={styles.logoImage}
               accessibilityLabel="zanziGo"
             />
-            <LogoZanziGo taille={48} surFonce />
             <Text style={styles.tagline}>{t('app_tagline')}</Text>
           </View>
 
@@ -180,9 +181,9 @@ const styles = StyleSheet.create({
     gap: espaces.s,
   },
   logoImage: {
-    width: 92,
-    height: 92,
-    borderRadius: 24,
+    width: 132,
+    height: 132,
+    borderRadius: 30,
     marginBottom: espaces.xs,
     ...ombres.carte,
   },

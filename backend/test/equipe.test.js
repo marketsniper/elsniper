@@ -9,7 +9,9 @@ import {
   app,
   authHeaders,
   createDriverApplication,
+  createHotel,
   createLocal,
+  createResident,
   createTourist,
   useTestDb,
 } from './setup.js';
@@ -117,5 +119,27 @@ describe('Tableau de bord équipe', () => {
     const verifies = await request(app).get('/api/drivers').set(adminHeaders());
     assert.equal(verifies.status, 200);
     assert.ok(!verifies.body.some((d) => d.id === driver.id));
+  });
+
+  it('GET /stats : compteurs d\'abonnés (clients / locaux / hôtels) ; sans clé → 401', async () => {
+    await createTourist();
+    await createTourist({ fullName: 'Deuxième Touriste' });
+    await createResident();
+    await createLocal();
+    await createHotel();
+    await createHotel({ name: 'Hôtel Pending', verify: false });
+
+    const stats = await request(app).get('/api/stats').set(adminHeaders());
+    assert.equal(stats.status, 200);
+    assert.equal(stats.body.tourists, 2);
+    assert.equal(stats.body.residents, 1);
+    assert.equal(stats.body.clients, 3);
+    assert.equal(stats.body.locals, 1);
+    assert.equal(stats.body.hotels, 2);
+    assert.equal(stats.body.hotels_verified, 1);
+    assert.equal(stats.body.drivers_verified, 0);
+
+    const sansCle = await request(app).get('/api/stats');
+    assert.ok([401, 403].includes(sansCle.status));
   });
 });

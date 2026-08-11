@@ -643,6 +643,21 @@ export async function verifierHotel(
   return requete<Hotel>(`/hotels/${id}/verify`, { methode: 'PATCH', corps: { status: statut } });
 }
 
+/** Compteurs d'abonnés du tableau de bord (GET /stats, équipe). */
+export interface StatsAbonnes {
+  tourists: number;
+  residents: number;
+  locals: number;
+  /** Touristes + résidents (visiteurs USD). */
+  clients: number;
+  hotels: number;
+  hotels_verified: number;
+  drivers_verified: number;
+}
+export async function statsAbonnes(): Promise<StatsAbonnes> {
+  return requete<StatsAbonnes>('/stats');
+}
+
 /** PATCH /trips/:id/assign-driver — l'équipe confirme un chauffeur. */
 export async function assignerChauffeur(tripId: string, driverId: string): Promise<Trajet> {
   return requete<Trajet>(`/trips/${tripId}/assign-driver`, {
@@ -737,6 +752,7 @@ export const api = {
   listerCandidaturesChauffeurs,
   listerClientsEnAttente,
   listerHotelsEnAttente,
+  statsAbonnes,
   assignerChauffeur,
   verifierChauffeur,
   verifierClient,

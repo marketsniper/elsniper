@@ -12,6 +12,7 @@ import packagesRouter from './routes/packages.js';
 import paymentsRouter from './routes/payments.js';
 import ridesRouter from './routes/rides.js';
 import { uploadsRouter } from './routes/uploads.js';
+import statsRouter from './routes/stats.js';
 import { localUploadsDir } from './services/storageService.js';
 
 // ===== Rate limiting =====
@@ -154,6 +155,7 @@ p{color:#8A7168;max-width:44ch;margin:8px auto}</style>
   app.use('/api/payments', paymentsRouter);
   app.use('/api/rides', ridesRouter);
   app.use('/api/uploads', uploadsRouter);
+  app.use('/api/stats', statsRouter);
 
   app.use((req, res) => {
     res.status(404).json({ error: { code: 'not_found', message: 'Route inconnue' } });

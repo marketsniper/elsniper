@@ -27,7 +27,7 @@ import {
   TexteErreur,
   Titre,
 } from '@/components/ui';
-import { api, definirCleEquipe, ErreurApi } from '@/lib/api';
+import { api, definirCleEquipe, ErreurApi, type StatsAbonnes } from '@/lib/api';
 import { formaterDateRelativeI18n, libelleTypeTrajet, useT } from '@/lib/i18n';
 import { couleurs, espaces, ombres, rayons } from '@/lib/theme';
 import {
@@ -69,6 +69,8 @@ export default function EcranEquipe() {
   const [clients, setClients] = useState<Utilisateur[]>([]);
   const [hotels, setHotels] = useState<Hotel[]>([]);
   const [chauffeurs, setChauffeurs] = useState<Chauffeur[]>([]);
+  // Compteurs d'abonnés (clients / locaux / hôtels) affichés en tête de menu.
+  const [abonnes, setAbonnes] = useState<StatsAbonnes | null>(null);
   // Rubrique ouverte (null = menu en grille de cases).
   const [section, setSection] = useState<SectionEquipe | null>(null);
   // Chauffeur choisi par course (libellé du sélecteur), avant confirmation.
@@ -79,7 +81,7 @@ export default function EcranEquipe() {
   const charger = useCallback(async () => {
     setErreur('');
     try {
-      const [lesCourses, lesPaiements, lesCandidats, lesClients, lesHotels, lesChauffeurs] =
+      const [lesCourses, lesPaiements, lesCandidats, lesClients, lesHotels, lesChauffeurs, lesAbonnes] =
         await Promise.all([
           api.listerCoursesEquipe('requested'),
           api.listerPaiementsEquipe(),
@@ -87,6 +89,7 @@ export default function EcranEquipe() {
           api.listerClientsEnAttente(),
           api.listerHotelsEnAttente(),
           api.listerChauffeursVerifies(),
+          api.statsAbonnes().catch(() => null),
         ]);
       setCourses(lesCourses);
       setPaiements(lesPaiements);
@@ -94,6 +97,7 @@ export default function EcranEquipe() {
       setClients(lesClients);
       setHotels(lesHotels);
       setChauffeurs(lesChauffeurs);
+      setAbonnes(lesAbonnes);
     } catch (e) {
       setErreur(e instanceof ErreurApi ? e.message : t('equipe_action_erreur'));
     }
@@ -249,6 +253,29 @@ export default function EcranEquipe() {
       {/* Menu principal : grille de cases, chaque case ouvre sa rubrique. */}
       {section === null && (
         <>
+          {/* Nos abonnés : clients (touristes + résidents), locaux, hôtels. */}
+          {abonnes && (
+            <View style={styles.bandeauAbonnes}>
+              <Text style={styles.titreAbonnes}>{t('equipe_abonnes_titre')}</Text>
+              <View style={styles.rangeeAbonnes}>
+                <View style={styles.colAbonnes}>
+                  <Text style={styles.nbAbonnes}>{abonnes.clients}</Text>
+                  <Text style={styles.labelAbonnes}>{t('equipe_abonnes_clients')}</Text>
+                </View>
+                <View style={styles.filetAbonnes} />
+                <View style={styles.colAbonnes}>
+                  <Text style={styles.nbAbonnes}>{abonnes.locals}</Text>
+                  <Text style={styles.labelAbonnes}>{t('equipe_abonnes_locaux')}</Text>
+                </View>
+                <View style={styles.filetAbonnes} />
+                <View style={styles.colAbonnes}>
+                  <Text style={styles.nbAbonnes}>{abonnes.hotels}</Text>
+                  <Text style={styles.labelAbonnes}>{t('equipe_abonnes_hotels')}</Text>
+                </View>
+              </View>
+            </View>
+          )}
+
           <Text style={styles.titreSection}>{t('equipe_resume_titre')}</Text>
           <Text style={styles.introMenu}>{t('equipe_menu_intro')}</Text>
           <View style={styles.grilleMenu}>
@@ -763,6 +790,44 @@ const styles = StyleSheet.create({
   },
   textePastilleMenuAction: {
     color: couleurs.attente,
+  },
+  bandeauAbonnes: {
+    backgroundColor: couleurs.carteTranslucide,
+    borderRadius: rayons.carte,
+    padding: espaces.l,
+    gap: espaces.m,
+    ...ombres.carte,
+  },
+  titreAbonnes: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: couleurs.texteSecondaire,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+  },
+  rangeeAbonnes: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  colAbonnes: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 2,
+  },
+  filetAbonnes: {
+    width: 1,
+    height: 34,
+    backgroundColor: couleurs.bordure,
+  },
+  nbAbonnes: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: couleurs.primaire,
+  },
+  labelAbonnes: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: couleurs.texteSecondaire,
   },
   retourMenu: {
     flexDirection: 'row',
