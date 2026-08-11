@@ -240,6 +240,11 @@ export async function creerHotel(donnees: CreationHotel): Promise<Hotel> {
   return requete<Hotel>('/hotels', { methode: 'POST', corps: donnees });
 }
 
+/** GET /hotels/:id — fiche hôtel (rafraîchit le statut de vérification). */
+export async function obtenirHotel(id: string): Promise<Hotel> {
+  return requete<Hotel>(`/hotels/${id}`);
+}
+
 // ---------------------------------------------------------------------------
 // Chauffeurs (backend/src/routes/drivers.js)
 // ---------------------------------------------------------------------------
@@ -518,6 +523,15 @@ export async function statsChauffeur(driverId: string): Promise<StatsChauffeur> 
   return requete<StatsChauffeur>(`/drivers/${driverId}/stats`);
 }
 
+/**
+ * GET /drivers/:id/trips — les courses assignées au chauffeur par l'équipe
+ * (les plus récentes d'abord). C'est la source de l'onglet « Courses ».
+ */
+export async function listerCoursesChauffeur(driverId: string): Promise<Trajet[]> {
+  const reponse = await requete<unknown>(`/drivers/${driverId}/trips`);
+  return commeListe<Trajet>(reponse, 'trips');
+}
+
 /** Position GPS d'un chauffeur (table driver_positions). */
 export interface PositionChauffeur {
   driver_id: string;
@@ -615,6 +629,20 @@ export async function listerClientsEnAttente(): Promise<Utilisateur[]> {
   return commeListe<Utilisateur>(reponse, 'users');
 }
 
+/** GET /hotels?verificationStatus=pending — comptes hôtels à vérifier (équipe). */
+export async function listerHotelsEnAttente(): Promise<Hotel[]> {
+  const reponse = await requete<unknown>('/hotels?verificationStatus=pending');
+  return commeListe<Hotel>(reponse, 'hotels');
+}
+
+/** PATCH /hotels/:id/verify — valider (ou bloquer) un compte hôtel (équipe). */
+export async function verifierHotel(
+  id: string,
+  statut: 'verified' | 'rejected'
+): Promise<Hotel> {
+  return requete<Hotel>(`/hotels/${id}/verify`, { methode: 'PATCH', corps: { status: statut } });
+}
+
 /** PATCH /trips/:id/assign-driver — l'équipe confirme un chauffeur. */
 export async function assignerChauffeur(tripId: string, driverId: string): Promise<Trajet> {
   return requete<Trajet>(`/trips/${tripId}/assign-driver`, {
@@ -671,6 +699,7 @@ export const api = {
   creerUtilisateur,
   obtenirUtilisateur,
   creerHotel,
+  obtenirHotel,
   creerChauffeur,
   creerTrajet,
   creerTrajetHotel,
@@ -697,6 +726,7 @@ export const api = {
   annulerColis,
   envoyerPositionChauffeur,
   statsChauffeur,
+  listerCoursesChauffeur,
   positionColis,
   colisParQr,
   recupererColis,
@@ -706,9 +736,11 @@ export const api = {
   listerChauffeursVerifies,
   listerCandidaturesChauffeurs,
   listerClientsEnAttente,
+  listerHotelsEnAttente,
   assignerChauffeur,
   verifierChauffeur,
   verifierClient,
+  verifierHotel,
   televerser,
 };
 

@@ -1,16 +1,19 @@
 // Tableau de bord équipe : protégé par la clé secrète (X-Admin-Key), sans
-// compte client. Quatre sections d'action :
+// compte client. Six sections d'action :
 //  1. Courses « Demandées » → choisir un chauffeur vérifié et le confirmer ;
 //  2. Paiements en attente → « Marquer payé » après réception de l'argent
 //     (lien manuel WhatsApp/PayPal) ;
 //  3. Candidatures chauffeurs → documents + Valider / Refuser (le QR véhicule
 //     est généré à la validation) ;
-//  4. Comptes résidents/locaux → document + Valider / Refuser.
+//  4. Comptes résidents/locaux → document + Valider / Refuser ;
+//  5. Hôtels à vérifier → appeler l'établissement puis Valider / Refuser ;
+//  6. Mes taxis → tous les chauffeurs vérifiés, dernière position GPS
+//     (lien Google Maps) et radiation avec confirmation.
 // La clé est persistée dans SecureStore et vérifiée par un premier appel.
 import { Ionicons } from '@expo/vector-icons';
 import * as SecureStore from 'expo-secure-store';
 import React, { useCallback, useEffect, useState } from 'react';
-import { Linking, StyleSheet, Text, View } from 'react-native';
+import { Alert, Linking, StyleSheet, Text, View } from 'react-native';
 
 import { Selecteur } from '@/components/Selecteur';
 import {
@@ -25,13 +28,14 @@ import {
   Titre,
 } from '@/components/ui';
 import { api, definirCleEquipe, ErreurApi } from '@/lib/api';
-import { libelleTypeTrajet, useT } from '@/lib/i18n';
+import { formaterDateRelativeI18n, libelleTypeTrajet, useT } from '@/lib/i18n';
 import { couleurs, espaces } from '@/lib/theme';
 import {
   champ,
   formaterMontant,
   formaterPrix,
   type Chauffeur,
+  type Hotel,
   type PaiementEquipe,
   type Trajet,
   type TypeTrajet,
@@ -59,6 +63,7 @@ export default function EcranEquipe() {
   const [paiements, setPaiements] = useState<PaiementEquipe[]>([]);
   const [candidats, setCandidats] = useState<Chauffeur[]>([]);
   const [clients, setClients] = useState<Utilisateur[]>([]);
+  const [hotels, setHotels] = useState<Hotel[]>([]);
   const [chauffeurs, setChauffeurs] = useState<Chauffeur[]>([]);
   // Chauffeur choisi par course (libellé du sélecteur), avant confirmation.
   const [choixChauffeur, setChoixChauffeur] = useState<Record<string, string>>({});
@@ -68,18 +73,20 @@ export default function EcranEquipe() {
   const charger = useCallback(async () => {
     setErreur('');
     try {
-      const [lesCourses, lesPaiements, lesCandidats, lesClients, lesChauffeurs] =
+      const [lesCourses, lesPaiements, lesCandidats, lesClients, lesHotels, lesChauffeurs] =
         await Promise.all([
           api.listerCoursesEquipe('requested'),
           api.listerPaiementsEquipe(),
           api.listerCandidaturesChauffeurs(),
           api.listerClientsEnAttente(),
+          api.listerHotelsEnAttente(),
           api.listerChauffeursVerifies(),
         ]);
       setCourses(lesCourses);
       setPaiements(lesPaiements);
       setCandidats(lesCandidats);
       setClients(lesClients);
+      setHotels(lesHotels);
       setChauffeurs(lesChauffeurs);
     } catch (e) {
       setErreur(e instanceof ErreurApi ? e.message : t('equipe_action_erreur'));
@@ -128,6 +135,8 @@ export default function EcranEquipe() {
     setPaiements([]);
     setCandidats([]);
     setClients([]);
+    setHotels([]);
+    setChauffeurs([]);
   };
 
   // Enveloppe commune des actions : verrouille le bouton, recharge après.
@@ -152,6 +161,21 @@ export default function EcranEquipe() {
       return;
     }
     agir(course.id, () => api.assignerChauffeur(course.id, chauffeur.id));
+  };
+
+  // Radiation d'un chauffeur qui ne respecte plus les normes zanziGo :
+  // confirmation obligatoire (action forte — il disparaît des assignations
+  // et ses annonces ouvertes sont fermées).
+  const radierChauffeur = (chauffeur: Chauffeur) => {
+    const nom = champ<string>(chauffeur, 'full_name', 'fullName') ?? '?';
+    Alert.alert(t('equipe_radier_titre'), t('equipe_radier_texte', { nom }), [
+      { text: t('commun_annuler'), style: 'cancel' },
+      {
+        text: t('equipe_radier_confirmer'),
+        style: 'destructive',
+        onPress: () => agir(chauffeur.id, () => api.verifierChauffeur(chauffeur.id, 'rejected')),
+      },
+    ]);
   };
 
   if (cle === null) {
@@ -395,6 +419,105 @@ export default function EcranEquipe() {
                 />
               </View>
             </View>
+          </Carte>
+        );
+      })}
+
+      {/* 5. Hôtels à vérifier (anti-usurpation : appeler l'établissement) */}
+      <Text style={styles.titreSection}>
+        {t('equipe_hotels')} ({hotels.length})
+      </Text>
+      {hotels.length === 0 && (
+        <EncartInfo icone="checkmark-circle-outline" ton="succes">
+          {t('equipe_hotels_vide')}
+        </EncartInfo>
+      )}
+      {hotels.length > 0 && (
+        <EncartInfo icone="call-outline" ton="attente">
+          {t('equipe_hotels_conseil')}
+        </EncartInfo>
+      )}
+      {hotels.map((lHotel) => {
+        const telephone = String(champ(lHotel, 'phone') ?? '');
+        return (
+          <Carte key={lHotel.id}>
+            <Text style={styles.itineraire}>{String(champ(lHotel, 'name') ?? '?')}</Text>
+            <Text style={styles.detail}>
+              {String(champ(lHotel, 'contact_name', 'contactName') ?? '—')} ·{' '}
+              {String(champ(lHotel, 'zone') ?? '—')} · {telephone}
+            </Text>
+            <Text style={styles.detail}>{String(champ(lHotel, 'email') ?? '')}</Text>
+            {!!telephone && (
+              <Bouton
+                titre={`WhatsApp · ${telephone}`}
+                icone="logo-whatsapp"
+                variante="secondaire"
+                onPress={() =>
+                  Linking.openURL(`https://wa.me/${telephone.replace(/[^\d]/g, '')}`)
+                }
+              />
+            )}
+            <View style={styles.rangeeActions}>
+              <View style={styles.demiAction}>
+                <Bouton
+                  titre={t('equipe_valider')}
+                  onPress={() => agir(lHotel.id, () => api.verifierHotel(lHotel.id, 'verified'))}
+                  charge={actionEnCours === lHotel.id}
+                />
+              </View>
+              <View style={styles.demiAction}>
+                <Bouton
+                  titre={t('equipe_refuser')}
+                  variante="danger"
+                  onPress={() => agir(lHotel.id, () => api.verifierHotel(lHotel.id, 'rejected'))}
+                  charge={actionEnCours === lHotel.id}
+                />
+              </View>
+            </View>
+          </Carte>
+        );
+      })}
+
+      {/* 6. Mes taxis : tous les chauffeurs vérifiés, position GPS, radiation */}
+      <Text style={styles.titreSection}>
+        {t('equipe_taxis')} ({chauffeurs.length})
+      </Text>
+      {chauffeurs.length === 0 && (
+        <EncartInfo icone="car-outline">{t('equipe_taxis_vide')}</EncartInfo>
+      )}
+      {chauffeurs.map((chauffeur) => {
+        const lat = Number(champ(chauffeur, 'last_lat') ?? NaN);
+        const lng = Number(champ(chauffeur, 'last_lng') ?? NaN);
+        const positionConnue = Number.isFinite(lat) && Number.isFinite(lng);
+        const majPosition = champ(chauffeur, 'position_updated_at');
+        return (
+          <Carte key={chauffeur.id}>
+            <Text style={styles.itineraire}>{libelleChauffeur(chauffeur)}</Text>
+            <Text style={styles.detail}>
+              {String(champ(chauffeur, 'vehicle_model', 'vehicleModel') ?? '—')} ·{' '}
+              {String(champ(chauffeur, 'zone') ?? '—')} ·{' '}
+              {String(champ(chauffeur, 'phone') ?? '')}
+            </Text>
+            {positionConnue ? (
+              <Bouton
+                titre={`${t('equipe_position')} · ${formaterDateRelativeI18n(majPosition, t)}`}
+                icone="location-outline"
+                variante="secondaire"
+                onPress={() => Linking.openURL(`https://www.google.com/maps?q=${lat},${lng}`)}
+              />
+            ) : (
+              <View style={styles.ligneDetail}>
+                <Ionicons name="location-outline" size={14} color={couleurs.texteSecondaire} />
+                <Text style={styles.detail}>{t('equipe_position_inconnue')}</Text>
+              </View>
+            )}
+            <Bouton
+              titre={t('equipe_radier')}
+              icone="close-circle-outline"
+              variante="danger"
+              onPress={() => radierChauffeur(chauffeur)}
+              charge={actionEnCours === chauffeur.id}
+            />
           </Carte>
         );
       })}

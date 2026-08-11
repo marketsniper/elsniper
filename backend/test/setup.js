@@ -262,8 +262,6 @@ export async function createVerifiedDriver(opts = {}) {
   return { token, driver: verifyRes.body };
 }
 
-// Hôtel partenaire : OTP → profil (pas de workflow de vérification côté hôtels).
-// Retour : {token, hotel}
 let hotelEmailCounter = 0;
 export function nextHotelEmail() {
   hotelEmailCounter += 1;
@@ -272,8 +270,9 @@ export function nextHotelEmail() {
 
 export const HOTEL_PASSWORD = 'MotDePasse#1';
 
-// Hôtel partenaire : compte email + mot de passe (POST /hotels public),
-// puis connexion via POST /auth/hotel-login.
+// Hôtel partenaire : compte email + mot de passe (POST /hotels public, créé
+// 'pending'), validation par l'équipe (sauf verify: false pour garder un
+// compte en attente), puis connexion via POST /auth/hotel-login.
 // Retour : {token, hotel, email, password}
 export async function createHotel({
   phone = nextPhone(),
@@ -282,12 +281,22 @@ export async function createHotel({
   zone = 'Nungwi',
   email = nextHotelEmail(),
   password = HOTEL_PASSWORD,
+  verify = true,
 } = {}) {
   const res = await request(app)
     .post('/api/hotels')
     .send({ name, contactName, email, password, phone, zone });
   if (res.status !== 201) {
     throw new Error(`création hôtel échouée : ${JSON.stringify(res.body)}`);
+  }
+  if (verify) {
+    const verifyRes = await request(app)
+      .patch(`/api/hotels/${res.body.id}/verify`)
+      .set(adminHeaders())
+      .send({ status: 'verified' });
+    if (verifyRes.status !== 200) {
+      throw new Error(`vérification hôtel échouée : ${JSON.stringify(verifyRes.body)}`);
+    }
   }
   const login = await request(app)
     .post('/api/auth/hotel-login')

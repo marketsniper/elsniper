@@ -41,6 +41,10 @@ export default function EcranProfil() {
   const typeCompte = champ<TypeCompte>(utilisateur, 'account_type', 'accountType');
   const estResident = typeCompte === 'resident';
   const estLocal = typeCompte === 'local';
+  // Statut de vérification du compte hôtel (les comptes créés avant la mise
+  // en place de la vérification n'ont pas le champ : considérés vérifiés).
+  const statutVerifHotel =
+    champ<StatutVerification>(hotel, 'verification_status', 'verificationStatus') ?? 'verified';
   // Touriste : vérifié d'office. Résident/local : pending → verified/rejected
   // (validation manuelle des documents par l'équipe).
   const statutVerif =
@@ -76,11 +80,13 @@ export default function EcranProfil() {
 
   // Recharge le profil (utile pour voir la validation arriver).
   const actualiser = async () => {
-    if (!utilisateur) return;
     setChargeMaj(true);
     try {
-      const maj = await api.obtenirUtilisateur(utilisateur.id);
-      await majSession({ user: maj });
+      if (utilisateur) {
+        await majSession({ user: await api.obtenirUtilisateur(utilisateur.id) });
+      } else if (hotel) {
+        await majSession({ hotel: await api.obtenirHotel(hotel.id) });
+      }
     } catch {
       // silencieux : le profil affiché reste celui de la session
     } finally {
@@ -118,6 +124,16 @@ export default function EcranProfil() {
       {(estResident || estLocal) && statutVerif === 'rejected' && (
         <EncartInfo icone="alert-circle-outline" ton="attente">
           {t('profil_info_refuse')}
+        </EncartInfo>
+      )}
+      {hotel && statutVerifHotel === 'pending' && (
+        <EncartInfo icone="hourglass-outline" ton="attente">
+          {t('hotel_attente_verif')}
+        </EncartInfo>
+      )}
+      {hotel && statutVerifHotel === 'rejected' && (
+        <EncartInfo icone="alert-circle-outline" ton="attente">
+          {t('hotel_refuse_verif')}
         </EncartInfo>
       )}
 
@@ -159,13 +175,24 @@ export default function EcranProfil() {
         <SelecteurLangue compact />
       </Carte>
 
-      {utilisateur && (
+      {(utilisateur || hotel) && (
         <Bouton
           titre={t('profil_actualiser')}
           icone="refresh-outline"
           variante="secondaire"
           onPress={actualiser}
           charge={chargeMaj}
+        />
+      )}
+
+      {/* Un gérant peut inscrire un autre établissement : le formulaire crée
+          le compte puis bascule la session sur ce nouvel hôtel. */}
+      {hotel && (
+        <Bouton
+          titre={t('hotel_ajouter_bouton')}
+          icone="business-outline"
+          variante="secondaire"
+          onPress={() => router.push('/(auth)/hotel-inscription')}
         />
       )}
 

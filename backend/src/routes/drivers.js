@@ -68,7 +68,9 @@ router.post(
   })
 );
 
-// GET /drivers?zone=&available= — recherche de chauffeurs vérifiés (équipe).
+// GET /drivers?zone=&available= — recherche de chauffeurs vérifiés (équipe),
+// avec la dernière position GPS connue de chacun (driver_positions) pour la
+// liste « Mes taxis » du tableau de bord.
 router.get(
   '/',
   requireAdmin,
@@ -76,19 +78,45 @@ router.get(
     const { zone, available, verificationStatus } = searchSchema.parse(req.query);
 
     const params = [verificationStatus ?? 'verified'];
-    const conditions = ['verification_status = $1'];
+    const conditions = ['d.verification_status = $1'];
     if (zone) {
       params.push(zone);
-      conditions.push(`zone = $${params.length}`);
+      conditions.push(`d.zone = $${params.length}`);
     }
     if (available !== undefined) {
       params.push(available === 'true');
-      conditions.push(`available = $${params.length}`);
+      conditions.push(`d.available = $${params.length}`);
     }
 
     const { rows } = await query(
-      `SELECT * FROM drivers WHERE ${conditions.join(' AND ')} ORDER BY rating_avg DESC NULLS LAST`,
+      `SELECT d.*, p.lat AS last_lat, p.lng AS last_lng, p.updated_at AS position_updated_at
+       FROM drivers d
+       LEFT JOIN driver_positions p ON p.driver_id = d.id
+       WHERE ${conditions.join(' AND ')}
+       ORDER BY d.rating_avg DESC NULLS LAST`,
       params
+    );
+    res.json(rows);
+  })
+);
+
+// GET /drivers/:id/trips — les courses assignées au chauffeur (lui-même ou
+// l'équipe). C'est la source de l'onglet « Courses » de l'app : dès que
+// l'équipe confirme un chauffeur sur une course, elle apparaît ici — sans
+// dépendre de l'ouverture manuelle par référence WhatsApp.
+router.get(
+  '/:id/trips',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    if (!isAdmin(req) && req.auth.driverId !== req.params.id) {
+      throw new HttpError(403, 'forbidden', 'Accès réservé au chauffeur concerné');
+    }
+    const { rows } = await query(
+      `SELECT * FROM trips
+       WHERE driver_id = $1
+       ORDER BY COALESCE(scheduled_at, created_at) DESC
+       LIMIT 100`,
+      [req.params.id]
     );
     res.json(rows);
   })
@@ -201,9 +229,12 @@ router.get(
   })
 );
 
-// PATCH /drivers/:id/verify — validation manuelle (équipe uniquement).
-// À la validation, le QR véhicule fixe est généré une seule fois :
-// il ne changera plus jamais ensuite (contrairement au QR colis).
+// PATCH /drivers/:id/verify — validation d'une candidature OU radiation d'un
+// chauffeur déjà vérifié qui ne respecte plus les normes zanziGo
+// ('verified' → 'rejected'). Un chauffeur radié peut être réintégré plus
+// tard ('rejected' → 'verified'). À la première validation, le QR véhicule
+// fixe est généré une seule fois : il ne changera plus jamais ensuite
+// (contrairement au QR colis).
 router.patch(
   '/:id/verify',
   requireAdmin,
@@ -213,16 +244,21 @@ router.patch(
     const { rows } = await query('SELECT * FROM drivers WHERE id = $1', [req.params.id]);
     const driver = rows[0];
     if (!driver) throw notFound('Chauffeur');
-    if (driver.verification_status !== 'pending') {
-      throw new HttpError(
-        409,
-        'invalid_status',
-        `Cette candidature a déjà été traitée (statut: ${driver.verification_status})`
-      );
+    if (driver.verification_status === status) {
+      throw new HttpError(409, 'invalid_status', `Ce chauffeur est déjà « ${status} »`);
     }
 
     const vehicleQr =
       status === 'verified' && !driver.vehicle_qr_code ? generateVehicleQr() : driver.vehicle_qr_code;
+
+    // Radiation : le chauffeur disparaît des assignations (filtre 'verified')
+    // et ses annonces encore ouvertes sont fermées — plus aucune réservation.
+    if (status === 'rejected') {
+      await query(
+        `UPDATE posted_rides SET status = 'closed' WHERE driver_id = $1 AND status = 'open'`,
+        [req.params.id]
+      );
+    }
 
     const updated = await query(
       'UPDATE drivers SET verification_status = $1, vehicle_qr_code = $2 WHERE id = $3 RETURNING *',

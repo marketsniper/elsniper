@@ -253,6 +253,37 @@ const CHAINES = {
   equipe_doc_vehicule: { fr: 'Véhicule', en: 'Vehicle', sw: 'Gari' },
   equipe_valider: { fr: 'Valider ✓', en: 'Approve ✓', sw: 'Kubali ✓' },
   equipe_refuser: { fr: 'Refuser', en: 'Reject', sw: 'Kataa' },
+  equipe_hotels: { fr: 'Hôtels à vérifier', en: 'Hotels to verify', sw: 'Hoteli za kuthibitisha' },
+  equipe_hotels_vide: {
+    fr: 'Aucun compte hôtel en attente de vérification.',
+    en: 'No hotel accounts awaiting verification.',
+    sw: 'Hakuna akaunti za hoteli zinazosubiri uthibitisho.',
+  },
+  equipe_hotels_conseil: {
+    fr: "Appelez l'établissement à son numéro officiel (ou WhatsApp) pour confirmer que l'inscription vient bien de lui avant de valider.",
+    en: 'Call the property on its official number (or WhatsApp) to confirm the signup really comes from them before approving.',
+    sw: 'Piga simu hoteli kwa namba yake rasmi (au WhatsApp) kuthibitisha usajili unatoka kwao kabla ya kukubali.',
+  },
+  equipe_taxis: { fr: 'Mes taxis', en: 'My taxis', sw: 'Teksi zangu' },
+  equipe_taxis_vide: {
+    fr: 'Aucun chauffeur vérifié pour le moment.',
+    en: 'No verified drivers yet.',
+    sw: 'Hakuna dereva aliyethibitishwa bado.',
+  },
+  equipe_position: { fr: 'Voir la position 📍', en: 'View location 📍', sw: 'Ona mahali 📍' },
+  equipe_position_inconnue: {
+    fr: 'Position inconnue (app chauffeur fermée)',
+    en: 'Location unknown (driver app closed)',
+    sw: 'Mahali hapajulikani (programu ya dereva imefungwa)',
+  },
+  equipe_radier: { fr: 'Radier ce chauffeur', en: 'Remove this driver', sw: 'Mwondoe dereva huyu' },
+  equipe_radier_titre: { fr: 'Radier le chauffeur ?', en: 'Remove this driver?', sw: 'Kumwondoa dereva?' },
+  equipe_radier_texte: {
+    fr: '{nom} ne recevra plus de courses zanziGo et ses annonces ouvertes seront fermées.',
+    en: '{nom} will no longer receive zanziGo rides and their open trips will be closed.',
+    sw: '{nom} hatapokea tena safari za zanziGo na matangazo yake yaliyo wazi yatafungwa.',
+  },
+  equipe_radier_confirmer: { fr: 'Radier', en: 'Remove', sw: 'Ondoa' },
   equipe_action_erreur: {
     fr: "L'action a échoué — réessayez.",
     en: 'The action failed — try again.',
@@ -1091,12 +1122,27 @@ const CHAINES = {
   profil_type_local: { fr: 'Local', en: 'Local', sw: 'Mzawa' },
   profil_contact: { fr: 'Contact', en: 'Contact', sw: 'Mawasiliano' },
   profil_actualiser: { fr: 'Actualiser mon profil', en: 'Refresh my profile', sw: 'Onyesha upya wasifu wangu' },
+  hotel_attente_verif: {
+    fr: "Compte hôtel en attente de vérification : l'équipe zanziGo va contacter votre établissement (téléphone ou WhatsApp) pour confirmer l'inscription. Les réservations seront débloquées juste après.",
+    en: 'Hotel account awaiting verification: the zanziGo team will contact your property (phone or WhatsApp) to confirm the signup. Bookings unlock right after.',
+    sw: 'Akaunti ya hoteli inasubiri uthibitisho: timu ya zanziGo itawasiliana na hoteli yako (simu au WhatsApp) kuthibitisha usajili. Uhifadhi utafunguliwa mara baada ya hapo.',
+  },
+  hotel_refuse_verif: {
+    fr: "Ce compte hôtel a été bloqué par l'équipe zanziGo. Contactez-nous sur WhatsApp si c'est une erreur.",
+    en: 'This hotel account was blocked by the zanziGo team. Contact us on WhatsApp if this is a mistake.',
+    sw: 'Akaunti hii ya hoteli imezuiwa na timu ya zanziGo. Wasiliana nasi kwa WhatsApp ikiwa ni kosa.',
+  },
+  hotel_ajouter_bouton: {
+    fr: 'Inscrire un autre hôtel',
+    en: 'Register another hotel',
+    sw: 'Sajili hoteli nyingine',
+  },
 
   // --- Mode chauffeur : courses ---------------------------------------------------
   courses_info: {
-    fr: "L'équipe zanziGo vous envoie vos courses par WhatsApp — entrez la référence ci-dessous ou scannez.",
-    en: 'The zanziGo team sends your rides on WhatsApp — enter the reference below or scan.',
-    sw: 'Timu ya zanziGo inakutumia safari zako kwa WhatsApp — weka kumbukumbu hapa chini au skani.',
+    fr: "Vos courses assignées par l'équipe zanziGo apparaissent automatiquement ci-dessous. Vous pouvez aussi ouvrir une course avec la référence reçue sur WhatsApp.",
+    en: 'Rides assigned to you by the zanziGo team appear below automatically. You can also open a ride with the reference received on WhatsApp.',
+    sw: 'Safari ulizopangiwa na timu ya zanziGo zinaonekana hapa chini kiotomatiki. Unaweza pia kufungua safari kwa kumbukumbu uliyopokea WhatsApp.',
   },
   courses_ouvrir_titre: { fr: 'Ouvrir une course', en: 'Open a ride', sw: 'Fungua safari' },
   courses_reference: { fr: 'Référence de course', en: 'Ride reference', sw: 'Kumbukumbu ya safari' },
@@ -1107,12 +1153,12 @@ const CHAINES = {
   },
   courses_ouvrir_bouton: { fr: 'Ouvrir la course', en: 'Open the ride', sw: 'Fungua safari' },
   courses_scanner_bouton: { fr: 'Ouvrir le scanner', en: 'Open the scanner', sw: 'Fungua skana' },
-  courses_recentes: { fr: 'Courses récentes', en: 'Recent rides', sw: 'Safari za hivi karibuni' },
-  courses_vide_titre: { fr: 'Aucune course récente', en: 'No recent rides', sw: 'Hakuna safari za hivi karibuni' },
+  courses_recentes: { fr: 'Mes courses', en: 'My rides', sw: 'Safari zangu' },
+  courses_vide_titre: { fr: 'Aucune course pour le moment', en: 'No rides yet', sw: 'Hakuna safari bado' },
   courses_vide_texte: {
-    fr: 'Les courses ouvertes sur ce téléphone apparaîtront ici.',
-    en: 'Rides opened on this phone will appear here.',
-    sw: 'Safari zilizofunguliwa kwenye simu hii zitaonekana hapa.',
+    fr: "Dès que l'équipe zanziGo vous assigne une course, elle apparaît ici automatiquement — tirez l'écran vers le bas pour actualiser.",
+    en: 'As soon as the zanziGo team assigns you a ride, it appears here automatically — pull down to refresh.',
+    sw: 'Mara timu ya zanziGo ikikupangia safari, itaonekana hapa kiotomatiki — vuta chini kuonyesha upya.',
   },
   courses_erreur_reference: {
     fr: 'Référence de course invalide (collez la référence ou le lien WhatsApp reçu).',

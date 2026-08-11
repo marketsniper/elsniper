@@ -102,7 +102,7 @@ describe('Chauffeurs (drivers)', () => {
     assert.equal(rows[0].vehicle_qr_code, originalQr);
   });
 
-  it('candidature rejetée → pas de QR véhicule, re-traitement → 409', async () => {
+  it('candidature rejetée → pas de QR véhicule ; réintégration → 200 avec QR généré', async () => {
     const { driver } = await createDriverApplication();
     const rejected = await request(app)
       .patch(`/api/drivers/${driver.id}/verify`)
@@ -112,12 +112,21 @@ describe('Chauffeurs (drivers)', () => {
     assert.equal(rejected.body.verification_status, 'rejected');
     assert.equal(rejected.body.vehicle_qr_code, null);
 
+    const doubleRejet = await request(app)
+      .patch(`/api/drivers/${driver.id}/verify`)
+      .set(adminHeaders())
+      .send({ status: 'rejected' });
+    assert.equal(doubleRejet.status, 409);
+    assert.equal(doubleRejet.body.error.code, 'invalid_status');
+
+    // Un chauffeur refusé/radié peut être réintégré par l'équipe.
     const retry = await request(app)
       .patch(`/api/drivers/${driver.id}/verify`)
       .set(adminHeaders())
       .send({ status: 'verified' });
-    assert.equal(retry.status, 409);
-    assert.equal(retry.body.error.code, 'invalid_status');
+    assert.equal(retry.status, 200);
+    assert.equal(retry.body.verification_status, 'verified');
+    assert.match(retry.body.vehicle_qr_code, /^VEH-/);
   });
 
   it('verify sur chauffeur inconnu (équipe) → 404 not_found', async () => {
@@ -241,5 +250,107 @@ describe('Chauffeur — compteur de gains', () => {
       .get(`/api/drivers/${driver.id}/stats`)
       .set(authHeaders(autreToken));
     assert.equal(interdit.status, 403);
+  });
+});
+
+describe('Équipe — liste des taxis et radiation', () => {
+  it('la recherche équipe expose la dernière position GPS du chauffeur', async () => {
+    const { token, driver } = await createVerifiedDriver();
+
+    const avant = await request(app).get('/api/drivers').set(adminHeaders());
+    assert.equal(avant.status, 200);
+    assert.equal(avant.body[0].last_lat, null);
+
+    await request(app)
+      .patch(`/api/drivers/${driver.id}/location`)
+      .set(authHeaders(token))
+      .send({ lat: -5.72, lng: 39.29 });
+
+    const apres = await request(app).get('/api/drivers').set(adminHeaders());
+    const ligne = apres.body.find((d) => d.id === driver.id);
+    assert.equal(ligne.last_lat, -5.72);
+    assert.equal(ligne.last_lng, 39.29);
+    assert.ok(ligne.position_updated_at);
+  });
+
+  it('radiation d\'un chauffeur vérifié → retiré de la recherche, annonces ouvertes fermées', async () => {
+    const { token, driver } = await createVerifiedDriver();
+
+    const demain = new Date(Date.now() + 24 * 3600 * 1000).toISOString();
+    const annonce = await request(app)
+      .post('/api/rides')
+      .set(authHeaders(token))
+      .send({
+        origin: 'Aéroport (AAKIA)',
+        destination: 'Nungwi',
+        departureAt: demain,
+        seatsTotal: 4,
+      });
+    assert.equal(annonce.status, 201);
+
+    const radiation = await request(app)
+      .patch(`/api/drivers/${driver.id}/verify`)
+      .set(adminHeaders())
+      .send({ status: 'rejected' });
+    assert.equal(radiation.status, 200);
+    assert.equal(radiation.body.verification_status, 'rejected');
+    // Le QR véhicule fixe n'est pas effacé (réintégration possible).
+    assert.match(radiation.body.vehicle_qr_code, /^VEH-/);
+
+    const recherche = await request(app).get('/api/drivers').set(adminHeaders());
+    assert.ok(!recherche.body.some((d) => d.id === driver.id), 'chauffeur radié exclu');
+
+    const { rows } = await pool.query('SELECT status FROM posted_rides WHERE id = $1', [
+      annonce.body.id,
+    ]);
+    assert.equal(rows[0].status, 'closed');
+  });
+});
+
+describe('Chauffeur — liste de ses courses assignées', () => {
+  it('GET /:id/trips : les courses assignées apparaissent ; autre chauffeur → 403', async () => {
+    const { token, user } = await createTourist();
+    const { token: driverToken, driver } = await createVerifiedDriver();
+
+    const vide = await request(app)
+      .get(`/api/drivers/${driver.id}/trips`)
+      .set(authHeaders(driverToken));
+    assert.equal(vide.status, 200);
+    assert.deepEqual(vide.body, []);
+
+    const trip = await request(app)
+      .post('/api/trips')
+      .set(authHeaders(token))
+      .send({
+        userId: user.id,
+        tripType: 'private',
+        pickupLocation: 'Stone Town',
+        dropoffLocation: 'Paje',
+      });
+    assert.equal(trip.status, 201);
+    await request(app)
+      .patch(`/api/trips/${trip.body.id}/assign-driver`)
+      .set(adminHeaders())
+      .send({ driverId: driver.id });
+
+    const liste = await request(app)
+      .get(`/api/drivers/${driver.id}/trips`)
+      .set(authHeaders(driverToken));
+    assert.equal(liste.status, 200);
+    assert.equal(liste.body.length, 1);
+    assert.equal(liste.body[0].id, trip.body.id);
+    assert.equal(liste.body[0].status, 'driver_confirmed');
+
+    const { token: autreToken } = await createVerifiedDriver({ fullName: 'Autre Chauffeur' });
+    const interdit = await request(app)
+      .get(`/api/drivers/${driver.id}/trips`)
+      .set(authHeaders(autreToken));
+    assert.equal(interdit.status, 403);
+
+    const equipe = await request(app)
+      .get(`/api/drivers/${driver.id}/trips`)
+      .set(adminHeaders());
+    assert.equal(equipe.status, 200);
+    assert.equal(equipe.body.length, 1);
   });
 });

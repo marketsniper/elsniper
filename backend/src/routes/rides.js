@@ -18,6 +18,7 @@ import { buildTeamNotificationLink } from '../services/whatsappService.js';
 import { config } from '../config.js';
 import { localSeatTzsForRoute, sharedSeatUsdForRoute } from '../services/pricingService.js';
 import { RIDE_DESTINATIONS, RIDE_ORIGINS } from '../services/locations.js';
+import { assertHotelVerified } from './hotels.js';
 
 const router = Router();
 
@@ -278,6 +279,14 @@ router.post(
       .parse(req.body);
     if (!req.auth.userId && !req.auth.hotelId && !isAdmin(req)) {
       throw new HttpError(403, 'forbidden', 'Réservé aux clients et aux hôtels partenaires');
+    }
+    // Un hôtel ne peut réserver de places qu'une fois son compte vérifié.
+    if (req.auth.hotelId) {
+      const { rows } = await query('SELECT verification_status FROM hotels WHERE id = $1', [
+        req.auth.hotelId,
+      ]);
+      if (!rows[0]) throw notFound('Hôtel');
+      assertHotelVerified(rows[0]);
     }
 
     const { rows: rideRows } = await query('SELECT * FROM posted_rides WHERE id = $1', [

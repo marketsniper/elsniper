@@ -9,6 +9,7 @@ import {
   app,
   authHeaders,
   createDriverApplication,
+  createHotel,
   createTourist,
   createVerifiedDriver,
   useTestDb,
@@ -272,5 +273,22 @@ describe('Trajets partagés — réservation de places dans l\'app', () => {
 
     const sansJeton = await request(app).post(`/api/rides/${ride.id}/book`).send({ seats: 1 });
     assert.equal(sansJeton.status, 401);
+  });
+
+  it('hôtel non vérifié → 403 hotel_not_verified, aucune place décomptée', async () => {
+    const { token: driverToken } = await createVerifiedDriver();
+    const ride = (await postRide(driverToken)).body;
+    const { token: hotelToken } = await createHotel({ verify: false });
+
+    const res = await request(app)
+      .post(`/api/rides/${ride.id}/book`)
+      .set(authHeaders(hotelToken))
+      .send({ seats: 2 });
+    assert.equal(res.status, 403);
+    assert.equal(res.body.error.code, 'hotel_not_verified');
+
+    const detail = await request(app).get('/api/rides').set(adminHeaders());
+    const ligne = detail.body.find((r) => r.id === ride.id);
+    assert.equal(ligne.seats_available, ride.seats_available);
   });
 });

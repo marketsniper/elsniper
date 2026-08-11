@@ -8,6 +8,7 @@ import { priceTrip } from '../services/pricingService.js';
 import { createPaymentOrder, isStubMode } from '../services/pesapalService.js';
 import { circuitPaiementUsd } from '../services/paypalService.js';
 import { buildTeamNotificationLink, tripRequestMessage } from '../services/whatsappService.js';
+import { assertHotelVerified } from './hotels.js';
 import { randomUUID } from 'node:crypto';
 
 const router = Router();
@@ -104,6 +105,7 @@ router.post(
       const { rows: hotelRows } = await query('SELECT * FROM hotels WHERE id = $1', [data.hotelId]);
       const hotel = hotelRows[0];
       if (!hotel) throw notFound('Hôtel');
+      assertHotelVerified(hotel);
 
       if (data.tripType === 'shared_local') {
         throw new HttpError(

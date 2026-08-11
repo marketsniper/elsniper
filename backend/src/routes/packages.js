@@ -10,6 +10,7 @@ import { pricePackage } from '../services/pricingService.js';
 import { circuitPaiementUsd } from '../services/paypalService.js';
 import { generatePackageQr } from '../services/qrService.js';
 import { buildTeamNotificationLink, packageRequestMessage } from '../services/whatsappService.js';
+import { assertHotelVerified } from './hotels.js';
 
 const router = Router();
 
@@ -85,6 +86,7 @@ router.post(
     } else {
       const { rows } = await query('SELECT * FROM hotels WHERE id = $1', [data.senderHotelId]);
       if (!rows[0]) throw notFound('Hôtel expéditeur');
+      assertHotelVerified(rows[0]);
       remise = config.hotelDiscountRate; // hôtel : grille touriste −5 %
       senderLabel = `${rows[0].name} (hôtel, ${rows[0].phone})`;
     }

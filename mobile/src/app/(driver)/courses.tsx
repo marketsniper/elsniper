@@ -1,8 +1,8 @@
 // Mode chauffeur — mes courses.
-// L'API MVP n'expose pas de liste des courses d'un chauffeur : l'équipe
-// zanziGo notifie chaque chauffeur par WhatsApp avec la référence de la
-// course. On ouvre donc une course par sa référence (GET /trips/:id, autorisé
-// au chauffeur assigné) et on garde localement les courses récemment ouvertes.
+// La liste vient du serveur (GET /drivers/:id/trips) : dès que l'équipe
+// assigne le chauffeur sur une course, elle apparaît ici au prochain
+// rafraîchissement — plus besoin de la référence WhatsApp, qui reste
+// utilisable en secours pour ouvrir une course directement.
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -20,7 +20,6 @@ import {
 } from '@/components/ui';
 import { api, ErreurApi } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import { ajouterCourseLocale, listerCoursesLocales } from '@/lib/colisLocal';
 import { formaterDateRelativeI18n, libelleTailleColis, useT } from '@/lib/i18n';
 import { couleurs, espaces, ombres, rayons } from '@/lib/theme';
 import { champ, formaterMontant, formaterPrix, type Colis, type StatutTrajet, type Trajet } from '@/lib/types';
@@ -83,11 +82,11 @@ export default function EcranCourses() {
 
   const rafraichir = useCallback(async () => {
     if (!chauffeurId) return;
-    const ids = await listerCoursesLocales(chauffeurId);
-    const resultats = await Promise.all(
-      ids.map((courseId) => api.obtenirTrajet(courseId).catch(() => null))
-    );
-    setRecentes(resultats.filter((trajet): trajet is Trajet => trajet !== null));
+    try {
+      setRecentes(await api.listerCoursesChauffeur(chauffeurId));
+    } catch {
+      // silencieux : hors-ligne, on garde la dernière liste affichée
+    }
     try {
       setColisDispo(await api.listerColisARamasser());
     } catch {
@@ -115,7 +114,6 @@ export default function EcranCourses() {
     setCharge(true);
     try {
       await api.obtenirTrajet(id); // vérifie l'accès (chauffeur assigné)
-      if (chauffeurId) await ajouterCourseLocale(chauffeurId, id);
       setIdSaisi('');
       router.push(`/course/${id}`);
     } catch (e) {

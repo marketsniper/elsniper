@@ -173,3 +173,84 @@ describe('Hôtels (hotels)', () => {
     assert.equal(res.body.error.code, 'not_found');
   });
 });
+
+describe('Vérification des comptes hôtels', () => {
+  it('un nouvel hôtel est pending ; il apparaît dans GET /hotels (équipe)', async () => {
+    const { hotel } = await createHotel({ verify: false });
+    assert.equal(hotel.verification_status, 'pending');
+
+    const liste = await request(app).get('/api/hotels').set(adminHeaders());
+    assert.equal(liste.status, 200);
+    assert.equal(liste.body.length, 1);
+    assert.equal(liste.body[0].id, hotel.id);
+    assert.equal(liste.body[0].password_hash, undefined);
+  });
+
+  it('GET /hotels sans clé équipe → 401/403', async () => {
+    const { token } = await createHotel();
+    const res = await request(app).get('/api/hotels').set(authHeaders(token));
+    assert.ok([401, 403].includes(res.status));
+  });
+
+  it('hôtel pending : réserver une course → 403 hotel_not_verified ; après validation → 201', async () => {
+    const { token, hotel } = await createHotel({ verify: false });
+
+    const corps = {
+      hotelId: hotel.id,
+      clientName: 'Guest Smith',
+      clientPhone: nextPhone(),
+      tripType: 'private',
+      pickupLocation: 'Aéroport de Zanzibar',
+      dropoffLocation: 'Nungwi',
+    };
+    const bloque = await request(app).post('/api/trips').set(authHeaders(token)).send(corps);
+    assert.equal(bloque.status, 403);
+    assert.equal(bloque.body.error.code, 'hotel_not_verified');
+
+    const verif = await request(app)
+      .patch(`/api/hotels/${hotel.id}/verify`)
+      .set(adminHeaders())
+      .send({ status: 'verified' });
+    assert.equal(verif.status, 200);
+    assert.equal(verif.body.verification_status, 'verified');
+
+    const ok = await request(app).post('/api/trips').set(authHeaders(token)).send(corps);
+    assert.equal(ok.status, 201);
+  });
+
+  it('hôtel pending : créer un colis → 403 hotel_not_verified', async () => {
+    const { token, hotel } = await createHotel({ verify: false });
+    const res = await request(app)
+      .post('/api/packages')
+      .set(authHeaders(token))
+      .send({
+        senderType: 'hotel',
+        senderHotelId: hotel.id,
+        size: 'small',
+        pickupLocation: 'Hotel Baraka, Nungwi',
+        dropoffLocation: 'Stone Town',
+        recipientName: 'Omar',
+        recipientPhone: nextPhone(),
+      });
+    assert.equal(res.status, 403);
+    assert.equal(res.body.error.code, 'hotel_not_verified');
+  });
+
+  it('PATCH /:id/verify : même statut → 409 ; blocage d\'un hôtel vérifié → 200', async () => {
+    const { hotel } = await createHotel();
+
+    const deja = await request(app)
+      .patch(`/api/hotels/${hotel.id}/verify`)
+      .set(adminHeaders())
+      .send({ status: 'verified' });
+    assert.equal(deja.status, 409);
+    assert.equal(deja.body.error.code, 'invalid_status');
+
+    const bloque = await request(app)
+      .patch(`/api/hotels/${hotel.id}/verify`)
+      .set(adminHeaders())
+      .send({ status: 'rejected' });
+    assert.equal(bloque.status, 200);
+    assert.equal(bloque.body.verification_status, 'rejected');
+  });
+});
