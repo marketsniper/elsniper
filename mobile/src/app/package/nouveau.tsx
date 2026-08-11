@@ -66,6 +66,8 @@ export default function EcranNouveauColis() {
   const [arrivee, setArrivee] = useState('');
   const [destinataire, setDestinataire] = useState('');
   const [telephone, setTelephone] = useState('+255');
+  // Numéro de l'expéditeur pour la ramasse — prérempli avec celui du compte.
+  const [telExpediteur, setTelExpediteur] = useState(session?.phone ?? '+255');
   const [description, setDescription] = useState('');
   // Quand ramasser : date vide = « Dès que possible ».
   const choixDates = libellesDates(t, langue);
@@ -104,6 +106,11 @@ export default function EcranNouveauColis() {
       setErreur(t('ncolis_erreur_tel'));
       return;
     }
+    const telExpediteurNormalise = telExpediteur.replace(/[\s-]/g, '');
+    if (!/^\+[1-9]\d{6,14}$/.test(telExpediteurNormalise)) {
+      setErreur(t('ncolis_erreur_tel_expediteur'));
+      return;
+    }
     let pickupAt: string | undefined;
     if (dateRamassage) {
       const iso = heureRamassage
@@ -126,6 +133,7 @@ export default function EcranNouveauColis() {
         dropoffLocation: arrivee.trim(),
         recipientName: destinataire.trim(),
         recipientPhone: telephoneNormalise,
+        senderPhone: telExpediteurNormalise,
         description: description.trim() || undefined,
         pickupAt,
       });
@@ -218,6 +226,15 @@ export default function EcranNouveauColis() {
             onChange={setHeureRamassage}
           />
         )}
+
+        {/* Numéro de l'expéditeur : le chauffeur l'appelle pour la ramasse. */}
+        <Champ
+          label={t('ncolis_tel_expediteur')}
+          value={telExpediteur}
+          onChangeText={setTelExpediteur}
+          keyboardType="phone-pad"
+          placeholder="+255 712 345 678"
+        />
 
         <Text style={styles.titreSection}>{t('ncolis_section_destinataire')}</Text>
         <Champ

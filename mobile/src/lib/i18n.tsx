@@ -1094,6 +1094,17 @@ const CHAINES = {
     en: 'E.g. documents, fragile, call on arrival…',
     sw: 'Mf. nyaraka, dhaifu, piga simu ukifika…',
   },
+  ncolis_tel_expediteur: {
+    fr: 'Votre numéro (pour la ramasse)',
+    en: 'Your phone (for pickup)',
+    sw: 'Namba yako (kwa kuchukua)',
+  },
+  ncolis_erreur_tel_expediteur: {
+    fr: 'Votre numéro doit être au format international (+255…).',
+    en: 'Your number must be in international format (+255…).',
+    sw: 'Namba yako iwe katika muundo wa kimataifa (+255…).',
+  },
+  colis_appeler_expediteur: { fr: "📞 Appeler l'expéditeur", en: '📞 Call the sender', sw: '📞 Mpigie mtumaji' },
   ncolis_quand: { fr: 'Quand ramasser le colis ?', en: 'When to pick up the parcel?', sw: 'Lini kuchukua mzigo?' },
   ncolis_asap: { fr: 'Dès que possible', en: 'As soon as possible', sw: 'Haraka iwezekanavyo' },
   colis_dispo_ramassage: { fr: 'À ramasser', en: 'Pick up', sw: 'Kuchukuliwa' },

@@ -26,6 +26,8 @@ const createPackageSchema = z
     dropoffLocation: z.string().min(2),
     recipientName: z.string().min(2),
     recipientPhone: z.string().min(6),
+    /** Téléphone de l'expéditeur pour la ramasse (absent = celui du compte). */
+    senderPhone: z.string().min(6).optional(),
     description: z.string().max(1000).optional(),
     /** Heure de ramassage souhaitée (absent = dès que possible). */
     pickupAt: z.string().datetime({ offset: true }).optional(),
@@ -80,6 +82,8 @@ router.post(
     let currency = 'USD';
     let remise = 0;
     let senderLabel;
+    // Téléphone de ramasse : celui saisi, sinon celui du compte expéditeur.
+    let senderPhone = data.senderPhone ?? null;
     if (data.senderType === 'user') {
       const { rows } = await query('SELECT * FROM users WHERE id = $1', [data.senderUserId]);
       if (!rows[0]) throw notFound('Utilisateur expéditeur');
@@ -88,13 +92,15 @@ router.post(
         throw new HttpError(403, 'account_blocked', "Compte bloqué par l'équipe zanziGo — contactez-nous sur WhatsApp");
       }
       currency = rows[0].currency;
-      senderLabel = `${rows[0].full_name} (client, ${rows[0].phone})`;
+      senderPhone = senderPhone ?? rows[0].phone;
+      senderLabel = `${rows[0].full_name} (client, ${senderPhone})`;
     } else {
       const { rows } = await query('SELECT * FROM hotels WHERE id = $1', [data.senderHotelId]);
       if (!rows[0]) throw notFound('Hôtel expéditeur');
       assertHotelVerified(rows[0]);
       remise = config.hotelDiscountRate; // hôtel : grille touriste −5 %
-      senderLabel = `${rows[0].name} (hôtel, ${rows[0].phone})`;
+      senderPhone = senderPhone ?? rows[0].phone;
+      senderLabel = `${rows[0].name} (hôtel, ${senderPhone})`;
     }
 
     const pricing = pricePackage(currency, data.size, remise);
@@ -102,8 +108,8 @@ router.post(
 
     const { rows } = await query(
       `INSERT INTO packages (sender_type, sender_user_id, sender_hotel_id, size, qr_code, pickup_location,
-                             dropoff_location, recipient_name, recipient_phone, description, pickup_at, price, commission, currency)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+                             dropoff_location, recipient_name, recipient_phone, sender_phone, description, pickup_at, price, commission, currency)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
        RETURNING *`,
       [
         data.senderType,
@@ -115,6 +121,7 @@ router.post(
         data.dropoffLocation,
         data.recipientName,
         data.recipientPhone,
+        senderPhone,
         data.description ?? null,
         data.pickupAt ?? null,
         pricing.price,

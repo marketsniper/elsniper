@@ -509,6 +509,7 @@ describe('Colis — bourse aux colis (mode chauffeur)', () => {
       });
     assert.equal(res.status, 201);
     assert.ok(res.body.pickup_at, 'pickup_at enregistré');
+    assert.equal(res.body.sender_phone, user.phone, 'téléphone expéditeur = compte par défaut');
 
     await payPackage(token, res.body.id);
     const liste = await request(app).get('/api/packages').set(authHeaders(driverToken));
@@ -576,6 +577,7 @@ describe('Colis — bourse aux colis (mode chauffeur)', () => {
     assert.ok(prise.body.driver_id);
     assert.equal(prise.body.qr_code, undefined, 'pas de QR à la réservation');
     assert.equal(prise.body.recipient_phone, undefined, 'pas de téléphone du destinataire');
+    assert.ok(prise.body.sender_phone, "téléphone de l'expéditeur fourni pour la ramasse");
     assert.ok(prise.body.whatsapp_link, "lien WhatsApp d'information équipe");
 
     // Le colis disparaît de la bourse ; le second chauffeur arrive trop tard.

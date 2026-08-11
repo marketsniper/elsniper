@@ -273,6 +273,7 @@ export default function EcranCourses() {
             const prixC = Number(champ(colis, 'price') ?? NaN);
             const commissionC = Number(champ(colis, 'commission') ?? NaN);
             const deviseC = String(champ(colis, 'currency') ?? '');
+            const telExpediteur = champ<string>(colis, 'sender_phone', 'senderPhone');
             const netC =
               Number.isFinite(prixC) && Number.isFinite(commissionC)
                 ? Math.round((prixC - commissionC) * 100) / 100
@@ -302,6 +303,17 @@ export default function EcranCourses() {
                     </Text>
                   )}
                 </View>
+                {!!telExpediteur && (
+                  <Pressable
+                    onPress={() => Linking.openURL(`tel:${telExpediteur}`)}
+                    accessibilityRole="button"
+                    style={({ pressed }) => [styles.ligneAppel, pressed && { opacity: 0.6 }]}
+                  >
+                    <Text style={styles.texteAppel}>
+                      {t('colis_appeler_expediteur')} · {telExpediteur}
+                    </Text>
+                  </Pressable>
+                )}
                 <Bouton
                   titre={t('courses_colis_scanner')}
                   icone="qr-code-outline"
@@ -518,6 +530,14 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: couleurs.primaire,
+  },
+  ligneAppel: {
+    paddingVertical: espaces.xs,
+  },
+  texteAppel: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: couleurs.primaireFonce,
   },
   boutonPrendre: {
     flexDirection: 'row',

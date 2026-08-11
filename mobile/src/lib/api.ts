@@ -449,6 +449,8 @@ export interface CreationColis {
   dropoffLocation: string;
   recipientName: string;
   recipientPhone: string; // format international +255…
+  /** Téléphone de l'expéditeur pour la ramasse (défaut : celui du compte). */
+  senderPhone?: string;
   description?: string;
   /** Heure de ramassage souhaitée (ISO) — absente = dès que possible. */
   pickupAt?: string;
