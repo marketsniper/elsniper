@@ -232,7 +232,12 @@ export default function EcranCourses() {
             ? Math.round((prix - commission) * 100) / 100
             : null;
         return (
-          <View key={colis.id} style={styles.carte}>
+          <Pressable
+            key={colis.id}
+            onPress={() => router.push(`/colis-dispo/${colis.id}`)}
+            accessibilityRole="button"
+            style={({ pressed }) => [styles.carte, pressed && { opacity: 0.75 }]}
+          >
             <View style={styles.enTete}>
               <Text style={styles.type}>
                 {nomHotel
@@ -259,14 +264,6 @@ export default function EcranCourses() {
               )}
             </View>
             <View style={styles.rangeeColis}>
-              <View style={styles.actionColis}>
-                <Bouton
-                  titre={t('courses_colis_scanner')}
-                  icone="qr-code-outline"
-                  variante="secondaire"
-                  onPress={() => router.push('/(driver)/scanner')}
-                />
-              </View>
               <Pressable
                 onPress={() => masquerUnColis(colis)}
                 accessibilityRole="button"
@@ -275,8 +272,12 @@ export default function EcranCourses() {
                 <Ionicons name="eye-off-outline" size={16} color={couleurs.texteSecondaire} />
                 <Text style={styles.texteMasquer}>{t('colis_masquer')}</Text>
               </Pressable>
+              <View style={styles.ligneOuvrirColis}>
+                <Text style={styles.texteOuvrirColis}>{t('annonces_ouvrir_detail')}</Text>
+                <Ionicons name="chevron-forward" size={16} color={couleurs.primaire} />
+              </View>
             </View>
-          </View>
+          </Pressable>
         );
       })}
       {nbColisMasques > 0 && (
@@ -394,10 +395,18 @@ const styles = StyleSheet.create({
   rangeeColis: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     gap: espaces.m,
   },
-  actionColis: {
-    flex: 1,
+  ligneOuvrirColis: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: espaces.xs,
+  },
+  texteOuvrirColis: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: couleurs.primaire,
   },
   boutonMasquer: {
     flexDirection: 'row',

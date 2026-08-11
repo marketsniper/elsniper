@@ -323,6 +323,28 @@ const CHAINES = {
     en: 'Show hidden parcels again ({n})',
     sw: 'Onyesha tena mizigo iliyofichwa ({n})',
   },
+  titre_colis_dispo: { fr: 'Colis à ramasser', en: 'Parcel to pick up', sw: 'Mzigo wa kuchukua' },
+  colis_dispo_intro: {
+    fr: 'Premier arrivé, premier servi : au ramassage, scannez le code QR collé sur le colis — la livraison devient la vôtre. Les coordonnées du destinataire apparaissent après le scan.',
+    en: 'First come, first served: at pickup, scan the QR code on the parcel — the delivery becomes yours. Recipient details appear after the scan.',
+    sw: 'Wa kwanza kufika, wa kwanza kuhudumiwa: unapochukua, skani QR iliyo kwenye mzigo — uwasilishaji unakuwa wako. Maelezo ya mpokeaji yanaonekana baada ya skani.',
+  },
+  colis_dispo_enlevement: { fr: 'Enlèvement', en: 'Pickup', sw: 'Kuchukua' },
+  colis_dispo_livraison: { fr: 'Livraison', en: 'Delivery', sw: 'Uwasilishaji' },
+  colis_dispo_taille: { fr: 'Taille', en: 'Size', sw: 'Ukubwa' },
+  colis_dispo_description: { fr: 'Description', en: 'Description', sw: 'Maelezo' },
+  colis_dispo_publie: { fr: 'Publié', en: 'Posted', sw: 'Imetangazwa' },
+  colis_dispo_prix: { fr: 'Prix payé par le client', en: 'Price paid by the client', sw: 'Bei aliyolipa mteja' },
+  colis_dispo_introuvable_titre: {
+    fr: 'Colis plus disponible',
+    en: 'Parcel no longer available',
+    sw: 'Mzigo haupatikani tena',
+  },
+  colis_dispo_introuvable_texte: {
+    fr: "Il a déjà été pris par un autre chauffeur, ou la demande a expiré (48 h).",
+    en: 'It was already taken by another driver, or the request expired (48 h).',
+    sw: 'Tayari umechukuliwa na dereva mwingine, au ombi limeisha muda (saa 48).',
+  },
   annonces_historique: { fr: 'Historique', en: 'History', sw: 'Historia' },
   annonces_ouvertes: { fr: 'Annonces en ligne', en: 'Live listings', sw: 'Matangazo hewani' },
   equipe_action_erreur: {

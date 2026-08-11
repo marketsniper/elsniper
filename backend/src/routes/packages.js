@@ -129,6 +129,8 @@ router.post(
 // envois programmés par les hôtels partenaires. Chauffeurs et équipe
 // uniquement. Volontairement minimal : ni QR ni coordonnées du destinataire
 // avant le ramassage (le chauffeur les obtient en scannant le colis).
+// Les demandes EXPIRENT après 48 h : un colis jamais ramassé disparaît de la
+// bourse (l'équipe le voit toujours et règle le cas avec l'expéditeur).
 router.get(
   '/',
   requireAuth,
@@ -138,12 +140,13 @@ router.get(
     }
     const { rows } = await query(
       `SELECT p.id, p.size, p.status, p.sender_type, p.pickup_location, p.dropoff_location,
-              p.price, p.commission, p.currency, p.created_at,
+              p.description, p.price, p.commission, p.currency, p.created_at,
               h.name AS sender_hotel_name, u.full_name AS sender_user_name
        FROM packages p
        LEFT JOIN hotels h ON h.id = p.sender_hotel_id
        LEFT JOIN users u ON u.id = p.sender_user_id
        WHERE p.status = 'paid' AND p.driver_id IS NULL
+         AND p.created_at >= now() - interval '48 hours'
        ORDER BY p.created_at ASC
        LIMIT 100`
     );

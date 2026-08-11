@@ -489,6 +489,27 @@ describe('Colis — suivi GPS pendant la livraison', () => {
 });
 
 describe('Colis — bourse aux colis (mode chauffeur)', () => {
+  it('une demande expirée (plus de 48 h) disparaît de la bourse ; la description est incluse', async () => {
+    const { pool } = await import('../src/db.js');
+    const { token, user } = await createTourist();
+    const { token: driverToken } = await createVerifiedDriver();
+
+    const pkg = await createUserPackage(token, user.id);
+    await payPackage(token, pkg.id);
+
+    const avant = await request(app).get('/api/packages').set(authHeaders(driverToken));
+    const ligne = avant.body.find((p) => p.id === pkg.id);
+    assert.ok(ligne, 'colis payé récent visible');
+    assert.notEqual(ligne.description, undefined, 'description exposée aux chauffeurs');
+
+    await pool.query(
+      `UPDATE packages SET created_at = now() - interval '3 days' WHERE id = $1`,
+      [pkg.id]
+    );
+    const apres = await request(app).get('/api/packages').set(authHeaders(driverToken));
+    assert.ok(!apres.body.some((p) => p.id === pkg.id), 'colis expiré exclu de la bourse');
+  });
+
   it('un chauffeur liste les colis payés sans chauffeur ; un client → 403', async () => {
     const { token, user } = await createTourist();
     const { token: hotelToken, hotel } = await createHotel();
