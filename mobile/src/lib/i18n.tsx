@@ -296,6 +296,7 @@ const CHAINES = {
   equipe_abonnes_hotels: { fr: 'Hôtels', en: 'Hotels', sw: 'Hoteli' },
   equipe_ca_titre: { fr: "Chiffre d'affaires", en: 'Revenue', sw: 'Mapato' },
   equipe_ca_net: { fr: 'Net zanziGo', en: 'zanziGo net', sw: 'Halisi zanziGo' },
+  equipe_ca_ouvrir: { fr: '7 j · 30 j ›', en: '7 d · 30 d ›', sw: 'Siku 7 · 30 ›' },
   equipe_stat_clients: { fr: 'Clients · Visiteurs', en: 'Clients · Visitors', sw: 'Wateja · Wageni' },
   equipe_stat_locaux: { fr: 'Locaux', en: 'Locals', sw: 'Wazawa' },
   equipe_recherche_label: {

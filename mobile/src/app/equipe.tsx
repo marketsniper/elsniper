@@ -81,6 +81,8 @@ export default function EcranEquipe() {
   const [abonnes, setAbonnes] = useState<StatsAbonnes | null>(null);
   // Rubrique ouverte (null = menu en grille de cases).
   const [section, setSection] = useState<SectionEquipe | null>(null);
+  // Case chiffre d'affaires : repliée (jour seul) ou dépliée (7 j / 30 j).
+  const [caOuvert, setCaOuvert] = useState(false);
   // Recherche de profils (rubriques Clients / Locaux) : radiation ciblée.
   const [recherche, setRecherche] = useState('');
   const [resultats, setResultats] = useState<Utilisateur[]>([]);
@@ -185,6 +187,12 @@ export default function EcranEquipe() {
     }
     agir(course.id, () => api.assignerChauffeur(course.id, chauffeur.id));
   };
+
+  // « 45 USD + 15 000 TZS » à partir d'un total par devise.
+  const joindreMontants = (montants: Record<string, number>) =>
+    Object.entries(montants)
+      .map(([devise, montant]) => formaterMontant(montant, devise))
+      .join(' + ');
 
   // Ouverture d'une rubrique depuis le menu : remet la recherche à zéro.
   const ouvrirSection = (cle: SectionEquipe) => {
@@ -340,43 +348,56 @@ export default function EcranEquipe() {
             </View>
           )}
 
-          {/* Chiffre d'affaires : CA encaissé (courses terminées + colis
-              livrés) et net zanziGo (commissions), par fenêtre. */}
+          {/* Chiffre d'affaires : case DISCRÈTE — le jour toujours visible,
+              toucher pour déplier les fenêtres 7 jours et 30 jours. */}
           {abonnes?.revenue && (
-            <View style={styles.bandeauAbonnes}>
-              <Text style={styles.titreAbonnes}>{t('equipe_ca_titre')}</Text>
-              {(
-                [
-                  ['gains_aujourdhui', abonnes.revenue.today],
-                  ['gains_7j', abonnes.revenue.week],
-                  ['gains_30j', abonnes.revenue.month],
-                ] as const
-              ).map(([cle, fenetre]) => {
-                const joindre = (montants: Record<string, number>) =>
-                  Object.entries(montants)
-                    .map(([devise, montant]) => formaterMontant(montant, devise))
-                    .join(' + ');
-                return (
-                  <View key={cle} style={styles.ligneCa}>
-                    <View style={styles.gaucheCa}>
-                      <Text style={styles.labelCa}>{t(cle)}</Text>
+            <Pressable
+              onPress={() => setCaOuvert((v) => !v)}
+              accessibilityRole="button"
+              style={({ pressed }) => [styles.bandeauCa, pressed && { opacity: 0.85 }]}
+            >
+              <View style={styles.enTeteCa}>
+                <Text style={styles.titreAbonnes}>{t('equipe_ca_titre')}</Text>
+                <View style={styles.droiteEnTeteCa}>
+                  {!caOuvert && (
+                    <Text style={styles.astuceCa}>{t('equipe_ca_ouvrir')}</Text>
+                  )}
+                  <Ionicons
+                    name={caOuvert ? 'chevron-up' : 'chevron-down'}
+                    size={16}
+                    color={couleurs.texteSecondaire}
+                  />
+                </View>
+              </View>
+              {(caOuvert
+                ? ([
+                    ['gains_aujourdhui', abonnes.revenue.today],
+                    ['gains_7j', abonnes.revenue.week],
+                    ['gains_30j', abonnes.revenue.month],
+                  ] as const)
+                : ([['gains_aujourdhui', abonnes.revenue.today]] as const)
+              ).map(([cle, fenetre]) => (
+                <View key={cle} style={styles.ligneCa}>
+                  <View style={styles.gaucheCa}>
+                    <Text style={styles.labelCa}>{t(cle)}</Text>
+                    {caOuvert && (
                       <Text style={styles.detailCa}>
                         {t('gains_detail_compte', {
                           courses: fenetre.courses,
                           colis: fenetre.colis,
                         })}
                       </Text>
-                    </View>
-                    <View style={styles.droiteCa}>
-                      <Text style={styles.montantCa}>{joindre(fenetre.ca) || '—'}</Text>
-                      <Text style={styles.netCa}>
-                        {t('equipe_ca_net')} : {joindre(fenetre.gains) || '—'}
-                      </Text>
-                    </View>
+                    )}
                   </View>
-                );
-              })}
-            </View>
+                  <View style={styles.droiteCa}>
+                    <Text style={styles.montantCa}>{joindreMontants(fenetre.ca) || '—'}</Text>
+                    <Text style={styles.netCa}>
+                      {t('equipe_ca_net')} : {joindreMontants(fenetre.gains) || '—'}
+                    </Text>
+                  </View>
+                </View>
+              ))}
+            </Pressable>
           )}
 
           <Text style={styles.titreSection}>{t('equipe_resume_titre')}</Text>
@@ -993,6 +1014,31 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: couleurs.texteSecondaire,
+  },
+  bandeauCa: {
+    backgroundColor: couleurs.carteTranslucide,
+    borderRadius: rayons.carte,
+    paddingHorizontal: espaces.l,
+    paddingVertical: espaces.m,
+    gap: espaces.s,
+    ...ombres.carte,
+  },
+  enTeteCa: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: espaces.m,
+  },
+  droiteEnTeteCa: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: espaces.xs,
+    flexShrink: 1,
+  },
+  astuceCa: {
+    fontSize: 11,
+    color: couleurs.texteSecondaire,
+    flexShrink: 1,
   },
   ligneCa: {
     flexDirection: 'row',
