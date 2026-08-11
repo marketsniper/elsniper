@@ -660,7 +660,17 @@ export async function verifierHotel(
   return requete<Hotel>(`/hotels/${id}/verify`, { methode: 'PATCH', corps: { status: statut } });
 }
 
-/** Compteurs d'abonnés du tableau de bord (GET /stats, équipe). */
+/** Fenêtre de chiffre d'affaires (GET /stats) : CA encaissé et net zanziGo. */
+export interface FenetreCa {
+  courses: number;
+  colis: number;
+  /** CA encaissé (prix payés) par devise. */
+  ca: Record<string, number>;
+  /** Net zanziGo (commissions) par devise. */
+  gains: Record<string, number>;
+}
+
+/** Compteurs d'abonnés + chiffre d'affaires du tableau de bord (GET /stats, équipe). */
 export interface StatsAbonnes {
   tourists: number;
   residents: number;
@@ -670,6 +680,7 @@ export interface StatsAbonnes {
   hotels: number;
   hotels_verified: number;
   drivers_verified: number;
+  revenue: { today: FenetreCa; week: FenetreCa; month: FenetreCa };
 }
 export async function statsAbonnes(): Promise<StatsAbonnes> {
   return requete<StatsAbonnes>('/stats');

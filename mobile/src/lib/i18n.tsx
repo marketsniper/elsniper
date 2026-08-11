@@ -294,6 +294,8 @@ const CHAINES = {
   equipe_abonnes_clients: { fr: 'Clients', en: 'Clients', sw: 'Wateja' },
   equipe_abonnes_locaux: { fr: 'Locaux', en: 'Locals', sw: 'Wazawa' },
   equipe_abonnes_hotels: { fr: 'Hôtels', en: 'Hotels', sw: 'Hoteli' },
+  equipe_ca_titre: { fr: "Chiffre d'affaires", en: 'Revenue', sw: 'Mapato' },
+  equipe_ca_net: { fr: 'Net zanziGo', en: 'zanziGo net', sw: 'Halisi zanziGo' },
   equipe_stat_courses: { fr: 'Courses à traiter', en: 'Rides to handle', sw: 'Safari za kushughulikia' },
   equipe_stat_paiements: { fr: 'Paiements', en: 'Payments', sw: 'Malipo' },
   equipe_stat_candidatures: { fr: 'Candidatures', en: 'Applications', sw: 'Maombi' },

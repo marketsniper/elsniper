@@ -250,6 +250,15 @@ describe('Chauffeur — compteur de gains', () => {
       .get(`/api/drivers/${driver.id}/stats`)
       .set(authHeaders(autreToken));
     assert.equal(interdit.status, 403);
+
+    // Le chiffre d'affaires équipe reflète la même course : CA = prix payé,
+    // net zanziGo = commission (Nord privé 50 USD, commission 10 % → 5 USD).
+    const equipe = await request(app).get('/api/stats').set(adminHeaders());
+    assert.equal(equipe.status, 200);
+    assert.equal(equipe.body.revenue.today.courses, 1);
+    assert.equal(equipe.body.revenue.today.ca.USD, 50);
+    assert.equal(equipe.body.revenue.today.gains.USD, 5);
+    assert.equal(equipe.body.revenue.month.courses, 1);
   });
 });
 

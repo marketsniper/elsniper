@@ -276,6 +276,45 @@ export default function EcranEquipe() {
             </View>
           )}
 
+          {/* Chiffre d'affaires : CA encaissé (courses terminées + colis
+              livrés) et net zanziGo (commissions), par fenêtre. */}
+          {abonnes?.revenue && (
+            <View style={styles.bandeauAbonnes}>
+              <Text style={styles.titreAbonnes}>{t('equipe_ca_titre')}</Text>
+              {(
+                [
+                  ['gains_aujourdhui', abonnes.revenue.today],
+                  ['gains_7j', abonnes.revenue.week],
+                  ['gains_30j', abonnes.revenue.month],
+                ] as const
+              ).map(([cle, fenetre]) => {
+                const joindre = (montants: Record<string, number>) =>
+                  Object.entries(montants)
+                    .map(([devise, montant]) => formaterMontant(montant, devise))
+                    .join(' + ');
+                return (
+                  <View key={cle} style={styles.ligneCa}>
+                    <View style={styles.gaucheCa}>
+                      <Text style={styles.labelCa}>{t(cle)}</Text>
+                      <Text style={styles.detailCa}>
+                        {t('gains_detail_compte', {
+                          courses: fenetre.courses,
+                          colis: fenetre.colis,
+                        })}
+                      </Text>
+                    </View>
+                    <View style={styles.droiteCa}>
+                      <Text style={styles.montantCa}>{joindre(fenetre.ca) || '—'}</Text>
+                      <Text style={styles.netCa}>
+                        {t('equipe_ca_net')} : {joindre(fenetre.gains) || '—'}
+                      </Text>
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          )}
+
           <Text style={styles.titreSection}>{t('equipe_resume_titre')}</Text>
           <Text style={styles.introMenu}>{t('equipe_menu_intro')}</Text>
           <View style={styles.grilleMenu}>
@@ -828,6 +867,39 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: couleurs.texteSecondaire,
+  },
+  ligneCa: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: espaces.m,
+  },
+  gaucheCa: {
+    flexShrink: 1,
+    gap: 1,
+  },
+  labelCa: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: couleurs.encre,
+  },
+  detailCa: {
+    fontSize: 12,
+    color: couleurs.texteSecondaire,
+  },
+  droiteCa: {
+    alignItems: 'flex-end',
+    gap: 1,
+  },
+  montantCa: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: couleurs.primaire,
+  },
+  netCa: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: couleurs.succes,
   },
   retourMenu: {
     flexDirection: 'row',

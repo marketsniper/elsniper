@@ -138,6 +138,9 @@ describe('Tableau de bord équipe', () => {
     assert.equal(stats.body.hotels, 2);
     assert.equal(stats.body.hotels_verified, 1);
     assert.equal(stats.body.drivers_verified, 0);
+    // Chiffre d'affaires : fenêtres présentes, vides sans activité.
+    assert.equal(stats.body.revenue.today.courses, 0);
+    assert.deepEqual(stats.body.revenue.today.ca, {});
 
     const sansCle = await request(app).get('/api/stats');
     assert.ok([401, 403].includes(sansCle.status));
