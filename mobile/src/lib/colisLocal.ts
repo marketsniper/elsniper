@@ -36,3 +36,13 @@ export const ajouterColisLocal = (proprietaireId: string, colisId: string) =>
 export const listerCoursesLocales = (chauffeurId: string) => lister('courses', chauffeurId);
 export const ajouterCourseLocale = (chauffeurId: string, courseId: string) =>
   ajouter('courses', chauffeurId, courseId);
+
+// Bourse aux colis : un chauffeur peut masquer les colis qui ne l'intéressent
+// pas — masquage local à SON téléphone, les autres chauffeurs voient toujours
+// le colis. Réversible via effacerColisMasques.
+export const listerColisMasques = (chauffeurId: string) => lister('colis_masques', chauffeurId);
+export const masquerColis = (chauffeurId: string, colisId: string) =>
+  ajouter('colis_masques', chauffeurId, colisId);
+export async function effacerColisMasques(chauffeurId: string): Promise<void> {
+  await SecureStore.deleteItemAsync(cle('colis_masques', chauffeurId));
+}

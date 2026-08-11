@@ -310,6 +310,19 @@ const CHAINES = {
     sw: 'Vitu vilivyokamilika au kughairiwa vitafichwa kwenye orodha hii, kwenye simu hii tu. Vinabaki kumbukumbu kwa zanziGo (historia na mapato).',
   },
   menage_confirmer: { fr: 'Effacer', en: 'Clear', sw: 'Futa' },
+  colis_masquer: { fr: 'Pas intéressé', en: 'Not interested', sw: 'Sivutiwi' },
+  colis_masquer_titre: { fr: 'Masquer ce colis ?', en: 'Hide this parcel?', sw: 'Kuficha mzigo huu?' },
+  colis_masquer_texte: {
+    fr: "Il ne s'affichera plus dans votre liste, mais restera proposé aux autres chauffeurs.",
+    en: 'It will no longer appear in your list, but stays available to other drivers.',
+    sw: 'Hautaonekana tena kwenye orodha yako, lakini utabaki kwa madereva wengine.',
+  },
+  colis_masquer_confirmer: { fr: 'Masquer', en: 'Hide', sw: 'Ficha' },
+  colis_reafficher: {
+    fr: 'Réafficher les colis masqués ({n})',
+    en: 'Show hidden parcels again ({n})',
+    sw: 'Onyesha tena mizigo iliyofichwa ({n})',
+  },
   annonces_historique: { fr: 'Historique', en: 'History', sw: 'Historia' },
   annonces_ouvertes: { fr: 'Annonces en ligne', en: 'Live listings', sw: 'Matangazo hewani' },
   equipe_action_erreur: {

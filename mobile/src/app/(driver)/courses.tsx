@@ -3,6 +3,7 @@
 // assigne le chauffeur sur une course, elle apparaît ici au prochain
 // rafraîchissement — plus besoin de la référence WhatsApp, qui reste
 // utilisable en secours pour ouvrir une course directement.
+import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -20,6 +21,7 @@ import {
 } from '@/components/ui';
 import { api, ErreurApi } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { effacerColisMasques, listerColisMasques, masquerColis } from '@/lib/colisLocal';
 import { formaterDateRelativeI18n, libelleTailleColis, useT } from '@/lib/i18n';
 import { estBalaye, lireCoupDeBalai, passerCoupDeBalai } from '@/lib/menageLocal';
 import { couleurs, espaces, ombres, rayons } from '@/lib/theme';
@@ -33,6 +35,8 @@ export default function EcranCourses() {
   const [recentes, setRecentes] = useState<Trajet[]>([]);
   // Bourse aux colis : colis payés en attente de ramassage (hôtels en tête).
   const [colisDispo, setColisDispo] = useState<Colis[]>([]);
+  // Colis masqués par CE chauffeur (« Pas intéressé ») — local au téléphone.
+  const [colisMasques, setColisMasques] = useState<string[]>([]);
   const [erreur, setErreur] = useState('');
   const [charge, setCharge] = useState(false);
   const [balai, setBalai] = useState(0);
@@ -94,8 +98,34 @@ export default function EcranCourses() {
     } catch {
       // silencieux : la section colis reste vide
     }
+    setColisMasques(await listerColisMasques(chauffeurId));
     setBalai(await lireCoupDeBalai('courses', chauffeurId));
   }, [chauffeurId]);
+
+  // « Pas intéressé » : le colis disparaît de la liste de CE chauffeur
+  // seulement — les autres chauffeurs le voient toujours.
+  const colisVisibles = colisDispo.filter((c) => !colisMasques.includes(c.id));
+  const nbColisMasques = colisDispo.length - colisVisibles.length;
+
+  const masquerUnColis = (colis: Colis) => {
+    if (!chauffeurId) return;
+    Alert.alert(t('colis_masquer_titre'), t('colis_masquer_texte'), [
+      { text: t('commun_annuler'), style: 'cancel' },
+      {
+        text: t('colis_masquer_confirmer'),
+        onPress: async () => {
+          await masquerColis(chauffeurId, colis.id);
+          setColisMasques((prev) => [...prev, colis.id]);
+        },
+      },
+    ]);
+  };
+
+  const reafficherColis = async () => {
+    if (!chauffeurId) return;
+    await effacerColisMasques(chauffeurId);
+    setColisMasques([]);
+  };
 
   // « Faire le ménage » : masque les courses terminées/annulées antérieures
   // au coup de balai (local au téléphone — les gains restent comptés).
@@ -186,12 +216,12 @@ export default function EcranCourses() {
       {/* Bourse aux colis : colis payés à ramasser (envois des hôtels en tête).
           Ramassage via l'onglet Scanner — le QR est sur le colis. */}
       <Text style={styles.titreSection}>
-        {t('courses_colis_titre')} ({colisDispo.length})
+        {t('courses_colis_titre')} ({colisVisibles.length})
       </Text>
-      {colisDispo.length === 0 && (
+      {colisVisibles.length === 0 && (
         <EncartInfo icone="cube-outline">{t('courses_colis_vide')}</EncartInfo>
       )}
-      {colisDispo.map((colis) => {
+      {colisVisibles.map((colis) => {
         const nomHotel = champ<string>(colis, 'sender_hotel_name');
         const nomClient = champ<string>(colis, 'sender_user_name');
         const prix = Number(champ(colis, 'price') ?? NaN);
@@ -228,15 +258,39 @@ export default function EcranCourses() {
                 </Text>
               )}
             </View>
-            <Bouton
-              titre={t('courses_colis_scanner')}
-              icone="qr-code-outline"
-              variante="secondaire"
-              onPress={() => router.push('/(driver)/scanner')}
-            />
+            <View style={styles.rangeeColis}>
+              <View style={styles.actionColis}>
+                <Bouton
+                  titre={t('courses_colis_scanner')}
+                  icone="qr-code-outline"
+                  variante="secondaire"
+                  onPress={() => router.push('/(driver)/scanner')}
+                />
+              </View>
+              <Pressable
+                onPress={() => masquerUnColis(colis)}
+                accessibilityRole="button"
+                style={({ pressed }) => [styles.boutonMasquer, pressed && { opacity: 0.6 }]}
+              >
+                <Ionicons name="eye-off-outline" size={16} color={couleurs.texteSecondaire} />
+                <Text style={styles.texteMasquer}>{t('colis_masquer')}</Text>
+              </Pressable>
+            </View>
           </View>
         );
       })}
+      {nbColisMasques > 0 && (
+        <Pressable
+          onPress={reafficherColis}
+          accessibilityRole="button"
+          style={({ pressed }) => [styles.lienReafficher, pressed && { opacity: 0.6 }]}
+        >
+          <Ionicons name="eye-outline" size={15} color={couleurs.primaireFonce} />
+          <Text style={styles.texteReafficher}>
+            {t('colis_reafficher', { n: nbColisMasques })}
+          </Text>
+        </Pressable>
+      )}
 
       <Text style={styles.titreSection}>{t('courses_recentes')}</Text>
       {coursesVisibles.length === 0 && (
@@ -336,5 +390,40 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
     color: couleurs.primaire,
+  },
+  rangeeColis: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: espaces.m,
+  },
+  actionColis: {
+    flex: 1,
+  },
+  boutonMasquer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: espaces.xs,
+    paddingHorizontal: espaces.m,
+    paddingVertical: espaces.s,
+    borderRadius: rayons.pastille,
+    borderWidth: 1,
+    borderColor: couleurs.bordure,
+  },
+  texteMasquer: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: couleurs.texteSecondaire,
+  },
+  lienReafficher: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: espaces.xs,
+    paddingVertical: espaces.s,
+  },
+  texteReafficher: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: couleurs.primaireFonce,
   },
 });
