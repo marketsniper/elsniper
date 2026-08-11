@@ -6,7 +6,7 @@
 // livraison au chauffeur.
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import { Alert, Linking, StyleSheet, Text, View } from 'react-native';
 
 import {
   Bouton,
@@ -18,7 +18,7 @@ import {
   LigneInfo,
   Titre,
 } from '@/components/ui';
-import { api } from '@/lib/api';
+import { api, ErreurApi } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { masquerColis } from '@/lib/colisLocal';
 import { formaterDateRelativeI18n, libelleTailleColis, useT } from '@/lib/i18n';
@@ -33,6 +33,8 @@ export default function EcranColisDispo() {
   const chauffeurId = session?.driver?.id ?? null;
   const [colis, setColis] = useState<Colis | null>(null);
   const [charge, setCharge] = useState(true);
+  const [prisEnCours, setPrisEnCours] = useState(false);
+  const [erreur, setErreur] = useState('');
 
   // La bourse est la source (elle n'expose que les champs sans risque) :
   // si le colis n'y est plus, il a été pris par un autre chauffeur ou a expiré.
@@ -92,6 +94,37 @@ export default function EcranColisDispo() {
     ]);
   };
 
+  // « Je prends la livraison » : réservation atomique côté serveur, puis
+  // notification WhatsApp pré-remplie vers l'équipe et retour aux courses.
+  const prendre = () => {
+    Alert.alert(t('colis_prendre_titre'), t('colis_prendre_texte'), [
+      { text: t('commun_annuler'), style: 'cancel' },
+      {
+        text: t('colis_prendre_confirmer'),
+        onPress: async () => {
+          setErreur('');
+          setPrisEnCours(true);
+          try {
+            const reponse = await api.prendreColis(colis.id);
+            const lien = champ<string>(reponse, 'whatsapp_link', 'whatsappLink');
+            Alert.alert('✅', t('colis_prendre_ok'));
+            if (lien) await Linking.openURL(lien);
+            router.replace('/(driver)/courses');
+          } catch (e) {
+            if (e instanceof ErreurApi && e.code === 'package_already_taken') {
+              setErreur(t('colis_pris_trop_tard'));
+              await chargerColis();
+            } else {
+              setErreur(e instanceof ErreurApi ? e.message : t('equipe_action_erreur'));
+            }
+          } finally {
+            setPrisEnCours(false);
+          }
+        },
+      },
+    ]);
+  };
+
   return (
     <Ecran fond="lagon">
       <EncartInfo icone="qr-code-outline">{t('colis_dispo_intro')}</EncartInfo>
@@ -144,10 +177,16 @@ export default function EcranColisDispo() {
         )}
       </Carte>
 
+      {!!erreur && (
+        <EncartInfo icone="alert-circle-outline" ton="attente">
+          {erreur}
+        </EncartInfo>
+      )}
       <Bouton
-        titre={t('courses_colis_scanner')}
-        icone="qr-code-outline"
-        onPress={() => router.push('/(driver)/scanner')}
+        titre={t('colis_prendre')}
+        icone="checkmark-circle-outline"
+        onPress={prendre}
+        charge={prisEnCours}
       />
       <Bouton
         titre={t('colis_masquer')}

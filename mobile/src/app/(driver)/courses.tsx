@@ -6,9 +6,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import {
+  BadgeStatutColis,
   BadgeStatutTrajet,
   Bouton,
   Carte,
@@ -43,6 +44,8 @@ export default function EcranCourses() {
   const [recentes, setRecentes] = useState<Trajet[]>([]);
   // Bourse aux colis : colis payés en attente de ramassage (hôtels en tête).
   const [colisDispo, setColisDispo] = useState<Colis[]>([]);
+  // Mes colis : réservés (« Je prends la livraison ») et en cours de livraison.
+  const [mesColis, setMesColis] = useState<Colis[]>([]);
   // Colis masqués par CE chauffeur (« Pas intéressé ») — local au téléphone.
   const [colisMasques, setColisMasques] = useState<string[]>([]);
   const [erreur, setErreur] = useState('');
@@ -106,9 +109,45 @@ export default function EcranCourses() {
     } catch {
       // silencieux : la section colis reste vide
     }
+    try {
+      setMesColis(await api.listerMesColisChauffeur());
+    } catch {
+      // silencieux : la section « mes colis » reste vide
+    }
     setColisMasques(await listerColisMasques(chauffeurId));
     setBalai(await lireCoupDeBalai('courses', chauffeurId));
   }, [chauffeurId]);
+
+  // « Je prends la livraison » depuis la carte : réservation en un clic.
+  const [priseEnCours, setPriseEnCours] = useState<string | null>(null);
+  const prendreUnColis = (colis: Colis) => {
+    Alert.alert(t('colis_prendre_titre'), t('colis_prendre_texte'), [
+      { text: t('commun_annuler'), style: 'cancel' },
+      {
+        text: t('colis_prendre_confirmer'),
+        onPress: async () => {
+          setPriseEnCours(colis.id);
+          setErreur('');
+          try {
+            const reponse = await api.prendreColis(colis.id);
+            const lien = champ<string>(reponse, 'whatsapp_link', 'whatsappLink');
+            if (lien) await Linking.openURL(lien);
+          } catch (e) {
+            setErreur(
+              e instanceof ErreurApi && e.code === 'package_already_taken'
+                ? t('colis_pris_trop_tard')
+                : e instanceof ErreurApi
+                  ? e.message
+                  : t('equipe_action_erreur')
+            );
+          } finally {
+            setPriseEnCours(null);
+            await rafraichir();
+          }
+        },
+      },
+    ]);
+  };
 
   // « Pas intéressé » : le colis disparaît de la liste de CE chauffeur
   // seulement — les autres chauffeurs le voient toujours.
@@ -221,6 +260,60 @@ export default function EcranCourses() {
         />
       </Carte>
 
+      {/* Mes colis : réservés via « Je prends la livraison » et en cours de
+          livraison — le scan du QR au ramassage reste obligatoire. */}
+      {mesColis.length > 0 && (
+        <>
+          <Text style={styles.titreSection}>
+            {t('courses_mes_colis')} ({mesColis.length})
+          </Text>
+          {mesColis.map((colis) => {
+            const statut = champ(colis, 'status', 'statut') as
+              | Parameters<typeof BadgeStatutColis>[0]['statut'];
+            const prixC = Number(champ(colis, 'price') ?? NaN);
+            const commissionC = Number(champ(colis, 'commission') ?? NaN);
+            const deviseC = String(champ(colis, 'currency') ?? '');
+            const netC =
+              Number.isFinite(prixC) && Number.isFinite(commissionC)
+                ? Math.round((prixC - commissionC) * 100) / 100
+                : null;
+            return (
+              <View key={colis.id} style={styles.carte}>
+                <View style={styles.enTete}>
+                  <BadgeStatutColis statut={statut} />
+                  <Text style={styles.type}>
+                    {libelleTailleColis(champ(colis, 'size'), t)}
+                  </Text>
+                </View>
+                <Text style={styles.itineraire}>
+                  {champ(colis, 'pickup_location', 'pickupLocation') ?? '?'}{'  '}
+                  <Text style={styles.fleche}>→</Text>{'  '}
+                  {champ(colis, 'dropoff_location', 'dropoffLocation') ?? '?'}
+                </Text>
+                <View style={styles.pied}>
+                  <Text style={styles.date}>
+                    {champ(colis, 'pickup_at', 'pickupAt')
+                      ? `⏰ ${formaterDate(champ(colis, 'pickup_at', 'pickupAt'))}`
+                      : t('ncolis_asap')}
+                  </Text>
+                  {netC !== null && (
+                    <Text style={styles.prix}>
+                      {t('gain_net')} : {formaterMontant(netC, deviseC)}
+                    </Text>
+                  )}
+                </View>
+                <Bouton
+                  titre={t('courses_colis_scanner')}
+                  icone="qr-code-outline"
+                  variante="secondaire"
+                  onPress={() => router.push('/(driver)/scanner')}
+                />
+              </View>
+            );
+          })}
+        </>
+      )}
+
       {/* Bourse aux colis : colis payés à ramasser (envois des hôtels en tête).
           Ramassage via l'onglet Scanner — le QR est sur le colis. */}
       <Text style={styles.titreSection}>
@@ -282,10 +375,18 @@ export default function EcranCourses() {
                 <Ionicons name="eye-off-outline" size={16} color={couleurs.texteSecondaire} />
                 <Text style={styles.texteMasquer}>{t('colis_masquer')}</Text>
               </Pressable>
-              <View style={styles.ligneOuvrirColis}>
-                <Text style={styles.texteOuvrirColis}>{t('annonces_ouvrir_detail')}</Text>
-                <Ionicons name="chevron-forward" size={16} color={couleurs.primaire} />
-              </View>
+              <Pressable
+                onPress={() => prendreUnColis(colis)}
+                disabled={priseEnCours === colis.id}
+                accessibilityRole="button"
+                style={({ pressed }) => [
+                  styles.boutonPrendre,
+                  (pressed || priseEnCours === colis.id) && { opacity: 0.6 },
+                ]}
+              >
+                <Ionicons name="checkmark-circle-outline" size={16} color={couleurs.surPrimaire} />
+                <Text style={styles.textePrendre}>{t('colis_prendre_court')}</Text>
+              </Pressable>
             </View>
           </Pressable>
         );
@@ -417,6 +518,20 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: couleurs.primaire,
+  },
+  boutonPrendre: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: espaces.xs,
+    backgroundColor: couleurs.primaire,
+    borderRadius: rayons.pastille,
+    paddingHorizontal: espaces.l,
+    paddingVertical: espaces.s,
+  },
+  textePrendre: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: couleurs.surPrimaire,
   },
   boutonMasquer: {
     flexDirection: 'row',

@@ -561,6 +561,55 @@ describe('Colis — bourse aux colis (mode chauffeur)', () => {
     assert.equal(interdit.status, 403);
   });
 
+  it('« Je prends la livraison » : réservation atomique, un seul chauffeur', async () => {
+    const { token, user } = await createTourist();
+    const { token: driverA } = await createVerifiedDriver();
+    const { token: driverB } = await createVerifiedDriver({ fullName: 'Second Driver' });
+
+    const pkg = await createUserPackage(token, user.id);
+    await payPackage(token, pkg.id);
+
+    const prise = await request(app)
+      .post(`/api/packages/${pkg.id}/claim`)
+      .set(authHeaders(driverA));
+    assert.equal(prise.status, 200);
+    assert.ok(prise.body.driver_id);
+    assert.equal(prise.body.qr_code, undefined, 'pas de QR à la réservation');
+    assert.equal(prise.body.recipient_phone, undefined, 'pas de téléphone du destinataire');
+    assert.ok(prise.body.whatsapp_link, "lien WhatsApp d'information équipe");
+
+    // Le colis disparaît de la bourse ; le second chauffeur arrive trop tard.
+    const bourse = await request(app).get('/api/packages').set(authHeaders(driverB));
+    assert.ok(!bourse.body.some((p) => p.id === pkg.id));
+    const tard = await request(app)
+      .post(`/api/packages/${pkg.id}/claim`)
+      .set(authHeaders(driverB));
+    assert.equal(tard.status, 409);
+    assert.equal(tard.body.error.code, 'package_already_taken');
+
+    // Le scan de ramassage est réservé au chauffeur qui a pris la livraison.
+    const scanB = await request(app)
+      .patch(`/api/packages/${pkg.id}/pickup`)
+      .set(authHeaders(driverB))
+      .send({ qrCode: pkg.qr_code, photoUrl: PHOTO_URL });
+    assert.equal(scanB.status, 409);
+    assert.equal(scanB.body.error.code, 'package_already_taken');
+
+    // « Mes colis » du chauffeur A (sans QR avant ramassage), puis scan OK.
+    const mes = await request(app).get('/api/packages/mine').set(authHeaders(driverA));
+    assert.equal(mes.status, 200);
+    const ligne = mes.body.find((p) => p.id === pkg.id);
+    assert.ok(ligne, 'colis réservé listé dans mes colis');
+    assert.equal(ligne.qr_code, undefined);
+
+    const scanA = await request(app)
+      .patch(`/api/packages/${pkg.id}/pickup`)
+      .set(authHeaders(driverA))
+      .send({ qrCode: pkg.qr_code, photoUrl: PHOTO_URL });
+    assert.equal(scanA.status, 200);
+    assert.equal(scanA.body.status, 'picked_up');
+  });
+
   it('un colis ramassé disparaît de la bourse', async () => {
     const { token, user } = await createTourist();
     const { token: driverToken } = await createVerifiedDriver();

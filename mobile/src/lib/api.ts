@@ -464,6 +464,21 @@ export async function obtenirColis(id: string): Promise<Colis> {
   return requete<Colis>(`/packages/${id}`);
 }
 
+/**
+ * POST /packages/:id/claim — « Je prends la livraison » : réserve le colis
+ * au chauffeur connecté (409 package_already_taken si un autre chauffeur a
+ * été plus rapide). Réponse avec whatsapp_link d'information équipe.
+ */
+export async function prendreColis(id: string): Promise<Colis> {
+  return requete<Colis>(`/packages/${id}/claim`, { methode: 'POST' });
+}
+
+/** GET /packages/mine — les colis réservés/en livraison du chauffeur. */
+export async function listerMesColisChauffeur(): Promise<Colis[]> {
+  const reponse = await requete<unknown>('/packages/mine');
+  return commeListe<Colis>(reponse, 'packages');
+}
+
 /** GET /hotels/:id/packages — colis expédiés par un hôtel. */
 export async function listerColisHotel(hotelId: string): Promise<Colis[]> {
   const reponse = await requete<unknown>(`/hotels/${hotelId}/packages`);
@@ -737,6 +752,8 @@ export const api = {
   lieuxRides,
   creerColis,
   obtenirColis,
+  prendreColis,
+  listerMesColisChauffeur,
   listerColisHotel,
   listerColisARamasser,
   payerColis,

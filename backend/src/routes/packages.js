@@ -157,6 +157,84 @@ router.get(
   })
 );
 
+// Avant le ramassage, ni QR ni téléphone du destinataire pour le chauffeur
+// (anti-fraude : le scan du colis physique reste la preuve de prise en charge).
+function sansSecretsChauffeur(pkg) {
+  const { qr_code, recipient_phone, ...reste } = pkg;
+  return reste;
+}
+
+// GET /packages/mine — les colis du chauffeur connecté : réservés (à
+// ramasser) et en cours de livraison. Déclarée avant /:id.
+router.get(
+  '/mine',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    if (!req.auth.driverId) {
+      throw new HttpError(403, 'forbidden', 'Accès réservé aux chauffeurs');
+    }
+    const { rows } = await query(
+      `SELECT * FROM packages
+       WHERE driver_id = $1 AND status IN ('paid', 'picked_up')
+       ORDER BY COALESCE(pickup_at, created_at) ASC`,
+      [req.auth.driverId]
+    );
+    res.json(rows.map((pkg) => (pkg.status === 'paid' ? sansSecretsChauffeur(pkg) : pkg)));
+  })
+);
+
+// POST /packages/:id/claim — « Je prends la livraison » : le chauffeur
+// RÉSERVE le colis en un clic (premier arrivé, premier servi). Réservation
+// ATOMIQUE : la condition driver_id IS NULL du UPDATE empêche deux
+// chauffeurs de prendre le même colis. Il disparaît aussitôt de la bourse ;
+// le scan du QR au ramassage reste la preuve de prise en charge.
+router.post(
+  '/:id/claim',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    if (!req.auth.driverId) {
+      throw new HttpError(403, 'forbidden', 'Accès réservé aux chauffeurs');
+    }
+    const { rows: driverRows } = await query(
+      `SELECT full_name, phone FROM drivers WHERE id = $1 AND verification_status = 'verified'`,
+      [req.auth.driverId]
+    );
+    if (!driverRows[0]) {
+      throw new HttpError(403, 'driver_not_verified', "Votre compte chauffeur n'a pas encore été validé");
+    }
+
+    const { rows } = await query(
+      `UPDATE packages SET driver_id = $1
+       WHERE id = $2 AND status = 'paid' AND driver_id IS NULL
+       RETURNING *`,
+      [req.auth.driverId, req.params.id]
+    );
+    if (!rows[0]) {
+      const pkg = await getPackage(req.params.id); // 404 si le colis n'existe pas
+      throw new HttpError(
+        409,
+        'package_already_taken',
+        pkg.driver_id
+          ? 'Trop tard — un autre chauffeur a déjà pris cette livraison'
+          : `Ce colis n'est pas réservable (statut actuel: ${pkg.status})`
+      );
+    }
+
+    const chauffeur = driverRows[0];
+    const pkg = rows[0];
+    const whatsappLink = buildTeamNotificationLink(
+      [
+        '🚚 Livraison prise par un chauffeur zanziGo',
+        `Chauffeur: ${chauffeur.full_name} (${chauffeur.phone})`,
+        `Trajet: ${pkg.pickup_location} → ${pkg.dropoff_location}`,
+        `Taille: ${pkg.size} — ${pkg.price} ${pkg.currency}`,
+        `Réf: ${pkg.id}`,
+      ].join('\n')
+    );
+    res.json({ ...sansSecretsChauffeur(pkg), whatsapp_link: whatsappLink });
+  })
+);
+
 // GET /packages/by-qr/:qrCode — lookup par QR (chauffeur authentifié ou équipe).
 // Déclarée avant /:id pour ne pas être interceptée par la route paramétrée.
 router.get(
@@ -185,7 +263,14 @@ router.get(
     if (!allowed) {
       throw new HttpError(403, 'forbidden', "Accès réservé à l'expéditeur, au chauffeur ou à l'équipe");
     }
-    res.json(pkg);
+    // Chauffeur assigné mais colis pas encore ramassé : détail SANS le QR ni
+    // le téléphone du destinataire (ils arrivent au scan du colis).
+    const chauffeurAvantRamassage =
+      !isAdmin(req) &&
+      !isSender(pkg, req.auth) &&
+      pkg.driver_id === req.auth.driverId &&
+      pkg.status === 'paid';
+    res.json(chauffeurAvantRamassage ? sansSecretsChauffeur(pkg) : pkg);
   })
 );
 
@@ -334,6 +419,15 @@ router.patch(
         409,
         'invalid_status',
         `Le ramassage ne peut être scanné que sur un colis payé (statut actuel: ${pkg.status})`
+      );
+    }
+    // Un colis réservé (« Je prends la livraison ») ne peut être ramassé que
+    // par le chauffeur qui l'a réservé.
+    if (pkg.driver_id && req.auth.driverId && pkg.driver_id !== req.auth.driverId) {
+      throw new HttpError(
+        409,
+        'package_already_taken',
+        'Cette livraison est réservée par un autre chauffeur'
       );
     }
     if (pkg.qr_code !== data.qrCode) {
