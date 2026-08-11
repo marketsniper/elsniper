@@ -100,8 +100,9 @@ small{color:#8A7168;display:block;margin-top:14px;line-height:1.5}small a{color:
 <a class="bouton secondaire" href="https://apps.apple.com/app/expo-go/id982107779">App Store (iPhone)</a>
 <a class="bouton secondaire" href="https://play.google.com/store/apps/details?id=host.exp.exponent">Google Play (Android)</a>
 <small>Android sans Expo Go : installez l'application zanziGo directement —
-<a href="https://expo.dev/artifacts/eas/ni3b39KgIuEO2Ewb3RyfmBBe-chVTGyvN6pb1H7_r78.apk">télécharger l'APK</a>.
-Astuce : si l'app semble en retard, fermez-la complètement et rouvrez-la deux fois.</small>
+<a href="https://expo.dev/artifacts/eas/VqLc0SJz1Ssgex9fTWiQ93Y6S020eCuj3a_Pf6YrWcU.apk">télécharger l'APK</a>.
+Astuce : si l'app semble en retard, fermez-la complètement et rouvrez-la deux fois.
+<a href="/confidentialite">Politique de confidentialité</a></small>
 </main></body></html>`
       );
   });
