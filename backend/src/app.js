@@ -106,6 +106,43 @@ Astuce : si l'app semble en retard, fermez-la complètement et rouvrez-la deux f
       );
   });
 
+  // Politique de confidentialité : exigée par Google Play / App Store, et
+  // liée depuis la fiche du store. Page statique, sobre, bilingue FR/EN.
+  app.get('/confidentialite', (_req, res) => {
+    res
+      .type('html')
+      .send(
+        `<!doctype html><html lang="fr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>zanziGo — Politique de confidentialité</title>
+<style>body{font-family:system-ui,sans-serif;background:#FBF0E4;color:#33222B;margin:0;line-height:1.65}
+main{max-width:680px;margin:0 auto;padding:40px 22px 80px}
+h1{color:#E4572E;font-size:34px;margin:0 0 4px}h2{font-size:20px;margin:28px 0 8px}
+p,li{color:#5C4A42;font-size:15.5px}em{color:#8A7168}
+a{color:#B93C1B}</style>
+</head><body><main>
+<h1>Politique de confidentialité</h1>
+<p><em>zanziGo — taxis &amp; livraison de colis à Zanzibar. Dernière mise à jour : août 2026.</em></p>
+<p><em>English summary: zanziGo collects only the data needed to operate rides and parcel deliveries (name, phone, optional e-mail, booking details, ID documents for resident/local/driver verification, and driver GPS location during deliveries only). Data is never sold. Contact us on WhatsApp +255 666 241 749 to access or delete your data.</em></p>
+<h2>Quelles données collectons-nous ?</h2>
+<ul>
+<li><strong>Compte</strong> : nom, numéro de téléphone (vérifié par code), e-mail optionnel.</li>
+<li><strong>Réservations</strong> : trajets, colis (lieux, destinataire et son téléphone, montants payés).</li>
+<li><strong>Vérifications</strong> : documents d'identité fournis volontairement par les résidents, locaux, chauffeurs et hôtels pour activer leur profil.</li>
+<li><strong>Position GPS</strong> : uniquement celle des CHAUFFEURS, uniquement pendant qu'ils utilisent l'app en livraison — pour le suivi des colis. Jamais celle des clients.</li>
+</ul>
+<h2>Pourquoi ?</h2>
+<p>Uniquement pour faire fonctionner le service : organiser les courses, livrer les colis, appliquer les bons tarifs, payer les chauffeurs et sécuriser la plateforme. Aucune publicité, aucune revente de données.</p>
+<h2>Qui y accède ?</h2>
+<p>L'équipe zanziGo, et le chauffeur assigné à votre course ou colis (le strict nécessaire : lieux, téléphones de ramasse et de livraison). Les paiements en ligne sont traités par nos prestataires de paiement (ex. PayPal) selon leurs propres politiques.</p>
+<h2>Combien de temps ?</h2>
+<p>Tant que votre compte est actif. Sur demande, nous supprimons votre compte et vos données personnelles (les obligations comptables peuvent imposer de conserver certaines traces de paiement).</p>
+<h2>Vos droits</h2>
+<p>Accès, correction, suppression : écrivez-nous sur WhatsApp au <strong>+255&nbsp;666&nbsp;241&nbsp;749</strong>.</p>
+</main></body></html>`
+      );
+  });
+
   // Pages de retour PayPal : après approbation (ou annulation) dans le
   // navigateur, on guide le client vers l'app pour finaliser.
   const pagePaypal = (titre, message, emoji) =>
