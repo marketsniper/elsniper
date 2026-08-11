@@ -710,6 +710,26 @@ export async function verifierClient(
   return requete<Utilisateur>(`/users/${id}/verify`, { methode: 'PATCH', corps: { status: statut } });
 }
 
+/**
+ * GET /users?q=&accountTypes= — recherche de profils clients par nom ou
+ * téléphone (équipe), filtrée par types de comptes (ex. 'tourist,resident').
+ */
+export async function rechercherProfils(
+  q: string,
+  accountTypes: string
+): Promise<Utilisateur[]> {
+  const params = new URLSearchParams();
+  if (q.trim()) params.set('q', q.trim());
+  if (accountTypes) params.set('accountTypes', accountTypes);
+  const reponse = await requete<unknown>(`/users?${params.toString()}`);
+  return commeListe<Utilisateur>(reponse, 'users');
+}
+
+/** PATCH /users/:id/ban — radier (banned=true) ou réintégrer un profil (équipe). */
+export async function bannirClient(id: string, banned: boolean): Promise<Utilisateur> {
+  return requete<Utilisateur>(`/users/${id}/ban`, { methode: 'PATCH', corps: { banned } });
+}
+
 // ---------------------------------------------------------------------------
 // Upload (backend/src/routes/uploads.js)
 // ---------------------------------------------------------------------------
@@ -787,6 +807,8 @@ export const api = {
   verifierChauffeur,
   verifierClient,
   verifierHotel,
+  rechercherProfils,
+  bannirClient,
   televerser,
 };
 

@@ -70,6 +70,10 @@ router.post(
       const { rows: userRows } = await query('SELECT * FROM users WHERE id = $1', [data.userId]);
       const user = userRows[0];
       if (!user) throw notFound('Utilisateur');
+      // Profil radié par l'équipe : plus aucune réservation possible.
+      if (user.banned_at) {
+        throw new HttpError(403, 'account_blocked', "Compte bloqué par l'équipe zanziGo — contactez-nous sur WhatsApp");
+      }
 
       if (user.account_type === 'local') {
         // Le tarif local (TZS) exige une carte d'identité tanzanienne validée.

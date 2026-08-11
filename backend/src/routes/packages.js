@@ -83,6 +83,10 @@ router.post(
     if (data.senderType === 'user') {
       const { rows } = await query('SELECT * FROM users WHERE id = $1', [data.senderUserId]);
       if (!rows[0]) throw notFound('Utilisateur expéditeur');
+      // Profil radié par l'équipe : plus aucune réservation possible.
+      if (rows[0].banned_at) {
+        throw new HttpError(403, 'account_blocked', "Compte bloqué par l'équipe zanziGo — contactez-nous sur WhatsApp");
+      }
       currency = rows[0].currency;
       senderLabel = `${rows[0].full_name} (client, ${rows[0].phone})`;
     } else {

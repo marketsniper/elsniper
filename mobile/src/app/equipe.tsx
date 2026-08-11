@@ -46,7 +46,15 @@ const CLE_STOCKAGE = 'zanzigo.cle_equipe';
 
 // Rubriques du tableau de bord — le menu est une grille de cases (comme un
 // écran d'accueil de téléphone), chaque case ouvre sa rubrique.
-type SectionEquipe = 'courses' | 'paiements' | 'candidatures' | 'comptes' | 'hotels' | 'taxis';
+type SectionEquipe =
+  | 'courses'
+  | 'paiements'
+  | 'candidatures'
+  | 'comptes'
+  | 'hotels'
+  | 'taxis'
+  | 'clients'
+  | 'locaux';
 
 // Libellé d'un chauffeur dans le sélecteur d'assignation.
 function libelleChauffeur(chauffeur: Chauffeur): string {
@@ -73,6 +81,11 @@ export default function EcranEquipe() {
   const [abonnes, setAbonnes] = useState<StatsAbonnes | null>(null);
   // Rubrique ouverte (null = menu en grille de cases).
   const [section, setSection] = useState<SectionEquipe | null>(null);
+  // Recherche de profils (rubriques Clients / Locaux) : radiation ciblée.
+  const [recherche, setRecherche] = useState('');
+  const [resultats, setResultats] = useState<Utilisateur[]>([]);
+  const [rechercheEnCours, setRechercheEnCours] = useState(false);
+  const [rechercheFaite, setRechercheFaite] = useState(false);
   // Chauffeur choisi par course (libellé du sélecteur), avant confirmation.
   const [choixChauffeur, setChoixChauffeur] = useState<Record<string, string>>({});
   // Id de l'élément dont l'action est en cours (bouton en chargement).
@@ -173,6 +186,55 @@ export default function EcranEquipe() {
     agir(course.id, () => api.assignerChauffeur(course.id, chauffeur.id));
   };
 
+  // Ouverture d'une rubrique depuis le menu : remet la recherche à zéro.
+  const ouvrirSection = (cle: SectionEquipe) => {
+    setSection(cle);
+    setRecherche('');
+    setResultats([]);
+    setRechercheFaite(false);
+  };
+
+  // Recherche de profils clients (nom ou téléphone) dans la rubrique active.
+  const lancerRecherche = async (sectionActive: SectionEquipe | null = section) => {
+    setRechercheEnCours(true);
+    setErreur('');
+    try {
+      const types = sectionActive === 'locaux' ? 'local' : 'tourist,resident';
+      setResultats(await api.rechercherProfils(recherche, types));
+      setRechercheFaite(true);
+    } catch (e) {
+      setErreur(e instanceof ErreurApi ? e.message : t('equipe_action_erreur'));
+    } finally {
+      setRechercheEnCours(false);
+    }
+  };
+
+  // Radiation / réintégration d'un profil client (banned_at côté serveur).
+  const basculerBlocageClient = async (profil: Utilisateur, bloquer: boolean) => {
+    setActionEnCours(profil.id);
+    setErreur('');
+    try {
+      await api.bannirClient(profil.id, bloquer);
+      await lancerRecherche();
+    } catch (e) {
+      setErreur(e instanceof ErreurApi ? e.message : t('equipe_action_erreur'));
+    } finally {
+      setActionEnCours(null);
+    }
+  };
+
+  const radierClient = (profil: Utilisateur) => {
+    const nom = String(champ(profil, 'full_name', 'fullName') ?? '?');
+    Alert.alert(t('equipe_radier_client_titre'), t('equipe_radier_client_texte', { nom }), [
+      { text: t('commun_annuler'), style: 'cancel' },
+      {
+        text: t('equipe_radier_confirmer'),
+        style: 'destructive',
+        onPress: () => basculerBlocageClient(profil, true),
+      },
+    ]);
+  };
+
   // Radiation d'un chauffeur qui ne respecte plus les normes zanziGo :
   // confirmation obligatoire (action forte — il disparaît des assignations
   // et ses annonces ouvertes sont fermées).
@@ -243,6 +305,8 @@ export default function EcranEquipe() {
     { cle: 'comptes', label: t('equipe_stat_comptes'), icone: 'id-card-outline', n: clients.length, action: true },
     { cle: 'hotels', label: t('equipe_stat_hotels'), icone: 'business-outline', n: hotels.length, action: true },
     { cle: 'taxis', label: t('equipe_stat_taxis'), icone: 'location-outline', n: chauffeurs.length, action: false },
+    { cle: 'clients', label: t('equipe_stat_clients'), icone: 'people-outline', n: abonnes?.clients ?? 0, action: false },
+    { cle: 'locaux', label: t('equipe_stat_locaux'), icone: 'card-outline', n: abonnes?.locals ?? 0, action: false },
   ];
 
   // ----- Tableau de bord ----------------------------------------------------
@@ -321,7 +385,7 @@ export default function EcranEquipe() {
             {rubriques.map((rubrique) => (
               <Pressable
                 key={rubrique.cle}
-                onPress={() => setSection(rubrique.cle)}
+                onPress={() => ouvrirSection(rubrique.cle)}
                 accessibilityRole="button"
                 style={({ pressed }) => [styles.caseMenu, pressed && { opacity: 0.75 }]}
               >
@@ -709,6 +773,68 @@ export default function EcranEquipe() {
         </View>
       ))}
 
+        </>
+      )}
+
+      {/* 7-8. Clients / Locaux : recherche par nom ou téléphone, radiation. */}
+      {(section === 'clients' || section === 'locaux') && (
+        <>
+          <Text style={styles.titreSection}>
+            {section === 'clients' ? t('equipe_stat_clients') : t('equipe_stat_locaux')}
+          </Text>
+          <EncartInfo icone="search-outline">{t('equipe_recherche_intro')}</EncartInfo>
+          <Champ
+            label={t('equipe_recherche_label')}
+            value={recherche}
+            onChangeText={setRecherche}
+            autoCapitalize="none"
+            placeholder="Amina / +255712…"
+          />
+          <Bouton
+            titre={t('equipe_recherche_bouton')}
+            icone="search-outline"
+            onPress={() => lancerRecherche()}
+            charge={rechercheEnCours}
+          />
+          {rechercheFaite && resultats.length === 0 && (
+            <EncartInfo icone="help-circle-outline" ton="attente">
+              {t('equipe_recherche_vide')}
+            </EncartInfo>
+          )}
+          {resultats.map((profil) => {
+            const bloque = !!champ(profil, 'banned_at', 'bannedAt');
+            const nom = String(champ(profil, 'full_name', 'fullName') ?? '?');
+            const type = String(champ(profil, 'account_type', 'accountType') ?? '—');
+            return (
+              <Carte key={profil.id}>
+                <View style={styles.ligneDetails}>
+                  <Text style={styles.itineraire}>{nom}</Text>
+                  {bloque ? (
+                    <Badge texte={t('equipe_profil_bloque')} ton="danger" />
+                  ) : (
+                    <Badge texte={type} ton="primaire" />
+                  )}
+                </View>
+                <Text style={styles.detail}>{String(champ(profil, 'phone') ?? '')}</Text>
+                {bloque ? (
+                  <Bouton
+                    titre={t('equipe_reintegrer')}
+                    icone="refresh-outline"
+                    onPress={() => basculerBlocageClient(profil, false)}
+                    charge={actionEnCours === profil.id}
+                  />
+                ) : (
+                  <Bouton
+                    titre={t('equipe_radier_client')}
+                    icone="close-circle-outline"
+                    variante="danger"
+                    onPress={() => radierClient(profil)}
+                    charge={actionEnCours === profil.id}
+                  />
+                )}
+              </Carte>
+            );
+          })}
         </>
       )}
 

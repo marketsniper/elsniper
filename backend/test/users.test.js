@@ -144,7 +144,7 @@ describe('Utilisateurs (users)', () => {
     assert.equal(second.body.error.code, 'invalid_status');
   });
 
-  it('verify avec status rejected → compte rejeté (puis 409 si retraité)', async () => {
+  it('verify avec status rejected → compte rejeté ; retraitement possible (correction), même statut → 409', async () => {
     const { user } = await createResident({ verify: false });
     const res = await request(app)
       .patch(`/api/users/${user.id}/verify`)
@@ -153,12 +153,21 @@ describe('Utilisateurs (users)', () => {
     assert.equal(res.status, 200);
     assert.equal(res.body.verification_status, 'rejected');
 
+    // L'équipe peut corriger une erreur de traitement (rejected → verified)…
     const retry = await request(app)
       .patch(`/api/users/${user.id}/verify`)
       .set(adminHeaders())
       .send({ status: 'verified' });
-    assert.equal(retry.status, 409);
-    assert.equal(retry.body.error.code, 'invalid_status');
+    assert.equal(retry.status, 200);
+    assert.equal(retry.body.verification_status, 'verified');
+
+    // …mais re-poser le même statut n'a pas de sens → 409.
+    const meme = await request(app)
+      .patch(`/api/users/${user.id}/verify`)
+      .set(adminHeaders())
+      .send({ status: 'verified' });
+    assert.equal(meme.status, 409);
+    assert.equal(meme.body.error.code, 'invalid_status');
   });
 
   it('verify d\'un touriste (déjà verified d\'office) → 409 invalid_status', async () => {

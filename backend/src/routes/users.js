@@ -62,22 +62,43 @@ router.post(
   })
 );
 
-// GET /users?verificationStatus= — liste pour le tableau de bord équipe
-// (ex. pending = résidents et locaux dont le document attend validation).
+// GET /users?verificationStatus=&q=&accountTypes= — liste pour le tableau de
+// bord équipe : pending = documents à valider ; q = recherche par nom ou
+// téléphone (gestion des profils, radiation) ; accountTypes = filtre par
+// types de comptes, séparés par des virgules (ex. tourist,resident).
 router.get(
   '/',
   requireAdmin,
   asyncHandler(async (req, res) => {
-    const { verificationStatus } = z
-      .object({ verificationStatus: z.enum(['pending', 'verified', 'rejected']).optional() })
+    const { verificationStatus, q, accountTypes } = z
+      .object({
+        verificationStatus: z.enum(['pending', 'verified', 'rejected']).optional(),
+        q: z.string().max(100).optional(),
+        accountTypes: z.string().max(60).optional(),
+      })
       .parse(req.query);
 
     const params = [];
-    let where = '';
+    const conditions = [];
     if (verificationStatus) {
       params.push(verificationStatus);
-      where = 'WHERE verification_status = $1';
+      conditions.push(`verification_status = $${params.length}`);
     }
+    if (accountTypes) {
+      const types = accountTypes
+        .split(',')
+        .map((type) => type.trim())
+        .filter((type) => ['tourist', 'resident', 'local'].includes(type));
+      if (types.length > 0) {
+        params.push(types);
+        conditions.push(`account_type = ANY($${params.length})`);
+      }
+    }
+    if (q && q.trim()) {
+      params.push(`%${q.trim()}%`);
+      conditions.push(`(full_name ILIKE $${params.length} OR phone ILIKE $${params.length})`);
+    }
+    const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
     const { rows } = await query(
       `SELECT * FROM users ${where} ORDER BY created_at DESC LIMIT 200`,
       params
@@ -100,7 +121,26 @@ router.get(
   })
 );
 
-// PATCH /users/:id/verify — validation manuelle du document (équipe uniquement).
+// PATCH /users/:id/ban {banned} — radiation (ou réintégration) d'un profil
+// client par l'équipe : un compte bloqué ne peut plus rien réserver.
+router.patch(
+  '/:id/ban',
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    const { banned } = z.object({ banned: z.boolean() }).parse(req.body);
+    const { rows } = await query('SELECT id FROM users WHERE id = $1', [req.params.id]);
+    if (!rows[0]) throw notFound('Utilisateur');
+    const updated = await query(
+      `UPDATE users SET banned_at = ${banned ? 'now()' : 'NULL'} WHERE id = $1 RETURNING *`,
+      [req.params.id]
+    );
+    res.json(updated.rows[0]);
+  })
+);
+
+// PATCH /users/:id/verify — validation manuelle du document (équipe
+// uniquement). Un document déjà traité peut être re-traité (correction
+// d'une erreur de validation).
 router.patch(
   '/:id/verify',
   requireAdmin,
@@ -110,12 +150,8 @@ router.patch(
     const { rows } = await query('SELECT * FROM users WHERE id = $1', [req.params.id]);
     const user = rows[0];
     if (!user) throw notFound('Utilisateur');
-    if (user.verification_status !== 'pending') {
-      throw new HttpError(
-        409,
-        'invalid_status',
-        `Ce compte a déjà été traité (statut: ${user.verification_status})`
-      );
+    if (user.verification_status === status) {
+      throw new HttpError(409, 'invalid_status', `Ce compte est déjà « ${status} »`);
     }
 
     const updated = await query(

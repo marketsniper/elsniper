@@ -288,6 +288,15 @@ router.post(
       if (!rows[0]) throw notFound('Hôtel');
       assertHotelVerified(rows[0]);
     }
+    // Profil client radié par l'équipe : plus aucune réservation possible.
+    if (req.auth.userId) {
+      const { rows } = await query('SELECT banned_at FROM users WHERE id = $1', [
+        req.auth.userId,
+      ]);
+      if (rows[0]?.banned_at) {
+        throw new HttpError(403, 'account_blocked', "Compte bloqué par l'équipe zanziGo — contactez-nous sur WhatsApp");
+      }
+    }
 
     const { rows: rideRows } = await query('SELECT * FROM posted_rides WHERE id = $1', [
       req.params.id,

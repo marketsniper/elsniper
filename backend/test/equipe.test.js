@@ -121,6 +121,52 @@ describe('Tableau de bord équipe', () => {
     assert.ok(!verifies.body.some((d) => d.id === driver.id));
   });
 
+  it('recherche de profils (q, accountTypes) et radiation : compte bloqué → 403 réservation', async () => {
+    const { token, user } = await createTourist({ fullName: 'Mauvais Payeur' });
+    await createLocal({ fullName: 'Juma Tranquille' });
+
+    const parNom = await request(app)
+      .get('/api/users')
+      .query({ q: 'Mauvais' })
+      .set(adminHeaders());
+    assert.equal(parNom.status, 200);
+    assert.ok(parNom.body.some((u) => u.id === user.id), 'trouvé par le nom');
+
+    const parType = await request(app)
+      .get('/api/users')
+      .query({ accountTypes: 'local', q: 'Juma' })
+      .set(adminHeaders());
+    assert.ok(parType.body.length > 0);
+    assert.ok(parType.body.every((u) => u.account_type === 'local'), 'filtre par type');
+
+    const radiation = await request(app)
+      .patch(`/api/users/${user.id}/ban`)
+      .set(adminHeaders())
+      .send({ banned: true });
+    assert.equal(radiation.status, 200);
+    assert.ok(radiation.body.banned_at, 'compte marqué bloqué');
+
+    const corps = {
+      userId: user.id,
+      tripType: 'private',
+      pickupLocation: 'Stone Town',
+      dropoffLocation: 'Paje',
+    };
+    const bloque = await request(app).post('/api/trips').set(authHeaders(token)).send(corps);
+    assert.equal(bloque.status, 403);
+    assert.equal(bloque.body.error.code, 'account_blocked');
+
+    // Réintégration : le compte peut de nouveau réserver.
+    const retour = await request(app)
+      .patch(`/api/users/${user.id}/ban`)
+      .set(adminHeaders())
+      .send({ banned: false });
+    assert.equal(retour.status, 200);
+    assert.equal(retour.body.banned_at, null);
+    const ok = await request(app).post('/api/trips').set(authHeaders(token)).send(corps);
+    assert.equal(ok.status, 201);
+  });
+
   it('GET /stats : compteurs d\'abonnés (clients / locaux / hôtels) ; sans clé → 401', async () => {
     await createTourist();
     await createTourist({ fullName: 'Deuxième Touriste' });
