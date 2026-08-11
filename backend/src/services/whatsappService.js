@@ -23,10 +23,18 @@ export function tripRequestMessage(trip, bookerLabel) {
 }
 
 export function packageRequestMessage(pkg, senderLabel) {
+  const quand = pkg.pickup_at
+    ? new Date(pkg.pickup_at).toLocaleString('fr-FR', {
+        timeZone: 'Africa/Dar_es_Salaam',
+        dateStyle: 'short',
+        timeStyle: 'short',
+      })
+    : 'dès que possible';
   return [
     `📦 Nouvelle demande de colis zanziGo`,
     `Expéditeur: ${senderLabel}`,
     `Ramassage: ${pkg.pickup_location}`,
+    `À ramasser: ${quand}`,
     `Livraison: ${pkg.dropoff_location}`,
     `Destinataire: ${pkg.recipient_name} (${pkg.recipient_phone})`,
     `Prix: ${pkg.price} ${pkg.currency}`,

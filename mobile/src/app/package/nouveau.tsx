@@ -10,6 +10,7 @@ import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { Selecteur } from '@/components/Selecteur';
 import {
   Bouton,
   Carte,
@@ -23,7 +24,13 @@ import {
 import { api, ErreurApi } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { ajouterColisLocal } from '@/lib/colisLocal';
-import { useT, type CleChaine } from '@/lib/i18n';
+import {
+  HEURES_CHOIX,
+  isoDepuisChoix,
+  libellesDates,
+  useT,
+  type CleChaine,
+} from '@/lib/i18n';
 import { couleurs, espaces, rayons } from '@/lib/theme';
 import {
   deviseUtilisateur,
@@ -52,7 +59,7 @@ const PRESENTATION_TAILLES: Record<
 export default function EcranNouveauColis() {
   const router = useRouter();
   const { session } = useAuth();
-  const { t } = useT();
+  const { t, langue } = useT();
 
   const [taille, setTaille] = useState<TailleColis | null>(null);
   const [depart, setDepart] = useState('');
@@ -60,6 +67,10 @@ export default function EcranNouveauColis() {
   const [destinataire, setDestinataire] = useState('');
   const [telephone, setTelephone] = useState('+255');
   const [description, setDescription] = useState('');
+  // Quand ramasser : date vide = « Dès que possible ».
+  const choixDates = libellesDates(t, langue);
+  const [dateRamassage, setDateRamassage] = useState('');
+  const [heureRamassage, setHeureRamassage] = useState('');
   const [erreur, setErreur] = useState('');
   const [charge, setCharge] = useState(false);
 
@@ -93,6 +104,17 @@ export default function EcranNouveauColis() {
       setErreur(t('ncolis_erreur_tel'));
       return;
     }
+    let pickupAt: string | undefined;
+    if (dateRamassage) {
+      const iso = heureRamassage
+        ? isoDepuisChoix(choixDates, dateRamassage, heureRamassage)
+        : null;
+      if (!iso) {
+        setErreur(t('sel_erreur_datetime'));
+        return;
+      }
+      pickupAt = iso;
+    }
     setCharge(true);
     try {
       const colis = await api.creerColis({
@@ -105,6 +127,7 @@ export default function EcranNouveauColis() {
         recipientName: destinataire.trim(),
         recipientPhone: telephoneNormalise,
         description: description.trim() || undefined,
+        pickupAt,
       });
       const proprietaireId = (expediteurHotel ?? expediteurUser)!.id;
       await ajouterColisLocal(proprietaireId, colis.id);
@@ -171,6 +194,30 @@ export default function EcranNouveauColis() {
           onChangeText={setArrivee}
           placeholder={t('ncolis_livraison_placeholder')}
         />
+
+        {/* Quand ramasser : le chauffeur voit cette heure sur l'annonce. */}
+        <Selecteur
+          label={t('ncolis_quand')}
+          valeur={dateRamassage}
+          options={[t('ncolis_asap'), ...choixDates]}
+          placeholder={t('ncolis_asap')}
+          onChange={(choix) => {
+            if (choix === t('ncolis_asap')) {
+              setDateRamassage('');
+              setHeureRamassage('');
+            } else {
+              setDateRamassage(choix);
+            }
+          }}
+        />
+        {!!dateRamassage && (
+          <Selecteur
+            label={t('sel_heure')}
+            valeur={heureRamassage}
+            options={HEURES_CHOIX}
+            onChange={setHeureRamassage}
+          />
+        )}
 
         <Text style={styles.titreSection}>{t('ncolis_section_destinataire')}</Text>
         <Champ

@@ -25,7 +25,15 @@ import { effacerColisMasques, listerColisMasques, masquerColis } from '@/lib/col
 import { formaterDateRelativeI18n, libelleTailleColis, useT } from '@/lib/i18n';
 import { estBalaye, lireCoupDeBalai, passerCoupDeBalai } from '@/lib/menageLocal';
 import { couleurs, espaces, ombres, rayons } from '@/lib/theme';
-import { champ, formaterMontant, formaterPrix, type Colis, type StatutTrajet, type Trajet } from '@/lib/types';
+import {
+  champ,
+  formaterDate,
+  formaterMontant,
+  formaterPrix,
+  type Colis,
+  type StatutTrajet,
+  type Trajet,
+} from '@/lib/types';
 
 export default function EcranCourses() {
   const router = useRouter();
@@ -255,7 +263,9 @@ export default function EcranCourses() {
             </Text>
             <View style={styles.pied}>
               <Text style={styles.date}>
-                {formaterDateRelativeI18n(champ(colis, 'created_at', 'createdAt'), t)}
+                {champ(colis, 'pickup_at', 'pickupAt')
+                  ? `⏰ ${formaterDate(champ(colis, 'pickup_at', 'pickupAt'))}`
+                  : formaterDateRelativeI18n(champ(colis, 'created_at', 'createdAt'), t)}
               </Text>
               {net !== null && (
                 <Text style={styles.prix}>

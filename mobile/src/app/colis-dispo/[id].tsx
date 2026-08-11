@@ -23,7 +23,7 @@ import { useAuth } from '@/lib/auth';
 import { masquerColis } from '@/lib/colisLocal';
 import { formaterDateRelativeI18n, libelleTailleColis, useT } from '@/lib/i18n';
 import { couleurs, espaces } from '@/lib/theme';
-import { champ, formaterMontant, type Colis, type TailleColis } from '@/lib/types';
+import { champ, formaterDate, formaterMontant, type Colis, type TailleColis } from '@/lib/types';
 
 export default function EcranColisDispo() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -105,6 +105,14 @@ export default function EcranColisDispo() {
         <LigneInfo
           label={t('colis_dispo_livraison')}
           valeur={String(champ(colis, 'dropoff_location', 'dropoffLocation') ?? '—')}
+        />
+        <LigneInfo
+          label={t('colis_dispo_ramassage')}
+          valeur={
+            champ(colis, 'pickup_at', 'pickupAt')
+              ? formaterDate(champ(colis, 'pickup_at', 'pickupAt'))
+              : t('ncolis_asap')
+          }
         />
         <LigneInfo
           label={t('colis_dispo_taille')}

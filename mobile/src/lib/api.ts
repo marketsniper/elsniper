@@ -450,6 +450,8 @@ export interface CreationColis {
   recipientName: string;
   recipientPhone: string; // format international +255…
   description?: string;
+  /** Heure de ramassage souhaitée (ISO) — absente = dès que possible. */
+  pickupAt?: string;
 }
 
 /** POST /packages → ligne packages (qr_code PKG-…, price/currency figés, whatsapp_link). */

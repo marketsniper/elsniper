@@ -489,6 +489,34 @@ describe('Colis — suivi GPS pendant la livraison', () => {
 });
 
 describe('Colis — bourse aux colis (mode chauffeur)', () => {
+  it('pickupAt : heure de ramassage souhaitée enregistrée et visible dans la bourse', async () => {
+    const { token, user } = await createTourist();
+    const { token: driverToken } = await createVerifiedDriver();
+    const dans6h = new Date(Date.now() + 6 * 3600 * 1000).toISOString();
+
+    const res = await request(app)
+      .post('/api/packages')
+      .set(authHeaders(token))
+      .send({
+        senderType: 'user',
+        senderUserId: user.id,
+        size: 'small',
+        pickupLocation: 'Stone Town',
+        dropoffLocation: 'Nungwi',
+        recipientName: 'Omar',
+        recipientPhone: nextPhone(),
+        pickupAt: dans6h,
+      });
+    assert.equal(res.status, 201);
+    assert.ok(res.body.pickup_at, 'pickup_at enregistré');
+
+    await payPackage(token, res.body.id);
+    const liste = await request(app).get('/api/packages').set(authHeaders(driverToken));
+    const ligne = liste.body.find((p) => p.id === res.body.id);
+    assert.ok(ligne, 'colis visible dans la bourse');
+    assert.ok(ligne.pickup_at, 'pickup_at exposé aux chauffeurs');
+  });
+
   it('une demande expirée (plus de 48 h) disparaît de la bourse ; la description est incluse', async () => {
     const { pool } = await import('../src/db.js');
     const { token, user } = await createTourist();

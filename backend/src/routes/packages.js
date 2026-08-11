@@ -27,6 +27,8 @@ const createPackageSchema = z
     recipientName: z.string().min(2),
     recipientPhone: z.string().min(6),
     description: z.string().max(1000).optional(),
+    /** Heure de ramassage souhaitée (absent = dès que possible). */
+    pickupAt: z.string().datetime({ offset: true }).optional(),
   })
   .refine((d) => (d.senderType === 'user' ? !!d.senderUserId && !d.senderHotelId : true), {
     path: ['senderUserId'],
@@ -96,8 +98,8 @@ router.post(
 
     const { rows } = await query(
       `INSERT INTO packages (sender_type, sender_user_id, sender_hotel_id, size, qr_code, pickup_location,
-                             dropoff_location, recipient_name, recipient_phone, description, price, commission, currency)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+                             dropoff_location, recipient_name, recipient_phone, description, pickup_at, price, commission, currency)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
        RETURNING *`,
       [
         data.senderType,
@@ -110,6 +112,7 @@ router.post(
         data.recipientName,
         data.recipientPhone,
         data.description ?? null,
+        data.pickupAt ?? null,
         pricing.price,
         pricing.commission,
         pricing.currency,
@@ -140,14 +143,14 @@ router.get(
     }
     const { rows } = await query(
       `SELECT p.id, p.size, p.status, p.sender_type, p.pickup_location, p.dropoff_location,
-              p.description, p.price, p.commission, p.currency, p.created_at,
+              p.description, p.pickup_at, p.price, p.commission, p.currency, p.created_at,
               h.name AS sender_hotel_name, u.full_name AS sender_user_name
        FROM packages p
        LEFT JOIN hotels h ON h.id = p.sender_hotel_id
        LEFT JOIN users u ON u.id = p.sender_user_id
        WHERE p.status = 'paid' AND p.driver_id IS NULL
          AND p.created_at >= now() - interval '48 hours'
-       ORDER BY p.created_at ASC
+       ORDER BY COALESCE(p.pickup_at, p.created_at) ASC
        LIMIT 100`
     );
     res.json(rows);
