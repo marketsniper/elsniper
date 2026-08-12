@@ -11,24 +11,26 @@ import { config } from '../config.js';
 //               (config.hotelDiscountRate, 5 %).
 //
 // Zones (depuis/vers la ville ou l'aéroport) :
+// Tarif local UNIFIÉ : 15 000 TZS la place partout (sauf trajets spéciaux
+// ci-dessous) — plus simple à retenir pour les clients et les chauffeurs.
 const ZONE_TIERS = {
   nord: { privateUsd: 50, sharedUsd: 18, localTzs: 15000 }, // Nungwi / Kendwa
-  nordEst: { privateUsd: 45, sharedUsd: 16, localTzs: 12000 }, // Matemwe / Kiwengwa
-  est: { privateUsd: 50, sharedUsd: 15, localTzs: 12000 }, // Paje / Jambiani
+  nordEst: { privateUsd: 45, sharedUsd: 16, localTzs: 15000 }, // Matemwe / Kiwengwa
+  est: { privateUsd: 50, sharedUsd: 15, localTzs: 15000 }, // Paje / Jambiani
   estPointe: { privateUsd: 50, sharedUsd: 18, localTzs: 15000 }, // Michamvi (route directe)
-  sud: { privateUsd: 45, sharedUsd: 14, localTzs: 12000 }, // Kizimkazi / Makunduchi
+  sud: { privateUsd: 45, sharedUsd: 14, localTzs: 15000 }, // Kizimkazi / Makunduchi
 };
 
 // Commissions zanziGo par service (grille « Chauffeur reçoit ») :
 //  - privé 10 % (50 → 45,00 chez le chauffeur) ;
 //  - partagé touriste 20 % (18 → 14,40) ;
-//  - local 10 % (15 000 → 13 500) ;
+//  - partagé local 15 % (15 000 → 12 750) ;
 //  - colis 20 % (5 → 4,00).
 // Les réservations d'hôtel restent sur le taux général config.commissionRate.
 const COMMISSION_RATES = {
   private: 0.1,
   shared: 0.2,
-  local: 0.1,
+  local: 0.15,
   package: 0.2,
 };
 
@@ -54,6 +56,11 @@ const CITY_ZONES = {
 
 // Trajets spéciaux à prix fixe (USD, courses privées), deux sens.
 const SPECIAL_PRIVATE_ROUTES_USD = [{ a: 'Nungwi', b: 'Paje', usd: 65 }];
+
+// Trajets spéciaux à prix fixe (TZS, place locale en taxi partagé), deux
+// sens : la traversée Nungwi ↔ Paje est plus longue que les liaisons
+// standard, la place locale y vaut 20 000 TZS au lieu de 15 000.
+const SPECIAL_LOCAL_ROUTES_TZS = [{ a: 'Nungwi', b: 'Paje', tzs: 20000 }];
 
 // Colis : forfait par taille (Stone Town → n'importe quelle plage),
 // payé en ligne à 100 % par l'expéditeur.
@@ -94,17 +101,29 @@ function specialPrivateRouteUsd(pickup, dropoff) {
   return route?.usd;
 }
 
+function specialLocalRouteTzs(pickup, dropoff) {
+  const p = normCity(pickup);
+  const d = normCity(dropoff);
+  const route = SPECIAL_LOCAL_ROUTES_TZS.find((r) => {
+    const a = r.a.toLowerCase();
+    const b = r.b.toLowerCase();
+    return (p === a && d === b) || (p === b && d === a);
+  });
+  return route?.tzs;
+}
+
 // Prix touriste (USD) d'une place en trajet partagé selon l'itinéraire —
 // utilisé aussi pour l'affichage des trajets postés par les chauffeurs.
 export function sharedSeatUsdForRoute(pickup, dropoff) {
   return tierForRoute(pickup, dropoff).sharedUsd;
 }
 
-// Prix local (TZS) d'une place — fixé par la grille zanziGo selon la zone :
-// c'est LUI qui est posé automatiquement sur les trajets partagés postés par
-// les chauffeurs (le chauffeur ne choisit pas son prix).
+// Prix local (TZS) d'une place — fixé par la grille zanziGo (15 000 partout,
+// trajets spéciaux inclus, ex. Nungwi ↔ Paje 20 000) : c'est LUI qui est posé
+// automatiquement sur les trajets partagés postés par les chauffeurs (le
+// chauffeur ne choisit pas son prix).
 export function localSeatTzsForRoute(pickup, dropoff) {
-  return tierForRoute(pickup, dropoff).localTzs;
+  return specialLocalRouteTzs(pickup, dropoff) ?? tierForRoute(pickup, dropoff).localTzs;
 }
 
 // audience : 'tourist' | 'resident' | 'local' | 'hotel'
@@ -120,8 +139,9 @@ export function priceTrip(tripType, audience, route = {}) {
       const price = Math.round(usd * config.usdToTzsRate);
       return { price, commission: round2(price * COMMISSION_RATES.private), currency: 'TZS' };
     }
-    // Navettes : tarif local de la zone, par place — commission 10 %.
-    const price = tier.localTzs;
+    // Taxi partagé local : tarif unifié (trajets spéciaux inclus), par
+    // place — commission 15 %.
+    const price = specialLocalRouteTzs(route.pickup, route.dropoff) ?? tier.localTzs;
     return { price, commission: round2(price * COMMISSION_RATES.local), currency: 'TZS' };
   }
 

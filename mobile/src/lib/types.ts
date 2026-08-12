@@ -318,16 +318,34 @@ export const TRAJETS_SPECIAUX_PRIVE_USD: { villes: [string, string]; prix: numbe
   { villes: ['Nungwi', 'Paje'], prix: 65 },
 ];
 
-/** Tarif privé spécial USD pour un itinéraire donné, ou null si aucun. */
-export function tarifSpecialPrive(depart: string, arrivee: string): number | null {
+/** Trajets spéciaux TZS : place locale en taxi partagé (deux sens). */
+export const TRAJETS_SPECIAUX_LOCAL_TZS: { villes: [string, string]; prix: number }[] = [
+  { villes: ['Nungwi', 'Paje'], prix: 20000 },
+];
+
+function tarifSpecialItineraire(
+  liste: { villes: [string, string]; prix: number }[],
+  depart: string,
+  arrivee: string
+): number | null {
   const a = depart.trim().toLowerCase();
   const b = arrivee.trim().toLowerCase();
   if (!a || !b) return null;
-  for (const special of TRAJETS_SPECIAUX_PRIVE_USD) {
+  for (const special of liste) {
     const [v1, v2] = [special.villes[0].toLowerCase(), special.villes[1].toLowerCase()];
     if ((a === v1 && b === v2) || (a === v2 && b === v1)) return special.prix;
   }
   return null;
+}
+
+/** Tarif privé spécial USD pour un itinéraire donné, ou null si aucun. */
+export function tarifSpecialPrive(depart: string, arrivee: string): number | null {
+  return tarifSpecialItineraire(TRAJETS_SPECIAUX_PRIVE_USD, depart, arrivee);
+}
+
+/** Tarif local spécial TZS (place partagée) pour un itinéraire, ou null. */
+export function tarifSpecialLocal(depart: string, arrivee: string): number | null {
+  return tarifSpecialItineraire(TRAJETS_SPECIAUX_LOCAL_TZS, depart, arrivee);
 }
 
 /** Remise résident (documents de résidence validés) sur tous les prix USD. */
@@ -356,12 +374,14 @@ export interface TarifsZone {
   localTzs: number;
 }
 
+// Tarif local UNIFIÉ : 15 000 TZS la place partout (sauf trajets spéciaux,
+// ex. Nungwi ↔ Paje 20 000) — miroir de la grille serveur.
 export const TARIFS_ZONE: Record<ZoneTarifaire, TarifsZone> = {
   nord: { priveUsd: 50, partageUsd: 18, localTzs: 15000 }, // Nungwi, Kendwa
-  nord_est: { priveUsd: 45, partageUsd: 16, localTzs: 12000 }, // Matemwe → Chwaka
-  est: { priveUsd: 50, partageUsd: 15, localTzs: 12000 }, // Paje, Jambiani, Bwejuu
+  nord_est: { priveUsd: 45, partageUsd: 16, localTzs: 15000 }, // Matemwe → Chwaka
+  est: { priveUsd: 50, partageUsd: 15, localTzs: 15000 }, // Paje, Jambiani, Bwejuu
   est_pointe: { priveUsd: 50, partageUsd: 18, localTzs: 15000 }, // Michamvi
-  sud: { priveUsd: 45, partageUsd: 14, localTzs: 12000 }, // Kizimkazi, Makunduchi, Fumba
+  sud: { priveUsd: 45, partageUsd: 14, localTzs: 15000 }, // Kizimkazi, Makunduchi, Fumba
 };
 
 /** Tarifs appliqués quand aucune ville zonée n'apparaît dans l'itinéraire. */
@@ -450,7 +470,11 @@ export function tarifTrajetProfil(
       const usd = special ?? zone.priveUsd;
       return { montant: Math.round(usd * TAUX_USD_TZS), devise: 'TZS' };
     }
-    return { montant: zone.localTzs, devise: 'TZS' };
+    // Place en taxi partagé : tarif unifié, trajets spéciaux inclus.
+    const specialLocal = itineraire
+      ? tarifSpecialLocal(itineraire.depart, itineraire.arrivee)
+      : null;
+    return { montant: specialLocal ?? zone.localTzs, devise: 'TZS' };
   }
   let plein: number | undefined;
   if (type === 'private') {

@@ -219,8 +219,8 @@ router.get(
         // chaque client paie dans sa devise.
         const out = serializeRide(r, { mode: 'both' });
         const usd = sharedSeatUsdForRoute(r.origin, r.destination);
-        // Commission zanziGo par place : 10 % sur le tarif local (navette),
-        // 20 % sur les places partagées USD — le chauffeur voit son net.
+        // Commission zanziGo par place : 15 % sur le tarif local (taxi
+        // partagé), 20 % sur les places USD — le chauffeur voit son net.
         const avecGain = (base, taux) => ({
           ...base,
           commission_per_seat: round2(base.price_per_seat * taux),
@@ -248,7 +248,7 @@ router.get(
                 price_per_seat: Number(r.price_per_seat),
                 currency: 'TZS',
               },
-              0.1
+              0.15
             );
           }
           const resident = b.account_type === 'resident' && b.verification_status === 'verified';

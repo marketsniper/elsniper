@@ -53,6 +53,33 @@ describe('Devises taxi partagé (parcours local complet)', () => {
     assert.equal(booking.client_type, 'local');
     assert.equal(booking.currency, 'TZS');
     assert.equal(Number(booking.price_per_seat), 15000);
-    assert.equal(Number(booking.net_per_seat), 13500);
+    // Commission partagé local 15 % : le chauffeur touche 85 %.
+    assert.equal(Number(booking.net_per_seat), 12750);
+  });
+
+  it('trajet spécial local : Nungwi ↔ Paje à 20 000 TZS la place (deux sens)', async () => {
+    const { token: tokenChauffeur } = await createVerifiedDriver();
+    const depart = new Date(Date.now() + 6 * 3600 * 1000).toISOString();
+    const aller = await request(app)
+      .post('/api/rides')
+      .set(authHeaders(tokenChauffeur))
+      .send({ origin: 'Nungwi', destination: 'Paje', departureAt: depart, seatsTotal: 4 });
+    assert.equal(aller.status, 201);
+    assert.equal(Number(aller.body.price_per_seat), 20000);
+
+    const retour = await request(app)
+      .post('/api/rides')
+      .set(authHeaders(tokenChauffeur))
+      .send({ origin: 'Paje', destination: 'Nungwi', departureAt: depart, seatsTotal: 4 });
+    assert.equal(retour.status, 201);
+    assert.equal(Number(retour.body.price_per_seat), 20000);
+
+    // Les autres liaisons restent au tarif unifié 15 000 TZS.
+    const standard = await request(app)
+      .post('/api/rides')
+      .set(authHeaders(tokenChauffeur))
+      .send({ origin: 'Stone Town Ferry', destination: 'Jambiani', departureAt: depart, seatsTotal: 4 });
+    assert.equal(standard.status, 201);
+    assert.equal(Number(standard.body.price_per_seat), 15000);
   });
 });
