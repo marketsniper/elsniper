@@ -256,7 +256,7 @@ export default function EcranDetailColis() {
           />
         </>
       )}
-      {peutPayer && paiementId && methodePaiement === 'paypal' && (
+      {peutPayer && paiementId && (methodePaiement === 'paypal' || methodePaiement === 'pesapal') && (
         <Bouton
           titre={t('trip_verifier_paiement')}
           icone="shield-checkmark-outline"
@@ -265,7 +265,7 @@ export default function EcranDetailColis() {
           charge={chargeConfirmation}
         />
       )}
-      {__DEV__ && peutPayer && paiementId && methodePaiement !== 'paypal' && (
+      {__DEV__ && peutPayer && paiementId && methodePaiement !== 'paypal' && methodePaiement !== 'pesapal' && (
         <Bouton
           titre={t('trip_confirm_dev')}
           variante="secondaire"

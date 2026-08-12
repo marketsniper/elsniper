@@ -8,6 +8,7 @@ import { asyncHandler } from '../middleware/errorHandler.js';
 import { isAdmin, requireAuth } from '../middleware/auth.js';
 import { pricePackage } from '../services/pricingService.js';
 import { circuitPaiementUsd } from '../services/paypalService.js';
+import { createPaymentOrder, isStubMode } from '../services/pesapalService.js';
 import { generatePackageQr } from '../services/qrService.js';
 import { buildTeamNotificationLink, packageRequestMessage } from '../services/whatsappService.js';
 import { assertHotelVerified } from './hotels.js';
@@ -305,17 +306,26 @@ router.post(
       );
     }
 
-    // Circuit USD automatique (PayPal) ou lien PayPal.Me si configurés ;
-    // sinon paiement MANUEL : le lien ouvre WhatsApp vers l'équipe, qui
-    // crée alors un lien de paiement à la main et confirme une fois payé.
+    // Circuit USD automatique (PayPal) si configuré ; sinon Pesapal RÉEL
+    // (mobile money M-Pesa/Tigo/Airtel + cartes) dès que les clés sont
+    // présentes ; en dernier recours (mode stub) paiement MANUEL : le lien
+    // ouvre WhatsApp vers l'équipe, qui confirme une fois l'argent reçu.
     const paypal = await circuitPaiementUsd({
       amount: pkg.price,
       currency: pkg.currency,
       description: `zanziGo colis ${pkg.qr_code}`,
     });
-    const reference = paypal?.reference ?? `WHATSAPP-${randomUUID()}`;
+    let circuit = paypal;
+    if (!circuit && !isStubMode()) {
+      circuit = await createPaymentOrder({
+        amount: pkg.price,
+        currency: pkg.currency,
+        description: `zanziGo colis ${pkg.qr_code}`,
+      });
+    }
+    const reference = circuit?.reference ?? `WHATSAPP-${randomUUID()}`;
     const paymentLink =
-      paypal?.paymentLink ??
+      circuit?.paymentLink ??
       buildTeamNotificationLink(
         [
           '💳 Paiement colis zanziGo',
@@ -334,7 +344,10 @@ router.post(
        RETURNING *`,
       [pkg.id, pkg.price, pkg.currency, reference, paymentLink]
     );
-    res.status(201).json({ ...rows[0], payment_method: paypal?.method ?? 'manual' });
+    res.status(201).json({
+      ...rows[0],
+      payment_method: paypal?.method ?? (isStubMode() ? 'manual' : 'pesapal'),
+    });
   })
 );
 

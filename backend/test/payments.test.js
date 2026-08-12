@@ -150,6 +150,32 @@ describe('Paiements — confirmation (mode stub Pesapal)', () => {
     assert.equal(res.body.error.code, 'payment_already_processed');
   });
 
+  it('webhook Pesapal (IPN) : confirme un paiement pending, inconnu → 200 sans effet', async () => {
+    const { token, trip, payment } = await createTripPayment();
+
+    // Notification IPN avec la référence du paiement : en stub, le statut
+    // vérifié est COMPLETED → paiement confirmé et course payée, sans aucun
+    // jeton (c'est Pesapal qui appelle).
+    const ipn = await request(app)
+      .post('/api/payments/pesapal-ipn')
+      .send({ OrderTrackingId: payment.pesapal_reference });
+    assert.equal(ipn.status, 200);
+    assert.equal(ipn.body.status, 200);
+
+    const releve = await request(app)
+      .get(`/api/payments/${payment.id}`)
+      .set(authHeaders(token));
+    assert.equal(releve.body.status, 'confirmed');
+    const tripRes = await request(app).get(`/api/trips/${trip.id}`).set(authHeaders(token));
+    assert.equal(tripRes.body.status, 'paid');
+
+    // Référence inconnue : réponse 200 (accusé de réception), aucun effet.
+    const inconnu = await request(app)
+      .post('/api/payments/pesapal-ipn')
+      .send({ OrderTrackingId: 'ref-inconnue' });
+    assert.equal(inconnu.status, 200);
+  });
+
   it('confirmer un paiement solde les doublons pending de la même cible en failed', async () => {
     const { token, trip, payment } = await createTripPayment();
     // Le client a rappuyé sur « payer » : second paiement en attente.

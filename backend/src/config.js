@@ -67,13 +67,20 @@ export const config = {
     meUsername: env.PAYPAL_ME_USERNAME || '',
   },
 
-  // Pesapal (paiements) — sans clés, le service tourne en mode stub
+  // Pesapal (paiements) — sans clés, le service tourne en mode stub.
+  // IPN : webhook appelé par Pesapal quand un paiement aboutit ; callback :
+  // page où le client revient après avoir payé. Les deux ont des valeurs par
+  // défaut basées sur l'URL publique de l'API.
   pesapal: {
     env: env.PESAPAL_ENV || 'sandbox',
     consumerKey: env.PESAPAL_CONSUMER_KEY || '',
     consumerSecret: env.PESAPAL_CONSUMER_SECRET || '',
-    ipnUrl: env.PESAPAL_IPN_URL || '',
-    callbackUrl: env.PESAPAL_CALLBACK_URL || '',
+    ipnUrl:
+      env.PESAPAL_IPN_URL ||
+      `${env.PUBLIC_API_URL || 'https://zanzigo-api.onrender.com'}/api/payments/pesapal-ipn`,
+    callbackUrl:
+      env.PESAPAL_CALLBACK_URL ||
+      `${env.PUBLIC_API_URL || 'https://zanzigo-api.onrender.com'}/api/pesapal/retour`,
   },
 
   // Stockage S3 compatible (Cloudflare R2 recommandé) — sans clés, fallback disque local

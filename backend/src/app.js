@@ -165,6 +165,21 @@ p{color:#8A7168;max-width:44ch;margin:8px auto}</style>
         )
       );
   });
+  // Page de retour Pesapal : après le paiement (mobile money ou carte), le
+  // client revient ici — la confirmation arrive toute seule par le webhook
+  // IPN ; on le guide simplement vers l'app.
+  app.get('/api/pesapal/retour', (_req, res) => {
+    res
+      .type('html')
+      .send(
+        pagePaypal(
+          'Paiement reçu',
+          "Merci ! Retournez dans l'app zanziGo : votre paiement se confirme automatiquement dans quelques instants (touchez « J'ai payé — vérifier » s'il tarde). Asante !",
+          '✅'
+        )
+      );
+  });
+
   app.get('/api/paypal/annule', (_req, res) => {
     res
       .type('html')

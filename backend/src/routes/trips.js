@@ -337,8 +337,11 @@ router.post(
       [trip.id, trip.price, trip.currency, reference, paymentLink]
     );
     // payment_method (non stocké) : l'app affiche « J'ai payé — vérifier »
-    // uniquement pour le circuit PayPal complet (capture vérifiable).
-    res.status(201).json({ ...rows[0], payment_method: paypal?.method ?? 'manual' });
+    // pour les circuits vérifiables (PayPal capture, Pesapal statut réel).
+    res.status(201).json({
+      ...rows[0],
+      payment_method: paypal?.method ?? (isStubMode() ? 'manual' : 'pesapal'),
+    });
   })
 );
 

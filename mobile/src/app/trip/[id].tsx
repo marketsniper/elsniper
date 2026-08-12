@@ -227,7 +227,7 @@ export default function EcranTrajet() {
           charge={chargePaiement}
         />
       )}
-      {peutPayer && paiementId && methodePaiement === 'paypal' && (
+      {peutPayer && paiementId && (methodePaiement === 'paypal' || methodePaiement === 'pesapal') && (
         <Bouton
           titre={t('trip_verifier_paiement')}
           icone="shield-checkmark-outline"
@@ -236,7 +236,7 @@ export default function EcranTrajet() {
           charge={chargeConfirmation}
         />
       )}
-      {__DEV__ && peutPayer && paiementId && methodePaiement !== 'paypal' && (
+      {__DEV__ && peutPayer && paiementId && methodePaiement !== 'paypal' && methodePaiement !== 'pesapal' && (
         <Bouton
           titre={t('trip_confirm_dev')}
           variante="secondaire"

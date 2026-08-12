@@ -139,38 +139,75 @@ router.post(
       );
     }
 
-    const updated = await withTransaction(async (client) => {
-      const { rows: paymentRows } = await client.query(
-        `UPDATE payments SET status = 'confirmed', confirmed_at = now() WHERE id = $1 RETURNING *`,
-        [req.params.id]
-      );
-
-      if (payment.trip_id) {
-        await client.query(
-          `UPDATE trips SET status = 'paid' WHERE id = $1 AND status = 'driver_confirmed'`,
-          [payment.trip_id]
-        );
-      } else if (payment.package_id) {
-        await client.query(
-          `UPDATE packages SET status = 'paid' WHERE id = $1 AND status = 'created'`,
-          [payment.package_id]
-        );
-      }
-
-      // Un client qui appuie plusieurs fois sur « payer » crée plusieurs
-      // paiements en attente pour la même cible : une fois l'un confirmé,
-      // les doublons sont soldés en 'failed' pour ne pas encombrer le
-      // tableau de bord équipe.
-      await client.query(
-        `UPDATE payments SET status = 'failed'
-         WHERE id <> $1 AND status = 'pending'
-           AND ((trip_id IS NOT NULL AND trip_id = $2) OR (package_id IS NOT NULL AND package_id = $3))`,
-        [req.params.id, payment.trip_id, payment.package_id]
-      );
-
-      return paymentRows[0];
-    });
+    const updated = await appliquerConfirmation(payment);
     res.json(updated);
+  })
+);
+
+// Applique la confirmation d'un paiement : paiement 'confirmed', cible
+// avancée (course/colis → paid), doublons pending de la même cible soldés.
+async function appliquerConfirmation(payment) {
+  return withTransaction(async (client) => {
+    const { rows: paymentRows } = await client.query(
+      `UPDATE payments SET status = 'confirmed', confirmed_at = now() WHERE id = $1 RETURNING *`,
+      [payment.id]
+    );
+
+    if (payment.trip_id) {
+      await client.query(
+        `UPDATE trips SET status = 'paid' WHERE id = $1 AND status = 'driver_confirmed'`,
+        [payment.trip_id]
+      );
+    } else if (payment.package_id) {
+      await client.query(
+        `UPDATE packages SET status = 'paid' WHERE id = $1 AND status = 'created'`,
+        [payment.package_id]
+      );
+    }
+
+    // Un client qui appuie plusieurs fois sur « payer » crée plusieurs
+    // paiements en attente pour la même cible : une fois l'un confirmé,
+    // les doublons sont soldés en 'failed' pour ne pas encombrer le
+    // tableau de bord équipe.
+    await client.query(
+      `UPDATE payments SET status = 'failed'
+       WHERE id <> $1 AND status = 'pending'
+         AND ((trip_id IS NOT NULL AND trip_id = $2) OR (package_id IS NOT NULL AND package_id = $3))`,
+      [payment.id, payment.trip_id, payment.package_id]
+    );
+
+    return paymentRows[0];
+  });
+}
+
+// POST /payments/pesapal-ipn — webhook Pesapal : appelé automatiquement par
+// Pesapal quand un paiement change d'état. Sans jeton — la sécurité vient de
+// la vérification du statut RÉEL auprès de l'API Pesapal avant toute action.
+// Ainsi, un paiement Pesapal se confirme TOUT SEUL, sans que le client ni
+// l'équipe n'aient rien à toucher.
+router.post(
+  '/pesapal-ipn',
+  asyncHandler(async (req, res) => {
+    const orderTrackingId =
+      req.body?.OrderTrackingId ?? req.query?.OrderTrackingId ?? null;
+    if (orderTrackingId) {
+      const { rows } = await query('SELECT * FROM payments WHERE pesapal_reference = $1', [
+        orderTrackingId,
+      ]);
+      const payment = rows[0];
+      if (payment && payment.status === 'pending') {
+        const status = await getTransactionStatus(orderTrackingId);
+        if (status === 'COMPLETED') {
+          await appliquerConfirmation(payment);
+        }
+      }
+    }
+    // Réponse au format attendu par Pesapal (statut 200 = notification reçue).
+    res.json({
+      orderNotificationType: 'IPNCHANGE',
+      orderTrackingId,
+      status: 200,
+    });
   })
 );
 
