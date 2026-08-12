@@ -36,7 +36,6 @@ const createTripSchema = z
   });
 
 const assignDriverSchema = z.object({ driverId: z.string().uuid() });
-const scanSchema = z.object({ qrCode: z.string().min(1) });
 const ratingSchema = z.object({
   rating: z.number().int().min(1).max(5),
   comment: z.string().max(1000).optional(),
@@ -345,14 +344,14 @@ router.post(
   })
 );
 
-// PATCH /trips/:id/start — scan du QR véhicule au départ (chauffeur assigné ou équipe).
-// Règle métier : le QR scanné doit correspondre au véhicule du chauffeur
-// assigné à CETTE course — pas n'importe quel QR véhicule valide.
+// PATCH /trips/:id/start — le chauffeur assigné (ou l'équipe) démarre la
+// course d'une simple touche. Pas de QR à scanner : la position GPS déjà
+// partagée en continu (PATCH /drivers/:id/location) reste la preuve de
+// terrain, sans friction supplémentaire pour le chauffeur.
 router.patch(
   '/:id/start',
   requireAuth,
   asyncHandler(async (req, res) => {
-    const { qrCode } = scanSchema.parse(req.body);
     const trip = await getTrip(req.params.id);
     if (!isAdmin(req) && (!req.auth.driverId || trip.driver_id !== req.auth.driverId)) {
       throw new HttpError(403, 'forbidden', 'Accès réservé au chauffeur assigné à cette course');
@@ -362,15 +361,8 @@ router.patch(
       throw new HttpError(
         409,
         'invalid_status',
-        `Le départ ne peut être scanné que sur un trajet payé (statut actuel: ${trip.status})`
+        `Le départ ne peut être déclaré que sur un trajet payé (statut actuel: ${trip.status})`
       );
-    }
-
-    const { rows: driverRows } = await query('SELECT vehicle_qr_code FROM drivers WHERE id = $1', [
-      trip.driver_id,
-    ]);
-    if (driverRows[0]?.vehicle_qr_code !== qrCode) {
-      throw new HttpError(403, 'qr_mismatch', 'Ce QR ne correspond pas au véhicule assigné à cette course');
     }
 
     const { rows } = await query(
@@ -381,14 +373,13 @@ router.patch(
   })
 );
 
-// PATCH /trips/:id/complete — scan du QR véhicule à l'arrivée (chauffeur assigné ou équipe).
-// Clôture la course et incrémente les stats mensuelles du chauffeur
+// PATCH /trips/:id/complete — le chauffeur assigné (ou l'équipe) clôture la
+// course d'une simple touche. Incrémente les stats mensuelles du chauffeur
 // (support du programme de fidélité) — ce qui débloque son paiement.
 router.patch(
   '/:id/complete',
   requireAuth,
   asyncHandler(async (req, res) => {
-    const { qrCode } = scanSchema.parse(req.body);
     const trip = await getTrip(req.params.id);
     if (!isAdmin(req) && (!req.auth.driverId || trip.driver_id !== req.auth.driverId)) {
       throw new HttpError(403, 'forbidden', 'Accès réservé au chauffeur assigné à cette course');
@@ -398,15 +389,8 @@ router.patch(
       throw new HttpError(
         409,
         'invalid_status',
-        `L'arrivée ne peut être scannée que sur un trajet en cours (statut actuel: ${trip.status})`
+        `L'arrivée ne peut être déclarée que sur un trajet en cours (statut actuel: ${trip.status})`
       );
-    }
-
-    const { rows: driverRows } = await query('SELECT vehicle_qr_code FROM drivers WHERE id = $1', [
-      trip.driver_id,
-    ]);
-    if (driverRows[0]?.vehicle_qr_code !== qrCode) {
-      throw new HttpError(403, 'qr_mismatch', 'Ce QR ne correspond pas au véhicule assigné à cette course');
     }
 
     const updated = await withTransaction(async (client) => {

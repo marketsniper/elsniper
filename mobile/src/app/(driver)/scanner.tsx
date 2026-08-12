@@ -1,16 +1,10 @@
-// Mode chauffeur — scanner de QR codes.
-// Deux usages :
-//  1. Arrivée depuis une course avec ?tripId=&action=start|complete :
-//     le QR scanné est celui du VÉHICULE, envoyé à PATCH /trips/:id/start|complete.
-//     Le serveur vérifie qu'il correspond au véhicule du chauffeur assigné
-//     (403 qr_mismatch sinon). Le bouton « Utiliser mon QR » envoie
-//     directement driver.vehicle_qr_code sans scanner.
-//  2. Scan libre d'un QR colis (PKG-…) : GET /packages/by-qr/:qrCode → fiche,
-//     puis ramassage/livraison avec photo de preuve OBLIGATOIRE
-//     (appareil photo → POST /uploads → photoUrl).
+// Mode chauffeur — scanner de QR colis (PKG-…) : GET /packages/by-qr/:qrCode
+// → fiche, puis ramassage/livraison avec photo de preuve OBLIGATOIRE
+// (appareil photo → POST /uploads → photoUrl).
+// (Le départ/arrivée d'une course se fait par simple touche dans
+// course/[id].tsx, sans scan — voir demarrerCourse/terminerCourse.)
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
-import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -27,7 +21,6 @@ import {
   Titre,
 } from '@/components/ui';
 import { api, ErreurApi, prochaineActionColis } from '@/lib/api';
-import { useAuth } from '@/lib/auth';
 import { libelleTailleColis, useT } from '@/lib/i18n';
 import { couleurs, espaces, rayons } from '@/lib/theme';
 import { champ, type Colis, type StatutColis, type TailleColis } from '@/lib/types';
@@ -53,13 +46,7 @@ function FenetreScan() {
 }
 
 export default function EcranScanner() {
-  const router = useRouter();
-  const { session } = useAuth();
   const { t } = useT();
-  const params = useLocalSearchParams<{ tripId?: string; action?: string }>();
-  const tripId = typeof params.tripId === 'string' && params.tripId ? params.tripId : null;
-  const actionCourse =
-    params.action === 'start' || params.action === 'complete' ? params.action : null;
 
   const [permission, demanderPermission] = useCameraPermissions();
   const scanEnCours = useRef(false);
@@ -84,28 +71,7 @@ export default function EcranScanner() {
       setErreur('');
       setMessage('');
 
-      // Cas 1 : scan du QR véhicule pour démarrer/terminer une course.
-      if (tripId && actionCourse) {
-        setCharge(true);
-        try {
-          if (actionCourse === 'start') {
-            await api.demarrerCourse(tripId, data);
-            setMessage(t('scanner_course_demarree'));
-          } else {
-            await api.terminerCourse(tripId, data);
-            setMessage(t('scanner_course_terminee'));
-          }
-          setTimeout(() => router.replace(`/course/${tripId}`), 1200);
-        } catch (e) {
-          setErreur(e instanceof ErreurApi ? e.message : t('course_erreur_action'));
-          scanEnCours.current = false;
-        } finally {
-          setCharge(false);
-        }
-        return;
-      }
-
-      // Cas 2 : scan d'un QR colis (PKG-…).
+      // Scan d'un QR colis (PKG-…) — seul usage restant de cet écran.
       if (estQrColis(data)) {
         setCharge(true);
         try {
@@ -124,11 +90,8 @@ export default function EcranScanner() {
       setErreur(t('scanner_qr_inconnu'));
       scanEnCours.current = false;
     },
-    [tripId, actionCourse, charge, router, t]
+    [charge, t]
   );
-
-  // QR véhicule fixe du chauffeur connecté (VEH-…), pour agir sans scanner.
-  const monQrVehicule = champ<string>(session?.driver, 'vehicle_qr_code', 'vehicleQrCode') ?? null;
 
   // Collecte ou livraison du colis scanné, avec photo de preuve.
   const traiterColis = async (action: 'pickup' | 'deliver') => {
@@ -289,16 +252,8 @@ export default function EcranScanner() {
       </View>
       <SafeAreaView style={styles.calque} edges={['top', 'bottom']}>
         <View style={styles.bandeau}>
-          <Text style={styles.titreBandeau}>
-            {tripId && actionCourse
-              ? actionCourse === 'start'
-                ? t('scanner_demarrer')
-                : t('scanner_terminer')
-              : t('scanner_colis_invite')}
-          </Text>
-          <Text style={styles.aideBandeau}>
-            {tripId && actionCourse ? t('scanner_aide_vehicule') : t('scanner_aide_colis')}
-          </Text>
+          <Text style={styles.titreBandeau}>{t('scanner_colis_invite')}</Text>
+          <Text style={styles.aideBandeau}>{t('scanner_aide_colis')}</Text>
         </View>
         <View style={styles.bandeauBas}>
           {!!message && <Text style={styles.messageOk}>{message}</Text>}
@@ -311,21 +266,6 @@ export default function EcranScanner() {
                 onPress={reprendreScan}
               />
             </>
-          )}
-          {tripId && actionCourse && monQrVehicule && (
-            <Bouton
-              titre={t('course_mon_qr')}
-              icone="car-outline"
-              onPress={() => surScan({ data: monQrVehicule })}
-              charge={charge}
-            />
-          )}
-          {tripId && actionCourse && (
-            <Bouton
-              titre={t('commun_annuler')}
-              variante="secondaire"
-              onPress={() => router.back()}
-            />
           )}
         </View>
       </SafeAreaView>

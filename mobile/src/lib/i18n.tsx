@@ -1312,31 +1312,29 @@ const CHAINES = {
   // --- Mode chauffeur : détail course ----------------------------------------------
   course_chargement: { fr: 'Chargement de la course…', en: 'Loading the ride…', sw: 'Inapakia safari…' },
   course_progression: { fr: 'Progression', en: 'Progress', sw: 'Maendeleo' },
-  course_scanner_demarrer: {
-    fr: 'Scanner le QR véhicule — démarrer',
-    en: 'Scan vehicle QR — start',
-    sw: 'Skani QR ya gari — anza',
+  course_demarrer_bouton: { fr: '🚕 Démarrer la course', en: '🚕 Start the ride', sw: '🚕 Anza safari' },
+  course_terminer_bouton: { fr: '🏁 Terminer la course', en: '🏁 Finish the ride', sw: '🏁 Maliza safari' },
+  course_demarrer_titre: { fr: 'Démarrer la course', en: 'Start the ride', sw: 'Anza safari' },
+  course_demarrer_confirm: {
+    fr: 'Confirmez-vous le départ ? Le client sera prévenu que la course a commencé.',
+    en: 'Confirm departure? The customer will be notified the ride has started.',
+    sw: 'Unathibitisha kuondoka? Mteja atajulishwa kuwa safari imeanza.',
   },
-  course_scanner_terminer: {
-    fr: 'Scanner le QR véhicule — terminer',
-    en: 'Scan vehicle QR — finish',
-    sw: 'Skani QR ya gari — maliza',
+  course_terminer_titre: { fr: 'Terminer la course', en: 'Finish the ride', sw: 'Maliza safari' },
+  course_terminer_confirm: {
+    fr: 'Confirmez-vous l’arrivée ? Cela clôture la course et débloque votre paiement.',
+    en: 'Confirm arrival? This closes the ride and unlocks your payment.',
+    sw: 'Unathibitisha kufika? Hii inafunga safari na kufungua malipo yako.',
   },
-  course_mon_qr: { fr: 'Utiliser mon QR véhicule', en: 'Use my vehicle QR', sw: 'Tumia QR ya gari langu' },
   course_demandee: {
     fr: "Course demandée — pas encore confirmée par l'équipe.",
     en: 'Ride requested — not confirmed by the team yet.',
     sw: 'Safari imeombwa — bado haijathibitishwa na timu.',
   },
   course_attente_paiement: {
-    fr: 'En attente du paiement du client. Le départ pourra être scanné une fois la course payée.',
-    en: 'Waiting for the customer’s payment. Departure can be scanned once the ride is paid.',
-    sw: 'Inasubiri malipo ya mteja. Kuondoka kutaskaniwa baada ya safari kulipiwa.',
-  },
-  course_erreur_qr: {
-    fr: 'Ce QR ne correspond pas au véhicule assigné à cette course.',
-    en: 'This QR does not match the vehicle assigned to this ride.',
-    sw: 'QR hii hailingani na gari lililopangwa kwa safari hii.',
+    fr: 'En attente du paiement du client. Vous pourrez démarrer la course une fois la course payée.',
+    en: 'Waiting for the customer’s payment. You can start the ride once it is paid.',
+    sw: 'Inasubiri malipo ya mteja. Utaweza kuanza safari baada ya kulipiwa.',
   },
   course_erreur_action: {
     fr: 'Action refusée pour cette course.',
@@ -1502,34 +1500,17 @@ const CHAINES = {
   scanner_preparation: { fr: 'Préparation de la caméra…', en: 'Preparing the camera…', sw: 'Inaandaa kamera…' },
   scanner_camera_requise: { fr: 'Caméra requise', en: 'Camera required', sw: 'Kamera inahitajika' },
   scanner_camera_texte: {
-    fr: "Le scan des QR codes (véhicule et colis) nécessite l'accès à la caméra.",
-    en: 'Scanning QR codes (vehicle and parcels) requires camera access.',
-    sw: 'Kuskani QR (gari na mizigo) kunahitaji ruhusa ya kamera.',
+    fr: "Le scan des QR colis nécessite l'accès à la caméra.",
+    en: 'Scanning parcel QR codes requires camera access.',
+    sw: 'Kuskani QR ya mzigo kunahitaji ruhusa ya kamera.',
   },
   scanner_autoriser: { fr: 'Autoriser la caméra', en: 'Allow camera', sw: 'Ruhusu kamera' },
-  scanner_demarrer: {
-    fr: 'Scannez le QR du véhicule pour démarrer la course',
-    en: 'Scan the vehicle QR to start the ride',
-    sw: 'Skani QR ya gari kuanza safari',
-  },
-  scanner_terminer: {
-    fr: 'Scannez le QR du véhicule pour terminer la course',
-    en: 'Scan the vehicle QR to finish the ride',
-    sw: 'Skani QR ya gari kumaliza safari',
-  },
   scanner_colis_invite: { fr: 'Scannez un QR colis (PKG-…)', en: 'Scan a parcel QR (PKG-…)', sw: 'Skani QR ya mzigo (PKG-…)' },
-  scanner_aide_vehicule: {
-    fr: 'Le QR est affiché à bord du véhicule.',
-    en: 'The QR is displayed inside the vehicle.',
-    sw: 'QR imebandikwa ndani ya gari.',
-  },
   scanner_aide_colis: {
     fr: 'Placez le QR du colis dans le cadre.',
     en: 'Place the parcel QR inside the frame.',
     sw: 'Weka QR ya mzigo ndani ya fremu.',
   },
-  scanner_course_demarree: { fr: 'Course démarrée. Bonne route !', en: 'Ride started. Safe travels!', sw: 'Safari imeanza. Safari njema!' },
-  scanner_course_terminee: { fr: 'Course terminée. Merci !', en: 'Ride completed. Thank you!', sw: 'Safari imekamilika. Asante!' },
   scanner_ramasser: {
     fr: 'Ramasser le colis (photo de preuve)',
     en: 'Pick up the parcel (proof photo)',
@@ -1583,11 +1564,6 @@ const CHAINES = {
   compte_badge_attente: { fr: 'En attente de validation', en: 'Awaiting validation', sw: 'Inasubiri uthibitisho' },
   compte_badge_refuse: { fr: 'Candidature refusée', en: 'Application declined', sw: 'Maombi yamekataliwa' },
   compte_avis: { fr: '★ {note} ({n} avis)', en: '★ {note} ({n} reviews)', sw: '★ {note} (maoni {n})' },
-  compte_qr_texte: {
-    fr: "QR de votre véhicule — à afficher à bord. Il confirme le départ et l'arrivée de chaque course.",
-    en: 'Your vehicle QR — display it on board. It confirms the start and end of every ride.',
-    sw: 'QR ya gari lako — ibandike ndani ya gari. Inathibitisha mwanzo na mwisho wa kila safari.',
-  },
   compte_vehicule: { fr: 'Véhicule', en: 'Vehicle', sw: 'Gari' },
   compte_plaque: { fr: 'Plaque', en: 'Plate', sw: 'Namba ya gari' },
   compte_permis: { fr: 'Permis', en: 'Licence', sw: 'Leseni' },

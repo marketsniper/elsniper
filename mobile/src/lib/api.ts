@@ -369,16 +369,17 @@ export async function noterTrajet(id: string, note: number, commentaire?: string
   });
 }
 
-// Côté chauffeur : le QR scanné doit être celui du véhicule du chauffeur
-// assigné à CETTE course (sinon 403 qr_mismatch).
-/** PATCH /trips/:id/start {qrCode} — course 'paid' → 'in_progress'. */
-export async function demarrerCourse(id: string, qrCode: string): Promise<Trajet> {
-  return requete<Trajet>(`/trips/${id}/start`, { methode: 'PATCH', corps: { qrCode } });
+// Côté chauffeur : une simple touche, pas de QR à scanner — la position GPS
+// déjà partagée en continu (envoyerPositionChauffeur) reste la preuve de
+// terrain.
+/** PATCH /trips/:id/start — course 'paid' → 'in_progress'. */
+export async function demarrerCourse(id: string): Promise<Trajet> {
+  return requete<Trajet>(`/trips/${id}/start`, { methode: 'PATCH', corps: {} });
 }
 
-/** PATCH /trips/:id/complete {qrCode} — course 'in_progress' → 'completed'. */
-export async function terminerCourse(id: string, qrCode: string): Promise<Trajet> {
-  return requete<Trajet>(`/trips/${id}/complete`, { methode: 'PATCH', corps: { qrCode } });
+/** PATCH /trips/:id/complete — course 'in_progress' → 'completed'. */
+export async function terminerCourse(id: string): Promise<Trajet> {
+  return requete<Trajet>(`/trips/${id}/complete`, { methode: 'PATCH', corps: {} });
 }
 
 // ---------------------------------------------------------------------------

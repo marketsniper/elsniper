@@ -1,9 +1,8 @@
-// Mode chauffeur — profil, QR véhicule fixe (VEH-…), langue et déconnexion.
+// Mode chauffeur — profil, langue et déconnexion.
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import QRCode from 'react-native-qrcode-svg';
 
 import {
   Badge,
@@ -16,7 +15,7 @@ import {
 import { api, type StatsChauffeur } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useT } from '@/lib/i18n';
-import { couleurs, espaces, ombres, rayons, tailles } from '@/lib/theme';
+import { couleurs, espaces, rayons, tailles } from '@/lib/theme';
 import { champ, formaterMontant, type StatutVerification } from '@/lib/types';
 
 /** Initiales (2 lettres max) d'un nom complet. */
@@ -53,7 +52,6 @@ export default function EcranCompteChauffeur() {
   const statutVerif =
     champ<StatutVerification>(chauffeur, 'verification_status', 'verificationStatus') ?? 'pending';
   const verifie = statutVerif === 'verified';
-  const qrVehicule = champ<string>(chauffeur, 'vehicle_qr_code', 'vehicleQrCode');
   const moyenneBrute = champ<number | string>(chauffeur, 'rating_avg', 'ratingAvg');
   const nbNotes = Number(champ<number | string>(chauffeur, 'rating_count', 'ratingCount') ?? 0);
   const moyenne =
@@ -120,21 +118,6 @@ export default function EcranCompteChauffeur() {
             </View>
           ))}
           <Text style={styles.noteGains}>{t('gains_note_paiement')}</Text>
-        </Carte>
-      )}
-
-      {qrVehicule && (
-        <Carte style={styles.carteQr}>
-          <SousTitre centre>{t('compte_qr_texte')}</SousTitre>
-          <View style={styles.cadreQr}>
-            <QRCode
-              value={qrVehicule}
-              size={160}
-              color={couleurs.encre}
-              backgroundColor={couleurs.blanc}
-            />
-            <Text style={styles.codeTexte}>{qrVehicule}</Text>
-          </View>
         </Carte>
       )}
 
@@ -234,23 +217,6 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
     color: couleurs.encre,
-  },
-  carteQr: {
-    alignItems: 'center',
-  },
-  cadreQr: {
-    alignItems: 'center',
-    gap: espaces.s,
-    padding: espaces.l,
-    marginVertical: espaces.s,
-    backgroundColor: couleurs.surface,
-    borderRadius: rayons.carte,
-    ...ombres.douce,
-  },
-  codeTexte: {
-    fontFamily: 'monospace',
-    fontSize: 14,
-    color: couleurs.texteSecondaire,
   },
   labelLangue: {
     fontSize: 13,

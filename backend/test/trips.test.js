@@ -85,20 +85,20 @@ describe('Courses taxi (trips)', () => {
     const paid = await request(app).get(`/api/trips/${trip.id}`).set(authHeaders(userToken));
     assert.equal(paid.body.status, 'paid');
 
-    // Scan départ (QR du véhicule assigné) → in_progress
+    // Départ (touche « Démarrer la course ») → in_progress
     const started = await request(app)
       .patch(`/api/trips/${trip.id}/start`)
       .set(authHeaders(driverToken))
-      .send({ qrCode: driver.vehicle_qr_code });
+      .send({});
     assert.equal(started.status, 200);
     assert.equal(started.body.status, 'in_progress');
     assert.ok(started.body.started_at);
 
-    // Scan arrivée → completed + stats mensuelles du chauffeur incrémentées
+    // Arrivée (touche « Terminer la course ») → completed + stats mensuelles
     const completed = await request(app)
       .patch(`/api/trips/${trip.id}/complete`)
       .set(authHeaders(driverToken))
-      .send({ qrCode: driver.vehicle_qr_code });
+      .send({});
     assert.equal(completed.status, 200);
     assert.equal(completed.body.status, 'completed');
     assert.ok(completed.body.completed_at);
@@ -295,7 +295,7 @@ describe('Courses taxi (trips)', () => {
     assert.equal(res.body.error.code, 'forbidden');
   });
 
-  it('start avant paiement → 409 ; par le client → 403 ; mauvais QR → 403 qr_mismatch', async () => {
+  it('start avant paiement → 409 ; par le client → 403 forbidden', async () => {
     const { token, user } = await createTourist();
     const { token: driverToken, driver } = await createVerifiedDriver();
     const trip = await createTrip(token, user.id);
@@ -305,7 +305,7 @@ describe('Courses taxi (trips)', () => {
     const beforePaid = await request(app)
       .patch(`/api/trips/${trip.id}/start`)
       .set(authHeaders(driverToken))
-      .send({ qrCode: driver.vehicle_qr_code });
+      .send({});
     assert.equal(beforePaid.status, 409);
     assert.equal(beforePaid.body.error.code, 'invalid_status');
 
@@ -315,17 +315,9 @@ describe('Courses taxi (trips)', () => {
     const byTourist = await request(app)
       .patch(`/api/trips/${trip.id}/start`)
       .set(authHeaders(token))
-      .send({ qrCode: driver.vehicle_qr_code });
+      .send({});
     assert.equal(byTourist.status, 403);
     assert.equal(byTourist.body.error.code, 'forbidden');
-
-    // QR d'un autre véhicule → 403 qr_mismatch
-    const wrongQr = await request(app)
-      .patch(`/api/trips/${trip.id}/start`)
-      .set(authHeaders(driverToken))
-      .send({ qrCode: 'VEH-fake-qr' });
-    assert.equal(wrongQr.status, 403);
-    assert.equal(wrongQr.body.error.code, 'qr_mismatch');
   });
 
   it('start par un autre chauffeur que l\'assigné → 403 forbidden', async () => {
@@ -339,7 +331,7 @@ describe('Courses taxi (trips)', () => {
     const res = await request(app)
       .patch(`/api/trips/${trip.id}/start`)
       .set(authHeaders(otherDriverToken))
-      .send({ qrCode: driver.vehicle_qr_code });
+      .send({});
     assert.equal(res.status, 403);
     assert.equal(res.body.error.code, 'forbidden');
   });
@@ -354,7 +346,7 @@ describe('Courses taxi (trips)', () => {
     const res = await request(app)
       .patch(`/api/trips/${trip.id}/complete`)
       .set(authHeaders(driverToken))
-      .send({ qrCode: driver.vehicle_qr_code });
+      .send({});
     assert.equal(res.status, 409);
     assert.equal(res.body.error.code, 'invalid_status');
   });
@@ -368,11 +360,11 @@ describe('Courses taxi (trips)', () => {
     await request(app)
       .patch(`/api/trips/${trip.id}/start`)
       .set(authHeaders(driverToken))
-      .send({ qrCode: driver.vehicle_qr_code });
+      .send({});
     await request(app)
       .patch(`/api/trips/${trip.id}/complete`)
       .set(authHeaders(driverToken))
-      .send({ qrCode: driver.vehicle_qr_code });
+      .send({});
 
     const rated = await request(app)
       .post(`/api/trips/${trip.id}/rating`)

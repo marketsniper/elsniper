@@ -1,11 +1,11 @@
 // Mode chauffeur — détail d'une course assignée.
 // Démarrage quand la course est « paid », clôture quand « in_progress » :
-// dans les deux cas le serveur vérifie que le QR envoyé est bien celui du
-// véhicule du chauffeur assigné (403 qr_mismatch sinon). Le chauffeur peut
-// scanner le QR affiché dans son véhicule, ou utiliser directement son QR
-// (driver.vehicle_qr_code de la session).
-import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+// une simple touche (avec confirmation), pas de QR à scanner. La position
+// GPS déjà partagée en continu (courses.tsx, toutes les 45 s) reste la
+// preuve de terrain — elle ne dépend pas de ce départ/arrivée.
+import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useState } from 'react';
+import { Alert } from 'react-native';
 
 import { TimelineStatut } from '@/components/TimelineStatut';
 import {
@@ -21,7 +21,6 @@ import {
   Titre,
 } from '@/components/ui';
 import { api, ErreurApi } from '@/lib/api';
-import { useAuth } from '@/lib/auth';
 import { libelleStatutTrajet, libelleTypeTrajet, useT } from '@/lib/i18n';
 import {
   champ,
@@ -35,15 +34,11 @@ import {
 } from '@/lib/types';
 
 export default function EcranDetailCourse() {
-  const router = useRouter();
-  const { session } = useAuth();
   const { t } = useT();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [course, setCourse] = useState<Trajet | null>(null);
   const [erreur, setErreur] = useState('');
   const [chargeAction, setChargeAction] = useState(false);
-
-  const monQrVehicule = champ<string>(session?.driver, 'vehicle_qr_code', 'vehicleQrCode') ?? null;
 
   const charger = useCallback(async () => {
     if (!id) return;
@@ -79,34 +74,30 @@ export default function EcranDetailCourse() {
   const peutDemarrer = statut === 'paid';
   const peutTerminer = statut === 'in_progress';
 
-  const allerAuScan = (action: 'start' | 'complete') => {
-    router.push({
-      pathname: '/(driver)/scanner',
-      params: { tripId: course.id, action },
-    });
-  };
-
-  // Envoie directement le QR véhicule du chauffeur connecté, sans scanner.
-  const utiliserMonQr = async (action: 'start' | 'complete') => {
-    if (!monQrVehicule) return;
+  const lancerAction = async (action: 'start' | 'complete') => {
     setChargeAction(true);
     setErreur('');
     try {
       if (action === 'start') {
-        await api.demarrerCourse(course.id, monQrVehicule);
+        await api.demarrerCourse(course.id);
       } else {
-        await api.terminerCourse(course.id, monQrVehicule);
+        await api.terminerCourse(course.id);
       }
       await charger();
     } catch (e) {
-      if (e instanceof ErreurApi && e.code === 'qr_mismatch') {
-        setErreur(t('course_erreur_qr'));
-      } else {
-        setErreur(e instanceof ErreurApi ? e.message : t('course_erreur_action'));
-      }
+      setErreur(e instanceof ErreurApi ? e.message : t('course_erreur_action'));
     } finally {
       setChargeAction(false);
     }
+  };
+
+  const confirmerAction = (action: 'start' | 'complete') => {
+    const titre = action === 'start' ? t('course_demarrer_titre') : t('course_terminer_titre');
+    const texte = action === 'start' ? t('course_demarrer_confirm') : t('course_terminer_confirm');
+    Alert.alert(titre, texte, [
+      { text: t('commun_confirmer_non'), style: 'cancel' },
+      { text: t('commun_confirmer_oui'), onPress: () => lancerAction(action) },
+    ]);
   };
 
   return (
@@ -164,40 +155,20 @@ export default function EcranDetailCourse() {
       </Carte>
 
       {peutDemarrer && (
-        <>
-          <Bouton
-            titre={t('course_scanner_demarrer')}
-            icone="qr-code-outline"
-            onPress={() => allerAuScan('start')}
-          />
-          {monQrVehicule && (
-            <Bouton
-              titre={t('course_mon_qr')}
-              icone="car-outline"
-              variante="secondaire"
-              onPress={() => utiliserMonQr('start')}
-              charge={chargeAction}
-            />
-          )}
-        </>
+        <Bouton
+          titre={t('course_demarrer_bouton')}
+          icone="play-circle-outline"
+          onPress={() => confirmerAction('start')}
+          charge={chargeAction}
+        />
       )}
       {peutTerminer && (
-        <>
-          <Bouton
-            titre={t('course_scanner_terminer')}
-            icone="qr-code-outline"
-            onPress={() => allerAuScan('complete')}
-          />
-          {monQrVehicule && (
-            <Bouton
-              titre={t('course_mon_qr')}
-              icone="car-outline"
-              variante="secondaire"
-              onPress={() => utiliserMonQr('complete')}
-              charge={chargeAction}
-            />
-          )}
-        </>
+        <Bouton
+          titre={t('course_terminer_bouton')}
+          icone="flag-outline"
+          onPress={() => confirmerAction('complete')}
+          charge={chargeAction}
+        />
       )}
       {statut === 'requested' && (
         <EncartInfo icone="time-outline" ton="attente">

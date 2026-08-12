@@ -153,13 +153,13 @@ describe('Hôtel — réservation de taxi pour un client', () => {
     const started = await request(app)
       .patch(`/api/trips/${trip.id}/start`)
       .set(authHeaders(driverToken))
-      .send({ qrCode: driver.vehicle_qr_code });
+      .send({});
     assert.equal(started.status, 200);
 
     const completed = await request(app)
       .patch(`/api/trips/${trip.id}/complete`)
       .set(authHeaders(driverToken))
-      .send({ qrCode: driver.vehicle_qr_code });
+      .send({});
     assert.equal(completed.status, 200);
     assert.equal(completed.body.status, 'completed');
 
