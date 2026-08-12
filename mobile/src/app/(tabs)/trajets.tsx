@@ -19,6 +19,7 @@ import { couleurs, espaces, ombres, rayons } from '@/lib/theme';
 import {
   champ,
   formaterPrix,
+  trajetExpire,
   type StatutTrajet,
   type Trajet,
   type TypeTrajet,
@@ -63,15 +64,17 @@ export default function EcranTrajets() {
     }, [rafraichir])
   );
 
-  // Courses affichées : les actives toujours, les terminées/annulées
-  // seulement si elles sont postérieures au dernier coup de balai.
-  const estFinie = (trajet: Trajet) =>
-    STATUTS_FINIS.includes(champ<StatutTrajet>(trajet, 'status', 'statut') ?? 'requested');
+  // Courses affichées : les actives toujours ; les terminées, annulées ou
+  // EXPIRÉES (jamais payées, heure passée) seulement si elles sont
+  // postérieures au dernier coup de balai.
+  const estNettoyable = (trajet: Trajet) =>
+    STATUTS_FINIS.includes(champ<StatutTrajet>(trajet, 'status', 'statut') ?? 'requested') ||
+    trajetExpire(trajet);
   const visibles = trajets.filter(
     (trajet) =>
-      !estFinie(trajet) || !estBalaye(champ(trajet, 'created_at', 'createdAt'), balai)
+      !estNettoyable(trajet) || !estBalaye(champ(trajet, 'created_at', 'createdAt'), balai)
   );
-  const nbNettoyables = visibles.filter(estFinie).length;
+  const nbNettoyables = visibles.filter(estNettoyable).length;
 
   const faireLeMenage = () => {
     if (!proprietaireId) return;

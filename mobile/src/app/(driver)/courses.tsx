@@ -31,6 +31,7 @@ import {
   formaterDate,
   formaterMontant,
   formaterPrix,
+  trajetExpire,
   type Colis,
   type StatutTrajet,
   type Trajet,
@@ -174,17 +175,18 @@ export default function EcranCourses() {
     setColisMasques([]);
   };
 
-  // « Faire le ménage » : masque les courses terminées/annulées antérieures
-  // au coup de balai (local au téléphone — les gains restent comptés).
-  const estFinie = (trajet: Trajet) => {
+  // « Faire le ménage » : masque les courses terminées, annulées ou EXPIRÉES
+  // (jamais payées, heure passée) antérieures au coup de balai — local au
+  // téléphone, les gains restent comptés.
+  const estNettoyable = (trajet: Trajet) => {
     const statut = champ<StatutTrajet>(trajet, 'status', 'statut');
-    return statut === 'completed' || statut === 'cancelled';
+    return statut === 'completed' || statut === 'cancelled' || trajetExpire(trajet);
   };
   const coursesVisibles = recentes.filter(
     (trajet) =>
-      !estFinie(trajet) || !estBalaye(champ(trajet, 'created_at', 'createdAt'), balai)
+      !estNettoyable(trajet) || !estBalaye(champ(trajet, 'created_at', 'createdAt'), balai)
   );
-  const nbNettoyables = coursesVisibles.filter(estFinie).length;
+  const nbNettoyables = coursesVisibles.filter(estNettoyable).length;
 
   const faireLeMenage = () => {
     if (!chauffeurId) return;

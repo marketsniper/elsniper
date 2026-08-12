@@ -340,9 +340,9 @@ const CHAINES = {
   menage_bouton_colis: { fr: '🧹 Effacer les anciens colis', en: '🧹 Clear old parcels', sw: '🧹 Futa mizigo ya zamani' },
   menage_titre: { fr: 'Faire le ménage ?', en: 'Clean up?', sw: 'Kufanya usafi?' },
   menage_texte: {
-    fr: 'Les éléments terminés ou annulés seront masqués de cette liste, sur ce téléphone uniquement. Ils restent enregistrés chez zanziGo (historique et gains).',
-    en: 'Finished or cancelled items will be hidden from this list, on this phone only. They stay recorded at zanziGo (history and earnings).',
-    sw: 'Vitu vilivyokamilika au kughairiwa vitafichwa kwenye orodha hii, kwenye simu hii tu. Vinabaki kumbukumbu kwa zanziGo (historia na mapato).',
+    fr: 'Les éléments terminés, annulés ou expirés seront masqués de cette liste, sur ce téléphone uniquement. Ils restent enregistrés chez zanziGo (historique et gains).',
+    en: 'Finished, cancelled or expired items will be hidden from this list, on this phone only. They stay recorded at zanziGo (history and earnings).',
+    sw: 'Vitu vilivyokamilika, kughairiwa au kuisha muda vitafichwa kwenye orodha hii, kwenye simu hii tu. Vinabaki kumbukumbu kwa zanziGo (historia na mapato).',
   },
   menage_confirmer: { fr: 'Effacer', en: 'Clear', sw: 'Futa' },
   colis_masquer: { fr: 'Pas intéressé', en: 'Not interested', sw: 'Sivutiwi' },

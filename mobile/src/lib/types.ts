@@ -240,6 +240,31 @@ export function formaterMontant(montant: number | string, devise: string): strin
   return `${montant} ${devise}`.trim();
 }
 
+/**
+ * Course « expirée » : jamais payée (demandée ou chauffeur confirmé) et dont
+ * l'heure — programmée, sinon la création — est passée depuis plus de 24 h.
+ * Elle n'aura plus lieu : le ménage peut la masquer.
+ */
+export function trajetExpire(trajet: Trajet): boolean {
+  const statut = champ<StatutTrajet>(trajet, 'status', 'statut');
+  if (statut !== 'requested' && statut !== 'driver_confirmed') return false;
+  const quand = new Date(
+    String(champ(trajet, 'scheduled_at', 'scheduledAt', 'created_at', 'createdAt') ?? '')
+  ).getTime();
+  return Number.isFinite(quand) && Date.now() - quand > 24 * 3600 * 1000;
+}
+
+/**
+ * Colis « expiré » : créé mais jamais payé depuis plus de 48 h — la demande
+ * est morte (côté chauffeurs, la bourse l'ignore déjà après 48 h).
+ */
+export function colisExpire(colis: Colis): boolean {
+  const statut = champ<StatutColis>(colis, 'status', 'statut');
+  if (statut !== 'created') return false;
+  const quand = new Date(String(champ(colis, 'created_at', 'createdAt') ?? '')).getTime();
+  return Number.isFinite(quand) && Date.now() - quand > 48 * 3600 * 1000;
+}
+
 /** Formate un prix renvoyé par l'API (price + currency). */
 export function formaterPrix(objet: Record<string, unknown> | null | undefined): string {
   const prix = champ<number | string>(objet, 'price', 'prix');

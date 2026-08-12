@@ -18,6 +18,7 @@ import { estBalaye, lireCoupDeBalai, passerCoupDeBalai } from '@/lib/menageLocal
 import { couleurs, espaces, ombres, rayons } from '@/lib/theme';
 import {
   champ,
+  colisExpire,
   formaterPrix,
   type Colis,
   type StatutColis,
@@ -65,14 +66,16 @@ export default function EcranColis() {
     }, [rafraichir])
   );
 
-  // Colis affichés : les actifs toujours, les livrés/annulés seulement s'ils
-  // sont postérieurs au dernier coup de balai.
-  const estFini = (c: Colis) =>
-    STATUTS_FINIS.includes(champ<StatutColis>(c, 'status', 'statut') ?? 'created');
+  // Colis affichés : les actifs toujours ; les livrés, annulés ou EXPIRÉS
+  // (créés mais jamais payés depuis 48 h) seulement s'ils sont postérieurs
+  // au dernier coup de balai.
+  const estNettoyable = (c: Colis) =>
+    STATUTS_FINIS.includes(champ<StatutColis>(c, 'status', 'statut') ?? 'created') ||
+    colisExpire(c);
   const visibles = colis.filter(
-    (c) => !estFini(c) || !estBalaye(champ(c, 'created_at', 'createdAt'), balai)
+    (c) => !estNettoyable(c) || !estBalaye(champ(c, 'created_at', 'createdAt'), balai)
   );
-  const nbNettoyables = visibles.filter(estFini).length;
+  const nbNettoyables = visibles.filter(estNettoyable).length;
 
   const faireLeMenage = () => {
     if (!proprietaireId) return;
