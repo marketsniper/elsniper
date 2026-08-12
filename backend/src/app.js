@@ -95,19 +95,43 @@ small{color:#8A7168;display:block;margin-top:14px;line-height:1.5}small a{color:
 </head><body><main>
 <h1>zanziGo</h1>
 <p><strong>Taxi &amp; colis à Zanzibar</strong> — dernière version, toujours à jour.</p>
-<a class="bouton" href="https://expo.dev/artifacts/eas/VqLc0SJz1Ssgex9fTWiQ93Y6S020eCuj3a_Pf6YrWcU.apk">📥 Installer sur Android (APK)</a>
-<p>Android : touchez le bouton, acceptez l'installation, c'est tout —
-l'app s'installe avec son icône, sans aucun compte.</p>
+<div id="zone-android">
+<a class="bouton" href="https://expo.dev/artifacts/eas/VqLc0SJz1Ssgex9fTWiQ93Y6S020eCuj3a_Pf6YrWcU.apk">📥 Installer zanziGo (Android)</a>
+<p>Touchez le bouton, acceptez l'installation (« Installer quand même » si
+votre téléphone le demande) — l'app s'installe avec son icône 🌅, sans aucun
+compte. N'utilisez PAS Expo Go sur Android.</p>
+</div>
+<div id="zone-iphone">
 <p><strong>iPhone</strong> : pendant le pilote, l'accès se fait sur invitation —
 écrivez-nous sur <a href="https://wa.me/255666241749">WhatsApp</a> et nous vous
 ouvrons l'accès en quelques minutes. L'app arrive bientôt sur les stores.</p>
+</div>
+<div id="zone-expogo">
 <a class="bouton secondaire" href="${lienExpo}">📱 Équipe &amp; testeurs invités : ouvrir dans Expo Go</a>
-<small>Testeurs invités : installez d'abord Expo Go
+<small>Testeurs invités uniquement : installez Expo Go
 (<a href="https://apps.apple.com/app/expo-go/id982107779">App Store</a> ·
 <a href="https://play.google.com/store/apps/details?id=host.exp.exponent">Google Play</a>),
-connectez-vous avec VOTRE compte Expo invité, puis rouvrez cette page.
-Astuce : si l'app semble en retard, fermez-la complètement et rouvrez-la deux fois.
-<a href="/confidentialite">Politique de confidentialité</a></small>
+connectez-vous avec VOTRE compte Expo invité, puis rouvrez cette page.</small>
+</div>
+<small>Astuce : si l'app semble en retard, fermez-la complètement et rouvrez-la
+deux fois. <a href="/confidentialite">Politique de confidentialité</a></small>
+<script>
+// Chaque téléphone ne voit que SON chemin : Android → APK (Expo Go caché,
+// source de confusion) ; iPhone → invitation ; ordinateur → tout.
+(function () {
+  var ua = navigator.userAgent || '';
+  var cacher = function (id) {
+    var zone = document.getElementById(id);
+    if (zone) zone.style.display = 'none';
+  };
+  if (/Android/i.test(ua)) {
+    cacher('zone-iphone');
+    cacher('zone-expogo');
+  } else if (/iPhone|iPad|iPod/i.test(ua)) {
+    cacher('zone-android');
+  }
+})();
+</script>
 </main></body></html>`
       );
   });
