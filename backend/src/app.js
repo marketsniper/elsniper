@@ -95,12 +95,17 @@ small{color:#8A7168;display:block;margin-top:14px;line-height:1.5}small a{color:
 </head><body><main>
 <h1>zanziGo</h1>
 <p><strong>Taxi &amp; colis à Zanzibar</strong> — dernière version, toujours à jour.</p>
-<a class="bouton" href="${lienExpo}">📱 Ouvrir dans Expo Go</a>
-<p>Il faut l'app gratuite <strong>Expo Go</strong> :</p>
-<a class="bouton secondaire" href="https://apps.apple.com/app/expo-go/id982107779">App Store (iPhone)</a>
-<a class="bouton secondaire" href="https://play.google.com/store/apps/details?id=host.exp.exponent">Google Play (Android)</a>
-<small>Android sans Expo Go : installez l'application zanziGo directement —
-<a href="https://expo.dev/artifacts/eas/VqLc0SJz1Ssgex9fTWiQ93Y6S020eCuj3a_Pf6YrWcU.apk">télécharger l'APK</a>.
+<a class="bouton" href="https://expo.dev/artifacts/eas/VqLc0SJz1Ssgex9fTWiQ93Y6S020eCuj3a_Pf6YrWcU.apk">📥 Installer sur Android (APK)</a>
+<p>Android : touchez le bouton, acceptez l'installation, c'est tout —
+l'app s'installe avec son icône, sans aucun compte.</p>
+<p><strong>iPhone</strong> : pendant le pilote, l'accès se fait sur invitation —
+écrivez-nous sur <a href="https://wa.me/255666241749">WhatsApp</a> et nous vous
+ouvrons l'accès en quelques minutes. L'app arrive bientôt sur les stores.</p>
+<a class="bouton secondaire" href="${lienExpo}">📱 Équipe &amp; testeurs invités : ouvrir dans Expo Go</a>
+<small>Testeurs invités : installez d'abord Expo Go
+(<a href="https://apps.apple.com/app/expo-go/id982107779">App Store</a> ·
+<a href="https://play.google.com/store/apps/details?id=host.exp.exponent">Google Play</a>),
+connectez-vous avec VOTRE compte Expo invité, puis rouvrez cette page.
 Astuce : si l'app semble en retard, fermez-la complètement et rouvrez-la deux fois.
 <a href="/confidentialite">Politique de confidentialité</a></small>
 </main></body></html>`
