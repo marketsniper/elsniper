@@ -107,26 +107,29 @@ main{text-align:center;padding:28px;max-width:480px}h1{color:#E4572E;font-size:4
 p{color:#8A7168;margin:10px auto;line-height:1.5}
 .bouton{display:block;background:#E4572E;color:#FFF8F2;text-decoration:none;font-weight:700;font-size:18px;padding:16px 22px;border-radius:14px;margin:18px auto}
 .secondaire{background:#FFFDFA;color:#B93C1B;border:2px solid #E4572E}
+.separateur{display:flex;align-items:center;gap:10px;color:#8A7168;font-size:13px;margin:26px 0 14px;text-transform:uppercase;letter-spacing:.5px}
+.separateur::before,.separateur::after{content:"";flex:1;height:1px;background:#F0DFD2}
 small{color:#8A7168;display:block;margin-top:14px;line-height:1.5}small a{color:#B93C1B}</style>
 </head><body><main>
 <h1>zanziGo</h1>
 <p><strong>Taxi &amp; colis à Zanzibar</strong> — dernière version, toujours à jour.</p>
+
+<a class="bouton" href="/web">🌐 Ouvrir zanziGo maintenant</a>
+<p>Aucune installation, aucun compte à créer avant de commencer — l'app
+s'ouvre directement dans votre navigateur, sur téléphone comme sur
+ordinateur. Touristes, résidents, hôtels : c'est ici.</p>
+
+<div class="separateur">Vous êtes chauffeur zanziGo ?</div>
 <div id="zone-android">
-<a class="bouton" href="https://expo.dev/artifacts/eas/kM6cP9BmGjkwOHQH2LenHGHHF0oBldgFlQYLQTRUCx0.apk">📥 Installer zanziGo (Android)</a>
+<a class="bouton secondaire" href="https://expo.dev/artifacts/eas/kM6cP9BmGjkwOHQH2LenHGHHF0oBldgFlQYLQTRUCx0.apk">📥 Installer l'app chauffeur (Android)</a>
 <p>Touchez le bouton, acceptez l'installation (« Installer quand même » si
 votre téléphone le demande) — l'app s'installe avec son icône 🌅, sans aucun
 compte. N'utilisez PAS Expo Go sur Android.</p>
 </div>
 <div id="zone-iphone">
-<p><strong>iPhone</strong> : pendant le pilote, l'accès se fait sur invitation —
+<p>Sur iPhone, l'app chauffeur est en accès sur invitation pendant le pilote —
 écrivez-nous sur <a href="https://wa.me/255666241749">WhatsApp</a> et nous vous
-ouvrons l'accès en quelques minutes. L'app arrive bientôt sur les stores.</p>
-</div>
-<div id="zone-ordinateur">
-<a class="bouton secondaire" href="/web">💻 Hôtels : ouvrir zanziGo sur ordinateur</a>
-<small>Pour les réceptions d'hôtel : zanziGo fonctionne aussi dans le
-navigateur — connectez-vous avec le numéro de l'hôtel, réservez des taxis et
-envoyez des colis pour vos clients, sans téléphone.</small>
+ouvrons l'accès en quelques minutes.</p>
 </div>
 <div id="zone-expogo">
 <a class="bouton secondaire" href="${lienExpo}">📱 Équipe &amp; testeurs invités : ouvrir dans Expo Go</a>
@@ -138,8 +141,8 @@ connectez-vous avec VOTRE compte Expo invité, puis rouvrez cette page.</small>
 <small>Astuce : si l'app semble en retard, fermez-la complètement et rouvrez-la
 deux fois. <a href="/confidentialite">Politique de confidentialité</a></small>
 <script>
-// Chaque téléphone ne voit que SON chemin : Android → APK (Expo Go caché,
-// source de confusion) ; iPhone → invitation ; ordinateur → tout.
+// Le raccourci chauffeur ne montre que SON chemin : Android → APK
+// (Expo Go caché, source de confusion) ; iPhone → invitation.
 (function () {
   var ua = navigator.userAgent || '';
   var cacher = function (id) {
@@ -149,10 +152,8 @@ deux fois. <a href="/confidentialite">Politique de confidentialité</a></small>
   if (/Android/i.test(ua)) {
     cacher('zone-iphone');
     cacher('zone-expogo');
-    cacher('zone-ordinateur');
   } else if (/iPhone|iPad|iPod/i.test(ua)) {
     cacher('zone-android');
-    cacher('zone-ordinateur');
   }
 })();
 </script>
