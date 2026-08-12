@@ -1,3 +1,5 @@
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import express from 'express';
 import rateLimit from 'express-rate-limit';
 import { config } from './config.js';
@@ -51,6 +53,20 @@ export function createApp() {
   // Fichiers uploadés en mode dev (fallback disque local)
   app.use('/uploads', express.static(localUploadsDir));
 
+  // Version web de l'application (hôtels sur ordinateur) : export Expo web
+  // copié dans backend/public/web. Application à page unique — toute route
+  // /web/* inconnue renvoie index.html, le routage se fait dans le navigateur.
+  const webAppDir = path.join(
+    path.dirname(fileURLToPath(import.meta.url)),
+    '..',
+    'public',
+    'web'
+  );
+  app.use('/web', express.static(webAppDir, { maxAge: '1h' }));
+  app.get('/web/*', (_req, res) =>
+    res.sendFile(path.join(webAppDir, 'index.html'))
+  );
+
   app.get('/health', (_req, res) => res.json({ status: 'ok' }));
   app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
 
@@ -96,7 +112,7 @@ small{color:#8A7168;display:block;margin-top:14px;line-height:1.5}small a{color:
 <h1>zanziGo</h1>
 <p><strong>Taxi &amp; colis à Zanzibar</strong> — dernière version, toujours à jour.</p>
 <div id="zone-android">
-<a class="bouton" href="https://expo.dev/artifacts/eas/VqLc0SJz1Ssgex9fTWiQ93Y6S020eCuj3a_Pf6YrWcU.apk">📥 Installer zanziGo (Android)</a>
+<a class="bouton" href="https://expo.dev/artifacts/eas/kM6cP9BmGjkwOHQH2LenHGHHF0oBldgFlQYLQTRUCx0.apk">📥 Installer zanziGo (Android)</a>
 <p>Touchez le bouton, acceptez l'installation (« Installer quand même » si
 votre téléphone le demande) — l'app s'installe avec son icône 🌅, sans aucun
 compte. N'utilisez PAS Expo Go sur Android.</p>
@@ -105,6 +121,12 @@ compte. N'utilisez PAS Expo Go sur Android.</p>
 <p><strong>iPhone</strong> : pendant le pilote, l'accès se fait sur invitation —
 écrivez-nous sur <a href="https://wa.me/255666241749">WhatsApp</a> et nous vous
 ouvrons l'accès en quelques minutes. L'app arrive bientôt sur les stores.</p>
+</div>
+<div id="zone-ordinateur">
+<a class="bouton secondaire" href="/web">💻 Hôtels : ouvrir zanziGo sur ordinateur</a>
+<small>Pour les réceptions d'hôtel : zanziGo fonctionne aussi dans le
+navigateur — connectez-vous avec le numéro de l'hôtel, réservez des taxis et
+envoyez des colis pour vos clients, sans téléphone.</small>
 </div>
 <div id="zone-expogo">
 <a class="bouton secondaire" href="${lienExpo}">📱 Équipe &amp; testeurs invités : ouvrir dans Expo Go</a>
@@ -127,8 +149,10 @@ deux fois. <a href="/confidentialite">Politique de confidentialité</a></small>
   if (/Android/i.test(ua)) {
     cacher('zone-iphone');
     cacher('zone-expogo');
+    cacher('zone-ordinateur');
   } else if (/iPhone|iPad|iPod/i.test(ua)) {
     cacher('zone-android');
+    cacher('zone-ordinateur');
   }
 })();
 </script>

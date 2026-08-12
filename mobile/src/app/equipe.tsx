@@ -9,9 +9,9 @@
 //  5. Hôtels à vérifier → appeler l'établissement puis Valider / Refuser ;
 //  6. Mes taxis → tous les chauffeurs vérifiés, dernière position GPS
 //     (lien Google Maps) et radiation avec confirmation.
-// La clé est persistée dans SecureStore et vérifiée par un premier appel.
+// La clé est persistée localement et vérifiée par un premier appel.
 import { Ionicons } from '@expo/vector-icons';
-import * as SecureStore from 'expo-secure-store';
+import { ecrireStockage, lireStockage, supprimerStockage } from '@/lib/stockage';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Alert, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -65,7 +65,7 @@ function libelleChauffeur(chauffeur: Chauffeur): string {
 
 export default function EcranEquipe() {
   const { t } = useT();
-  // null = lecture de SecureStore en cours ; '' = pas de clé enregistrée.
+  // null = lecture du stockage en cours ; '' = pas de clé enregistrée.
   const [cle, setCle] = useState<string | null>(null);
   const [saisie, setSaisie] = useState('');
   const [chargeActivation, setChargeActivation] = useState(false);
@@ -121,7 +121,7 @@ export default function EcranEquipe() {
   // Lecture de la clé enregistrée au montage ; si présente, mode actif direct.
   useEffect(() => {
     (async () => {
-      const enregistree = (await SecureStore.getItemAsync(CLE_STOCKAGE)) ?? '';
+      const enregistree = (await lireStockage(CLE_STOCKAGE)) ?? '';
       if (enregistree) definirCleEquipe(enregistree);
       setCle(enregistree);
     })();
@@ -139,7 +139,7 @@ export default function EcranEquipe() {
     definirCleEquipe(candidate);
     try {
       await api.listerCoursesEquipe('requested');
-      await SecureStore.setItemAsync(CLE_STOCKAGE, candidate);
+      await ecrireStockage(CLE_STOCKAGE, candidate);
       setCle(candidate);
       setSaisie('');
     } catch (e) {
@@ -153,7 +153,7 @@ export default function EcranEquipe() {
   };
 
   const quitter = async () => {
-    await SecureStore.deleteItemAsync(CLE_STOCKAGE);
+    await supprimerStockage(CLE_STOCKAGE);
     definirCleEquipe(null);
     setCle('');
     setCourses([]);

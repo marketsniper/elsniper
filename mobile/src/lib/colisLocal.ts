@@ -1,10 +1,10 @@
-// Mémorisation locale d'identifiants (SecureStore), par propriétaire.
+// Mémorisation locale d'identifiants (stockage local), par propriétaire.
 // - Colis : l'API n'expose pas de liste des colis d'un utilisateur (seuls les
 //   hôtels ont GET /hotels/:id/packages) → on garde les ids créés depuis ce
 //   téléphone et on recharge chaque colis via GET /packages/:id.
 // - Courses chauffeur : pas de liste côté API non plus → on garde les ids de
 //   courses récemment ouvertes par le chauffeur.
-import * as SecureStore from 'expo-secure-store';
+import { ecrireStockage, lireStockage, supprimerStockage } from './stockage';
 
 function cle(espace: string, proprietaireId: string): string {
   // SecureStore n'accepte que [A-Za-z0-9._-] dans les clés.
@@ -13,7 +13,7 @@ function cle(espace: string, proprietaireId: string): string {
 
 async function lister(espace: string, proprietaireId: string): Promise<string[]> {
   try {
-    const brut = await SecureStore.getItemAsync(cle(espace, proprietaireId));
+    const brut = await lireStockage(cle(espace, proprietaireId));
     const ids = brut ? (JSON.parse(brut) as unknown) : [];
     return Array.isArray(ids) ? ids.filter((id): id is string => typeof id === 'string') : [];
   } catch {
@@ -25,7 +25,7 @@ async function ajouter(espace: string, proprietaireId: string, id: string): Prom
   const ids = await lister(espace, proprietaireId);
   if (!ids.includes(id)) {
     ids.unshift(id); // le plus récent en premier
-    await SecureStore.setItemAsync(cle(espace, proprietaireId), JSON.stringify(ids.slice(0, 50)));
+    await ecrireStockage(cle(espace, proprietaireId), JSON.stringify(ids.slice(0, 50)));
   }
 }
 
@@ -44,5 +44,5 @@ export const listerColisMasques = (chauffeurId: string) => lister('colis_masques
 export const masquerColis = (chauffeurId: string, colisId: string) =>
   ajouter('colis_masques', chauffeurId, colisId);
 export async function effacerColisMasques(chauffeurId: string): Promise<void> {
-  await SecureStore.deleteItemAsync(cle('colis_masques', chauffeurId));
+  await supprimerStockage(cle('colis_masques', chauffeurId));
 }

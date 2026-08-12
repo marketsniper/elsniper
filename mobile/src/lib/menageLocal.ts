@@ -3,7 +3,7 @@
 // supprimé chez zanziGo — l'historique officiel (gains des chauffeurs,
 // tableau de bord équipe, comptabilité) reste complet. On ne stocke que
 // l'horodatage du coup de balai, par liste et par propriétaire.
-import * as SecureStore from 'expo-secure-store';
+import { ecrireStockage, lireStockage } from './stockage';
 
 function cle(espace: string, proprietaireId: string): string {
   // SecureStore n'accepte que [A-Za-z0-9._-] dans les clés.
@@ -13,7 +13,7 @@ function cle(espace: string, proprietaireId: string): string {
 /** Horodatage (ms) du dernier coup de balai — 0 si jamais passé. */
 export async function lireCoupDeBalai(espace: string, proprietaireId: string): Promise<number> {
   try {
-    const brut = await SecureStore.getItemAsync(cle(espace, proprietaireId));
+    const brut = await lireStockage(cle(espace, proprietaireId));
     const valeur = brut ? Number(brut) : 0;
     return Number.isFinite(valeur) ? valeur : 0;
   } catch {
@@ -24,7 +24,7 @@ export async function lireCoupDeBalai(espace: string, proprietaireId: string): P
 /** Passe le coup de balai maintenant et renvoie l'horodatage enregistré. */
 export async function passerCoupDeBalai(espace: string, proprietaireId: string): Promise<number> {
   const maintenant = Date.now();
-  await SecureStore.setItemAsync(cle(espace, proprietaireId), String(maintenant));
+  await ecrireStockage(cle(espace, proprietaireId), String(maintenant));
   return maintenant;
 }
 

@@ -1,0 +1,5 @@
+
+# Version web (export Expo copie dans backend/public/web) : ses assets
+# vivent sous un dossier nomme node_modules - ne pas les ignorer.
+!backend/public/web/
+!backend/public/web/**

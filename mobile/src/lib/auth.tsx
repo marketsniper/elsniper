@@ -1,5 +1,5 @@
-// Contexte d'authentification : session JWT persistée dans SecureStore.
-import * as SecureStore from 'expo-secure-store';
+// Contexte d'authentification : session JWT persistée localement
+// (SecureStore sur téléphone, localStorage sur le web — voir lib/stockage).
 import React, {
   createContext,
   useCallback,
@@ -10,6 +10,7 @@ import React, {
 } from 'react';
 
 import { definirJeton } from './api';
+import { ecrireStockage, lireStockage, supprimerStockage } from './stockage';
 import type { SessionAuth } from './types';
 
 const CLE_SESSION = 'zanzigo_session';
@@ -17,7 +18,7 @@ const CLE_SESSION = 'zanzigo_session';
 interface ContexteAuth {
   /** Session courante, ou null si déconnecté. */
   session: SessionAuth | null;
-  /** True pendant la lecture initiale de SecureStore. */
+  /** True pendant la lecture initiale du stockage local. */
   chargement: boolean;
   connexion: (session: SessionAuth) => Promise<void>;
   deconnexion: () => Promise<void>;
@@ -35,7 +36,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     (async () => {
       try {
-        const brut = await SecureStore.getItemAsync(CLE_SESSION);
+        const brut = await lireStockage(CLE_SESSION);
         if (brut) {
           const restauree = JSON.parse(brut) as SessionAuth;
           if (restauree?.token) {
@@ -45,7 +46,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       } catch {
         // Session illisible : on repart de zéro.
-        await SecureStore.deleteItemAsync(CLE_SESSION).catch(() => {});
+        await supprimerStockage(CLE_SESSION).catch(() => {});
       } finally {
         setChargement(false);
       }
@@ -55,13 +56,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const connexion = useCallback(async (nouvelle: SessionAuth) => {
     definirJeton(nouvelle.token);
     setSession(nouvelle);
-    await SecureStore.setItemAsync(CLE_SESSION, JSON.stringify(nouvelle));
+    await ecrireStockage(CLE_SESSION, JSON.stringify(nouvelle));
   }, []);
 
   const deconnexion = useCallback(async () => {
     definirJeton(null);
     setSession(null);
-    await SecureStore.deleteItemAsync(CLE_SESSION).catch(() => {});
+    await supprimerStockage(CLE_SESSION).catch(() => {});
   }, []);
 
   const majSession = useCallback(async (maj: Partial<SessionAuth>) => {
@@ -72,7 +73,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return suivante;
     });
     if (suivante) {
-      await SecureStore.setItemAsync(CLE_SESSION, JSON.stringify(suivante));
+      await ecrireStockage(CLE_SESSION, JSON.stringify(suivante));
     }
   }, []);
 

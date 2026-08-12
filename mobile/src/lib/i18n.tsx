@@ -1,9 +1,9 @@
 // i18n maison de zanziGo — français / anglais / swahili, sans dépendance.
 // - CHAINES : dictionnaire {cle: {fr, en, sw}} de TOUTES les chaînes visibles.
-// - LangueProvider / useT() : langue active persistée dans SecureStore,
+// - LangueProvider / useT() : langue active persistée localement,
 //   t(cle, params?) avec interpolation {nom}.
 // - Les montants, devises et noms de lieux ne sont jamais traduits.
-import * as SecureStore from 'expo-secure-store';
+import { ecrireStockage, lireStockage } from './stockage';
 import React, {
   createContext,
   useCallback,
@@ -1629,7 +1629,7 @@ export function LangueProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     (async () => {
       try {
-        const memorisee = await SecureStore.getItemAsync(CLE_LANGUE);
+        const memorisee = await lireStockage(CLE_LANGUE);
         if (memorisee === 'fr' || memorisee === 'en' || memorisee === 'sw') {
           setLangue(memorisee);
         }
@@ -1641,7 +1641,7 @@ export function LangueProvider({ children }: { children: React.ReactNode }) {
 
   const changerLangue = useCallback((nouvelle: Langue) => {
     setLangue(nouvelle);
-    SecureStore.setItemAsync(CLE_LANGUE, nouvelle).catch(() => {});
+    ecrireStockage(CLE_LANGUE, nouvelle).catch(() => {});
   }, []);
 
   const t = useCallback<FonctionT>(

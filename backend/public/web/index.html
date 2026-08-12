@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <title>zanziGo — Taxi &amp; colis à Zanzibar</title>
+    <!-- The `react-native-web` recommended style reset: https://necolas.github.io/react-native-web/docs/setup/#root-element -->
+    <style id="expo-reset">
+      /* These styles make the body full-height */
+      html,
+      body {
+        height: 100%;
+      }
+      /* These styles disable body scrolling if you are using <ScrollView> */
+      body {
+        overflow: hidden;
+      }
+      /* These styles make the root element full-height */
+      #root {
+        display: flex;
+        height: 100%;
+        flex: 1;
+      }
+    </style>
+    <!-- Ajout zanziGo : sur grand écran (réception d'hôtel), l'app s'affiche
+         comme une colonne centrée façon téléphone plutôt qu'étirée. -->
+    <style id="zanzigo-web">
+      body {
+        background: #33222b;
+      }
+      @media (min-width: 720px) {
+        #root {
+          max-width: 640px;
+          width: 100%;
+          margin: 0 auto;
+          box-shadow: 0 0 48px rgba(0, 0, 0, 0.45);
+          position: relative;
+          overflow: hidden;
+        }
+      }
+    </style>
+  <link rel="icon" href="/web/favicon.ico" /></head>
+
+  <body>
+    <!-- Use static rendering with Expo Router to support running without JavaScript. -->
+    <noscript>
+      You need to enable JavaScript to run this app.
+    </noscript>
+    <!-- The root element for your Expo app. -->
+    <div id="root"></div>
+  <script src="/web/_expo/static/js/web/entry-fa751bffa29c812e9b07f530897c93bc.js" defer></script>
+</body>
+</html>

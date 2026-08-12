@@ -2,3 +2,8 @@ node_modules/
 uploads/
 .env
 *.log
+
+# Version web (export Expo copie dans public/web) : ses assets vivent
+# sous un dossier nomme node_modules - ne pas les ignorer.
+!public/web/
+!public/web/**
