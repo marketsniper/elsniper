@@ -116,14 +116,14 @@ const CHAINES = {
   // --- Types de course -----------------------------------------------------
   type_trajet_private: { fr: 'Course privée', en: 'Private ride', sw: 'Safari binafsi' },
   type_trajet_shared_tourist: {
-    fr: 'Navette partagée',
-    en: 'Shared shuttle',
-    sw: 'Safari ya pamoja',
+    fr: 'Taxi partagé',
+    en: 'Shared taxi',
+    sw: 'Teksi ya pamoja',
   },
   type_trajet_shared_local: {
-    fr: 'Navette locale',
-    en: 'Local shuttle',
-    sw: 'Safari ya wenyeji',
+    fr: 'Taxi partagé local',
+    en: 'Local shared taxi',
+    sw: 'Teksi ya pamoja ya wenyeji',
   },
   type_trajet_posted_return: {
     fr: 'Retour affiché',
@@ -798,9 +798,9 @@ const CHAINES = {
   },
   reserver_partage: { fr: 'Partagé', en: 'Shared', sw: 'Pamoja' },
   reserver_partage_desc: {
-    fr: 'Une place dans une navette.',
-    en: 'A seat in a shuttle.',
-    sw: 'Kiti kwenye safari ya pamoja.',
+    fr: 'Une place dans un taxi partagé.',
+    en: 'A seat in a shared taxi.',
+    sw: 'Kiti kwenye teksi ya pamoja.',
   },
   reserver_precision: {
     fr: 'Précision (hôtel, adresse…) — optionnel',
@@ -889,9 +889,9 @@ const CHAINES = {
     sw: 'Simu ya mteja si sahihi (muundo wa kimataifa +255…).',
   },
   reserver_erreur_local_only: {
-    fr: 'La navette locale est réservée aux locaux vérifiés (carte tanzanienne).',
-    en: 'The local shuttle is reserved for verified locals (Tanzanian ID).',
-    sw: 'Safari ya wenyeji ni kwa wazawa waliothibitishwa tu (kitambulisho cha NIDA).',
+    fr: 'Le taxi partagé local est réservé aux locaux vérifiés (carte tanzanienne).',
+    en: 'The local shared taxi is reserved for verified locals (Tanzanian ID).',
+    sw: 'Teksi ya pamoja ya wenyeji ni kwa wazawa waliothibitishwa tu (kitambulisho cha NIDA).',
   },
   reserver_erreur_local_attente: {
     fr: 'Validation en cours — vous pourrez réserver une fois votre carte d’identité validée.',
@@ -1417,6 +1417,17 @@ const CHAINES = {
     sw: 'Makadirio ya mapato halisi (viti vilivyohifadhiwa)',
   },
   gain_net_par_place: { fr: 'net', en: 'net', sw: 'halisi' },
+  annonce_prix_label: { fr: 'Prix par place', en: 'Price per seat', sw: 'Bei kwa kiti' },
+  annonces_prix_deux: {
+    fr: '{tzs} (locaux) · {usd} (touristes)',
+    en: '{tzs} (locals) · {usd} (tourists)',
+    sw: '{tzs} (wazawa) · {usd} (watalii)',
+  },
+  annonce_prix_info: {
+    fr: 'Chaque client paie dans SA devise : les locaux en shillings (vous touchez 90 %), les touristes et résidents en dollars (vous touchez 80 %). Voir un prix en dollars pour un touriste est donc normal.',
+    en: 'Each client pays in THEIR currency: locals in shillings (you receive 90%), tourists and residents in dollars (you receive 80%). Seeing a dollar price for a tourist is therefore normal.',
+    sw: 'Kila mteja hulipa kwa sarafu YAKE: wazawa kwa shilingi (unapokea 90%), watalii na wakazi kwa dola (unapokea 80%). Kuona bei ya dola kwa mtalii ni jambo la kawaida.',
+  },
   resa_type_tourist: { fr: 'touriste', en: 'tourist', sw: 'mtalii' },
   resa_type_resident: { fr: 'résident', en: 'resident', sw: 'mkazi' },
   resa_type_local: { fr: 'local', en: 'local', sw: 'mzawa' },

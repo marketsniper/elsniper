@@ -90,7 +90,7 @@ router.post(
           throw new HttpError(
             403,
             'local_only',
-            "La navette locale est réservée aux locaux munis d'une carte d'identité tanzanienne"
+            "Le taxi partagé local est réservé aux locaux munis d'une carte d'identité tanzanienne"
           );
         }
         // La remise résident (-10 %) ne s'applique qu'une fois les documents
@@ -115,7 +115,7 @@ router.post(
         throw new HttpError(
           403,
           'local_only',
-          "La navette locale est réservée aux locaux munis d'une carte d'identité tanzanienne"
+          "Le taxi partagé local est réservé aux locaux munis d'une carte d'identité tanzanienne"
         );
       }
       audience = 'hotel';

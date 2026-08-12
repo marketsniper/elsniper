@@ -145,8 +145,8 @@ export const ETAPES_TRAJET: StatutTrajet[] = [
 /** Libellés français des types de course (trip_type). */
 export const LIBELLES_TYPE_TRAJET: Record<TypeTrajet, string> = {
   private: 'Course privée',
-  shared_tourist: 'Navette partagée',
-  shared_local: 'Navette locale',
+  shared_tourist: 'Taxi partagé',
+  shared_local: 'Taxi partagé local',
   posted_return: 'Retour affiché',
 };
 

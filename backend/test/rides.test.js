@@ -43,8 +43,9 @@ describe('Trajets partagés (rides)', () => {
     assert.equal(res.body.seats_available, 4);
     assert.equal(res.body.currency, 'TZS');
     assert.equal(Number(res.body.price_per_seat), 15000); // grille Nord, fixée par zanziGo
-    // Le chauffeur voit son prix local — jamais le tarif touriste.
-    assert.equal(res.body.price_per_seat_usd, undefined);
+    // Le chauffeur voit LES DEUX prix : TZS (locaux) et USD (touristes) —
+    // chaque client paie dans sa devise, le chauffeur doit le savoir.
+    assert.equal(Number(res.body.price_per_seat_usd), 18);
     assert.ok(res.body.whatsapp_link.includes('wa.me'));
   });
 

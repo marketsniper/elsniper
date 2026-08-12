@@ -71,6 +71,8 @@ export default function EcranAnnonce() {
   }
 
   const statut = champ<StatutRide>(ride, 'status', 'statut');
+  const prixTzs = champ<number | string>(ride, 'price_per_seat', 'pricePerSeat');
+  const prixUsd = champ<number | string>(ride, 'price_per_seat_usd', 'pricePerSeatUsd');
   const total = Number(champ(ride, 'seats_total', 'seatsTotal') ?? 0);
   const restantes = Number(champ(ride, 'seats_available', 'seatsAvailable') ?? 0);
   const reservations = champ<ReservationRide[]>(ride, 'bookings') ?? [];
@@ -135,8 +137,20 @@ export default function EcranAnnonce() {
           label={t('sel_date')}
           valeur={formaterDate(champ(ride, 'departure_at', 'departureAt'))}
         />
+        {prixTzs !== undefined && prixUsd !== undefined && (
+          <LigneInfo
+            label={t('annonce_prix_label')}
+            valeur={t('annonces_prix_deux', {
+              tzs: formaterMontant(prixTzs, 'TZS'),
+              usd: formaterMontant(prixUsd, 'USD'),
+            })}
+          />
+        )}
         {!!notes && <LigneInfo label={t('annonces_notes')} valeur={String(notes)} />}
       </Carte>
+
+      {/* Deux devises par conception : chaque client paie dans la sienne. */}
+      <EncartInfo icone="cash-outline">{t('annonce_prix_info')}</EncartInfo>
 
       {/* Réservations reçues : type de client et prix par place correspondant. */}
       <Carte>

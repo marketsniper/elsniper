@@ -40,6 +40,7 @@ import {
   formaterDate,
   formaterMontant,
   ORIGINES_RIDES,
+  tarifTrajetProfil,
   type ReservationRide,
   type Ride,
   type StatutRide,
@@ -77,6 +78,21 @@ export default function EcranAnnonces() {
   const [heureDepart, setHeureDepart] = useState('');
   const [places, setPlaces] = useState('4');
   const [notes, setNotes] = useState('');
+
+  // Prix par place projetés (grille zanziGo, miroir local) : shillings pour
+  // les locaux, dollars pour les touristes — affichés dès l'itinéraire choisi.
+  const itineraireChoisi =
+    origine && destination ? { depart: origine, arrivee: destination } : undefined;
+  const tarifLocalProjete = itineraireChoisi
+    ? tarifTrajetProfil('shared_local', 'local', itineraireChoisi)
+    : null;
+  const tarifTouristeProjete = itineraireChoisi
+    ? tarifTrajetProfil('shared_tourist', 'tourist', itineraireChoisi)
+    : null;
+  const prixProjetes =
+    tarifLocalProjete && tarifTouristeProjete
+      ? { tzs: tarifLocalProjete.montant, usd: tarifTouristeProjete.montant }
+      : null;
   const [erreur, setErreur] = useState('');
   const [messageOk, setMessageOk] = useState('');
   const [charge, setCharge] = useState(false);
@@ -190,6 +206,8 @@ export default function EcranAnnonces() {
 
   const carteAnnonce = (ride: Ride) => {
     const statut = champ<StatutRide>(ride, 'status', 'statut');
+    const prixTzs = champ<number | string>(ride, 'price_per_seat', 'pricePerSeat');
+    const prixUsd = champ<number | string>(ride, 'price_per_seat_usd', 'pricePerSeatUsd');
     const total = Number(champ(ride, 'seats_total', 'seatsTotal') ?? 0);
     const restantes = Number(champ(ride, 'seats_available', 'seatsAvailable') ?? 0);
     const reservations = champ<ReservationRide[]>(ride, 'bookings') ?? [];
@@ -229,6 +247,14 @@ export default function EcranAnnonces() {
             </Text>
           </View>
         </View>
+        {prixTzs !== undefined && prixUsd !== undefined && (
+          <Text style={styles.prixRide}>
+            {t('annonces_prix_deux', {
+              tzs: formaterMontant(prixTzs, 'TZS'),
+              usd: formaterMontant(prixUsd, 'USD'),
+            })}
+          </Text>
+        )}
         <View style={styles.ligneOuvrir}>
           <Text style={[styles.texteOuvrir, reservations.length > 0 && styles.texteOuvrirFort]}>
             {reservations.length > 0
@@ -268,6 +294,14 @@ export default function EcranAnnonces() {
           placeholder={t('annonces_destination_placeholder')}
           onChange={setDestination}
         />
+        {!!origine && !!destination && prixProjetes && (
+          <EncartInfo icone="cash-outline">
+            {t('annonce_prix_label')} : {t('annonces_prix_deux', {
+              tzs: formaterMontant(prixProjetes.tzs, 'TZS'),
+              usd: formaterMontant(prixProjetes.usd, 'USD'),
+            })}
+          </EncartInfo>
+        )}
         <View style={styles.rangeeChamps}>
           <View style={styles.demiChamp}>
             <Selecteur

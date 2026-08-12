@@ -153,8 +153,9 @@ router.post(
         data.notes ?? null,
       ]
     );
-    // Le chauffeur qui publie voit son prix local (TZS).
-    res.status(201).json(serializeRide(rows[0], PRICING_TZS));
+    // Le chauffeur qui publie voit LES DEUX prix (TZS locaux + USD touristes)
+    // pour comprendre que chaque client paie dans sa devise.
+    res.status(201).json(serializeRide(rows[0], { mode: 'both' }));
   })
 );
 
@@ -214,7 +215,9 @@ router.get(
 
     res.json(
       rows.map((r) => {
-        const out = serializeRide(r, PRICING_TZS);
+        // Les deux prix (TZS locaux + USD touristes) : le chauffeur voit que
+        // chaque client paie dans sa devise.
+        const out = serializeRide(r, { mode: 'both' });
         const usd = sharedSeatUsdForRoute(r.origin, r.destination);
         // Commission zanziGo par place : 10 % sur le tarif local (navette),
         // 20 % sur les places partagées USD — le chauffeur voit son net.
