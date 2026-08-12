@@ -1105,6 +1105,7 @@ const CHAINES = {
     sw: 'Namba yako iwe katika muundo wa kimataifa (+255…).',
   },
   colis_appeler_expediteur: { fr: "📞 Appeler l'expéditeur", en: '📞 Call the sender', sw: '📞 Mpigie mtumaji' },
+  colis_appeler_destinataire: { fr: '📞 Appeler le destinataire', en: '📞 Call the recipient', sw: '📞 Mpigie mpokeaji' },
   ncolis_quand: { fr: 'Quand ramasser le colis ?', en: 'When to pick up the parcel?', sw: 'Lini kuchukua mzigo?' },
   ncolis_asap: { fr: 'Dès que possible', en: 'As soon as possible', sw: 'Haraka iwezekanavyo' },
   colis_dispo_ramassage: { fr: 'À ramasser', en: 'Pick up', sw: 'Kuchukuliwa' },

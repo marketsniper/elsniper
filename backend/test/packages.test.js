@@ -576,7 +576,7 @@ describe('Colis — bourse aux colis (mode chauffeur)', () => {
     assert.equal(prise.status, 200);
     assert.ok(prise.body.driver_id);
     assert.equal(prise.body.qr_code, undefined, 'pas de QR à la réservation');
-    assert.equal(prise.body.recipient_phone, undefined, 'pas de téléphone du destinataire');
+    assert.ok(prise.body.recipient_phone, 'téléphone du destinataire fourni pour la remise');
     assert.ok(prise.body.sender_phone, "téléphone de l'expéditeur fourni pour la ramasse");
     assert.ok(prise.body.whatsapp_link, "lien WhatsApp d'information équipe");
 

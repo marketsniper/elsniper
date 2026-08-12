@@ -273,7 +273,7 @@ export default function EcranCourses() {
             const prixC = Number(champ(colis, 'price') ?? NaN);
             const commissionC = Number(champ(colis, 'commission') ?? NaN);
             const deviseC = String(champ(colis, 'currency') ?? '');
-            const telExpediteur = champ<string>(colis, 'sender_phone', 'senderPhone');
+            const telDestinataire = champ<string>(colis, 'recipient_phone', 'recipientPhone');
             const netC =
               Number.isFinite(prixC) && Number.isFinite(commissionC)
                 ? Math.round((prixC - commissionC) * 100) / 100
@@ -303,14 +303,16 @@ export default function EcranCourses() {
                     </Text>
                   )}
                 </View>
-                {!!telExpediteur && (
+                {/* Raccourci d'appel : le DESTINATAIRE — c'est lui qu'il faut
+                    joindre pour la remise du colis. */}
+                {!!telDestinataire && (
                   <Pressable
-                    onPress={() => Linking.openURL(`tel:${telExpediteur}`)}
+                    onPress={() => Linking.openURL(`tel:${telDestinataire}`)}
                     accessibilityRole="button"
                     style={({ pressed }) => [styles.ligneAppel, pressed && { opacity: 0.6 }]}
                   >
                     <Text style={styles.texteAppel}>
-                      {t('colis_appeler_expediteur')} · {telExpediteur}
+                      {t('colis_appeler_destinataire')} · {telDestinataire}
                     </Text>
                   </Pressable>
                 )}

@@ -168,10 +168,12 @@ router.get(
   })
 );
 
-// Avant le ramassage, ni QR ni téléphone du destinataire pour le chauffeur
-// (anti-fraude : le scan du colis physique reste la preuve de prise en charge).
+// Avant le ramassage, pas de QR pour le chauffeur (anti-fraude : seul le
+// scan du colis PHYSIQUE prouve la prise en charge). Le chauffeur qui a
+// réservé la livraison voit en revanche les téléphones de l'expéditeur et
+// du destinataire — nécessaires pour organiser la ramasse et la remise.
 function sansSecretsChauffeur(pkg) {
-  const { qr_code, recipient_phone, ...reste } = pkg;
+  const { qr_code, ...reste } = pkg;
   return reste;
 }
 
