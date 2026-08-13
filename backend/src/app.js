@@ -118,6 +118,9 @@ small{color:#8A7168;display:block;margin-top:14px;line-height:1.5}small a{color:
 <p>Aucune installation, aucun compte à créer avant de commencer — l'app
 s'ouvre directement dans votre navigateur, sur téléphone comme sur
 ordinateur. Touristes, résidents, hôtels : c'est ici.</p>
+<small>💡 Pour garder zanziGo sous la main : une fois la page ouverte,
+choisissez « Ajouter à l'écran d'accueil » dans le menu du navigateur —
+l'icône 🌅 s'installe comme une vraie app, en plein écran.</small>
 
 <div class="separateur">Vous êtes chauffeur zanziGo ?</div>
 <div id="zone-android">

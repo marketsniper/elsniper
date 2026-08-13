@@ -38,7 +38,14 @@
         }
       }
     </style>
-  <link rel="icon" href="/web/favicon.ico" /></head>
+  <link rel="icon" href="/web/favicon.ico" />
+    <link rel="manifest" href="/web/manifest.webmanifest" />
+    <meta name="theme-color" content="#E4572E" />
+    <link rel="apple-touch-icon" href="/web/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="zanziGo" />
+  </head>
 
   <body>
     <!-- Use static rendering with Expo Router to support running without JavaScript. -->
@@ -48,5 +55,12 @@
     <!-- The root element for your Expo app. -->
     <div id="root"></div>
   <script src="/web/_expo/static/js/web/entry-9191e15ba8a4d437bce44c5ef83fe184.js" defer></script>
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", function () {
+        navigator.serviceWorker.register("/web/service-worker.js");
+      });
+    }
+  </script>
 </body>
 </html>

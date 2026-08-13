@@ -1,0 +1,18 @@
+{
+  "name": "zanziGo — Taxi & colis à Zanzibar",
+  "short_name": "zanziGo",
+  "description": "Réservez un taxi ou envoyez un colis à Zanzibar — chauffeurs vérifiés, prix fixes.",
+  "id": "/web/",
+  "start_url": "/web/",
+  "scope": "/web/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FBF0E4",
+  "theme_color": "#E4572E",
+  "lang": "fr",
+  "icons": [
+    { "src": "/web/icone-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/web/icone-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/web/icone-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
