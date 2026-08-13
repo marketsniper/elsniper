@@ -53,6 +53,68 @@ router.get(
   })
 );
 
+// GET /payments/remboursements — les remboursements À VERSER (annulations
+// clients à +24 h du départ) : montant dû (100 % ou 50 % du paiement reçu),
+// avec le contexte de la cible. L'équipe solde chaque ligne d'un bouton
+// une fois l'argent rendu (POST /payments/:id/rembourse).
+router.get(
+  '/remboursements',
+  requireAdmin,
+  asyncHandler(async (_req, res) => {
+    const { rows } = await query(
+      `SELECT p.*,
+              t.pickup_location  AS trip_pickup,
+              t.dropoff_location AS trip_dropoff,
+              t.client_name      AS trip_client_name,
+              pk.pickup_location  AS package_pickup,
+              pk.dropoff_location AS package_dropoff,
+              pk.qr_code          AS package_qr,
+              r.origin            AS ride_origin,
+              r.destination       AS ride_destination,
+              rb.seats            AS ride_seats,
+              COALESCE(u.full_name, h.name) AS ride_client_name
+       FROM payments p
+       LEFT JOIN trips t ON t.id = p.trip_id
+       LEFT JOIN packages pk ON pk.id = p.package_id
+       LEFT JOIN ride_bookings rb ON rb.id = p.ride_booking_id
+       LEFT JOIN posted_rides r ON r.id = rb.ride_id
+       LEFT JOIN users u ON u.id = rb.user_id
+       LEFT JOIN hotels h ON h.id = rb.hotel_id
+       WHERE p.refund_due_at IS NOT NULL AND p.refunded_at IS NULL
+       ORDER BY p.refund_due_at ASC
+       LIMIT 200`
+    );
+    res.json(rows);
+  })
+);
+
+// POST /payments/:id/rembourse — l'équipe confirme avoir VERSÉ le
+// remboursement (mobile money, espèces, re-crédit hôtel…) : la ligne sort
+// de la liste des remboursements à traiter.
+router.post(
+  '/:id/rembourse',
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    const { rows } = await query(
+      `UPDATE payments SET refunded_at = now()
+       WHERE id = $1 AND refund_due_at IS NOT NULL AND refunded_at IS NULL
+       RETURNING *`,
+      [req.params.id]
+    );
+    if (!rows[0]) {
+      const paiement = await getPayment(req.params.id);
+      throw new HttpError(
+        409,
+        'refund_not_due',
+        paiement.refunded_at
+          ? 'Ce remboursement a déjà été soldé'
+          : 'Aucun remboursement n\'est dû sur ce paiement'
+      );
+    }
+    res.json(rows[0]);
+  })
+);
+
 async function getPayment(id) {
   const { rows } = await query('SELECT * FROM payments WHERE id = $1', [id]);
   if (!rows[0]) throw notFound('Paiement');

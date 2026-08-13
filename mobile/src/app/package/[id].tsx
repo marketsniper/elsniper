@@ -101,11 +101,15 @@ export default function EcranDetailColis() {
     setChargeCredit(true);
     setErreur('');
     try {
-      await api.payerColisAvecCredit(colis.id);
+      const paiement = await api.payerColisAvecCredit(colis.id);
       if (hotelId) {
         api.creditHotel(hotelId).then((c) => setSoldeCredit(c.balance)).catch(() => {});
       }
       await charger();
+      // L'équipe est prévenue du paiement par crédit : le message WhatsApp
+      // pré-rempli s'ouvre, il ne reste qu'à appuyer sur Envoyer.
+      const alerte = champ<string>(paiement, 'whatsapp_link', 'whatsappLink');
+      if (alerte) Linking.openURL(alerte).catch(() => {});
     } catch (e) {
       setErreur(e instanceof ErreurApi ? e.message : t('trip_paiement_indisponible'));
     } finally {

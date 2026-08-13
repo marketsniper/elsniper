@@ -9,6 +9,7 @@ import type {
   Paiement,
   PaiementEquipe,
   ReponseVerifieOtp,
+  ReservationPlace,
   Ride,
   StatutColis,
   StatutTrajet,
@@ -363,8 +364,10 @@ export async function confirmerPaiement(paiementId: string): Promise<Paiement> {
 }
 
 /**
- * POST /trips/:id/cancel — annulation par le réservateur tant que la course
- * n'est pas payée (sinon 409 : passer par l'équipe sur WhatsApp).
+ * POST /trips/:id/cancel — annulation par le réservateur. Course non payée :
+ * libre. Course payée avec départ planifié : barème 24/48 h (remboursement
+ * 100 % à +48 h, 50 % entre 24 h et 48 h, refusée à moins de 24 h). La
+ * réponse porte alors refund {amount, currency, rate} + whatsapp_link.
  */
 export async function annulerTrajet(id: string): Promise<Trajet> {
   return requete<Trajet>(`/trips/${id}/cancel`, { methode: 'POST' });
@@ -617,6 +620,33 @@ export async function reserverPlacesRide(id: string, seats: number): Promise<Rid
   return requete<Ride>(`/rides/${id}/book`, { methode: 'POST', corps: { seats } });
 }
 
+/**
+ * GET /rides/reservations — les places de taxi partagé réservées par le
+ * client connecté (prix dans SA devise, payé ou non, annulable ou non).
+ */
+export async function mesReservationsPlaces(): Promise<ReservationPlace[]> {
+  const reponse = await requete<unknown>('/rides/reservations');
+  return commeListe<ReservationPlace>(reponse, 'reservations');
+}
+
+/** Réponse d'annulation d'une place (remboursement éventuel + alerte équipe). */
+export interface AnnulationPlace {
+  id: string;
+  cancelled: boolean;
+  refund: { amount: number; currency: string; rate: number } | null;
+  whatsapp_link?: string;
+}
+
+/**
+ * POST /rides/reservations/:id/cancel — annule la place du client. Barème :
+ * remboursement 100 % à 48 h ou plus du départ, 50 % entre 24 h et 48 h,
+ * refusé à moins de 24 h (409 cancellation_too_late). Les places retournent
+ * automatiquement sur l'annonce du chauffeur.
+ */
+export async function annulerReservationPlace(id: string): Promise<AnnulationPlace> {
+  return requete<AnnulationPlace>(`/rides/reservations/${id}/cancel`, { methode: 'POST' });
+}
+
 /** Compteur de gains d'un chauffeur (GET /drivers/:id/stats). */
 export interface StatsChauffeur {
   today: FenetreStats;
@@ -725,6 +755,26 @@ export async function listerCoursesEquipe(statut: StatutTrajet): Promise<Trajet[
 export async function listerPaiementsEquipe(): Promise<PaiementEquipe[]> {
   const reponse = await requete<unknown>('/payments?status=pending');
   return commeListe<PaiementEquipe>(reponse, 'payments');
+}
+
+/** GET /payments?status=confirmed — derniers paiements REÇUS (équipe). */
+export async function listerPaiementsRecus(): Promise<PaiementEquipe[]> {
+  const reponse = await requete<unknown>('/payments?status=confirmed');
+  return commeListe<PaiementEquipe>(reponse, 'payments');
+}
+
+/**
+ * GET /payments/remboursements — remboursements à VERSER (annulations
+ * clients, barème 24/48 h) : montant dû + contexte (équipe).
+ */
+export async function listerRemboursementsEquipe(): Promise<PaiementEquipe[]> {
+  const reponse = await requete<unknown>('/payments/remboursements');
+  return commeListe<PaiementEquipe>(reponse, 'payments');
+}
+
+/** POST /payments/:id/rembourse — remboursement versé, la ligne est soldée. */
+export async function marquerRembourse(id: string): Promise<Paiement> {
+  return requete<Paiement>(`/payments/${id}/rembourse`, { methode: 'POST' });
 }
 
 /** GET /drivers — chauffeurs vérifiés (recherche d'assignation, équipe). */
@@ -911,6 +961,11 @@ export const api = {
   livrerColis,
   listerCoursesEquipe,
   listerPaiementsEquipe,
+  listerPaiementsRecus,
+  listerRemboursementsEquipe,
+  marquerRembourse,
+  mesReservationsPlaces,
+  annulerReservationPlace,
   listerChauffeursVerifies,
   listerCandidaturesChauffeurs,
   listerClientsEnAttente,

@@ -357,9 +357,9 @@ router.post(
       if (!pkg.sender_hotel_id || pkg.sender_hotel_id !== req.auth.hotelId) {
         throw new HttpError(403, 'forbidden', 'Le paiement par crédit est réservé à l\'hôtel expéditeur');
       }
-      const paiement = await withTransaction(async (client) => {
+      const { paiement, hotelNom, soldeRestant } = await withTransaction(async (client) => {
         const { rows: hotelRows } = await client.query(
-          'SELECT credit_balance FROM hotels WHERE id = $1 FOR UPDATE',
+          'SELECT name, credit_balance FROM hotels WHERE id = $1 FOR UPDATE',
           [pkg.sender_hotel_id]
         );
         const solde = Number(hotelRows[0].credit_balance);
@@ -394,9 +394,26 @@ router.post(
            WHERE id <> $1 AND status = 'pending' AND package_id = $2`,
           [rows[0].id, pkg.id]
         );
-        return rows[0];
+        return {
+          paiement: rows[0],
+          hotelNom: hotelRows[0].name,
+          soldeRestant: Math.round((solde - Number(pkg.price)) * 100) / 100,
+        };
       });
-      res.status(201).json({ ...paiement, payment_method: 'credit' });
+      // L'équipe est ALERTÉE comme pour tout paiement : lien WhatsApp
+      // pré-rempli ouvert par l'app de l'hôtel + ligne « Derniers paiements
+      // reçus » (badge crédit) dans le tableau de bord.
+      const alerteEquipe = buildTeamNotificationLink(
+        [
+          '💳 Paiement reçu par CRÉDIT — colis zanziGo',
+          `Hôtel: ${hotelNom}`,
+          `Colis: ${pkg.pickup_location} → ${pkg.dropoff_location}`,
+          `Montant: ${pkg.price} ${pkg.currency} (déjà encaissé — payé avec le crédit prépayé)`,
+          `Solde crédit restant: ${soldeRestant} USD`,
+          `Réf: ${pkg.qr_code}`,
+        ].join('\n')
+      );
+      res.status(201).json({ ...paiement, payment_method: 'credit', whatsapp_link: alerteEquipe });
       return;
     }
 

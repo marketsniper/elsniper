@@ -95,6 +95,30 @@ export interface PaiementEquipe extends Paiement {
   ride_destination?: string | null;
   ride_seats?: number | null;
   ride_client_name?: string | null;
+  /** Remboursement dû après annulation client (barème 24/48 h). */
+  refund_amount?: string | number | null;
+  refund_due_at?: string | null;
+  refunded_at?: string | null;
+}
+
+/** Place de taxi partagé réservée par le client (GET /rides/reservations). */
+export interface ReservationPlace {
+  id: string;
+  origin: string;
+  destination: string;
+  departure_at: string;
+  ride_status: string;
+  driver_name?: string | null;
+  seats: number;
+  price_per_seat: number;
+  amount: number;
+  currency: string;
+  paid: boolean;
+  cancelled: boolean;
+  /** Annulable maintenant (barème 24/48 h respecté). */
+  cancellable: boolean;
+  /** 1 = remboursement 100 %, 0.5 = 50 %, null = pas de remboursement. */
+  refund_rate: number | null;
 }
 
 /** Session authentifiée persistée dans SecureStore. */
@@ -246,6 +270,19 @@ export function formaterMontant(montant: number | string, devise: string): strin
     return `${nombre.toLocaleString('fr-FR', options)} ${devise}`.trim();
   }
   return `${montant} ${devise}`.trim();
+}
+
+/**
+ * Barème d'annulation CLIENT d'un voyage payé (même règle que le serveur) :
+ * ≥ 48 h avant le départ = remboursement 100 %, entre 24 h et 48 h = 50 %,
+ * < 24 h = annulation refusée. Renvoie 1, 0.5 ou null.
+ */
+export function tauxRemboursement(departISO: string | null | undefined): number | null {
+  if (!departISO) return null;
+  const heures = (new Date(departISO).getTime() - Date.now()) / 3_600_000;
+  if (heures >= 48) return 1;
+  if (heures >= 24) return 0.5;
+  return null;
 }
 
 /**

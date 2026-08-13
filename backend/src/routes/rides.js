@@ -21,6 +21,7 @@ import { createPaymentOrder, isStubMode } from '../services/pesapalService.js';
 import { RIDE_DESTINATIONS, RIDE_ORIGINS } from '../services/locations.js';
 import { randomUUID } from 'node:crypto';
 import { assertHotelVerified } from './hotels.js';
+import { tauxRemboursement } from '../services/annulationService.js';
 
 const router = Router();
 
@@ -362,6 +363,186 @@ router.get(
   })
 );
 
+// GET /rides/reservations — les places réservées par le CLIENT connecté
+// (utilisateur ou hôtel) : trajet, départ, prix dans SA devise, statut du
+// paiement, et ce que donnerait une annulation maintenant (barème 24/48 h).
+router.get(
+  '/reservations',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    if (!req.auth.userId && !req.auth.hotelId) {
+      throw new HttpError(403, 'forbidden', 'Réservé aux clients et aux hôtels partenaires');
+    }
+    await annulerRidesEnRetard();
+    await annulerReservationsImpayees();
+    const { rows } = await query(
+      `SELECT b.id, b.seats, b.created_at, b.paid_at, b.cancelled_at,
+              r.origin, r.destination, r.departure_at, r.status AS ride_status,
+              r.price_per_seat, r.currency AS ride_currency,
+              d.full_name AS driver_name
+       FROM ride_bookings b
+       JOIN posted_rides r ON r.id = b.ride_id
+       JOIN drivers d ON d.id = r.driver_id
+       WHERE ${req.auth.userId ? 'b.user_id = $1' : 'b.hotel_id = $1'}
+       ORDER BY r.departure_at DESC
+       LIMIT 100`,
+      [req.auth.userId ?? req.auth.hotelId]
+    );
+    const pricing = await viewerPricing(req);
+    res.json(
+      rows.map((b) => {
+        const prixPlace =
+          pricing.mode === 'USD'
+            ? rideUsd({ origin: b.origin, destination: b.destination }, pricing)
+            : Number(b.price_per_seat);
+        const devise = pricing.mode === 'USD' ? 'USD' : b.ride_currency;
+        const futur = new Date(b.departure_at).getTime() > Date.now();
+        const taux = tauxRemboursement(b.departure_at);
+        const active = b.cancelled_at === null && b.ride_status !== 'cancelled';
+        return {
+          id: b.id,
+          origin: b.origin,
+          destination: b.destination,
+          departure_at: b.departure_at,
+          ride_status: b.ride_status,
+          driver_name: b.driver_name,
+          seats: b.seats,
+          price_per_seat: prixPlace,
+          amount: Math.round(prixPlace * b.seats * 100) / 100,
+          currency: devise,
+          paid: b.paid_at !== null,
+          cancelled: b.cancelled_at !== null || b.ride_status === 'cancelled',
+          // Annulable maintenant ? Place non payée : oui tant que le départ
+          // n'est pas passé. Place payée : seulement à 24 h ou plus (barème).
+          cancellable: active && futur && (b.paid_at === null || taux !== null),
+          refund_rate: active && futur && b.paid_at !== null ? taux : null,
+        };
+      })
+    );
+  })
+);
+
+// POST /rides/reservations/:id/cancel — annulation par le CLIENT de sa place
+// de taxi partagé. Barème : ≥ 48 h avant le départ = remboursement 100 %,
+// entre 24 h et 48 h = 50 %, < 24 h = refusée (la place reste due). Les
+// places retournent sur l'annonce du chauffeur, le remboursement éventuel
+// est tracé sur le paiement pour le tableau de bord équipe.
+router.post(
+  '/reservations/:id/cancel',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const resultat = await withTransaction(async (client) => {
+      const { rows: bookingRows } = await client.query(
+        `SELECT b.*, r.origin, r.destination, r.departure_at, r.status AS ride_status
+         FROM ride_bookings b
+         JOIN posted_rides r ON r.id = b.ride_id
+         WHERE b.id = $1
+         FOR UPDATE OF b`,
+        [req.params.id]
+      );
+      const booking = bookingRows[0];
+      if (!booking) throw notFound('Réservation');
+      const estReservateur =
+        (booking.user_id !== null && booking.user_id === req.auth.userId) ||
+        (booking.hotel_id !== null && booking.hotel_id === req.auth.hotelId);
+      if (!isAdmin(req) && !estReservateur) {
+        throw new HttpError(403, 'forbidden', 'Seul le client qui a réservé peut annuler sa place');
+      }
+      if (booking.cancelled_at !== null) {
+        throw new HttpError(409, 'already_cancelled', 'Cette réservation est déjà annulée');
+      }
+      if (new Date(booking.departure_at).getTime() <= Date.now()) {
+        throw new HttpError(409, 'ride_departed', 'Le départ est passé — cette place ne peut plus être annulée');
+      }
+
+      const taux = booking.paid_at !== null ? tauxRemboursement(booking.departure_at) : null;
+      if (booking.paid_at !== null && taux === null) {
+        throw new HttpError(
+          409,
+          'cancellation_too_late',
+          'À moins de 24 h du départ, la place reste due en intégralité — contactez l\'équipe sur WhatsApp'
+        );
+      }
+
+      await client.query(`UPDATE ride_bookings SET cancelled_at = now() WHERE id = $1`, [
+        booking.id,
+      ]);
+      // Les places libérées retournent sur l'annonce (plafond : total).
+      await client.query(
+        `UPDATE posted_rides
+         SET seats_available = LEAST(seats_total, seats_available + $2)
+         WHERE id = $1 AND status = 'open'`,
+        [booking.ride_id, booking.seats]
+      );
+      // Paiement encore en attente : soldé en échec, rien à rembourser.
+      await client.query(
+        `UPDATE payments SET status = 'failed'
+         WHERE status = 'pending' AND ride_booking_id = $1`,
+        [booking.id]
+      );
+      // Paiement déjà reçu : remboursement dû (100 % ou 50 %), tracé pour le
+      // tableau de bord équipe qui le solde d'un bouton une fois versé.
+      let refund = null;
+      if (booking.paid_at !== null) {
+        const { rows: paiements } = await client.query(
+          `UPDATE payments
+           SET refund_amount = ROUND(amount * $2, 2), refund_due_at = now()
+           WHERE ride_booking_id = $1 AND status = 'confirmed' AND refund_due_at IS NULL
+           RETURNING refund_amount, currency`,
+          [booking.id, taux]
+        );
+        if (paiements[0]) {
+          refund = {
+            amount: Number(paiements[0].refund_amount),
+            currency: paiements[0].currency,
+            rate: taux,
+          };
+        }
+      }
+      return { booking, refund };
+    });
+
+    // Étiquette du réservateur pour le message à l'équipe.
+    let etiquette = 'équipe zanziGo';
+    if (resultat.booking.user_id) {
+      const { rows } = await query('SELECT full_name, phone FROM users WHERE id = $1', [
+        resultat.booking.user_id,
+      ]);
+      if (rows[0]) etiquette = `${rows[0].full_name} (${rows[0].phone})`;
+    } else if (resultat.booking.hotel_id) {
+      const { rows } = await query('SELECT name, phone FROM hotels WHERE id = $1', [
+        resultat.booking.hotel_id,
+      ]);
+      if (rows[0]) etiquette = `${rows[0].name} (hôtel, ${rows[0].phone})`;
+    }
+    const depart = new Date(resultat.booking.departure_at).toLocaleString('fr-FR', {
+      timeZone: 'Africa/Dar_es_Salaam',
+      dateStyle: 'short',
+      timeStyle: 'short',
+    });
+    const whatsappLink = buildTeamNotificationLink(
+      [
+        '❌ Annulation place — taxi partagé zanziGo',
+        `Client: ${etiquette}`,
+        `Trajet: ${resultat.booking.origin} → ${resultat.booking.destination}`,
+        `Départ: ${depart}`,
+        `Places annulées: ${resultat.booking.seats}`,
+        resultat.refund
+          ? `À rembourser: ${resultat.refund.amount} ${resultat.refund.currency} (${resultat.refund.rate * 100} %)`
+          : 'Aucun paiement reçu — rien à rembourser.',
+        `Réf: ${resultat.booking.id}`,
+      ].join('\n')
+    );
+
+    res.json({
+      id: resultat.booking.id,
+      cancelled: true,
+      refund: resultat.refund,
+      whatsapp_link: whatsappLink,
+    });
+  })
+);
+
 // POST /rides/:id/book {seats} — réservation de place(s) DANS L'APP :
 // décompte atomique des places restantes sur l'annonce du chauffeur (le
 // chauffeur voit ses places baisser en direct), trace en ride_bookings, et
@@ -517,6 +698,7 @@ router.post(
         `Réf: ${rideMaj.id}`,
         'Paiement: sous 5 minutes — sinon la réservation s\'annule et les places sont remises en vente.',
         'Règle: retard de +10 min au départ = place annulée, due en intégralité au chauffeur (respect des autres voyageurs).',
+        'Annulation: remboursement 100 % à 48 h ou plus du départ, 50 % entre 24 h et 48 h, impossible à moins de 24 h.',
       ].join('\n')
     );
 

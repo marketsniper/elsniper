@@ -32,6 +32,7 @@ import {
   formaterDate,
   formaterMontant,
   formaterPrix,
+  tauxRemboursement,
   type StatutTrajet,
   type Trajet,
   type TypeTrajet,
@@ -101,9 +102,15 @@ export default function EcranTrajet() {
   const annule = statut === 'cancelled';
   // Règle serveur : le paiement n'est possible qu'après confirmation d'un chauffeur.
   const peutPayer = statut === 'driver_confirmed';
-  // Annulation par le réservateur : uniquement avant paiement (ensuite,
-  // passer par l'équipe sur WhatsApp).
-  const peutAnnuler = statut === 'requested' || statut === 'driver_confirmed';
+  // Annulation par le réservateur : libre avant paiement. Course PAYÉE avec
+  // départ planifié : barème 24/48 h — remboursement 100 % à +48 h, 50 %
+  // entre 24 h et 48 h, refusée à moins de 24 h (même règle côté serveur).
+  const tauxRembours =
+    statut === 'paid'
+      ? tauxRemboursement(champ<string>(trajet, 'scheduled_at', 'scheduledAt'))
+      : null;
+  const peutAnnuler =
+    statut === 'requested' || statut === 'driver_confirmed' || tauxRembours !== null;
   // Notation : course terminée, jamais notée (rating null côté serveur).
   const dejaNotee = champ<number>(trajet, 'rating') !== undefined;
   const peutNoter = statut === 'completed' && !dejaNotee && !noteEnvoyee;
@@ -113,11 +120,15 @@ export default function EcranTrajet() {
     setChargeCredit(true);
     setErreur('');
     try {
-      await api.payerTrajetAvecCredit(trajet.id);
+      const paiement = await api.payerTrajetAvecCredit(trajet.id);
       if (hotelId) {
         api.creditHotel(hotelId).then((c) => setSoldeCredit(c.balance)).catch(() => {});
       }
       await charger();
+      // L'équipe est prévenue du paiement par crédit : le message WhatsApp
+      // pré-rempli s'ouvre, il ne reste qu'à appuyer sur Envoyer.
+      const alerte = champ<string>(paiement, 'whatsapp_link', 'whatsappLink');
+      if (alerte) Linking.openURL(alerte).catch(() => {});
     } catch (e) {
       setErreur(e instanceof ErreurApi ? e.message : t('trip_paiement_indisponible'));
     } finally {
@@ -160,9 +171,19 @@ export default function EcranTrajet() {
     }
   };
 
-  // Annulation avec confirmation (dialogue natif) — irréversible.
+  // Annulation avec confirmation (dialogue natif) — irréversible. Course
+  // payée : le message précise le remboursement (100 % ou 50 %).
   const annuler = () => {
-    Alert.alert(t('trip_annuler'), t('trip_annuler_confirm'), [
+    const prix = Number(champ(trajet, 'price') ?? 0);
+    const devise = String(champ(trajet, 'currency') ?? 'USD');
+    const message =
+      tauxRembours !== null
+        ? t('trip_annuler_confirm_rembours', {
+            montant: formaterMontant(Math.round(prix * tauxRembours * 100) / 100, devise),
+            taux: String(tauxRembours * 100),
+          })
+        : t('trip_annuler_confirm');
+    Alert.alert(t('trip_annuler'), message, [
       { text: t('commun_confirmer_non'), style: 'cancel' },
       {
         text: t('commun_confirmer_oui'),
@@ -171,8 +192,21 @@ export default function EcranTrajet() {
           setChargeAnnulation(true);
           setErreur('');
           try {
-            await api.annulerTrajet(trajet.id);
+            const resultat = await api.annulerTrajet(trajet.id);
             await charger();
+            // Remboursement dû : l'équipe est prévenue par le message
+            // WhatsApp pré-rempli qui s'ouvre.
+            const refund = champ<{ amount: number; currency: string }>(resultat, 'refund');
+            const alerte = champ<string>(resultat, 'whatsapp_link', 'whatsappLink');
+            if (refund) {
+              Alert.alert(
+                t('trip_annulee_titre'),
+                t('trip_annulee_rembours', {
+                  montant: formaterMontant(refund.amount, refund.currency),
+                })
+              );
+            }
+            if (alerte) Linking.openURL(alerte).catch(() => {});
           } catch (e) {
             setErreur(e instanceof ErreurApi ? e.message : t('commun_annulation_impossible'));
           } finally {

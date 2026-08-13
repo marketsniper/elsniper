@@ -6,20 +6,22 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
-import { Alert, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { Alert, FlatList, Linking, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 
 import { Etoiles } from '@/components/Etoiles';
 import { FondPlage } from '@/components/FondPlage';
 import { BadgeStatutTrajet, Bouton, EtatVide, TexteErreur } from '@/components/ui';
-import { api } from '@/lib/api';
+import { api, ErreurApi } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { formaterDateRelativeI18n, libelleTypeTrajet, useT } from '@/lib/i18n';
 import { estBalaye, lireCoupDeBalai, passerCoupDeBalai } from '@/lib/menageLocal';
 import { couleurs, espaces, ombres, rayons } from '@/lib/theme';
 import {
   champ,
+  formaterMontant,
   formaterPrix,
   trajetExpire,
+  type ReservationPlace,
   type StatutTrajet,
   type Trajet,
   type TypeTrajet,
@@ -32,6 +34,9 @@ export default function EcranTrajets() {
   const { session } = useAuth();
   const { t } = useT();
   const [trajets, setTrajets] = useState<Trajet[]>([]);
+  // Places de taxi partagé réservées (annulables jusqu'à 24 h avant le départ).
+  const [places, setPlaces] = useState<ReservationPlace[]>([]);
+  const [annulationEnCours, setAnnulationEnCours] = useState<string | null>(null);
   const [charge, setCharge] = useState(false);
   const [erreur, setErreur] = useState('');
   const [balai, setBalai] = useState(0);
@@ -50,6 +55,8 @@ export default function EcranTrajets() {
         ? await api.listerTrajetsHotel(hotel.id)
         : await api.listerTrajets(utilisateur!.id);
       setTrajets(liste);
+      // Places de taxi partagé (silencieux : la section reste vide en cas d'échec).
+      api.mesReservationsPlaces().then(setPlaces).catch(() => {});
       if (proprietaireId) setBalai(await lireCoupDeBalai('trajets', proprietaireId));
     } catch {
       setErreur(t('trajets_erreur'));
@@ -88,6 +95,55 @@ export default function EcranTrajets() {
     ]);
   };
 
+  // Places à venir, non annulées — les autres n'ont plus rien à faire ici.
+  const placesVisibles = places.filter(
+    (place) => !place.cancelled && new Date(place.departure_at).getTime() > Date.now()
+  );
+
+  // Annulation d'une place : le dialogue précise le remboursement (100 % à
+  // +48 h du départ, 50 % entre 24 h et 48 h) — même barème que le serveur.
+  const annulerPlace = (place: ReservationPlace) => {
+    const message =
+      place.paid && place.refund_rate
+        ? t('place_annuler_confirm_rembours', {
+            montant: formaterMontant(
+              Math.round(place.amount * place.refund_rate * 100) / 100,
+              place.currency
+            ),
+            taux: String(place.refund_rate * 100),
+          })
+        : t('place_annuler_confirm');
+    Alert.alert(t('place_annuler'), message, [
+      { text: t('commun_confirmer_non'), style: 'cancel' },
+      {
+        text: t('commun_confirmer_oui'),
+        style: 'destructive',
+        onPress: async () => {
+          setAnnulationEnCours(place.id);
+          setErreur('');
+          try {
+            const resultat = await api.annulerReservationPlace(place.id);
+            if (resultat.refund) {
+              Alert.alert(
+                t('trip_annulee_titre'),
+                t('place_annulee_rembours', {
+                  montant: formaterMontant(resultat.refund.amount, resultat.refund.currency),
+                })
+              );
+            }
+            // L'équipe est prévenue : message WhatsApp pré-rempli à envoyer.
+            if (resultat.whatsapp_link) Linking.openURL(resultat.whatsapp_link).catch(() => {});
+            await rafraichir();
+          } catch (e) {
+            setErreur(e instanceof ErreurApi ? e.message : t('commun_annulation_impossible'));
+          } finally {
+            setAnnulationEnCours(null);
+          }
+        },
+      },
+    ]);
+  };
+
   return (
     <FondPlage fond="palmiers" voile="clair">
       <FlatList
@@ -97,7 +153,58 @@ export default function EcranTrajets() {
         refreshControl={
           <RefreshControl refreshing={charge} onRefresh={rafraichir} tintColor={couleurs.primaire} />
         }
-        ListHeaderComponent={erreur ? <TexteErreur>{erreur}</TexteErreur> : null}
+        ListHeaderComponent={
+          <>
+            {erreur ? <TexteErreur>{erreur}</TexteErreur> : null}
+            {placesVisibles.length > 0 && (
+              <View style={styles.blocPlaces}>
+                <Text style={styles.titrePlaces}>🚌 {t('places_titre')}</Text>
+                {placesVisibles.map((place) => (
+                  <View key={place.id} style={styles.carte}>
+                    <Text style={styles.itineraire}>
+                      {place.origin}{'  '}
+                      <Text style={styles.fleche}>→</Text>{'  '}
+                      {place.destination}
+                    </Text>
+                    <View style={styles.pied}>
+                      <Text style={styles.date}>
+                        {formaterDateRelativeI18n(place.departure_at, t)}
+                      </Text>
+                      <Text style={styles.prix}>
+                        {formaterMontant(place.amount, place.currency)}
+                      </Text>
+                    </View>
+                    <View style={styles.lignePlace}>
+                      <Text style={styles.detailPlace}>
+                        {t('places_detail', { n: place.seats })}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.badgePlace,
+                          place.paid ? styles.badgePlacePayee : styles.badgePlaceAttente,
+                        ]}
+                      >
+                        {place.paid ? `✅ ${t('places_payee')}` : `⏳ ${t('places_a_payer')}`}
+                      </Text>
+                    </View>
+                    {place.cancellable ? (
+                      <Bouton
+                        titre={t('place_annuler')}
+                        icone="close-circle-outline"
+                        variante="secondaire"
+                        onPress={() => annulerPlace(place)}
+                        charge={annulationEnCours === place.id}
+                      />
+                    ) : place.paid ? (
+                      <Text style={styles.notePlace}>{t('place_trop_tard')}</Text>
+                    ) : null}
+                  </View>
+                ))}
+                <Text style={styles.reglePlaces}>{t('resa_regle_annulation')}</Text>
+              </View>
+            )}
+          </>
+        }
         ListFooterComponent={
           nbNettoyables > 0 ? (
             <Bouton
@@ -246,6 +353,53 @@ const styles = StyleSheet.create({
   },
   rangeeAction: {
     marginTop: espaces.xs,
+  },
+  blocPlaces: {
+    gap: espaces.m,
+    marginBottom: espaces.m,
+  },
+  titrePlaces: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: couleurs.encre,
+  },
+  lignePlace: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: espaces.s,
+  },
+  detailPlace: {
+    fontSize: 13,
+    color: couleurs.texteSecondaire,
+    fontWeight: '600',
+  },
+  badgePlace: {
+    fontSize: 12.5,
+    fontWeight: '700',
+    paddingHorizontal: espaces.s,
+    paddingVertical: 3,
+    borderRadius: rayons.pastille,
+    overflow: 'hidden',
+  },
+  badgePlacePayee: {
+    color: couleurs.succes,
+    backgroundColor: couleurs.succesFond,
+  },
+  badgePlaceAttente: {
+    color: couleurs.attente,
+    backgroundColor: couleurs.attenteFond,
+  },
+  notePlace: {
+    fontSize: 12.5,
+    color: couleurs.texteSecondaire,
+    lineHeight: 18,
+  },
+  reglePlaces: {
+    fontSize: 12.5,
+    color: couleurs.texteSecondaire,
+    lineHeight: 18,
   },
   boutonPayer: {
     flexDirection: 'row',

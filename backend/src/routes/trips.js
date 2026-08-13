@@ -10,6 +10,7 @@ import { circuitPaiementUsd } from '../services/paypalService.js';
 import { buildTeamNotificationLink, tripRequestMessage } from '../services/whatsappService.js';
 import { assertHotelVerified } from './hotels.js';
 import { randomUUID } from 'node:crypto';
+import { tauxRemboursement } from '../services/annulationService.js';
 
 const router = Router();
 
@@ -307,9 +308,9 @@ router.post(
       if (!trip.hotel_id || trip.hotel_id !== req.auth.hotelId) {
         throw new HttpError(403, 'forbidden', 'Le paiement par crédit est réservé à l\'hôtel réservateur');
       }
-      const paiement = await withTransaction(async (client) => {
+      const { paiement, hotelNom, soldeRestant } = await withTransaction(async (client) => {
         const { rows: hotelRows } = await client.query(
-          'SELECT credit_balance FROM hotels WHERE id = $1 FOR UPDATE',
+          'SELECT name, credit_balance FROM hotels WHERE id = $1 FOR UPDATE',
           [trip.hotel_id]
         );
         const solde = Number(hotelRows[0].credit_balance);
@@ -344,9 +345,26 @@ router.post(
            WHERE id <> $1 AND status = 'pending' AND trip_id = $2`,
           [rows[0].id, trip.id]
         );
-        return rows[0];
+        return {
+          paiement: rows[0],
+          hotelNom: hotelRows[0].name,
+          soldeRestant: Math.round((solde - Number(trip.price)) * 100) / 100,
+        };
       });
-      res.status(201).json({ ...paiement, payment_method: 'credit' });
+      // L'équipe est ALERTÉE comme pour tout paiement : l'app de l'hôtel
+      // ouvre ce lien WhatsApp pré-rempli, et la ligne apparaît aussi dans
+      // « Derniers paiements reçus » du tableau de bord (badge crédit).
+      const alerteEquipe = buildTeamNotificationLink(
+        [
+          '💳 Paiement reçu par CRÉDIT — course zanziGo',
+          `Hôtel: ${hotelNom}`,
+          `Trajet: ${trip.pickup_location} → ${trip.dropoff_location}`,
+          `Montant: ${trip.price} ${trip.currency} (déjà encaissé — payé avec le crédit prépayé)`,
+          `Solde crédit restant: ${soldeRestant} USD`,
+          `Réf: ${trip.id}`,
+        ].join('\n')
+      );
+      res.status(201).json({ ...paiement, payment_method: 'credit', whatsapp_link: alerteEquipe });
       return;
     }
 
@@ -464,11 +482,14 @@ router.patch(
   })
 );
 
-// POST /trips/:id/cancel — annulation par le réservateur (client ou hôtel)
-// tant que la course n'est pas payée. L'équipe peut aussi annuler une course
-// déjà payée (le remboursement se règle à la main, via WhatsApp). Les
-// paiements encore en attente sont marqués 'failed' pour ne pas rester
-// confirmables sur une course morte.
+// POST /trips/:id/cancel — annulation par le réservateur (client ou hôtel).
+// Course non payée : annulable librement. Course PAYÉE avec une date de
+// départ planifiée : barème client — ≥ 48 h avant = remboursement 100 %,
+// entre 24 h et 48 h = 50 %, < 24 h = refusée (contacter l'équipe). Le
+// remboursement dû est tracé sur le paiement (tableau de bord équipe).
+// L'équipe peut annuler une course payée à tout moment. Les paiements
+// encore en attente sont marqués 'failed' pour ne pas rester confirmables
+// sur une course morte.
 router.post(
   '/:id/cancel',
   requireAuth,
@@ -481,31 +502,66 @@ router.post(
       throw new HttpError(403, 'forbidden', 'Seul le réservateur de la course peut l\'annuler');
     }
 
+    // Barème appliqué au réservateur d'une course payée (jamais requis pour
+    // l'équipe, qui garde la main sans condition).
+    const tauxPaye = trip.scheduled_at ? tauxRemboursement(trip.scheduled_at) : null;
     const annulables = isAdmin(req)
       ? ['requested', 'driver_confirmed', 'paid']
-      : ['requested', 'driver_confirmed'];
+      : ['requested', 'driver_confirmed', ...(tauxPaye !== null ? ['paid'] : [])];
     if (!annulables.includes(trip.status)) {
       throw new HttpError(
         409,
         'invalid_status',
         trip.status === 'paid'
-          ? "Course déjà payée — contactez l'équipe sur WhatsApp pour l'annuler et être remboursé"
+          ? "Course payée : annulation possible jusqu'à 24 h avant le départ (remboursement 100 % à +48 h, 50 % entre 24 h et 48 h) — passé ce délai, contactez l'équipe sur WhatsApp"
           : `Cette course ne peut plus être annulée (statut actuel: ${trip.status})`
       );
     }
 
-    const updated = await withTransaction(async (client) => {
+    const { updated, refund } = await withTransaction(async (client) => {
       await client.query(
         `UPDATE payments SET status = 'failed' WHERE trip_id = $1 AND status = 'pending'`,
         [req.params.id]
       );
+      // Course déjà payée annulée par le CLIENT : remboursement dû selon le
+      // barème, tracé sur le paiement confirmé.
+      let refund = null;
+      if (trip.status === 'paid' && !isAdmin(req) && tauxPaye !== null) {
+        const { rows: paiements } = await client.query(
+          `UPDATE payments
+           SET refund_amount = ROUND(amount * $2, 2), refund_due_at = now()
+           WHERE trip_id = $1 AND status = 'confirmed' AND refund_due_at IS NULL
+           RETURNING refund_amount, currency`,
+          [req.params.id, tauxPaye]
+        );
+        if (paiements[0]) {
+          refund = {
+            amount: Number(paiements[0].refund_amount),
+            currency: paiements[0].currency,
+            rate: tauxPaye,
+          };
+        }
+      }
       const { rows } = await client.query(
         `UPDATE trips SET status = 'cancelled' WHERE id = $1 RETURNING *`,
         [req.params.id]
       );
-      return rows[0];
+      return { updated: rows[0], refund };
     });
-    res.json(updated);
+
+    const sortie = { ...updated, refund };
+    if (refund) {
+      sortie.whatsapp_link = buildTeamNotificationLink(
+        [
+          '❌ Annulation course payée — zanziGo',
+          `Trajet: ${trip.pickup_location} → ${trip.dropoff_location}`,
+          `Montant payé: ${trip.price} ${trip.currency}`,
+          `À rembourser: ${refund.amount} ${refund.currency} (${refund.rate * 100} %)`,
+          `Réf: ${trip.id}`,
+        ].join('\n')
+      );
+    }
+    res.json(sortie);
   })
 );
 

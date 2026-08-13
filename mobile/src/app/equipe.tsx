@@ -34,6 +34,7 @@ import {
   champ,
   formaterMontant,
   formaterPrix,
+  TAUX_USD_TZS,
   type Chauffeur,
   type Hotel,
   type PaiementEquipe,
@@ -73,6 +74,10 @@ export default function EcranEquipe() {
 
   const [courses, setCourses] = useState<Trajet[]>([]);
   const [paiements, setPaiements] = useState<PaiementEquipe[]>([]);
+  // Remboursements à verser (annulations clients, barème 24/48 h) et
+  // derniers paiements REÇUS (dont ceux payés par crédit hôtel).
+  const [remboursements, setRemboursements] = useState<PaiementEquipe[]>([]);
+  const [paiementsRecus, setPaiementsRecus] = useState<PaiementEquipe[]>([]);
   const [candidats, setCandidats] = useState<Chauffeur[]>([]);
   const [clients, setClients] = useState<Utilisateur[]>([]);
   const [hotels, setHotels] = useState<Hotel[]>([]);
@@ -99,7 +104,7 @@ export default function EcranEquipe() {
   const charger = useCallback(async () => {
     setErreur('');
     try {
-      const [lesCourses, lesPaiements, lesCandidats, lesClients, lesHotels, lesChauffeurs, lesAbonnes, lesVerifies] =
+      const [lesCourses, lesPaiements, lesCandidats, lesClients, lesHotels, lesChauffeurs, lesAbonnes, lesVerifies, lesRemboursements, lesRecus] =
         await Promise.all([
           api.listerCoursesEquipe('requested'),
           api.listerPaiementsEquipe(),
@@ -109,6 +114,8 @@ export default function EcranEquipe() {
           api.listerChauffeursVerifies(),
           api.statsAbonnes().catch(() => null),
           api.listerHotelsVerifies().catch(() => []),
+          api.listerRemboursementsEquipe().catch(() => []),
+          api.listerPaiementsRecus().catch(() => []),
         ]);
       setCourses(lesCourses);
       setPaiements(lesPaiements);
@@ -118,6 +125,8 @@ export default function EcranEquipe() {
       setChauffeurs(lesChauffeurs);
       setAbonnes(lesAbonnes);
       setHotelsVerifies(lesVerifies);
+      setRemboursements(lesRemboursements);
+      setPaiementsRecus(lesRecus);
     } catch (e) {
       setErreur(e instanceof ErreurApi ? e.message : t('equipe_action_erreur'));
     }
@@ -215,6 +224,16 @@ export default function EcranEquipe() {
     Object.entries(montants)
       .map(([devise, montant]) => formaterMontant(montant, devise))
       .join(' + ');
+
+  // Total d'un panier de gains EN SHILLINGS : les montants USD sont
+  // convertis au taux zanziGo (même taux que la grille tarifaire).
+  const gainEnTzs = (gains: Record<string, number>) => {
+    let total = 0;
+    for (const [devise, montant] of Object.entries(gains)) {
+      total += devise === 'USD' ? montant * TAUX_USD_TZS : montant;
+    }
+    return Math.round(total);
+  };
 
   // Ouverture d'une rubrique depuis le menu : remet la recherche à zéro.
   const ouvrirSection = (cle: SectionEquipe) => {
@@ -322,15 +341,18 @@ export default function EcranEquipe() {
   }
 
   // Les six cases du menu — compteur en or dès qu'une action attend.
+  // La case Paiements a son VOYANT VERT : nombre de paiements en attente
+  // + remboursements à verser, repérable d'un coup d'œil.
   const rubriques: {
     cle: SectionEquipe;
     label: string;
     icone: React.ComponentProps<typeof Ionicons>['name'];
     n: number;
     action: boolean;
+    voyantVert?: boolean;
   }[] = [
     { cle: 'courses', label: t('equipe_stat_courses'), icone: 'car-outline', n: courses.length, action: true },
-    { cle: 'paiements', label: t('equipe_stat_paiements'), icone: 'cash-outline', n: paiements.length, action: true },
+    { cle: 'paiements', label: t('equipe_stat_paiements'), icone: 'cash-outline', n: paiements.length + remboursements.length, action: true, voyantVert: true },
     { cle: 'candidatures', label: t('equipe_stat_candidatures'), icone: 'document-text-outline', n: candidats.length, action: true },
     { cle: 'comptes', label: t('equipe_stat_comptes'), icone: 'id-card-outline', n: clients.length, action: true },
     { cle: 'hotels', label: t('equipe_stat_hotels'), icone: 'business-outline', n: hotels.length, action: true },
@@ -370,8 +392,10 @@ export default function EcranEquipe() {
             </View>
           )}
 
-          {/* Chiffre d'affaires : case DISCRÈTE — le jour toujours visible,
-              toucher pour déplier les fenêtres 7 jours et 30 jours. */}
+          {/* Chiffre d'affaires : le GAIN NET DU JOUR en grand et en
+              shillings (les gains USD sont convertis au taux zanziGo), avec
+              le détail courses/colis/places. Toucher pour déplier 7 j / 30 j
+              avec la moyenne PAR JOUR en shillings. */}
           {abonnes?.revenue && (
             <Pressable
               onPress={() => setCaOuvert((v) => !v)}
@@ -379,7 +403,7 @@ export default function EcranEquipe() {
               style={({ pressed }) => [styles.bandeauCa, pressed && { opacity: 0.85 }]}
             >
               <View style={styles.enTeteCa}>
-                <Text style={styles.titreAbonnes}>{t('equipe_ca_titre')}</Text>
+                <Text style={styles.titreAbonnes}>💰 {t('equipe_ca_titre')}</Text>
                 <View style={styles.droiteEnTeteCa}>
                   {!caOuvert && (
                     <Text style={styles.astuceCa}>{t('equipe_ca_ouvrir')}</Text>
@@ -391,18 +415,34 @@ export default function EcranEquipe() {
                   />
                 </View>
               </View>
-              {(caOuvert
-                ? ([
-                    ['gains_aujourdhui', abonnes.revenue.today],
-                    ['gains_7j', abonnes.revenue.week],
-                    ['gains_30j', abonnes.revenue.month],
-                  ] as const)
-                : ([['gains_aujourdhui', abonnes.revenue.today]] as const)
-              ).map(([cle, fenetre]) => (
-                <View key={cle} style={styles.ligneCa}>
-                  <View style={styles.gaucheCa}>
-                    <Text style={styles.labelCa}>{t(cle)}</Text>
-                    {caOuvert && (
+              <View style={styles.heroCa}>
+                <Text style={styles.heroMontantCa}>
+                  {formaterMontant(gainEnTzs(abonnes.revenue.today.gains), 'TZS')}
+                </Text>
+                <Text style={styles.heroLabelCa}>{t('equipe_ca_hero')}</Text>
+                <Text style={styles.heroDetailCa}>
+                  {t('gains_detail_compte', {
+                    courses: abonnes.revenue.today.courses,
+                    colis: abonnes.revenue.today.colis,
+                    places: abonnes.revenue.today.places ?? 0,
+                  })}
+                </Text>
+                {(abonnes.revenue.today.gains.USD ?? 0) > 0 && (
+                  <Text style={styles.heroSousCa}>
+                    {joindreMontants(abonnes.revenue.today.gains)}
+                  </Text>
+                )}
+              </View>
+              {caOuvert &&
+                (
+                  [
+                    ['gains_7j', abonnes.revenue.week, 7],
+                    ['gains_30j', abonnes.revenue.month, 30],
+                  ] as const
+                ).map(([cle, fenetre, jours]) => (
+                  <View key={cle} style={styles.ligneCa}>
+                    <View style={styles.gaucheCa}>
+                      <Text style={styles.labelCa}>{t(cle)}</Text>
                       <Text style={styles.detailCa}>
                         {t('gains_detail_compte', {
                           courses: fenetre.courses,
@@ -410,16 +450,25 @@ export default function EcranEquipe() {
                           places: fenetre.places ?? 0,
                         })}
                       </Text>
-                    )}
+                      <Text style={styles.detailCa}>
+                        {t('equipe_ca_encaisse')} : {joindreMontants(fenetre.ca) || '—'}
+                      </Text>
+                    </View>
+                    <View style={styles.droiteCa}>
+                      <Text style={styles.montantCa}>
+                        {formaterMontant(gainEnTzs(fenetre.gains), 'TZS')}
+                      </Text>
+                      <Text style={styles.netCa}>
+                        {t('equipe_ca_par_jour', {
+                          montant: formaterMontant(
+                            Math.round(gainEnTzs(fenetre.gains) / jours),
+                            'TZS'
+                          ),
+                        })}
+                      </Text>
+                    </View>
                   </View>
-                  <View style={styles.droiteCa}>
-                    <Text style={styles.montantCa}>{joindreMontants(fenetre.ca) || '—'}</Text>
-                    <Text style={styles.netCa}>
-                      {t('equipe_ca_net')} : {joindreMontants(fenetre.gains) || '—'}
-                    </Text>
-                  </View>
-                </View>
-              ))}
+                ))}
             </Pressable>
           )}
 
@@ -440,13 +489,17 @@ export default function EcranEquipe() {
                 <View
                   style={[
                     styles.pastilleMenu,
-                    rubrique.action && rubrique.n > 0 && styles.pastilleMenuAction,
+                    rubrique.action && rubrique.n > 0 &&
+                      (rubrique.voyantVert ? styles.pastilleMenuVerte : styles.pastilleMenuAction),
                   ]}
                 >
                   <Text
                     style={[
                       styles.textePastilleMenu,
-                      rubrique.action && rubrique.n > 0 && styles.textePastilleMenuAction,
+                      rubrique.action && rubrique.n > 0 &&
+                        (rubrique.voyantVert
+                          ? styles.textePastilleMenuVerte
+                          : styles.textePastilleMenuAction),
                     ]}
                   >
                     {rubrique.n}
@@ -530,9 +583,96 @@ export default function EcranEquipe() {
         </>
       )}
 
-      {/* 2. Paiements en attente */}
-      {section === 'paiements' && (
+      {/* 2. Paiements : remboursements à verser, en attente, puis reçus */}
+      {section === 'paiements' && (() => {
+        // Corps commun d'une carte paiement : type, montant, trajet, client.
+        const corpsPaiement = (paiement: PaiementEquipe) => {
+          const estColis = !!paiement.package_id;
+          const estPlace = !!paiement.ride_booking_id;
+          const depart = estColis
+            ? paiement.package_pickup
+            : estPlace
+              ? paiement.ride_origin
+              : paiement.trip_pickup;
+          const arrivee = estColis
+            ? paiement.package_dropoff
+            : estPlace
+              ? paiement.ride_destination
+              : paiement.trip_dropoff;
+          const montant = formaterMontant(
+            Number(champ(paiement, 'amount') ?? 0),
+            String(champ(paiement, 'currency') ?? 'TZS')
+          );
+          return (
+            <>
+              {/* flexWrap : un gros montant (800 000 TZS) passe à la ligne au
+                  lieu d'être coupé au bord de l'écran. */}
+              <View style={styles.lignePaiement}>
+                <Badge
+                  texte={
+                    estColis
+                      ? t('equipe_paiement_colis')
+                      : estPlace
+                        ? t('equipe_paiement_place', { n: paiement.ride_seats ?? 1 })
+                        : t('equipe_paiement_course')
+                  }
+                  ton="primaire"
+                />
+                <Text style={styles.prix}>{montant}</Text>
+              </View>
+              <Text style={styles.itineraire}>
+                {depart ?? '?'}{'  '}
+                <Text style={styles.fleche}>→</Text>{'  '}
+                {arrivee ?? '?'}
+              </Text>
+              {estColis && !!paiement.package_qr && (
+                <Text style={styles.detail}>{paiement.package_qr}</Text>
+              )}
+              {estPlace && !!paiement.ride_client_name && (
+                <Text style={styles.detail}>{paiement.ride_client_name}</Text>
+              )}
+              {!estColis && !estPlace && !!paiement.trip_client_name && (
+                <Text style={styles.detail}>{paiement.trip_client_name}</Text>
+              )}
+            </>
+          );
+        };
+        return (
         <>
+      {/* Remboursements à VERSER (annulations clients à +24 h du départ). */}
+      {remboursements.length > 0 && (
+        <>
+          <Text style={styles.titreSection}>
+            ↩️ {t('equipe_remboursements')} ({remboursements.length})
+          </Text>
+          {remboursements.map((paiement) => {
+            const montantDu = Number(paiement.refund_amount ?? 0);
+            const devise = String(champ(paiement, 'currency') ?? 'TZS');
+            const taux = Math.round(
+              (montantDu / Math.max(Number(champ(paiement, 'amount') ?? 1), 0.01)) * 100
+            );
+            return (
+              <Carte key={paiement.id}>
+                {corpsPaiement(paiement)}
+                <Text style={styles.montantRembourser}>
+                  {t('equipe_rembourser_montant', {
+                    montant: formaterMontant(montantDu, devise),
+                    taux: String(taux),
+                  })}
+                </Text>
+                <Bouton
+                  titre={t('equipe_rembourse_bouton')}
+                  icone="checkmark-circle-outline"
+                  variante="secondaire"
+                  onPress={() => agir(paiement.id, () => api.marquerRembourse(paiement.id))}
+                  charge={actionEnCours === paiement.id}
+                />
+              </Carte>
+            );
+          })}
+        </>
+      )}
+
       <Text style={styles.titreSection}>
         {t('equipe_paiements')} ({paiements.length})
       </Text>
@@ -541,66 +681,53 @@ export default function EcranEquipe() {
           {t('equipe_paiements_vide')}
         </EncartInfo>
       )}
-      {paiements.map((paiement) => {
-        const estColis = !!paiement.package_id;
-        const estPlace = !!paiement.ride_booking_id;
-        const depart = estColis
-          ? paiement.package_pickup
-          : estPlace
-            ? paiement.ride_origin
-            : paiement.trip_pickup;
-        const arrivee = estColis
-          ? paiement.package_dropoff
-          : estPlace
-            ? paiement.ride_destination
-            : paiement.trip_dropoff;
-        const montant = formaterMontant(
-          Number(champ(paiement, 'amount') ?? 0),
-          String(champ(paiement, 'currency') ?? 'TZS')
-        );
-        return (
-          <Carte key={paiement.id}>
-            {/* flexWrap : un gros montant (800 000 TZS) passe à la ligne au
-                lieu d'être coupé au bord de l'écran. */}
-            <View style={styles.lignePaiement}>
-              <Badge
-                texte={
-                  estColis
-                    ? t('equipe_paiement_colis')
-                    : estPlace
-                      ? t('equipe_paiement_place', { n: paiement.ride_seats ?? 1 })
-                      : t('equipe_paiement_course')
-                }
-                ton="primaire"
-              />
-              <Text style={styles.prix}>{montant}</Text>
-            </View>
-            <Text style={styles.itineraire}>
-              {depart ?? '?'}{'  '}
-              <Text style={styles.fleche}>→</Text>{'  '}
-              {arrivee ?? '?'}
-            </Text>
-            {estColis && !!paiement.package_qr && (
-              <Text style={styles.detail}>{paiement.package_qr}</Text>
-            )}
-            {estPlace && !!paiement.ride_client_name && (
-              <Text style={styles.detail}>{paiement.ride_client_name}</Text>
-            )}
-            {!estColis && !estPlace && !!paiement.trip_client_name && (
-              <Text style={styles.detail}>{paiement.trip_client_name}</Text>
-            )}
-            <Bouton
-              titre={t('equipe_marquer_paye')}
-              icone="cash-outline"
-              onPress={() => agir(paiement.id, () => api.confirmerPaiement(paiement.id))}
-              charge={actionEnCours === paiement.id}
-            />
-          </Carte>
-        );
-      })}
+      {paiements.map((paiement) => (
+        <Carte key={paiement.id}>
+          {corpsPaiement(paiement)}
+          <Bouton
+            titre={t('equipe_marquer_paye')}
+            icone="cash-outline"
+            onPress={() => agir(paiement.id, () => api.confirmerPaiement(paiement.id))}
+            charge={actionEnCours === paiement.id}
+          />
+        </Carte>
+      ))}
 
+      {/* Derniers paiements REÇUS : la preuve que « ça a bien été payé »,
+          y compris les paiements par crédit hôtel (badge 💳, encaissés
+          automatiquement sans passer par « en attente »). */}
+      {paiementsRecus.length > 0 && (
+        <>
+          <Text style={styles.titreSection}>✅ {t('equipe_paiements_recus')}</Text>
+          {paiementsRecus
+            .filter((paiement) => !paiement.refund_due_at || paiement.refunded_at)
+            .slice(0, 10)
+            .map((paiement) => {
+            const parCredit = String(paiement.pesapal_reference ?? '').startsWith('CREDIT-');
+            return (
+              <Carte key={paiement.id}>
+                {corpsPaiement(paiement)}
+                <View style={styles.ligneRecu}>
+                  <Text style={styles.badgeRecu}>✅ {t('equipe_paiement_recu')}</Text>
+                  {parCredit && (
+                    <Text style={styles.badgeCredit}>💳 {t('equipe_paiement_credit')}</Text>
+                  )}
+                  <Text style={styles.dateRecu}>
+                    {formaterDateRelativeI18n(
+                      champ(paiement, 'confirmed_at', 'confirmedAt', 'created_at', 'createdAt'),
+                      t
+                    )}
+                  </Text>
+                </View>
+              </Carte>
+            );
+          })}
         </>
       )}
+
+        </>
+        );
+      })()}
 
       {/* 3. Candidatures chauffeurs */}
       {section === 'candidatures' && (
@@ -1071,6 +1198,10 @@ const styles = StyleSheet.create({
   pastilleMenuAction: {
     backgroundColor: couleurs.attenteFond,
   },
+  // Voyant VERT de la case Paiements : à traiter, repérable d'un coup d'œil.
+  pastilleMenuVerte: {
+    backgroundColor: couleurs.succes,
+  },
   textePastilleMenu: {
     fontSize: 14,
     fontWeight: '800',
@@ -1078,6 +1209,9 @@ const styles = StyleSheet.create({
   },
   textePastilleMenuAction: {
     color: couleurs.attente,
+  },
+  textePastilleMenuVerte: {
+    color: couleurs.surPrimaire,
   },
   bandeauAbonnes: {
     backgroundColor: couleurs.carteTranslucide,
@@ -1174,6 +1308,63 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     color: couleurs.succes,
+  },
+  // Gain net du jour : le chiffre en GRAND, en shillings, au centre.
+  heroCa: {
+    alignItems: 'center',
+    gap: 2,
+    paddingVertical: espaces.s,
+  },
+  heroMontantCa: {
+    fontSize: 30,
+    fontWeight: '800',
+    color: couleurs.succes,
+  },
+  heroLabelCa: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: couleurs.encre,
+  },
+  heroDetailCa: {
+    fontSize: 12.5,
+    color: couleurs.texteSecondaire,
+  },
+  heroSousCa: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: couleurs.texteSecondaire,
+  },
+  // Rubrique paiements : remboursement dû + paiements reçus.
+  montantRembourser: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: couleurs.danger,
+  },
+  ligneRecu: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: espaces.s,
+  },
+  badgeRecu: {
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: couleurs.succes,
+  },
+  badgeCredit: {
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: couleurs.primaireFonce,
+    backgroundColor: couleurs.primaireClair,
+    paddingHorizontal: espaces.s,
+    paddingVertical: 2,
+    borderRadius: rayons.pastille,
+    overflow: 'hidden',
+  },
+  dateRecu: {
+    fontSize: 12,
+    color: couleurs.texteSecondaire,
+    marginLeft: 'auto',
   },
   retourMenu: {
     flexDirection: 'row',

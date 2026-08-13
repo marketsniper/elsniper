@@ -297,6 +297,43 @@ const CHAINES = {
   equipe_ca_titre: { fr: "Chiffre d'affaires", en: 'Revenue', sw: 'Mapato' },
   equipe_ca_net: { fr: 'Net zanziGo', en: 'zanziGo net', sw: 'Halisi zanziGo' },
   equipe_ca_ouvrir: { fr: '7 j · 30 j ›', en: '7 d · 30 d ›', sw: 'Siku 7 · 30 ›' },
+  equipe_ca_hero: {
+    fr: 'Gain net aujourd\'hui (USD convertis)',
+    en: 'Net gain today (USD converted)',
+    sw: 'Faida halisi leo (USD zimebadilishwa)',
+  },
+  equipe_ca_encaisse: { fr: 'Encaissé', en: 'Collected', sw: 'Zilizokusanywa' },
+  equipe_ca_par_jour: {
+    fr: '≈ {montant} / jour',
+    en: '≈ {montant} / day',
+    sw: '≈ {montant} / siku',
+  },
+  equipe_remboursements: {
+    fr: 'Remboursements à verser',
+    en: 'Refunds to pay out',
+    sw: 'Marejesho ya kulipa',
+  },
+  equipe_rembourser_montant: {
+    fr: '↩️ À rembourser : {montant} ({taux} % — annulation client)',
+    en: '↩️ To refund: {montant} ({taux}% — client cancellation)',
+    sw: '↩️ Ya kurejesha: {montant} ({taux}% — mteja ameghairi)',
+  },
+  equipe_rembourse_bouton: {
+    fr: 'Remboursement versé ✓',
+    en: 'Refund paid ✓',
+    sw: 'Marejesho yamelipwa ✓',
+  },
+  equipe_paiements_recus: {
+    fr: 'Derniers paiements reçus',
+    en: 'Latest payments received',
+    sw: 'Malipo ya hivi karibuni',
+  },
+  equipe_paiement_recu: { fr: 'reçu', en: 'received', sw: 'imepokelewa' },
+  equipe_paiement_credit: {
+    fr: 'Payé par crédit hôtel',
+    en: 'Paid with hotel credit',
+    sw: 'Imelipwa kwa salio la hoteli',
+  },
   equipe_stat_clients: { fr: 'Clients · Visiteurs', en: 'Clients · Visitors', sw: 'Wateja · Wageni' },
   equipe_stat_locaux: { fr: 'Locaux', en: 'Locals', sw: 'Wazawa' },
   equipe_recherche_label: {
@@ -411,6 +448,46 @@ const CHAINES = {
     fr: 'Paiement sous 5 minutes : au-delà, la réservation s\'annule automatiquement et les places sont remises en vente. Ponctualité : plus de 10 minutes de retard au départ = place considérée comme annulée et due en intégralité au chauffeur — par respect pour les autres voyageurs.',
     en: 'Pay within 5 minutes: after that, the booking cancels automatically and the seats go back on sale. Punctuality: more than 10 minutes late at departure = seat considered cancelled and owed in full to the driver — out of respect for the other travellers.',
     sw: 'Lipa ndani ya dakika 5: baada ya hapo, uhifadhi unaghairiwa kiotomatiki na viti vinarudishwa sokoni. Uwakati: kuchelewa zaidi ya dakika 10 wakati wa kuondoka = kiti kinahesabiwa kimeghairiwa na kinadaiwa kikamilifu kwa dereva — kwa heshima ya wasafiri wengine.',
+  },
+  resa_regle_annulation: {
+    fr: 'Annulation : remboursement 100 % jusqu\'à 48 h avant le départ, 50 % entre 48 h et 24 h. À moins de 24 h du départ, la place reste due.',
+    en: 'Cancellation: 100% refund up to 48 h before departure, 50% between 48 h and 24 h. Less than 24 h before departure, the seat remains due.',
+    sw: 'Kughairi: marejesho 100% hadi saa 48 kabla ya kuondoka, 50% kati ya saa 48 na 24. Chini ya saa 24 kabla ya kuondoka, kiti kinabaki kinadaiwa.',
+  },
+
+  // --- Mes places de taxi partagé (annulation client) -----------------------------
+  places_titre: {
+    fr: 'Mes places de taxi partagé',
+    en: 'My shared taxi seats',
+    sw: 'Viti vyangu vya teksi ya pamoja',
+  },
+  places_detail: {
+    fr: '{n} place·s réservée·s',
+    en: '{n} seat·s booked',
+    sw: 'viti {n} vimehifadhiwa',
+  },
+  places_payee: { fr: 'payée', en: 'paid', sw: 'imelipwa' },
+  places_a_payer: { fr: 'à payer', en: 'to pay', sw: 'kulipwa' },
+  place_annuler: { fr: 'Annuler ma place', en: 'Cancel my seat', sw: 'Ghairi kiti changu' },
+  place_annuler_confirm: {
+    fr: 'Annuler cette réservation ? Les places retournent au chauffeur.',
+    en: 'Cancel this booking? The seats go back to the driver.',
+    sw: 'Ughairi uhifadhi huu? Viti vinarudi kwa dereva.',
+  },
+  place_annuler_confirm_rembours: {
+    fr: 'Annuler cette place ? Vous serez remboursé de {montant} ({taux} %).',
+    en: 'Cancel this seat? You will be refunded {montant} ({taux}%).',
+    sw: 'Ughairi kiti hiki? Utarejeshewa {montant} ({taux}%).',
+  },
+  place_annulee_rembours: {
+    fr: 'Place annulée. Remboursement de {montant} : l\'équipe vous le verse — le message WhatsApp qui s\'ouvre la prévient, appuyez sur Envoyer.',
+    en: 'Seat cancelled. {montant} refund: the team will pay you — the WhatsApp message that opens notifies them, just press Send.',
+    sw: 'Kiti kimeghairiwa. Marejesho ya {montant}: timu itakulipa — ujumbe wa WhatsApp unaofunguka unawajulisha, bonyeza Tuma.',
+  },
+  place_trop_tard: {
+    fr: 'À moins de 24 h du départ, la place ne peut plus être annulée et reste due.',
+    en: 'Less than 24 h before departure, the seat can no longer be cancelled and remains due.',
+    sw: 'Chini ya saa 24 kabla ya kuondoka, kiti hakiwezi kughairiwa tena na kinabaki kinadaiwa.',
   },
 
   // --- Fidélité + crédit prépayé (hôtels) -----------------------------------------
@@ -1074,6 +1151,17 @@ const CHAINES = {
     fr: 'Annuler cette course ?',
     en: 'Cancel this ride?',
     sw: 'Ughairi safari hii?',
+  },
+  trip_annuler_confirm_rembours: {
+    fr: 'Annuler cette course payée ? Vous serez remboursé de {montant} ({taux} % — barème : 100 % à plus de 48 h du départ, 50 % entre 48 h et 24 h).',
+    en: 'Cancel this paid ride? You will be refunded {montant} ({taux}% — scale: 100% more than 48 h before departure, 50% between 48 h and 24 h).',
+    sw: 'Ughairi safari hii iliyolipwa? Utarejeshewa {montant} ({taux}% — kiwango: 100% zaidi ya saa 48 kabla ya kuondoka, 50% kati ya saa 48 na 24).',
+  },
+  trip_annulee_titre: { fr: 'Voyage annulé', en: 'Trip cancelled', sw: 'Safari imeghairiwa' },
+  trip_annulee_rembours: {
+    fr: 'Course annulée. Remboursement de {montant} : l\'équipe vous le verse — le message WhatsApp qui s\'ouvre la prévient, appuyez sur Envoyer.',
+    en: 'Ride cancelled. {montant} refund: the team will pay you — the WhatsApp message that opens notifies them, just press Send.',
+    sw: 'Safari imeghairiwa. Marejesho ya {montant}: timu itakulipa — ujumbe wa WhatsApp unaofunguka unawajulisha, bonyeza Tuma.',
   },
   commun_confirmer_oui: { fr: 'Oui, annuler', en: 'Yes, cancel', sw: 'Ndiyo, ghairi' },
   commun_confirmer_non: { fr: 'Non, garder', en: 'No, keep it', sw: 'Hapana, baki nayo' },

@@ -200,6 +200,9 @@ describe('Crédit prépayé hôtels', () => {
     assert.equal(paiement.status, 201);
     assert.equal(paiement.body.status, 'confirmed');
     assert.equal(paiement.body.payment_method, 'credit');
+    // L'équipe est alertée : lien WhatsApp avec le solde restant.
+    assert.ok(paiement.body.whatsapp_link.includes('wa.me'));
+    assert.ok(decodeURIComponent(paiement.body.whatsapp_link).includes('Solde crédit restant: 52.5 USD'));
 
     const apres = await request(app).get(`/api/trips/${trip.body.id}`).set(authHeaders(token));
     assert.equal(apres.body.status, 'paid');
@@ -261,6 +264,9 @@ describe('Crédit prépayé hôtels', () => {
       .send({ method: 'credit' });
     assert.equal(paiement.status, 201);
     assert.equal(paiement.body.payment_method, 'credit');
+    // L'équipe est alertée aussi pour les colis payés par crédit.
+    assert.ok(paiement.body.whatsapp_link.includes('wa.me'));
+    assert.ok(decodeURIComponent(paiement.body.whatsapp_link).includes('Solde crédit restant: 40.5 USD'));
 
     const apres = await request(app)
       .get(`/api/packages/${colis.body.id}`)
