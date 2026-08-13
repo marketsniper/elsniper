@@ -116,11 +116,10 @@ function specialLocalRouteTzs(pickup, dropoff) {
 // GRILLE PRIVÉE VILLE ↔ VILLE, AU KILOMÈTRE
 // ---------------------------------------------------------------------------
 // Le prix privé entre deux villes (hors hubs Stone Town / aéroport, qui
-// gardent la grille par zone historique) est EXTRAPOLÉ des tarifs connus :
-// prise en charge + prix par km de route (vol d'oiseau × détour routier
-// moyen), arrondi aux 5 USD. Étalonnage vérifié sur les trajets établis :
-// Stone Town → Nungwi (≈ 79 km de route) ≈ 50 USD ; Nungwi ↔ Paje
-// (≈ 88 km) → 65 USD — exactement le trajet spécial existant.
+// gardent la grille par zone historique) est SIMPLEMENT au kilomètre :
+// 0,50 USD par km de route (vol d'oiseau × détour routier moyen), arrondi
+// aux 5 USD, minimum 20 USD. Exemples : Kiwengwa → Paje (≈ 48 km) → 25 USD ;
+// Matemwe → Jambiani (≈ 73 km) → 35 USD ; villages voisins → 20 USD.
 const CITY_COORDS = {
   'aéroport (aakia)': [-6.221, 39.223],
   aéroport: [-6.221, 39.223],
@@ -144,7 +143,6 @@ const CITY_COORDS = {
   fumba: [-6.322, 39.183],
 };
 const DETOUR_ROUTIER = 1.35; // les routes de l'île ne sont jamais directes
-const PRISE_EN_CHARGE_USD = 20;
 const PRIX_PAR_KM_USD = 0.5;
 const PRIVE_MINIMUM_USD = 20;
 const HUBS = new Set(['stone town', 'stone town ferry', 'aéroport (aakia)', 'aéroport', 'airport']);
@@ -175,7 +173,7 @@ export function privateUsdForRoute(pickup, dropoff) {
   if (!HUBS.has(p) && !HUBS.has(d)) {
     const km = kmEntreVilles(pickup, dropoff);
     if (km !== null) {
-      const brut = PRISE_EN_CHARGE_USD + PRIX_PAR_KM_USD * km;
+      const brut = PRIX_PAR_KM_USD * km;
       return Math.max(PRIVE_MINIMUM_USD, Math.round(brut / 5) * 5);
     }
   }

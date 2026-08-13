@@ -85,6 +85,35 @@ async function fetchAvecTimeout(url: string, init: RequestInit): Promise<Respons
   }
 }
 
+// Dernier signe de vie du serveur : toute réponse HTTP (même une erreur)
+// prouve qu'il est éveillé. En dessous de 4 minutes, inutile de re-vérifier
+// (il ne s'endort qu'après 15 minutes sans visite).
+let dernierSigneDeVie = 0;
+const SERVEUR_CONSIDERE_EVEILLE_MS = 4 * 60 * 1000;
+
+/**
+ * Réveille le serveur gratuit AVANT une écriture : les POST/PATCH ne sont
+ * jamais rejoués (pas de doublons), donc ils doivent partir sur un serveur
+ * déjà debout. GET /health avec patience (le réveil prend 30-60 s) ; appelé
+ * aussi au lancement de l'app pour que tout soit prêt dès le premier geste.
+ */
+export async function reveillerServeur(): Promise<void> {
+  if (Date.now() - dernierSigneDeVie < SERVEUR_CONSIDERE_EVEILLE_MS) return;
+  for (let essai = 0; ; essai += 1) {
+    try {
+      const reponse = await fetchAvecTimeout(`${BASE_URL}/health`, { method: 'GET' });
+      if (reponse.ok) {
+        dernierSigneDeVie = Date.now();
+        return;
+      }
+    } catch {
+      // Réseau coupé ou réveil en cours : on insiste selon le calendrier.
+    }
+    if (essai >= DELAIS_REVEIL_MS.length) return; // la vraie requête tentera sa chance
+    await attendre(DELAIS_REVEIL_MS[essai]);
+  }
+}
+
 async function requete<T>(chemin: string, options: OptionsRequete = {}): Promise<T> {
   const entetes: Record<string, string> = {};
   if (jetonCourant) entetes.Authorization = `Bearer ${jetonCourant}`;
@@ -104,11 +133,18 @@ async function requete<T>(chemin: string, options: OptionsRequete = {}): Promise
   const init: RequestInit = { method: methode, headers: entetes, body };
   const relanceable = methode === 'GET';
 
+  // Écriture (jamais rejouée) : s'assurer d'abord que le serveur est debout,
+  // sinon le premier « Créer mon compte » de la journée échoue pendant le
+  // réveil et le client croit que la touche ne marche pas.
+  if (!relanceable) await reveillerServeur();
+
   let reponse: Response | null = null;
   for (let essai = 0; ; essai += 1) {
     try {
       reponse = await fetchAvecTimeout(`${BASE_URL}${chemin}`, init);
-      // 502/503/504 : le proxy répond mais le serveur dort encore.
+      // 502/503/504 : c'est le proxy Render qui répond, pas notre serveur —
+      // ça ne compte pas comme signe de vie.
+      if (![502, 503, 504].includes(reponse.status)) dernierSigneDeVie = Date.now();
       if (relanceable && [502, 503, 504].includes(reponse.status) && essai < DELAIS_REVEIL_MS.length) {
         await attendre(DELAIS_REVEIL_MS[essai]);
         continue;

@@ -1193,6 +1193,11 @@ const CHAINES = {
     en: 'Your number + a password of your choice — no SMS code to receive, works anywhere in the world.',
     sw: 'Namba yako + nenosiri unalochagua — hakuna msimbo wa SMS, inafanya kazi popote duniani.',
   },
+  tel_compte_existant: {
+    fr: 'Un compte existe déjà avec ce numéro, mais ce mot de passe ne correspond pas. Utilisez « Se connecter » — mot de passe oublié ? Écrivez-nous sur WhatsApp.',
+    en: 'An account already exists with this number, but this password does not match. Use "Sign in" — forgot your password? Message us on WhatsApp.',
+    sw: 'Akaunti tayari ipo kwa namba hii, lakini nenosiri hili halilingani. Tumia « Ingia » — umesahau nenosiri? Tuandikie WhatsApp.',
+  },
   tel_mdp_label: {
     fr: 'Mot de passe (8 caractères minimum)',
     en: 'Password (8 characters minimum)',

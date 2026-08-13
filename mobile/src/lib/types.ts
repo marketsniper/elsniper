@@ -532,7 +532,6 @@ const COORDONNEES_VILLES: Record<string, [number, number]> = {
   fumba: [-6.322, 39.183],
 };
 const DETOUR_ROUTIER = 1.35;
-const PRISE_EN_CHARGE_USD = 20;
 const PRIX_PAR_KM_USD = 0.5;
 const PRIVE_MINIMUM_USD = 20;
 const HUBS_TARIFAIRES = new Set([
@@ -566,7 +565,7 @@ export function tarifPriveItineraire(depart: string, arrivee: string): number {
   if (!HUBS_TARIFAIRES.has(d) && !HUBS_TARIFAIRES.has(a)) {
     const km = kmEntreVilles(depart, arrivee);
     if (km !== null) {
-      const brut = PRISE_EN_CHARGE_USD + PRIX_PAR_KM_USD * km;
+      const brut = PRIX_PAR_KM_USD * km;
       return Math.max(PRIVE_MINIMUM_USD, Math.round(brut / 5) * 5);
     }
   }

@@ -3,9 +3,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter, type Href } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Pressable, Text } from 'react-native';
 
+import { reveillerServeur } from '@/lib/api';
 import { AuthProvider } from '@/lib/auth';
 import { LangueProvider, useT } from '@/lib/i18n';
 import { couleurs } from '@/lib/theme';
@@ -69,6 +70,12 @@ function PilesNavigation() {
 }
 
 export default function LayoutRacine() {
+  // Le serveur gratuit s'endort après 15 min sans visite : on le réveille dès
+  // l'ouverture de l'app, pour que le premier geste (inscription, connexion,
+  // réservation) parte sur un serveur debout.
+  useEffect(() => {
+    reveillerServeur();
+  }, []);
   return (
     <LangueProvider>
       <AuthProvider>

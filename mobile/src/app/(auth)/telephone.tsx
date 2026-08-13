@@ -19,7 +19,7 @@ import {
 import { api, ErreurApi } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useT, type CleChaine } from '@/lib/i18n';
-import { champ, type StatutVerification } from '@/lib/types';
+import { champ, type ReponseVerifieOtp, type StatutVerification } from '@/lib/types';
 import { couleurs, espaces } from '@/lib/theme';
 
 /** Clé i18n du libellé de chaque profil proposé sur la page d'accueil. */
@@ -70,12 +70,35 @@ export default function EcranTelephone() {
       return;
     }
     setCharge(true);
+    // « Créer mon compte » sur un numéro DÉJÀ inscrit : on tente la
+    // connexion avec le mot de passe saisi — la touche aboutit toujours.
+    // Si le mot de passe ne correspond pas, message clair.
+    const inscrireOuConnecter = async (
+      inscrire: () => Promise<ReponseVerifieOtp>,
+      connecter: () => Promise<ReponseVerifieOtp>
+    ): Promise<ReponseVerifieOtp | null> => {
+      try {
+        return await inscrire();
+      } catch (e) {
+        if (!(e instanceof ErreurApi) || e.code !== 'account_exists') throw e;
+        try {
+          return await connecter();
+        } catch {
+          setErreur(t('tel_compte_existant'));
+          return null;
+        }
+      }
+    };
     try {
       // ----- CHAUFFEURS -----
       if (estChauffeur) {
         const reponse = creation
-          ? await api.inscriptionChauffeur(telephone, motDePasse)
+          ? await inscrireOuConnecter(
+              () => api.inscriptionChauffeur(telephone, motDePasse),
+              () => api.connexionChauffeur(telephone, motDePasse)
+            )
           : await api.connexionChauffeur(telephone, motDePasse);
+        if (!reponse) return;
         await connexion({
           token: reponse.token,
           phone: telephone,
@@ -97,8 +120,12 @@ export default function EcranTelephone() {
 
       // ----- CLIENTS (visiteurs ET locaux) -----
       const reponse = creation
-        ? await api.inscriptionVisiteur(telephone, motDePasse)
+        ? await inscrireOuConnecter(
+            () => api.inscriptionVisiteur(telephone, motDePasse),
+            () => api.connexionVisiteur(telephone, motDePasse)
+          )
         : await api.connexionVisiteur(telephone, motDePasse);
+      if (!reponse) return;
       await connexion({
         token: reponse.token,
         phone: telephone,
