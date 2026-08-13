@@ -190,10 +190,13 @@ export default function EcranAnnonces() {
   const annoncesOuvertes = mesRides.filter(
     (ride) => champ<StatutRide>(ride, 'status', 'statut') === 'open'
   );
+  // Le balai compare la date de CRÉATION de l'annonce (toujours dans le
+  // passé) — pas celle du départ : une annonce annulée avant un départ
+  // futur doit pouvoir s'effacer immédiatement.
   const annoncesPassees = mesRides.filter(
     (ride) =>
       champ<StatutRide>(ride, 'status', 'statut') !== 'open' &&
-      !estBalaye(champ(ride, 'departure_at', 'departureAt', 'created_at', 'createdAt'), balai)
+      !estBalaye(champ(ride, 'created_at', 'createdAt', 'departure_at', 'departureAt'), balai)
   );
 
   const faireLeMenage = () => {
