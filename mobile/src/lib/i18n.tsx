@@ -1494,6 +1494,11 @@ const CHAINES = {
     sw: 'Makadirio ya mapato halisi (viti vilivyohifadhiwa)',
   },
   gain_net_par_place: { fr: 'net', en: 'net', sw: 'halisi' },
+  annonces_gain_cumule: {
+    fr: 'Gain net',
+    en: 'Net earnings',
+    sw: 'Mapato halisi',
+  },
   annonce_prix_label: { fr: 'Prix par place', en: 'Price per seat', sw: 'Bei kwa kiti' },
   annonces_prix_deux: {
     fr: '{tzs} (locaux) · {usd} (touristes)',

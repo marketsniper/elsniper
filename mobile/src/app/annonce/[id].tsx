@@ -29,6 +29,7 @@ import {
   champ,
   formaterDate,
   formaterMontant,
+  TAUX_USD_TZS,
   type ReservationRide,
   type Ride,
   type StatutRide,
@@ -179,7 +180,8 @@ export default function EcranAnnonce() {
             <Text style={styles.labelTotal}>{t('annonce_gain_total')}</Text>
             <Text style={styles.valeurTotal}>
               {(() => {
-                // Totaux par devise (des places USD et TZS peuvent coexister).
+                // Totaux par devise (des places USD et TZS peuvent coexister),
+                // avec l'équivalent GLOBAL en shillings quand il y a de l'USD.
                 const totaux: Record<string, number> = {};
                 for (const resa of reservations) {
                   if (resa.net_per_seat === undefined) continue;
@@ -189,7 +191,15 @@ export default function EcranAnnonce() {
                 const parts = Object.entries(totaux).map(([devise, montant]) =>
                   formaterMontant(Math.round(montant * 100) / 100, devise)
                 );
-                return parts.length > 0 ? parts.join(' + ') : '—';
+                if (parts.length === 0) return '—';
+                const affichage = parts.join(' + ');
+                if (totaux.USD) {
+                  const totalTzs = Math.round(
+                    (totaux.TZS ?? 0) + totaux.USD * TAUX_USD_TZS
+                  );
+                  return `${affichage} (≈ ${formaterMontant(totalTzs, 'TZS')})`;
+                }
+                return affichage;
               })()}
             </Text>
           </View>

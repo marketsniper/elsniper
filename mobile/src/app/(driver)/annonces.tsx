@@ -41,6 +41,7 @@ import {
   formaterMontant,
   ORIGINES_RIDES,
   tarifTrajetProfil,
+  TAUX_USD_TZS,
   type ReservationRide,
   type Ride,
   type StatutRide,
@@ -215,6 +216,15 @@ export default function EcranAnnonces() {
     const restantes = Number(champ(ride, 'seats_available', 'seatsAvailable') ?? 0);
     const reservations = champ<ReservationRide[]>(ride, 'bookings') ?? [];
     const estOuverte = statut === 'open';
+    // Gain net cumulé, TOUT converti en shillings (les places touristes en
+    // USD comptent × taux) — le chauffeur voit son gain grossir en direct.
+    const gainTotalTzs = Math.round(
+      reservations.reduce((somme, resa) => {
+        const net = Number(resa.net_per_seat ?? 0) * resa.seats;
+        return somme + (resa.currency === 'USD' ? net * TAUX_USD_TZS : net);
+      }, 0)
+    );
+    const complet = estOuverte && restantes === 0;
     return (
       <Pressable
         key={ride.id}
@@ -232,7 +242,11 @@ export default function EcranAnnonces() {
             <Text style={styles.fleche}>→</Text>{'  '}
             {champ(ride, 'destination') ?? '?'}
           </Text>
-          <Badge texte={libelleStatutRide(statut, t)} ton={tonStatut(statut)} />
+          {complet ? (
+            <Badge texte={`🎉 ${t('rides_complet')}`} ton="succes" />
+          ) : (
+            <Badge texte={libelleStatutRide(statut, t)} ton={tonStatut(statut)} />
+          )}
         </View>
         <View style={styles.ligneDetails}>
           <View style={styles.detail}>
@@ -256,6 +270,12 @@ export default function EcranAnnonces() {
               tzs: formaterMontant(prixTzs, 'TZS'),
               usd: formaterMontant(prixUsd, 'USD'),
             })}
+          </Text>
+        )}
+        {/* Gain net cumulé en shillings, au fil des places vendues. */}
+        {gainTotalTzs > 0 && (
+          <Text style={styles.gainRide}>
+            💰 {t('annonces_gain_cumule')} : {formaterMontant(gainTotalTzs, 'TZS')}
           </Text>
         )}
         <View style={styles.ligneOuvrir}>
@@ -462,6 +482,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '800',
     color: couleurs.primaire,
+  },
+  gainRide: {
+    fontSize: 14.5,
+    fontWeight: '800',
+    color: couleurs.succes,
   },
   blocReservations: {
     backgroundColor: couleurs.surface,

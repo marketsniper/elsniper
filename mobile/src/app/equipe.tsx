@@ -559,7 +559,9 @@ export default function EcranEquipe() {
         );
         return (
           <Carte key={paiement.id}>
-            <View style={styles.ligneDetails}>
+            {/* flexWrap : un gros montant (800 000 TZS) passe à la ligne au
+                lieu d'être coupé au bord de l'écran. */}
+            <View style={styles.lignePaiement}>
               <Badge
                 texte={
                   estColis
@@ -990,6 +992,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     gap: espaces.m,
+  },
+  lignePaiement: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: espaces.s,
   },
   ligneDetail: {
     flexDirection: 'row',
