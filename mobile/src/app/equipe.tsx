@@ -29,6 +29,7 @@ import {
 } from '@/components/ui';
 import { api, definirCleEquipe, ErreurApi, type StatsAbonnes } from '@/lib/api';
 import { formaterDateRelativeI18n, libelleTypeTrajet, useT } from '@/lib/i18n';
+import { useRafraichissementAuto } from '@/lib/rafraichissementAuto';
 import { couleurs, espaces, ombres, rayons } from '@/lib/theme';
 import {
   champ,
@@ -161,6 +162,13 @@ export default function EcranEquipe() {
   useEffect(() => {
     if (cle) charger();
   }, [cle, charger]);
+
+  // Tableau vivant : compteurs, paiements et POSITIONS GPS des chauffeurs se
+  // rafraîchissent tout seuls (les chauffeurs envoient leur position toutes
+  // les 45 s — l'équipe les suit donc en quasi temps réel).
+  useRafraichissementAuto(() => {
+    if (cle) charger();
+  }, 30000);
 
   const activer = async () => {
     const candidate = saisie.trim();
@@ -557,6 +565,34 @@ export default function EcranEquipe() {
                     setChoixChauffeur((prev) => ({ ...prev, [course.id]: libelle }))
                   }
                 />
+                {/* AVANT de confirmer : où est ce chauffeur, là maintenant ?
+                    Zone déclarée + dernière position GPS sur la carte — pour
+                    vérifier qu'il est vraiment dans le secteur. */}
+                {(() => {
+                  const choisi = chauffeurs.find(
+                    (c) => libelleChauffeur(c) === choixChauffeur[course.id]
+                  );
+                  if (!choisi) return null;
+                  const lat = Number(champ(choisi, 'last_lat') ?? NaN);
+                  const lng = Number(champ(choisi, 'last_lng') ?? NaN);
+                  const positionConnue = Number.isFinite(lat) && Number.isFinite(lng);
+                  const majPosition = champ(choisi, 'position_updated_at');
+                  return positionConnue ? (
+                    <Bouton
+                      titre={`📍 ${String(champ(choisi, 'zone') ?? '—')} · ${t('equipe_position')} · ${formaterDateRelativeI18n(majPosition, t)}`}
+                      icone="location-outline"
+                      variante="secondaire"
+                      onPress={() => Linking.openURL(`https://www.google.com/maps?q=${lat},${lng}`)}
+                    />
+                  ) : (
+                    <View style={styles.ligneDetail}>
+                      <Ionicons name="location-outline" size={14} color={couleurs.texteSecondaire} />
+                      <Text style={styles.detail}>
+                        {String(champ(choisi, 'zone') ?? '—')} · {t('equipe_position_inconnue')}
+                      </Text>
+                    </View>
+                  );
+                })()}
                 <Bouton
                   titre={t('equipe_confirmer_chauffeur')}
                   icone="checkmark-circle-outline"

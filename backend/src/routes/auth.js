@@ -62,10 +62,10 @@ authRouter.post('/request-otp', async (req, res, next) => {
 
     const body = { sent: true, expiresInMinutes: OTP_TTL_MINUTES };
     // Exposé hors production, ou si le mode pilote est activé
-    // (OTP_EXPOSE_DEV_CODE=1) : tant qu'aucun vrai fournisseur SMS n'est
-    // branché, le code s'affiche dans l'app pour permettre les tests.
-    // À DÉSACTIVER dès que les SMS réels sont en place.
-    if (config.env !== 'production' || config.exposeOtpDevCode) {
+    // (OTP_EXPOSE_DEV_CODE=1) — mais JAMAIS quand un vrai fournisseur SMS
+    // est branché : dès que les SMS réels partent (Africa's Talking), le
+    // code n'apparaît plus dans l'app, automatiquement.
+    if (config.env !== 'production' || (config.exposeOtpDevCode && smsService.isSmsStub())) {
       body.devCode = code;
     }
     res.status(200).json(body);

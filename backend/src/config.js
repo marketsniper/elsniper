@@ -111,6 +111,15 @@ export const config = {
     phone: env.CALLMEBOT_PHONE || env.TEAM_WHATSAPP_NUMBER || '+255666241749',
   },
 
+  // SMS RÉELS (codes OTP) via Africa's Talking — sans clés, mode stub : le
+  // code s'affiche dans l'app (mode pilote). Avec les clés, les clients
+  // reçoivent VRAIMENT leur code par SMS et le mode pilote se coupe seul.
+  sms: {
+    username: env.AT_USERNAME || '',
+    apiKey: env.AT_API_KEY || '',
+    senderId: env.AT_SENDER_ID || '',
+  },
+
   // Stockage S3 compatible (Cloudflare R2 recommandé) — sans clés, fallback disque local
   s3: {
     bucket: env.S3_BUCKET || '',
