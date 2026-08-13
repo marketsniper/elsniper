@@ -206,12 +206,26 @@ export function sharedSeatUsdForRoute(pickup, dropoff) {
   return tierForRoute(pickup, dropoff).sharedUsd;
 }
 
-// Prix local (TZS) d'une place — fixé par la grille zanziGo (15 000 partout,
-// trajets spéciaux inclus, ex. Nungwi ↔ Paje 20 000) : c'est LUI qui est posé
-// automatiquement sur les trajets partagés postés par les chauffeurs (le
-// chauffeur ne choisit pas son prix).
+// Le TARIF LOCAL (place à 15 000 TZS, spéciaux inclus, ex. Nungwi ↔ Paje
+// 20 000) ne s'applique que sur les GRANDS AXES — définis par : le taxi
+// privé du même trajet coûte au moins 45 USD. Sur les petits trajets
+// (privé sous les 45 USD), pas de tarif local : la place se paie au prix
+// touriste de la zone, converti en shillings.
+const GRAND_AXE_PRIVE_MIN_USD = 45;
+
+function estGrandAxe(pickup, dropoff) {
+  return privateUsdForRoute(pickup, dropoff) >= GRAND_AXE_PRIVE_MIN_USD;
+}
+
+// Prix local (TZS) d'une place — c'est LUI qui est posé automatiquement sur
+// les trajets partagés postés par les chauffeurs (le chauffeur ne choisit
+// pas son prix).
 export function localSeatTzsForRoute(pickup, dropoff) {
-  return specialLocalRouteTzs(pickup, dropoff) ?? tierForRoute(pickup, dropoff).localTzs;
+  const tier = tierForRoute(pickup, dropoff);
+  if (!estGrandAxe(pickup, dropoff)) {
+    return Math.round(tier.sharedUsd * config.usdToTzsRate);
+  }
+  return specialLocalRouteTzs(pickup, dropoff) ?? tier.localTzs;
 }
 
 // audience : 'tourist' | 'resident' | 'local' | 'hotel'
@@ -229,9 +243,10 @@ export function priceTrip(tripType, audience, route = {}) {
       const taux = privateCommissionRate(route.pickup, route.dropoff);
       return { price, commission: round2(price * taux), currency: 'TZS' };
     }
-    // Taxi partagé local : tarif unifié (trajets spéciaux inclus), par
-    // place — commission 15 %.
-    const price = specialLocalRouteTzs(route.pickup, route.dropoff) ?? tier.localTzs;
+    // Taxi partagé local : tarif unifié (trajets spéciaux inclus) SUR LES
+    // GRANDS AXES uniquement ; ailleurs, prix touriste converti en TZS —
+    // commission 15 % dans les deux cas.
+    const price = localSeatTzsForRoute(route.pickup, route.dropoff);
     return { price, commission: round2(price * COMMISSION_RATES.local), currency: 'TZS' };
   }
 

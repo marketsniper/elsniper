@@ -615,7 +615,12 @@ export function tarifTrajetProfil(
         : zone.priveUsd;
       return { montant: Math.round(usd * TAUX_USD_TZS), devise: 'TZS' };
     }
-    // Place en taxi partagé : tarif unifié, trajets spéciaux inclus.
+    // Place en taxi partagé : le tarif local (15 000, spéciaux inclus) ne
+    // vaut que sur les GRANDS AXES — privé du même trajet à 45 USD minimum.
+    // Ailleurs, la place se paie au prix touriste converti en shillings.
+    if (itineraire && tarifPriveItineraire(itineraire.depart, itineraire.arrivee) < 45) {
+      return { montant: Math.round(zone.partageUsd * TAUX_USD_TZS), devise: 'TZS' };
+    }
     const specialLocal = itineraire
       ? tarifSpecialLocal(itineraire.depart, itineraire.arrivee)
       : null;
