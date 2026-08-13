@@ -273,6 +273,19 @@ export function formaterMontant(montant: number | string, devise: string): strin
 }
 
 /**
+ * Total d'un panier de gains {devise: montant} EN SHILLINGS : les montants
+ * USD sont convertis au taux zanziGo (TAUX_USD_TZS). Utilisé par les
+ * compteurs de gains (équipe et chauffeurs) pour afficher UN chiffre clair.
+ */
+export function totalEnTzs(gains: Record<string, number>): number {
+  let total = 0;
+  for (const [devise, montant] of Object.entries(gains)) {
+    total += devise === 'USD' ? montant * TAUX_USD_TZS : montant;
+  }
+  return Math.round(total);
+}
+
+/**
  * Barème d'annulation CLIENT d'un voyage payé (même règle que le serveur) :
  * ≥ 48 h avant le départ = remboursement 100 %, entre 24 h et 48 h = 50 %,
  * < 24 h = annulation refusée. Renvoie 1, 0.5 ou null.

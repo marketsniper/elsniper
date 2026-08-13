@@ -5,6 +5,7 @@ import { HttpError, notFound } from '../errors.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { isAdmin, requireAuth, requireAdmin } from '../middleware/auth.js';
 import { hashPassword } from '../services/passwordService.js';
+import { emailBienvenueHotel, envoyerEmail } from '../services/emailService.js';
 
 // Fidélité : 1 bon toutes les COURSES_PAR_BON courses TERMINÉES réservées
 // par l'hôtel — la rampe de lancement de zanziGo, ce sont les hôtels : on
@@ -68,6 +69,10 @@ router.post(
         data.address ?? null,
       ]
     );
+    // Récapitulatif + informations de connexion par e-mail — au mieux,
+    // jamais bloquant (le mot de passe n'est JAMAIS envoyé).
+    const { subject, html } = emailBienvenueHotel(rows[0]);
+    envoyerEmail({ to: rows[0].email, subject, html }).catch(() => {});
     res.status(201).json(sanitizeHotel(rows[0]));
   })
 );

@@ -34,7 +34,7 @@ import {
   champ,
   formaterMontant,
   formaterPrix,
-  TAUX_USD_TZS,
+  totalEnTzs,
   type Chauffeur,
   type Hotel,
   type PaiementEquipe,
@@ -227,13 +227,7 @@ export default function EcranEquipe() {
 
   // Total d'un panier de gains EN SHILLINGS : les montants USD sont
   // convertis au taux zanziGo (même taux que la grille tarifaire).
-  const gainEnTzs = (gains: Record<string, number>) => {
-    let total = 0;
-    for (const [devise, montant] of Object.entries(gains)) {
-      total += devise === 'USD' ? montant * TAUX_USD_TZS : montant;
-    }
-    return Math.round(total);
-  };
+  const gainEnTzs = totalEnTzs;
 
   // Ouverture d'une rubrique depuis le menu : remet la recherche à zéro.
   const ouvrirSection = (cle: SectionEquipe) => {

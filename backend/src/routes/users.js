@@ -4,6 +4,7 @@ import { query } from '../db.js';
 import { HttpError, notFound } from '../errors.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { isAdmin, requireAuth, requireAdmin } from '../middleware/auth.js';
+import { emailBienvenueClient, envoyerEmail } from '../services/emailService.js';
 
 const router = Router();
 
@@ -58,6 +59,12 @@ router.post(
         data.idDocumentUrl ?? null,
       ]
     );
+    // Récapitulatif d'inscription par e-mail (si fourni) — au mieux, jamais
+    // bloquant : l'inscription réussit même si l'e-mail ne part pas.
+    if (rows[0].email) {
+      const { subject, html } = emailBienvenueClient(rows[0]);
+      envoyerEmail({ to: rows[0].email, subject, html }).catch(() => {});
+    }
     res.status(201).json(rows[0]);
   })
 );

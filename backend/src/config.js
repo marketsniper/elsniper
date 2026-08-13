@@ -83,6 +83,14 @@ export const config = {
       `${env.PUBLIC_API_URL || 'https://zanzigo-api.onrender.com'}/api/pesapal/retour`,
   },
 
+  // E-mails transactionnels (récapitulatif d'inscription…) via Resend
+  // (https://resend.com — clé API gratuite). Sans clé, mode stub : l'e-mail
+  // est simplement journalisé, l'inscription n'échoue JAMAIS pour un e-mail.
+  emailer: {
+    resendApiKey: env.RESEND_API_KEY || '',
+    from: env.EMAIL_FROM || 'zanziGo <onboarding@resend.dev>',
+  },
+
   // Stockage S3 compatible (Cloudflare R2 recommandé) — sans clés, fallback disque local
   s3: {
     bucket: env.S3_BUCKET || '',

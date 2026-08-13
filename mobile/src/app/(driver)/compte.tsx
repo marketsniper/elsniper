@@ -16,7 +16,7 @@ import { api, type StatsChauffeur } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useT } from '@/lib/i18n';
 import { couleurs, espaces, rayons, tailles } from '@/lib/theme';
-import { champ, formaterMontant, type StatutVerification } from '@/lib/types';
+import { champ, formaterMontant, totalEnTzs, type StatutVerification } from '@/lib/types';
 
 /** Initiales (2 lettres max) d'un nom complet. */
 function initiales(nom: string): string {
@@ -90,17 +90,31 @@ export default function EcranCompteChauffeur() {
         )}
       </Carte>
 
-      {/* Compteur de gains : aujourd'hui / 7 jours / 30 jours. */}
+      {/* Compteur de gains — TOUT EN SHILLINGS : le gain net du jour en
+          grand (les places payées en USD sont converties au taux zanziGo),
+          puis 7 jours et 30 jours avec la moyenne par jour. */}
       {verifie && stats && (
         <Carte>
-          <Text style={styles.titreGains}>{t('gains_titre')}</Text>
+          <Text style={styles.titreGains}>💰 {t('gains_titre')}</Text>
+          <View style={styles.heroGains}>
+            <Text style={styles.heroMontantGains}>
+              {formaterMontant(totalEnTzs(stats.today.gains), 'TZS')}
+            </Text>
+            <Text style={styles.heroLabelGains}>{t('gains_hero_label')}</Text>
+            <Text style={styles.heroDetailGains}>
+              {t('gains_detail_compte', {
+                courses: stats.today.courses,
+                colis: stats.today.colis,
+                places: stats.today.places ?? 0,
+              })}
+            </Text>
+          </View>
           {(
             [
-              ['gains_aujourdhui', stats.today],
-              ['gains_7j', stats.week],
-              ['gains_30j', stats.month],
+              ['gains_7j', stats.week, 7],
+              ['gains_30j', stats.month, 30],
             ] as const
-          ).map(([cle, fenetre]) => (
+          ).map(([cle, fenetre, jours]) => (
             <View key={cle} style={styles.ligneGains}>
               <View style={styles.colonneGains}>
                 <Text style={styles.labelGains}>{t(cle)}</Text>
@@ -108,16 +122,21 @@ export default function EcranCompteChauffeur() {
                   {t('gains_detail_compte', { courses: fenetre.courses, colis: fenetre.colis, places: fenetre.places ?? 0 })}
                 </Text>
               </View>
-              <Text style={styles.montantGains}>
-                {Object.keys(fenetre.gains).length > 0
-                  ? Object.entries(fenetre.gains)
-                      .map(([devise, montant]) => formaterMontant(montant, devise))
-                      .join(' + ')
-                  : '—'}
-              </Text>
+              <View style={styles.colonneMontants}>
+                <Text style={styles.montantGains}>
+                  {formaterMontant(totalEnTzs(fenetre.gains), 'TZS')}
+                </Text>
+                <Text style={styles.parJourGains}>
+                  {t('equipe_ca_par_jour', {
+                    montant: formaterMontant(Math.round(totalEnTzs(fenetre.gains) / jours), 'TZS'),
+                  })}
+                </Text>
+              </View>
             </View>
           ))}
-          <Text style={styles.noteGains}>{t('gains_note_paiement')}</Text>
+          <Text style={styles.noteGains}>
+            {t('gains_note_paiement')} {t('gains_note_conversion')}
+          </Text>
         </Carte>
       )}
 
@@ -160,6 +179,35 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
     color: couleurs.encre,
+  },
+  // Gain du jour : le chiffre en GRAND, en shillings, au centre.
+  heroGains: {
+    alignItems: 'center',
+    gap: 2,
+    paddingVertical: espaces.s,
+  },
+  heroMontantGains: {
+    fontSize: 30,
+    fontWeight: '800',
+    color: couleurs.succes,
+  },
+  heroLabelGains: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: couleurs.encre,
+  },
+  heroDetailGains: {
+    fontSize: 12.5,
+    color: couleurs.texteSecondaire,
+  },
+  colonneMontants: {
+    alignItems: 'flex-end',
+    gap: 1,
+  },
+  parJourGains: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: couleurs.succes,
   },
   ligneGains: {
     flexDirection: 'row',

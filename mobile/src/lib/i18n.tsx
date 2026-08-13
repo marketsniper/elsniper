@@ -164,6 +164,16 @@ const CHAINES = {
     en: 'Net earnings, zanziGo commission already deducted — you are paid after each ride.',
     sw: 'Mapato halisi, kamisheni ya zanziGo imeshatolewa — unalipwa baada ya kila safari.',
   },
+  gains_hero_label: {
+    fr: "Aujourd'hui, net — en shillings",
+    en: 'Today, net — in shillings',
+    sw: 'Leo, halisi — kwa shilingi',
+  },
+  gains_note_conversion: {
+    fr: 'Les gains en dollars (clients touristes et hôtels) sont convertis en shillings au taux zanziGo : 1 USD = 2 600 TZS.',
+    en: 'Dollar earnings (tourist and hotel clients) are converted to shillings at the zanziGo rate: 1 USD = 2,600 TZS.',
+    sw: 'Mapato ya dola (watalii na hoteli) yanabadilishwa kuwa shilingi kwa kiwango cha zanziGo: 1 USD = TZS 2,600.',
+  },
   courses_colis_titre: {
     fr: 'Colis à ramasser',
     en: 'Parcels to pick up',
