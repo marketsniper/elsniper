@@ -41,48 +41,51 @@ export default function EcranTelephone() {
   const params = useLocalSearchParams<{ profil?: string }>();
   const profil = typeof params.profil === 'string' ? params.profil : '';
 
-  // VISITEURS (touristes) : identification par E-MAIL uniquement — à
-  // l'étranger, les SMS n'arrivent pas, l'e-mail marche partout. Les locaux
-  // et chauffeurs gardent l'identification par téléphone (SIM tanzanienne).
+  // VISITEURS (touristes/résidents) : numéro + MOT DE PASSE choisi par le
+  // client — aucun code SMS ni e-mail à recevoir, ça marche partout dans le
+  // monde. Locaux : numéro seul. Chauffeurs : code SMS.
   const estVisiteur = profil === 'visitor';
-  const [modeTelephone, setModeTelephone] = useState(!estVisiteur);
 
   const [indicatif, setIndicatif] = useState('+255');
   const [numero, setNumero] = useState('');
+  const [motDePasse, setMotDePasse] = useState('');
   const [erreur, setErreur] = useState('');
   const [charge, setCharge] = useState(false);
-  const [email, setEmail] = useState('');
+
+  // Connexion OU création de compte visiteur (numéro + mot de passe).
+  const actionVisiteur = async (creation: boolean) => {
+    setErreur('');
+    const telephone = normaliserTelephone(indicatif, numero);
+    if (!/^\+\d{9,15}$/.test(telephone)) {
+      setErreur(t('tel_erreur_numero'));
+      return;
+    }
+    if (motDePasse.length < 8) {
+      setErreur(t('tel_erreur_mdp'));
+      return;
+    }
+    setCharge(true);
+    try {
+      const reponse = creation
+        ? await api.inscriptionVisiteur(telephone, motDePasse)
+        : await api.connexionVisiteur(telephone, motDePasse);
+      await connexion({
+        token: reponse.token,
+        phone: telephone,
+        user: reponse.user ?? null,
+        driver: null,
+        hotel: null,
+      });
+      router.replace(reponse.user ? '/(tabs)/reserver' : '/(auth)/client');
+    } catch (e) {
+      setErreur(e instanceof ErreurApi ? e.message : t('tel_erreur_envoi'));
+    } finally {
+      setCharge(false);
+    }
+  };
 
   const envoyer = async () => {
     setErreur('');
-    // ----- Identité E-MAIL (visiteurs) -----
-    if (!modeTelephone) {
-      const adresse = email.trim().toLowerCase();
-      if (!/^\S+@\S+\.\S+$/.test(adresse)) {
-        setErreur(t('tel_erreur_email'));
-        return;
-      }
-      setCharge(true);
-      try {
-        const resultat = await api.demanderOtpParEmail(adresse);
-        router.push({
-          pathname: '/(auth)/otp',
-          params: {
-            emailIdentite: adresse,
-            devCode: resultat.devCode ?? '',
-            profil,
-            canal: 'email',
-            emailMasque: resultat.emailMasked ?? adresse,
-          },
-        });
-      } catch (e) {
-        setErreur(e instanceof ErreurApi ? e.message : t('tel_erreur_envoi'));
-      } finally {
-        setCharge(false);
-      }
-      return;
-    }
-
     // ----- Identité TÉLÉPHONE -----
     const telephone = normaliserTelephone(indicatif, numero);
     if (!/^\+\d{9,15}$/.test(telephone)) {
@@ -144,7 +147,7 @@ export default function EcranTelephone() {
           </Text>
         )}
         <SousTitre>
-          {!modeTelephone
+          {estVisiteur
             ? t('tel_intro_visiteur')
             : profil === 'driver'
               ? t('tel_intro_chauffeur')
@@ -152,58 +155,57 @@ export default function EcranTelephone() {
                 ? t('tel_intro_local')
                 : t('tel_intro')}
         </SousTitre>
-        {!modeTelephone ? (
-          // ----- VISITEURS : e-mail uniquement -----
+        <View style={styles.rangeeTelephone}>
           <Champ
-            label={t('tel_email_label')}
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            placeholder="vous@exemple.com"
-            autoFocus
+            label={t('tel_indicatif')}
+            value={indicatif}
+            onChangeText={setIndicatif}
+            keyboardType="phone-pad"
+            style={styles.champIndicatif}
           />
-        ) : (
-          <View style={styles.rangeeTelephone}>
+          <View style={styles.champNumero}>
             <Champ
-              label={t('tel_indicatif')}
-              value={indicatif}
-              onChangeText={setIndicatif}
+              label={t('tel_numero')}
+              value={numero}
+              onChangeText={setNumero}
               keyboardType="phone-pad"
-              style={styles.champIndicatif}
+              textContentType="telephoneNumber"
+              placeholder="712 345 678"
+              autoFocus
             />
-            <View style={styles.champNumero}>
-              <Champ
-                label={t('tel_numero')}
-                value={numero}
-                onChangeText={setNumero}
-                keyboardType="phone-pad"
-                textContentType="telephoneNumber"
-                placeholder="712 345 678"
-                autoFocus
-              />
-            </View>
           </View>
+        </View>
+        {/* Visiteurs : mot de passe choisi par le client — pas de code. */}
+        {estVisiteur && (
+          <Champ
+            label={t('tel_mdp_label')}
+            value={motDePasse}
+            onChangeText={setMotDePasse}
+            secureTextEntry
+            autoCapitalize="none"
+            placeholder="••••••••"
+          />
         )}
         <TexteErreur>{erreur}</TexteErreur>
-        <Bouton
-          titre={!modeTelephone ? t('tel_bouton_email') : t('tel_bouton')}
-          icone={!modeTelephone ? 'mail-outline' : 'arrow-forward'}
-          onPress={envoyer}
-          charge={charge}
-        />
-        {/* Visiteurs : bascule possible vers l'ancien accès par téléphone
-            (comptes créés avant l'identification par e-mail). */}
-        {estVisiteur && (
-          <Pressable
-            onPress={() => setModeTelephone((v) => !v)}
-            accessibilityRole="button"
-            style={({ pressed }) => pressed && { opacity: 0.7 }}
-          >
-            <Text style={styles.lienEmail}>
-              {modeTelephone ? t('tel_retour_email') : t('tel_lien_telephone')}
-            </Text>
-          </Pressable>
+        {estVisiteur ? (
+          <>
+            <Bouton
+              titre={t('tel_bouton_connexion')}
+              icone="log-in-outline"
+              onPress={() => actionVisiteur(false)}
+              charge={charge}
+            />
+            <Bouton
+              titre={t('tel_bouton_creer_compte')}
+              icone="person-add-outline"
+              variante="secondaire"
+              onPress={() => actionVisiteur(true)}
+              charge={charge}
+            />
+            <Text style={styles.lienEmail}>{t('tel_mdp_oublie')}</Text>
+          </>
+        ) : (
+          <Bouton titre={t('tel_bouton')} icone="arrow-forward" onPress={envoyer} charge={charge} />
         )}
       </Carte>
 

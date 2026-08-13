@@ -16,8 +16,9 @@ import { pool, withTransaction } from '../db.js';
 import { HttpError } from '../errors.js';
 import * as smsService from '../services/smsService.js';
 import { emailCodeOtp, envoyerEmail, isEmailStub } from '../services/emailService.js';
-import { verifyPassword } from '../services/passwordService.js';
+import { hashPassword, verifyPassword } from '../services/passwordService.js';
 import { sanitizeHotel } from './hotels.js';
+import { sanitizeUser } from './users.js';
 
 export const authRouter = Router();
 
@@ -195,7 +196,7 @@ authRouter.post('/verify-otp', async (req, res, next) => {
       if (driver) payload.driverId = driver.id;
 
       const token = jwt.sign(payload, config.jwtSecret, { expiresIn: config.jwtExpiresIn });
-      return res.json({ token, user, driver, hotel: null });
+      return res.json({ token, user: sanitizeUser(user), driver, hotel: null });
     }
 
     // Identité E-MAIL (touristes/visiteurs) : le compte client le plus
@@ -210,7 +211,93 @@ authRouter.post('/verify-otp', async (req, res, next) => {
     if (user) payload.userId = user.id;
 
     const token = jwt.sign(payload, config.jwtSecret, { expiresIn: config.jwtExpiresIn });
-    res.json({ token, user, driver: null, hotel: null });
+    res.json({ token, user: sanitizeUser(user), driver: null, hotel: null });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/auth/visitor-register {phone, password}
+// Création de compte VISITEUR (touriste/résident) : le client choisit son
+// numéro + un MOT DE PASSE — aucun code SMS ni e-mail à recevoir, ça marche
+// partout dans le monde. Le jeton émis porte le hash du mot de passe (signé
+// par nous) : il sera posé sur le profil à sa création (POST /users), qui
+// suit immédiatement (nom, type de compte, document éventuel).
+authRouter.post('/visitor-register', async (req, res, next) => {
+  try {
+    const { phone, password } = z
+      .object({
+        phone: phoneSchema,
+        password: z.string().min(8, 'Mot de passe : 8 caractères minimum'),
+      })
+      .parse(req.body);
+
+    const { rows } = await pool.query('SELECT id FROM users WHERE phone = $1', [phone]);
+    if (rows[0]) {
+      throw new HttpError(
+        409,
+        'account_exists',
+        'Un compte existe déjà avec ce numéro — connectez-vous avec votre mot de passe'
+      );
+    }
+
+    // sansOtp : jamais de pouvoirs chauffeur ; visiteur : ne crée que des
+    // comptes touriste/résident (POST /users).
+    const token = jwt.sign(
+      { phone, sansOtp: true, visiteur: true, passwordHash: await hashPassword(password) },
+      config.jwtSecret,
+      { expiresIn: config.jwtExpiresIn }
+    );
+    res.status(201).json({ token, user: null, driver: null, hotel: null });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/auth/visitor-login {phone, password}
+// Connexion VISITEUR : numéro + mot de passe. Un compte d'avant les mots de
+// passe (créé par OTP, sans hash) adopte le PREMIER mot de passe saisi —
+// simplicité MVP assumée, l'équipe tranche les litiges sur WhatsApp.
+authRouter.post('/visitor-login', async (req, res, next) => {
+  try {
+    const { phone, password } = z
+      .object({ phone: phoneSchema, password: z.string().min(1) })
+      .parse(req.body);
+
+    const { rows } = await pool.query('SELECT * FROM users WHERE phone = $1', [phone]);
+    const user = rows[0];
+    if (!user) {
+      throw new HttpError(
+        401,
+        'invalid_credentials',
+        'Numéro inconnu ou mot de passe incorrect — nouveau chez zanziGo ? Créez votre compte'
+      );
+    }
+    if (user.account_type === 'local') {
+      throw new HttpError(
+        409,
+        'not_visitor_account',
+        'Compte local : entrez simplement votre numéro dans la rubrique Locaux (sans mot de passe)'
+      );
+    }
+    if (!user.password_hash) {
+      if (password.length < 8) {
+        throw new HttpError(400, 'weak_password', 'Mot de passe : 8 caractères minimum');
+      }
+      await pool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [
+        await hashPassword(password),
+        user.id,
+      ]);
+    } else if (!(await verifyPassword(password, user.password_hash))) {
+      throw new HttpError(401, 'invalid_credentials', 'Numéro inconnu ou mot de passe incorrect');
+    }
+
+    const token = jwt.sign(
+      { phone: user.phone, userId: user.id, sansOtp: true, visiteur: true },
+      config.jwtSecret,
+      { expiresIn: config.jwtExpiresIn }
+    );
+    res.json({ token, user: sanitizeUser(user), driver: null, hotel: null });
   } catch (err) {
     next(err);
   }
@@ -241,7 +328,7 @@ authRouter.post('/local-login', async (req, res, next) => {
     const payload = { phone, sansOtp: true };
     if (user) payload.userId = user.id;
     const token = jwt.sign(payload, config.jwtSecret, { expiresIn: config.jwtExpiresIn });
-    res.json({ token, user, driver: null, hotel: null });
+    res.json({ token, user: sanitizeUser(user), driver: null, hotel: null });
   } catch (err) {
     next(err);
   }

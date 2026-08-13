@@ -5,8 +5,17 @@ import { HttpError, notFound } from '../errors.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { isAdmin, requireAuth, requireAdmin } from '../middleware/auth.js';
 import { emailBienvenueClient, envoyerEmail, notifierEquipe } from '../services/emailService.js';
+import { hashPassword } from '../services/passwordService.js';
 
 const router = Router();
+
+// Le hash de mot de passe ne sort JAMAIS de l'API (visiteurs : identité
+// téléphone + mot de passe, comme les hôtels).
+export function sanitizeUser(user) {
+  if (!user) return user;
+  const { password_hash, ...rest } = user;
+  return rest;
+}
 
 // Trois types de comptes :
 //  - tourist  : aucun document, USD plein tarif, vérifié d'office ;
@@ -53,6 +62,12 @@ router.post(
     const identiteEmail = !isAdmin(req) && !req.auth.phone && req.auth.email;
     let email = data.email ?? null;
     let phone = data.phone ?? null;
+    // Jeton visiteur (numéro + mot de passe choisis à l'inscription) : le
+    // hash voyage dans le jeton signé et se pose sur le profil ici.
+    let passwordHash = null;
+    if (!isAdmin(req) && req.auth.visiteur && req.auth.passwordHash) {
+      passwordHash = req.auth.passwordHash;
+    }
     if (identiteEmail) {
       if (data.accountType === 'local') {
         throw new HttpError(
@@ -66,10 +81,17 @@ router.post(
       if (!data.phone || data.phone !== req.auth.phone) {
         throw new HttpError(403, 'phone_mismatch', 'Le téléphone doit être celui vérifié par OTP (jeton)');
       }
-      // Jeton local SANS code (numéro seul) : il ne crée QUE des comptes
-      // locaux — les visiteurs passent par l'e-mail, les chauffeurs par
-      // le code.
-      if (req.auth.sansOtp && data.accountType !== 'local') {
+      // Jeton VISITEUR (numéro + mot de passe) : touriste/résident
+      // uniquement. Jeton local SANS code (numéro seul) : local uniquement.
+      if (req.auth.visiteur) {
+        if (data.accountType === 'local') {
+          throw new HttpError(
+            403,
+            'local_phone_required',
+            'Les comptes locaux s\'identifient par leur numéro seul (rubrique Locaux)'
+          );
+        }
+      } else if (req.auth.sansOtp && data.accountType !== 'local') {
         throw new HttpError(
           403,
           'local_only',
@@ -83,8 +105,8 @@ router.post(
     let rows;
     try {
       ({ rows } = await query(
-        `INSERT INTO users (full_name, phone, email, account_type, currency, verification_status, id_document_url)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)
+        `INSERT INTO users (full_name, phone, email, account_type, currency, verification_status, id_document_url, password_hash)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
          RETURNING *`,
         [
           data.fullName,
@@ -94,6 +116,7 @@ router.post(
           data.accountType === 'local' ? 'TZS' : 'USD',
           needsVerification ? 'pending' : 'verified',
           data.idDocumentUrl ?? null,
+          passwordHash,
         ]
       ));
     } catch (err) {
@@ -123,7 +146,7 @@ router.post(
         ].join('\n')
       );
     }
-    res.status(201).json(rows[0]);
+    res.status(201).json(sanitizeUser(rows[0]));
   })
 );
 
@@ -168,7 +191,7 @@ router.get(
       `SELECT * FROM users ${where} ORDER BY created_at DESC LIMIT 200`,
       params
     );
-    res.json(rows);
+    res.json(rows.map(sanitizeUser));
   })
 );
 
@@ -182,7 +205,7 @@ router.get(
     }
     const { rows } = await query('SELECT * FROM users WHERE id = $1', [req.params.id]);
     if (!rows[0]) throw notFound('Utilisateur');
-    res.json(rows[0]);
+    res.json(sanitizeUser(rows[0]));
   })
 );
 
@@ -199,7 +222,27 @@ router.patch(
       `UPDATE users SET banned_at = ${banned ? 'now()' : 'NULL'} WHERE id = $1 RETURNING *`,
       [req.params.id]
     );
-    res.json(updated.rows[0]);
+    res.json(sanitizeUser(updated.rows[0]));
+  })
+);
+
+// PATCH /users/:id/password — l'ÉQUIPE réinitialise le mot de passe d'un
+// visiteur qui l'a oublié (demande via WhatsApp) : elle lui communique le
+// nouveau mot de passe temporaire, qu'il pourra garder ou refaire changer.
+router.patch(
+  '/:id/password',
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    const { password } = z
+      .object({ password: z.string().min(8, 'Mot de passe : 8 caractères minimum') })
+      .parse(req.body);
+    const { rows } = await query('SELECT id FROM users WHERE id = $1', [req.params.id]);
+    if (!rows[0]) throw notFound('Utilisateur');
+    const updated = await query(
+      'UPDATE users SET password_hash = $1 WHERE id = $2 RETURNING *',
+      [await hashPassword(password), req.params.id]
+    );
+    res.json(sanitizeUser(updated.rows[0]));
   })
 );
 
@@ -223,7 +266,7 @@ router.patch(
       'UPDATE users SET verification_status = $1 WHERE id = $2 RETURNING *',
       [status, req.params.id]
     );
-    res.json(updated.rows[0]);
+    res.json(sanitizeUser(updated.rows[0]));
   })
 );
 

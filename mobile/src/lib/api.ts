@@ -220,6 +220,32 @@ export async function demanderOtpParEmail(
 }
 
 /**
+ * VISITEURS (touristes/résidents) : numéro + MOT DE PASSE choisi par le
+ * client — aucun code SMS ni e-mail à recevoir, ça marche partout.
+ * L'inscription émet un jeton (le profil se crée juste après) ; la
+ * connexion renvoie le compte. Jetons sans pouvoirs chauffeur.
+ */
+export async function inscriptionVisiteur(
+  phone: string,
+  password: string
+): Promise<ReponseVerifieOtp> {
+  return requete<ReponseVerifieOtp>('/auth/visitor-register', {
+    methode: 'POST',
+    corps: { phone, password },
+  });
+}
+
+export async function connexionVisiteur(
+  phone: string,
+  password: string
+): Promise<ReponseVerifieOtp> {
+  return requete<ReponseVerifieOtp>('/auth/visitor-login', {
+    methode: 'POST',
+    corps: { phone, password },
+  });
+}
+
+/**
  * CONNEXION LOCALE SANS CODE : POST /auth/local-login {phone} — le local
  * entre son numéro et entre directement (pas d'OTP ; jeton sans pouvoirs
  * chauffeur ; 409 not_local_account si le numéro est un compte visiteur).
@@ -994,6 +1020,8 @@ export async function televerser(uri: string): Promise<{ url: string }> {
 export const api = {
   demanderOtp,
   demanderOtpParEmail,
+  inscriptionVisiteur,
+  connexionVisiteur,
   connexionLocale,
   verifierOtp,
   verifierOtpParEmail,

@@ -1189,9 +1189,30 @@ const CHAINES = {
     sw: 'Weka namba yako ya simu — hakuna msimbo wa kusubiri, unaingia moja kwa moja.',
   },
   tel_intro_visiteur: {
-    fr: 'Votre e-mail suffit : le code de connexion y est envoyé. Pas besoin de SMS — pratique quand on voyage.',
-    en: 'Your e-mail is enough: the login code is sent there. No SMS needed — handy when travelling.',
-    sw: 'Barua pepe yako inatosha: msimbo wa kuingia unatumwa huko. Hakuna haja ya SMS.',
+    fr: 'Votre numéro + un mot de passe de votre choix — aucun code SMS à recevoir, ça marche partout dans le monde.',
+    en: 'Your number + a password of your choice — no SMS code to receive, works anywhere in the world.',
+    sw: 'Namba yako + nenosiri unalochagua — hakuna msimbo wa SMS, inafanya kazi popote duniani.',
+  },
+  tel_mdp_label: {
+    fr: 'Mot de passe (8 caractères minimum)',
+    en: 'Password (8 characters minimum)',
+    sw: 'Nenosiri (angalau herufi 8)',
+  },
+  tel_bouton_connexion: { fr: 'Se connecter', en: 'Log in', sw: 'Ingia' },
+  tel_bouton_creer_compte: {
+    fr: 'Nouveau ? Créer mon compte',
+    en: 'New here? Create my account',
+    sw: 'Mgeni? Fungua akaunti yangu',
+  },
+  tel_erreur_mdp: {
+    fr: 'Mot de passe : 8 caractères minimum',
+    en: 'Password: 8 characters minimum',
+    sw: 'Nenosiri: angalau herufi 8',
+  },
+  tel_mdp_oublie: {
+    fr: 'Mot de passe oublié ? Écrivez à l\'équipe sur WhatsApp : +255 666 241 749',
+    en: 'Forgot your password? Message the team on WhatsApp: +255 666 241 749',
+    sw: 'Umesahau nenosiri? Andikia timu WhatsApp: +255 666 241 749',
   },
   tel_lien_telephone: {
     fr: '📱 J\'ai un compte créé par téléphone — me connecter par SMS',
