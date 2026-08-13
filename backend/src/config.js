@@ -95,10 +95,20 @@ export const config = {
     brevoApiKey: env.BREVO_API_KEY || '',
     resendApiKey: env.RESEND_API_KEY || '',
     from: env.EMAIL_FROM || 'zanziGo <onboarding@resend.dev>',
-    // Boîte de l'ÉQUIPE : chaque action sur la plateforme (réservation,
-    // colis, annonce, annulation, paiement crédit…) y est notifiée
-    // AUTOMATIQUEMENT — le client n'a plus rien à envoyer lui-même.
+    // Boîte de l'ÉQUIPE : canal de SECOURS des notifications automatiques
+    // (utilisé seulement si le WhatsApp CallMeBot n'est pas configuré).
     teamEmail: env.TEAM_EMAIL || '',
+  },
+
+  // Notifications équipe par WHATSAPP (canal préféré) via CallMeBot —
+  // passerelle gratuite : depuis le WhatsApp de l'équipe, ajouter le numéro
+  // du bot en contact, lui envoyer « I allow callmebot to send me
+  // messages », recevoir la clé, la poser dans CALLMEBOT_APIKEY. Dès que la
+  // clé est là, chaque action de la plateforme arrive en WhatsApp sur le
+  // téléphone de l'équipe — automatiquement, sans action des clients.
+  callmebot: {
+    apiKey: env.CALLMEBOT_APIKEY || '',
+    phone: env.CALLMEBOT_PHONE || env.TEAM_WHATSAPP_NUMBER || '+255666241749',
   },
 
   // Stockage S3 compatible (Cloudflare R2 recommandé) — sans clés, fallback disque local

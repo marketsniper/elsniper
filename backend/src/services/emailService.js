@@ -111,21 +111,48 @@ function bouton(url, texte) {
 /**
  * Notification AUTOMATIQUE de l'équipe : chaque action sur la plateforme
  * (réservation, colis posté, annonce publiée, annulation, paiement crédit…)
- * part en e-mail vers TEAM_EMAIL — le client n'a plus rien à envoyer
- * lui-même. `texte` : les mêmes lignes que le résumé WhatsApp. Fire-and-
- * forget : jamais bloquant, jamais d'exception.
+ * arrive TOUTE SEULE sur le téléphone de l'équipe — le client n'a plus rien
+ * à envoyer lui-même. Canal préféré : WHATSAPP via la passerelle CallMeBot
+ * (clé CALLMEBOT_APIKEY) ; à défaut, e-mail vers TEAM_EMAIL ; sans aucun
+ * canal, simple journal. `texte` : les mêmes lignes que le résumé WhatsApp.
+ * Fire-and-forget : jamais bloquant, jamais d'exception.
  */
-export function notifierEquipe(sujet, texte) {
+export async function notifierEquipe(sujet, texte) {
+  // 1. WhatsApp (CallMeBot) — le canal que l'équipe lit en premier.
+  const { apiKey, phone } = config.callmebot;
+  if (apiKey && phone) {
+    try {
+      const url =
+        'https://api.callmebot.com/whatsapp.php' +
+        `?phone=${encodeURIComponent(phone)}` +
+        `&apikey=${encodeURIComponent(apiKey)}` +
+        `&text=${encodeURIComponent(`${sujet}\n${texte}`)}`;
+      const reponse = await fetch(url, { signal: AbortSignal.timeout(15000) });
+      if (reponse.ok) return { sent: true, channel: 'whatsapp' };
+      console.error(`[notif équipe] WhatsApp CallMeBot en échec (${reponse.status}) — bascule e-mail`);
+    } catch (err) {
+      console.error(`[notif équipe] WhatsApp CallMeBot injoignable (${err.message}) — bascule e-mail`);
+    }
+  }
+
+  // 2. E-mail (secours).
   const destinataire = config.emailer.teamEmail;
-  if (!destinataire) return Promise.resolve({ sent: false, reason: 'no_team_email' });
-  const corps = `
+  if (destinataire) {
+    const corps = `
     <p style="margin:0 0 12px;font-size:15px;line-height:24px;white-space:pre-line;">${String(texte)
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')}</p>
     <p style="margin:0;font-size:13px;color:#8A7168;">Notification automatique zanziGo — le tableau de bord équipe a le détail.</p>`;
-  return envoyerEmail({ to: destinataire, subject: sujet, html: gabarit(sujet, corps) }).catch(
-    () => ({ sent: false, reason: 'error' })
-  );
+    try {
+      const resultat = await envoyerEmail({ to: destinataire, subject: sujet, html: gabarit(sujet, corps) });
+      return { ...resultat, channel: 'email' };
+    } catch {
+      return { sent: false, reason: 'error' };
+    }
+  }
+
+  console.log(`[notif équipe stub] ${sujet}`);
+  return { sent: false, reason: 'no_channel' };
 }
 
 const LIBELLES_PROFIL = {
