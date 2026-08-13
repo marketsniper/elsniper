@@ -1316,6 +1316,10 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: couleurs.encre,
     lineHeight: 21,
+    // Dans une rangée avec un badge à droite : le texte se replie sur
+    // plusieurs lignes au lieu de pousser le badge hors de l'écran
+    // (indispensable depuis le nom complet de l'aéroport).
+    flexShrink: 1,
   },
   enTete: {
     flexDirection: 'row',
