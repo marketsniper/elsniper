@@ -119,6 +119,8 @@ function bouton(url, texte) {
  */
 export async function notifierEquipe(sujet, texte) {
   // 1. WhatsApp (CallMeBot) — le canal que l'équipe lit en premier.
+  // Chaque tentative est JOURNALISÉE (succès compris) : les journaux Render
+  // permettent de vérifier qu'une notification est bien partie.
   const { apiKey, phone } = config.callmebot;
   if (apiKey && phone) {
     try {
@@ -127,9 +129,17 @@ export async function notifierEquipe(sujet, texte) {
         `?phone=${encodeURIComponent(phone)}` +
         `&apikey=${encodeURIComponent(apiKey)}` +
         `&text=${encodeURIComponent(`${sujet}\n${texte}`)}`;
-      const reponse = await fetch(url, { signal: AbortSignal.timeout(15000) });
-      if (reponse.ok) return { sent: true, channel: 'whatsapp' };
-      console.error(`[notif équipe] WhatsApp CallMeBot en échec (${reponse.status}) — bascule e-mail`);
+      const reponse = await fetch(url, { signal: AbortSignal.timeout(20000) });
+      const corps = await reponse.text().catch(() => '');
+      // CallMeBot répond 200 même en cas d'erreur : la preuve d'envoi est le
+      // « Message queued » dans le corps de la réponse.
+      if (reponse.ok && /queued|sent/i.test(corps)) {
+        console.log(`[notif équipe] WhatsApp OK — ${sujet}`);
+        return { sent: true, channel: 'whatsapp' };
+      }
+      console.error(
+        `[notif équipe] WhatsApp CallMeBot en échec (${reponse.status}: ${corps.replace(/<[^>]+>/g, ' ').trim().slice(0, 120)}) — bascule e-mail`
+      );
     } catch (err) {
       console.error(`[notif équipe] WhatsApp CallMeBot injoignable (${err.message}) — bascule e-mail`);
     }
