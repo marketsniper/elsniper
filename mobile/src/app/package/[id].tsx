@@ -1,6 +1,6 @@
 // Détail d'un colis : QR code (PKG-…) à présenter au chauffeur, suivi
 // Créé → Payé → Ramassé → Livré, paiement quand le colis vient d'être créé.
-import { useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import { Alert, Linking, Share, StyleSheet, Text, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
@@ -39,6 +39,7 @@ const WHATSAPP_EQUIPE = 'https://wa.me/255666241749';
 
 export default function EcranDetailColis() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const router = useRouter();
   const { t } = useT();
   const { session } = useAuth();
   const [colis, setColis] = useState<Colis | null>(null);
@@ -367,6 +368,13 @@ export default function EcranDetailColis() {
         icone="refresh-outline"
         variante="secondaire"
         onPress={charger}
+      />
+      {/* Retour toujours possible depuis la fiche (colis livré compris). */}
+      <Bouton
+        titre={t('commun_retour_accueil')}
+        icone="arrow-back-outline"
+        variante="secondaire"
+        onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)/colis'))}
       />
     </Ecran>
   );

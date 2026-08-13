@@ -3,7 +3,7 @@
 // WhatsApp équipe et notation quand la course est terminée
 // (POST /trips/:id/rating {rating, comment?}).
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import { Alert, Linking, StyleSheet, Text, View } from 'react-native';
 
@@ -44,6 +44,7 @@ const WHATSAPP_EQUIPE = 'https://wa.me/255666241749';
 
 export default function EcranTrajet() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const router = useRouter();
   const { t } = useT();
   const { session } = useAuth();
   const [trajet, setTrajet] = useState<Trajet | null>(null);
@@ -379,6 +380,14 @@ export default function EcranTrajet() {
         icone="refresh-outline"
         variante="secondaire"
         onPress={charger}
+      />
+      {/* Retour toujours possible depuis la fiche — course terminée
+          comprise : le client repart faire une autre action. */}
+      <Bouton
+        titre={t('commun_retour_accueil')}
+        icone="arrow-back-outline"
+        variante="secondaire"
+        onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)/trajets'))}
       />
     </Ecran>
   );

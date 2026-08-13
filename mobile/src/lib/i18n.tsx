@@ -1182,6 +1182,12 @@ const CHAINES = {
     en: 'Ride cancelled. {montant} refund: the team will pay you — the WhatsApp message that opens notifies them, just press Send.',
     sw: 'Safari imeghairiwa. Marejesho ya {montant}: timu itakulipa — ujumbe wa WhatsApp unaofunguka unawajulisha, bonyeza Tuma.',
   },
+  commun_retour: { fr: 'Retour', en: 'Back', sw: 'Rudi' },
+  commun_retour_accueil: {
+    fr: 'Retour à l\'accueil',
+    en: 'Back to home',
+    sw: 'Rudi mwanzo',
+  },
   commun_confirmer_oui: { fr: 'Oui, annuler', en: 'Yes, cancel', sw: 'Ndiyo, ghairi' },
   commun_confirmer_non: { fr: 'Non, garder', en: 'No, keep it', sw: 'Hapana, baki nayo' },
   commun_annulation_impossible: {

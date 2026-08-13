@@ -1,15 +1,48 @@
 // Mise en page racine : fournit la langue, le contexte d'auth et la pile de
 // navigation (titres traduits).
-import { Stack } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { Stack, useRouter, type Href } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React from 'react';
+import { Pressable, Text } from 'react-native';
 
 import { AuthProvider } from '@/lib/auth';
 import { LangueProvider, useT } from '@/lib/i18n';
 import { couleurs } from '@/lib/theme';
 
+// Flèche de retour GARANTIE sur chaque fiche : le retour natif disparaît
+// quand l'historique est vide (page web rechargée, PWA relancée…) et son
+// libellé automatique était illisible (« (auth) »). Ici : toujours visible,
+// toujours un mot clair, et un repli vers l'accueil si rien derrière.
+function RetourEntete({ accueil }: { accueil: Href }) {
+  const router = useRouter();
+  const { t } = useT();
+  return (
+    <Pressable
+      onPress={() => (router.canGoBack() ? router.back() : router.replace(accueil))}
+      accessibilityRole="button"
+      hitSlop={12}
+      style={({ pressed }) => [
+        { flexDirection: 'row', alignItems: 'center', paddingRight: 12 },
+        pressed && { opacity: 0.6 },
+      ]}
+    >
+      <Ionicons name="chevron-back" size={26} color={couleurs.primaireFonce} />
+      <Text style={{ color: couleurs.primaireFonce, fontSize: 16, fontWeight: '600' }}>
+        {t('commun_retour')}
+      </Text>
+    </Pressable>
+  );
+}
+
 function PilesNavigation() {
   const { t } = useT();
+  // Accueil de repli : onglets client pour les fiches client, mode chauffeur
+  // pour les fiches chauffeur.
+  const retourClient = () => <RetourEntete accueil="/(tabs)/trajets" />;
+  const retourColis = () => <RetourEntete accueil="/(tabs)/colis" />;
+  const retourChauffeur = () => <RetourEntete accueil="/(driver)/courses" />;
+  const retourProfil = () => <RetourEntete accueil="/(tabs)/profil" />;
   return (
     <Stack
       screenOptions={{
@@ -24,13 +57,13 @@ function PilesNavigation() {
       <Stack.Screen name="(auth)" options={{ headerShown: false }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="(driver)" options={{ headerShown: false }} />
-      <Stack.Screen name="trip/[id]" options={{ title: t('titre_trajet') }} />
-      <Stack.Screen name="package/nouveau" options={{ title: t('titre_nouveau_colis') }} />
-      <Stack.Screen name="package/[id]" options={{ title: t('titre_colis') }} />
-      <Stack.Screen name="course/[id]" options={{ title: t('titre_course') }} />
-      <Stack.Screen name="equipe" options={{ title: t('titre_equipe') }} />
-      <Stack.Screen name="annonce/[id]" options={{ title: t('titre_annonce') }} />
-      <Stack.Screen name="colis-dispo/[id]" options={{ title: t('titre_colis_dispo') }} />
+      <Stack.Screen name="trip/[id]" options={{ title: t('titre_trajet'), headerLeft: retourClient }} />
+      <Stack.Screen name="package/nouveau" options={{ title: t('titre_nouveau_colis'), headerLeft: retourColis }} />
+      <Stack.Screen name="package/[id]" options={{ title: t('titre_colis'), headerLeft: retourColis }} />
+      <Stack.Screen name="course/[id]" options={{ title: t('titre_course'), headerLeft: retourChauffeur }} />
+      <Stack.Screen name="equipe" options={{ title: t('titre_equipe'), headerLeft: retourProfil }} />
+      <Stack.Screen name="annonce/[id]" options={{ title: t('titre_annonce'), headerLeft: retourChauffeur }} />
+      <Stack.Screen name="colis-dispo/[id]" options={{ title: t('titre_colis_dispo'), headerLeft: retourChauffeur }} />
     </Stack>
   );
 }
