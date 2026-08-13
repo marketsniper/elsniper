@@ -54,10 +54,16 @@ const CITY_ZONES = {
   fumba: 'sud',
 };
 
-// Trajets spéciaux à prix fixe (USD, courses privées), deux sens.
+// Trajets spéciaux à prix fixe (USD, courses privées), deux sens. Les
+// petits sauts de la côte est passent SOUS le minimum de 20 USD — le prix
+// spécial est prioritaire sur la formule au kilomètre ET sur le minimum.
 const SPECIAL_PRIVATE_ROUTES_USD = [
   { a: 'Nungwi', b: 'Paje', usd: 65 },
   { a: 'Nungwi', b: 'Kizimkazi', usd: 70 },
+  { a: 'Michamvi', b: 'Paje', usd: 20 },
+  { a: 'Makunduchi', b: 'Jambiani', usd: 20 },
+  { a: 'Paje', b: 'Bwejuu', usd: 10 },
+  { a: 'Paje', b: 'Jambiani', usd: 10 },
 ];
 
 // Trajets spéciaux à prix fixe (TZS, place locale en taxi partagé), deux

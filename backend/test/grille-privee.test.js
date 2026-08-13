@@ -15,19 +15,24 @@ describe('Grille privée au kilomètre', () => {
     assert.equal(privateUsdForRoute('Stone Town', 'Nungwi'), 50);
     assert.equal(privateUsdForRoute('Aéroport (AAKIA)', 'Paje'), 50);
     assert.equal(privateUsdForRoute('Stone Town Ferry', 'Matemwe'), 45);
-    // Trajets spéciaux : prioritaires sur la formule.
+    // Trajets spéciaux : prioritaires sur la formule (et sur le minimum de
+    // 20 USD pour les petits sauts de la côte est à 10 USD).
     assert.equal(privateUsdForRoute('Nungwi', 'Paje'), 65);
     assert.equal(privateUsdForRoute('Paje', 'Nungwi'), 65);
     assert.equal(privateUsdForRoute('Nungwi', 'Kizimkazi'), 70);
     assert.equal(privateUsdForRoute('Kizimkazi', 'Nungwi'), 70);
+    assert.equal(privateUsdForRoute('Michamvi', 'Paje'), 20);
+    assert.equal(privateUsdForRoute('Makunduchi', 'Jambiani'), 20);
+    assert.equal(privateUsdForRoute('Paje', 'Bwejuu'), 10);
+    assert.equal(privateUsdForRoute('Paje', 'Jambiani'), 10);
+    assert.equal(privateUsdForRoute('Jambiani', 'Paje'), 10);
   });
 
   it('paires de villes : 0,85 USD/km, arrondi aux 5 USD, minimum 20', () => {
     // Voisines et moyennes distances : le minimum de 20 USD s'applique.
     assert.equal(privateUsdForRoute('Nungwi', 'Kendwa'), 20);
-    assert.equal(privateUsdForRoute('Paje', 'Jambiani'), 20);
+    assert.equal(privateUsdForRoute('Bwejuu', 'Jambiani'), 20);
     assert.equal(privateUsdForRoute('Nungwi', 'Matemwe'), 20);
-    assert.equal(privateUsdForRoute('Paje', 'Michamvi'), 20);
     // Grandes traversées : au kilomètre.
     assert.equal(privateUsdForRoute('Matemwe', 'Paje'), 55); // ≈ 65 km
     assert.equal(privateUsdForRoute('Kendwa', 'Kizimkazi'), 85); // ≈ 102 km

@@ -381,6 +381,10 @@ export const TARIFS_TRAJET_USD: Partial<Record<TypeTrajet, number>> = {
 export const TRAJETS_SPECIAUX_PRIVE_USD: { villes: [string, string]; prix: number }[] = [
   { villes: ['Nungwi', 'Paje'], prix: 65 },
   { villes: ['Nungwi', 'Kizimkazi'], prix: 70 },
+  { villes: ['Michamvi', 'Paje'], prix: 20 },
+  { villes: ['Makunduchi', 'Jambiani'], prix: 20 },
+  { villes: ['Paje', 'Bwejuu'], prix: 10 },
+  { villes: ['Paje', 'Jambiani'], prix: 10 },
 ];
 
 /** Trajets spéciaux TZS : place locale en taxi partagé (deux sens). */
