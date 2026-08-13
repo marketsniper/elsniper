@@ -334,19 +334,18 @@ export default function EcranEquipe() {
     else groupesTaxis.push({ ville, liste: [chauffeur] });
   }
 
-  // Les six cases du menu — compteur en or dès qu'une action attend.
-  // La case Paiements a son VOYANT VERT : nombre de paiements en attente
-  // + remboursements à verser, repérable d'un coup d'œil.
+  // Les six cases du menu — compteur ORANGE dès qu'une action attend
+  // (paiements pas encore encaissés compris : le vert est réservé aux
+  // paiements par crédit hôtel, déjà dans la caisse).
   const rubriques: {
     cle: SectionEquipe;
     label: string;
     icone: React.ComponentProps<typeof Ionicons>['name'];
     n: number;
     action: boolean;
-    voyantVert?: boolean;
   }[] = [
     { cle: 'courses', label: t('equipe_stat_courses'), icone: 'car-outline', n: courses.length, action: true },
-    { cle: 'paiements', label: t('equipe_stat_paiements'), icone: 'cash-outline', n: paiements.length + remboursements.length, action: true, voyantVert: true },
+    { cle: 'paiements', label: t('equipe_stat_paiements'), icone: 'cash-outline', n: paiements.length + remboursements.length, action: true },
     { cle: 'candidatures', label: t('equipe_stat_candidatures'), icone: 'document-text-outline', n: candidats.length, action: true },
     { cle: 'comptes', label: t('equipe_stat_comptes'), icone: 'id-card-outline', n: clients.length, action: true },
     { cle: 'hotels', label: t('equipe_stat_hotels'), icone: 'business-outline', n: hotels.length, action: true },
@@ -483,17 +482,13 @@ export default function EcranEquipe() {
                 <View
                   style={[
                     styles.pastilleMenu,
-                    rubrique.action && rubrique.n > 0 &&
-                      (rubrique.voyantVert ? styles.pastilleMenuVerte : styles.pastilleMenuAction),
+                    rubrique.action && rubrique.n > 0 && styles.pastilleMenuAction,
                   ]}
                 >
                   <Text
                     style={[
                       styles.textePastilleMenu,
-                      rubrique.action && rubrique.n > 0 &&
-                        (rubrique.voyantVert
-                          ? styles.textePastilleMenuVerte
-                          : styles.textePastilleMenuAction),
+                      rubrique.action && rubrique.n > 0 && styles.textePastilleMenuAction,
                     ]}
                   >
                     {rubrique.n}
@@ -678,10 +673,11 @@ export default function EcranEquipe() {
       {paiements.map((paiement) => (
         <Carte key={paiement.id}>
           {corpsPaiement(paiement)}
+          <Text style={styles.badgeAttentePaiement}>⏳ {t('resa_impayee')}</Text>
           <Bouton
             titre={t('equipe_marquer_paye')}
             icone="cash-outline"
-            onPress={() => agir(paiement.id, () => api.confirmerPaiement(paiement.id))}
+            onPress={() => agir(paiement.id, () => api.confirmerPaiementEquipe(paiement.id))}
             charge={actionEnCours === paiement.id}
           />
         </Carte>
@@ -701,10 +697,13 @@ export default function EcranEquipe() {
             return (
               <Carte key={paiement.id}>
                 {corpsPaiement(paiement)}
+                {/* VERT réservé au crédit hôtel (argent déjà chez zanziGo) ;
+                    tout le reste est en ORANGE — validé à la main par vous. */}
                 <View style={styles.ligneRecu}>
-                  <Text style={styles.badgeRecu}>✅ {t('equipe_paiement_recu')}</Text>
-                  {parCredit && (
-                    <Text style={styles.badgeCredit}>💳 {t('equipe_paiement_credit')}</Text>
+                  {parCredit ? (
+                    <Text style={styles.badgeRecuCredit}>💳 {t('equipe_paiement_credit')} ✅</Text>
+                  ) : (
+                    <Text style={styles.badgeValideMain}>✔ {t('equipe_paiement_valide_main')}</Text>
                   )}
                   <Text style={styles.dateRecu}>
                     {formaterDateRelativeI18n(
@@ -1192,10 +1191,6 @@ const styles = StyleSheet.create({
   pastilleMenuAction: {
     backgroundColor: couleurs.attenteFond,
   },
-  // Voyant VERT de la case Paiements : à traiter, repérable d'un coup d'œil.
-  pastilleMenuVerte: {
-    backgroundColor: couleurs.succes,
-  },
   textePastilleMenu: {
     fontSize: 14,
     fontWeight: '800',
@@ -1203,9 +1198,6 @@ const styles = StyleSheet.create({
   },
   textePastilleMenuAction: {
     color: couleurs.attente,
-  },
-  textePastilleMenuVerte: {
-    color: couleurs.surPrimaire,
   },
   bandeauAbonnes: {
     backgroundColor: couleurs.carteTranslucide,
@@ -1340,20 +1332,39 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: espaces.s,
   },
-  badgeRecu: {
+  // VERT : argent déjà encaissé automatiquement (crédit prépayé hôtel).
+  badgeRecuCredit: {
     fontSize: 12.5,
     fontWeight: '700',
     color: couleurs.succes,
-  },
-  badgeCredit: {
-    fontSize: 12.5,
-    fontWeight: '700',
-    color: couleurs.primaireFonce,
-    backgroundColor: couleurs.primaireClair,
+    backgroundColor: couleurs.succesFond,
     paddingHorizontal: espaces.s,
     paddingVertical: 2,
     borderRadius: rayons.pastille,
     overflow: 'hidden',
+  },
+  // ORANGE : validé à la main par l'équipe (bouton « Marquer payé »).
+  badgeValideMain: {
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: couleurs.attente,
+    backgroundColor: couleurs.attenteFond,
+    paddingHorizontal: espaces.s,
+    paddingVertical: 2,
+    borderRadius: rayons.pastille,
+    overflow: 'hidden',
+  },
+  // ORANGE : paiement pas encore fait (à encaisser).
+  badgeAttentePaiement: {
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: couleurs.attente,
+    backgroundColor: couleurs.attenteFond,
+    paddingHorizontal: espaces.s,
+    paddingVertical: 2,
+    borderRadius: rayons.pastille,
+    overflow: 'hidden',
+    alignSelf: 'flex-start',
   },
   dateRecu: {
     fontSize: 12,

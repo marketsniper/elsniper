@@ -45,12 +45,16 @@ const updateRideSchema = z
 // Cloison tarifaire stricte : les visiteurs/touristes (compte en USD)
 // voient UNIQUEMENT le tarif touriste fixe (config.sharedRideUsdPerSeat) ;
 // les résidents, hôtels et chauffeurs voient UNIQUEMENT le prix local en
-// shillings posté par le chauffeur. L'équipe voit les deux.
+// shillings posté par le chauffeur.
+// L'identité CLIENT prime TOUJOURS sur la clé équipe : le téléphone de
+// l'équipe (clé X-Admin-Key enregistrée) sert aussi à tester des comptes
+// clients — un touriste connecté dessus doit voir de l'USD, pas la double
+// grille équipe. Le mode « both » est réservé aux requêtes équipe pures,
+// sans compte client connecté.
 async function viewerPricing(req) {
-  if (isAdmin(req)) return { mode: 'both', remise: 0 };
   // Hôtel partenaire : même grille USD que les touristes, avec −5 %.
-  if (req.auth.hotelId) return { mode: 'USD', remise: config.hotelDiscountRate };
-  if (req.auth.userId) {
+  if (req.auth?.hotelId) return { mode: 'USD', remise: config.hotelDiscountRate };
+  if (req.auth?.userId) {
     const { rows } = await query(
       'SELECT account_type, verification_status FROM users WHERE id = $1',
       [req.auth.userId]
@@ -61,7 +65,9 @@ async function viewerPricing(req) {
       const verifie = user.account_type === 'resident' && user.verification_status === 'verified';
       return { mode: 'USD', remise: verifie ? config.residentDiscountRate : 0 };
     }
+    return { mode: 'TZS' };
   }
+  if (isAdmin(req)) return { mode: 'both', remise: 0 };
   return { mode: 'TZS' };
 }
 

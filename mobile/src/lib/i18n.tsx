@@ -338,11 +338,15 @@ const CHAINES = {
     en: 'Latest payments received',
     sw: 'Malipo ya hivi karibuni',
   },
-  equipe_paiement_recu: { fr: 'reçu', en: 'received', sw: 'imepokelewa' },
   equipe_paiement_credit: {
     fr: 'Payé par crédit hôtel',
     en: 'Paid with hotel credit',
     sw: 'Imelipwa kwa salio la hoteli',
+  },
+  equipe_paiement_valide_main: {
+    fr: 'marqué payé à la main',
+    en: 'marked paid by hand',
+    sw: 'imewekwa imelipwa kwa mkono',
   },
   equipe_stat_clients: { fr: 'Clients · Visiteurs', en: 'Clients · Visitors', sw: 'Wateja · Wageni' },
   equipe_stat_locaux: { fr: 'Locaux', en: 'Locals', sw: 'Wazawa' },

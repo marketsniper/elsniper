@@ -53,6 +53,14 @@ interface OptionsRequete {
   methode?: 'GET' | 'POST' | 'PATCH' | 'DELETE';
   corps?: unknown;
   formData?: FormData;
+  /**
+   * Envoyer la clé équipe (X-Admin-Key) avec CETTE requête. Réservé aux
+   * fonctions du tableau de bord équipe : la clé stockée sur le téléphone ne
+   * doit JAMAIS accompagner les écrans clients, sinon un touriste testé sur
+   * le téléphone de l'équipe verrait les prix locaux en shillings et ses
+   * confirmations passeraient avec les pouvoirs de l'équipe.
+   */
+  admin?: boolean;
 }
 
 // Le serveur gratuit (Render) s'endort après 15 min sans visite : la première
@@ -80,7 +88,8 @@ async function fetchAvecTimeout(url: string, init: RequestInit): Promise<Respons
 async function requete<T>(chemin: string, options: OptionsRequete = {}): Promise<T> {
   const entetes: Record<string, string> = {};
   if (jetonCourant) entetes.Authorization = `Bearer ${jetonCourant}`;
-  if (cleEquipeCourante) entetes['X-Admin-Key'] = cleEquipeCourante;
+  // La clé équipe n'accompagne QUE les requêtes du tableau de bord.
+  if (options.admin && cleEquipeCourante) entetes['X-Admin-Key'] = cleEquipeCourante;
 
   let body: string | FormData | undefined;
   if (options.formData) {
@@ -364,6 +373,14 @@ export async function confirmerPaiement(paiementId: string): Promise<Paiement> {
 }
 
 /**
+ * POST /payments/:id/confirm avec la clé équipe — bouton « Marquer payé » du
+ * tableau de bord (seule l'équipe valide les paiements manuels WhatsApp).
+ */
+export async function confirmerPaiementEquipe(paiementId: string): Promise<Paiement> {
+  return requete<Paiement>(`/payments/${paiementId}/confirm`, { methode: 'POST', admin: true });
+}
+
+/**
  * POST /trips/:id/cancel — annulation par le réservateur. Course non payée :
  * libre. Course payée avec départ planifié : barème 24/48 h (remboursement
  * 100 % à +48 h, 50 % entre 24 h et 48 h, refusée à moins de 24 h). La
@@ -590,6 +607,7 @@ export async function crediterHotel(
   return requete<{ balance: number }>(`/hotels/${hotelId}/credit`, {
     methode: 'POST',
     corps: { amount, ...(note ? { note } : {}) },
+    admin: true,
   });
 }
 
@@ -747,19 +765,19 @@ export function prochaineActionColis(statut: StatutColis | undefined): 'pickup' 
 
 /** GET /trips?status= — toutes les courses d'un statut donné (équipe). */
 export async function listerCoursesEquipe(statut: StatutTrajet): Promise<Trajet[]> {
-  const reponse = await requete<unknown>(`/trips?status=${statut}`);
+  const reponse = await requete<unknown>(`/trips?status=${statut}`, { admin: true });
   return commeListe<Trajet>(reponse, 'trips');
 }
 
 /** GET /payments?status=pending — paiements en attente + contexte (équipe). */
 export async function listerPaiementsEquipe(): Promise<PaiementEquipe[]> {
-  const reponse = await requete<unknown>('/payments?status=pending');
+  const reponse = await requete<unknown>('/payments?status=pending', { admin: true });
   return commeListe<PaiementEquipe>(reponse, 'payments');
 }
 
 /** GET /payments?status=confirmed — derniers paiements REÇUS (équipe). */
 export async function listerPaiementsRecus(): Promise<PaiementEquipe[]> {
-  const reponse = await requete<unknown>('/payments?status=confirmed');
+  const reponse = await requete<unknown>('/payments?status=confirmed', { admin: true });
   return commeListe<PaiementEquipe>(reponse, 'payments');
 }
 
@@ -768,42 +786,42 @@ export async function listerPaiementsRecus(): Promise<PaiementEquipe[]> {
  * clients, barème 24/48 h) : montant dû + contexte (équipe).
  */
 export async function listerRemboursementsEquipe(): Promise<PaiementEquipe[]> {
-  const reponse = await requete<unknown>('/payments/remboursements');
+  const reponse = await requete<unknown>('/payments/remboursements', { admin: true });
   return commeListe<PaiementEquipe>(reponse, 'payments');
 }
 
 /** POST /payments/:id/rembourse — remboursement versé, la ligne est soldée. */
 export async function marquerRembourse(id: string): Promise<Paiement> {
-  return requete<Paiement>(`/payments/${id}/rembourse`, { methode: 'POST' });
+  return requete<Paiement>(`/payments/${id}/rembourse`, { methode: 'POST', admin: true });
 }
 
 /** GET /drivers — chauffeurs vérifiés (recherche d'assignation, équipe). */
 export async function listerChauffeursVerifies(): Promise<Chauffeur[]> {
-  const reponse = await requete<unknown>('/drivers');
+  const reponse = await requete<unknown>('/drivers', { admin: true });
   return commeListe<Chauffeur>(reponse, 'drivers');
 }
 
 /** GET /drivers?verificationStatus=pending — candidatures à traiter (équipe). */
 export async function listerCandidaturesChauffeurs(): Promise<Chauffeur[]> {
-  const reponse = await requete<unknown>('/drivers?verificationStatus=pending');
+  const reponse = await requete<unknown>('/drivers?verificationStatus=pending', { admin: true });
   return commeListe<Chauffeur>(reponse, 'drivers');
 }
 
 /** GET /users?verificationStatus=pending — documents clients à valider (équipe). */
 export async function listerClientsEnAttente(): Promise<Utilisateur[]> {
-  const reponse = await requete<unknown>('/users?verificationStatus=pending');
+  const reponse = await requete<unknown>('/users?verificationStatus=pending', { admin: true });
   return commeListe<Utilisateur>(reponse, 'users');
 }
 
 /** GET /hotels?verificationStatus=pending — comptes hôtels à vérifier (équipe). */
 export async function listerHotelsEnAttente(): Promise<Hotel[]> {
-  const reponse = await requete<unknown>('/hotels?verificationStatus=pending');
+  const reponse = await requete<unknown>('/hotels?verificationStatus=pending', { admin: true });
   return commeListe<Hotel>(reponse, 'hotels');
 }
 
 /** GET /hotels?verificationStatus=verified — les hôtels partenaires actifs (équipe). */
 export async function listerHotelsVerifies(): Promise<Hotel[]> {
-  const reponse = await requete<unknown>('/hotels?verificationStatus=verified');
+  const reponse = await requete<unknown>('/hotels?verificationStatus=verified', { admin: true });
   return commeListe<Hotel>(reponse, 'hotels');
 }
 
@@ -812,7 +830,7 @@ export async function verifierHotel(
   id: string,
   statut: 'verified' | 'rejected'
 ): Promise<Hotel> {
-  return requete<Hotel>(`/hotels/${id}/verify`, { methode: 'PATCH', corps: { status: statut } });
+  return requete<Hotel>(`/hotels/${id}/verify`, { methode: 'PATCH', corps: { status: statut }, admin: true });
 }
 
 /** Fenêtre de chiffre d'affaires (GET /stats) : CA encaissé et net zanziGo. */
@@ -840,7 +858,7 @@ export interface StatsAbonnes {
   revenue: { today: FenetreCa; week: FenetreCa; month: FenetreCa };
 }
 export async function statsAbonnes(): Promise<StatsAbonnes> {
-  return requete<StatsAbonnes>('/stats');
+  return requete<StatsAbonnes>('/stats', { admin: true });
 }
 
 /** PATCH /trips/:id/assign-driver — l'équipe confirme un chauffeur. */
@@ -848,6 +866,7 @@ export async function assignerChauffeur(tripId: string, driverId: string): Promi
   return requete<Trajet>(`/trips/${tripId}/assign-driver`, {
     methode: 'PATCH',
     corps: { driverId },
+    admin: true,
   });
 }
 
@@ -856,7 +875,7 @@ export async function verifierChauffeur(
   id: string,
   statut: 'verified' | 'rejected'
 ): Promise<Chauffeur> {
-  return requete<Chauffeur>(`/drivers/${id}/verify`, { methode: 'PATCH', corps: { status: statut } });
+  return requete<Chauffeur>(`/drivers/${id}/verify`, { methode: 'PATCH', corps: { status: statut }, admin: true });
 }
 
 /** PATCH /users/:id/verify — valider/refuser un document client (équipe). */
@@ -864,7 +883,7 @@ export async function verifierClient(
   id: string,
   statut: 'verified' | 'rejected'
 ): Promise<Utilisateur> {
-  return requete<Utilisateur>(`/users/${id}/verify`, { methode: 'PATCH', corps: { status: statut } });
+  return requete<Utilisateur>(`/users/${id}/verify`, { methode: 'PATCH', corps: { status: statut }, admin: true });
 }
 
 /**
@@ -878,13 +897,13 @@ export async function rechercherProfils(
   const params = new URLSearchParams();
   if (q.trim()) params.set('q', q.trim());
   if (accountTypes) params.set('accountTypes', accountTypes);
-  const reponse = await requete<unknown>(`/users?${params.toString()}`);
+  const reponse = await requete<unknown>(`/users?${params.toString()}`, { admin: true });
   return commeListe<Utilisateur>(reponse, 'users');
 }
 
 /** PATCH /users/:id/ban — radier (banned=true) ou réintégrer un profil (équipe). */
 export async function bannirClient(id: string, banned: boolean): Promise<Utilisateur> {
-  return requete<Utilisateur>(`/users/${id}/ban`, { methode: 'PATCH', corps: { banned } });
+  return requete<Utilisateur>(`/users/${id}/ban`, { methode: 'PATCH', corps: { banned }, admin: true });
 }
 
 // ---------------------------------------------------------------------------
@@ -935,6 +954,7 @@ export const api = {
   convertirBonEnCredit,
   annulerTrajet,
   confirmerPaiement,
+  confirmerPaiementEquipe,
   noterTrajet,
   demarrerCourse,
   terminerCourse,

@@ -10,6 +10,7 @@ import {
   app,
   authHeaders,
   createLocal,
+  createTourist,
   createVerifiedDriver,
   useTestDb,
 } from './setup.js';
@@ -57,6 +58,46 @@ describe('Devises taxi partagé (parcours local complet)', () => {
     assert.equal(Number(booking.price_per_seat), 15000);
     // Commission partagé local 15 % : le chauffeur touche 85 %.
     assert.equal(Number(booking.net_per_seat), 12750);
+  });
+
+  it('téléphone équipe : l\'identité CLIENT prime sur la clé admin (touriste = USD)', async () => {
+    // Le téléphone de l'équipe garde la clé X-Admin-Key enregistrée ET sert
+    // à tester des comptes clients : un touriste connecté dessus doit voir
+    // et payer en USD — jamais la grille locale en shillings.
+    const { token: tokenChauffeur } = await createVerifiedDriver();
+    const { token: tokenTouriste } = await createTourist();
+
+    const depart = new Date(Date.now() + 6 * 3600 * 1000).toISOString();
+    await request(app)
+      .post('/api/rides')
+      .set(authHeaders(tokenChauffeur))
+      .send({ origin: 'Aéroport (AAKIA)', destination: 'Nungwi', departureAt: depart, seatsTotal: 4 });
+
+    // Jeton touriste + clé équipe sur la même requête.
+    const liste = await request(app)
+      .get('/api/rides')
+      .set(authHeaders(tokenTouriste))
+      .set(adminHeaders());
+    assert.equal(liste.body[0].currency, 'USD');
+    assert.equal(Number(liste.body[0].price_per_seat_usd), 18);
+    assert.equal(liste.body[0].price_per_seat, undefined);
+
+    const resa = await request(app)
+      .post(`/api/rides/${liste.body[0].id}/book`)
+      .set(authHeaders(tokenTouriste))
+      .set(adminHeaders())
+      .send({ seats: 1 });
+    assert.equal(resa.status, 201);
+    assert.equal(resa.body.payment.currency, 'USD');
+    assert.equal(Number(resa.body.payment.amount), 18);
+
+    // « Mes places » du touriste : USD aussi, même avec la clé embarquée.
+    const mesPlaces = await request(app)
+      .get('/api/rides/reservations')
+      .set(authHeaders(tokenTouriste))
+      .set(adminHeaders());
+    assert.equal(mesPlaces.body[0].currency, 'USD');
+    assert.equal(Number(mesPlaces.body[0].amount), 18);
   });
 
   it('trajet spécial local : Nungwi ↔ Paje à 20 000 TZS la place (deux sens)', async () => {
