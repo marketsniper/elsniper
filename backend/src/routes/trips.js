@@ -4,7 +4,7 @@ import { query, withTransaction } from '../db.js';
 import { HttpError, notFound } from '../errors.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { isAdmin, requireAuth, requireAdmin } from '../middleware/auth.js';
-import { priceTrip } from '../services/pricingService.js';
+import { priceTrip, sharedAllowedForRoute } from '../services/pricingService.js';
 import { createPaymentOrder, isStubMode } from '../services/pesapalService.js';
 import { circuitPaiementUsd } from '../services/paypalService.js';
 import { buildTeamNotificationLink, tripRequestMessage } from '../services/whatsappService.js';
@@ -69,6 +69,16 @@ router.post(
   requireAuth,
   asyncHandler(async (req, res) => {
     const data = createTripSchema.parse(req.body);
+
+    // Pas de taxi partagé sur les trajets courts (course privée du même
+    // trajet à moins de 35 USD) : course privée uniquement.
+    if (data.tripType !== 'private' && !sharedAllowedForRoute(data.pickupLocation, data.dropoffLocation)) {
+      throw new HttpError(
+        422,
+        'no_shared_route',
+        'Pas de taxi partagé sur ce trajet court — réservez une course privée'
+      );
+    }
 
     let bookerLabel;
     let audience;

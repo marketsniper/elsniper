@@ -1021,6 +1021,11 @@ const CHAINES = {
     en: 'Price shown once you pick your route',
     sw: 'Bei itaonyeshwa baada ya kuchagua safari',
   },
+  reserver_pas_partage: {
+    fr: 'Trajet court : course privée uniquement — pas de taxi partagé sur ce trajet.',
+    en: 'Short trip: private ride only — no shared taxi on this route.',
+    sw: 'Safari fupi: safari binafsi tu — hakuna teksi ya kushirikiana kwenye njia hii.',
+  },
   reserver_note_prix: {
     fr: 'Tarif plat selon la formule (grille zanziGo). Le prix est figé à la réservation — aucun supplément ensuite.',
     en: 'Flat fare by ride mode (zanziGo price list). The price is locked at booking — no extra charges later.',

@@ -217,6 +217,15 @@ function estGrandAxe(pickup, dropoff) {
   return privateUsdForRoute(pickup, dropoff) >= GRAND_AXE_PRIVE_MIN_USD;
 }
 
+// Le TAXI PARTAGÉ n'existe que sur les trajets assez longs : course privée
+// du même trajet à 35 USD minimum. En dessous (petits sauts de la côte est,
+// villages voisins…), course privée uniquement.
+const PARTAGE_PRIVE_MIN_USD = 35;
+
+export function sharedAllowedForRoute(pickup, dropoff) {
+  return privateUsdForRoute(pickup, dropoff) >= PARTAGE_PRIVE_MIN_USD;
+}
+
 // Prix local (TZS) d'une place — c'est LUI qui est posé automatiquement sur
 // les trajets partagés postés par les chauffeurs (le chauffeur ne choisit
 // pas son prix).

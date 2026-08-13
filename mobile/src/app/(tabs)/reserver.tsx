@@ -13,7 +13,7 @@
 // du client, payload {hotelId, clientName, clientPhone, …} sans userId.
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { RidesPartages } from '@/components/RidesPartages';
@@ -35,6 +35,7 @@ import {
   localVerifie,
   ORIGINES_RIDES,
   profilTarifaireUtilisateur,
+  tarifPriveItineraire,
   tarifSpecialPrive,
   tarifTrajetProfil,
   type ProfilTarifaire,
@@ -104,6 +105,12 @@ export default function EcranReserver() {
   // Trajet spécial (privé uniquement) : villes exactes, deux sens.
   const estSpecial = mode === 'prive' && tarifSpecialPrive(depart, arrivee) !== null;
   const tarifCourant = itineraireChoisi ? tarifTrajetProfil('private', profil, itineraire) : null;
+  // Pas de taxi partagé sur les trajets courts : course privée du même
+  // trajet à 35 USD minimum (même règle côté serveur).
+  const partageDisponible = !itineraireChoisi || tarifPriveItineraire(depart, arrivee) >= 35;
+  useEffect(() => {
+    if (!partageDisponible && mode === 'partage') setMode('prive');
+  }, [partageDisponible, mode]);
 
   const reserver = async () => {
     setErreur('');
@@ -236,6 +243,10 @@ export default function EcranReserver() {
       />
 
       <Text style={styles.titreSection}>{t('reserver_mode_titre')}</Text>
+      {/* Trajet court (privé < 35 USD) : pas de taxi partagé du tout. */}
+      {itineraireChoisi && !partageDisponible && (
+        <EncartInfo icone="car-outline">{t('reserver_pas_partage')}</EncartInfo>
+      )}
       <View style={styles.rangeeModes}>
         {(
           [
@@ -246,13 +257,17 @@ export default function EcranReserver() {
               description: t('reserver_prive_desc'),
               type: 'private' as TypeTrajet,
             },
-            {
-              cle: 'partage' as ModeCourse,
-              icone: 'people-outline' as const,
-              titre: t('reserver_partage'),
-              description: t('reserver_partage_desc'),
-              type: typePartage,
-            },
+            ...(partageDisponible
+              ? [
+                  {
+                    cle: 'partage' as ModeCourse,
+                    icone: 'people-outline' as const,
+                    titre: t('reserver_partage'),
+                    description: t('reserver_partage_desc'),
+                    type: typePartage,
+                  },
+                ]
+              : []),
           ]
         ).map((option) => {
           const actif = mode === option.cle;

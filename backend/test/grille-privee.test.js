@@ -75,6 +75,33 @@ describe('Grille privée au kilomètre', () => {
     assert.equal(local.currency, 'TZS');
   });
 
+  it('trajet court : la demande de course PARTAGÉE est refusée, la privée passe', async () => {
+    const { token, user } = await createTourist();
+    const partage = await request(app)
+      .post('/api/trips')
+      .set(authHeaders(token))
+      .send({
+        userId: user.id,
+        tripType: 'shared_tourist',
+        pickupLocation: 'Paje',
+        dropoffLocation: 'Jambiani',
+      });
+    assert.equal(partage.status, 422);
+    assert.equal(partage.body.error.code, 'no_shared_route');
+
+    const prive = await request(app)
+      .post('/api/trips')
+      .set(authHeaders(token))
+      .send({
+        userId: user.id,
+        tripType: 'private',
+        pickupLocation: 'Paje',
+        dropoffLocation: 'Jambiani',
+      });
+    assert.equal(prive.status, 201, JSON.stringify(prive.body));
+    assert.equal(Number(prive.body.price), 15);
+  });
+
   it('bout en bout : une course privée Matemwe → Paje est créée à 55 USD', async () => {
     const { token, user } = await createTourist();
     const creation = await request(app)

@@ -16,7 +16,11 @@ import { asyncHandler } from '../middleware/errorHandler.js';
 import { isAdmin, requireAuth } from '../middleware/auth.js';
 import { buildTeamNotificationLink } from '../services/whatsappService.js';
 import { config } from '../config.js';
-import { localSeatTzsForRoute, sharedSeatUsdForRoute } from '../services/pricingService.js';
+import {
+  localSeatTzsForRoute,
+  sharedAllowedForRoute,
+  sharedSeatUsdForRoute,
+} from '../services/pricingService.js';
 import { createPaymentOrder, isStubMode } from '../services/pesapalService.js';
 import { RIDE_DESTINATIONS, RIDE_ORIGINS } from '../services/locations.js';
 import { randomUUID } from 'node:crypto';
@@ -199,6 +203,16 @@ router.post(
 
     if (new Date(data.departureAt).getTime() <= Date.now()) {
       throw new HttpError(400, 'departure_in_past', "L'heure de départ doit être dans le futur");
+    }
+
+    // Pas de taxi partagé sur les trajets courts (course privée du même
+    // trajet à moins de 35 USD) : course privée uniquement.
+    if (!sharedAllowedForRoute(data.origin, data.destination)) {
+      throw new HttpError(
+        422,
+        'no_shared_route',
+        'Pas de taxi partagé sur ce trajet court — proposez une course privée'
+      );
     }
 
     // Prix par place FIXÉ PAR LA GRILLE zanziGo selon la zone du trajet —
