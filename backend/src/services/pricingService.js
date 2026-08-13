@@ -112,6 +112,76 @@ function specialLocalRouteTzs(pickup, dropoff) {
   return route?.tzs;
 }
 
+// ---------------------------------------------------------------------------
+// GRILLE PRIVÉE VILLE ↔ VILLE, AU KILOMÈTRE
+// ---------------------------------------------------------------------------
+// Le prix privé entre deux villes (hors hubs Stone Town / aéroport, qui
+// gardent la grille par zone historique) est EXTRAPOLÉ des tarifs connus :
+// prise en charge + prix par km de route (vol d'oiseau × détour routier
+// moyen), arrondi aux 5 USD. Étalonnage vérifié sur les trajets établis :
+// Stone Town → Nungwi (≈ 79 km de route) ≈ 50 USD ; Nungwi ↔ Paje
+// (≈ 88 km) → 65 USD — exactement le trajet spécial existant.
+const CITY_COORDS = {
+  'aéroport (aakia)': [-6.221, 39.223],
+  aéroport: [-6.221, 39.223],
+  airport: [-6.221, 39.223],
+  'stone town': [-6.162, 39.191],
+  'stone town ferry': [-6.163, 39.19],
+  nungwi: [-5.727, 39.297],
+  kendwa: [-5.758, 39.29],
+  matemwe: [-5.869, 39.351],
+  'pwani mchangani': [-5.925, 39.37],
+  kiwengwa: [-5.986, 39.38],
+  pongwe: [-6.03, 39.395],
+  uroa: [-6.098, 39.418],
+  chwaka: [-6.16, 39.433],
+  michamvi: [-6.106, 39.496],
+  bwejuu: [-6.226, 39.538],
+  paje: [-6.266, 39.531],
+  jambiani: [-6.317, 39.541],
+  makunduchi: [-6.421, 39.457],
+  kizimkazi: [-6.437, 39.336],
+  fumba: [-6.322, 39.183],
+};
+const DETOUR_ROUTIER = 1.35; // les routes de l'île ne sont jamais directes
+const PRISE_EN_CHARGE_USD = 20;
+const PRIX_PAR_KM_USD = 0.5;
+const PRIVE_MINIMUM_USD = 20;
+const HUBS = new Set(['stone town', 'stone town ferry', 'aéroport (aakia)', 'aéroport', 'airport']);
+
+// Kilomètres de ROUTE estimés entre deux villes connues (sinon null).
+export function kmEntreVilles(a, b) {
+  const ca = CITY_COORDS[normCity(a)];
+  const cb = CITY_COORDS[normCity(b)];
+  if (!ca || !cb) return null;
+  const rad = Math.PI / 180;
+  const dLat = (cb[0] - ca[0]) * rad;
+  const dLng = (cb[1] - ca[1]) * rad;
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(ca[0] * rad) * Math.cos(cb[0] * rad) * Math.sin(dLng / 2) ** 2;
+  return 2 * 6371 * Math.asin(Math.sqrt(h)) * DETOUR_ROUTIER;
+}
+
+// Prix privé USD d'un itinéraire : trajet spécial d'abord (Nungwi ↔ Paje 65),
+// grille par zone pour les liaisons depuis/vers les hubs (tarifs
+// historiques inchangés), formule au kilomètre pour toute autre paire de
+// villes connues, zone en dernier recours.
+export function privateUsdForRoute(pickup, dropoff) {
+  const special = specialPrivateRouteUsd(pickup, dropoff);
+  if (special !== undefined) return special;
+  const p = normCity(pickup);
+  const d = normCity(dropoff);
+  if (!HUBS.has(p) && !HUBS.has(d)) {
+    const km = kmEntreVilles(pickup, dropoff);
+    if (km !== null) {
+      const brut = PRISE_EN_CHARGE_USD + PRIX_PAR_KM_USD * km;
+      return Math.max(PRIVE_MINIMUM_USD, Math.round(brut / 5) * 5);
+    }
+  }
+  return tierForRoute(pickup, dropoff).privateUsd;
+}
+
 // Prix touriste (USD) d'une place en trajet partagé selon l'itinéraire —
 // utilisé aussi pour l'affichage des trajets postés par les chauffeurs.
 export function sharedSeatUsdForRoute(pickup, dropoff) {
@@ -132,10 +202,10 @@ export function priceTrip(tripType, audience, route = {}) {
   const tier = tierForRoute(route.pickup, route.dropoff);
 
   if (audience === 'local') {
-    // Course PRIVÉE : même prix que la grille touriste (trajet spécial
-    // inclus), converti en shillings — commission privé 10 %.
+    // Course PRIVÉE : même prix que la grille touriste (grille au kilomètre
+    // ville ↔ ville incluse), converti en shillings — commission privé 10 %.
     if (tripType === 'private') {
-      const usd = specialPrivateRouteUsd(route.pickup, route.dropoff) ?? tier.privateUsd;
+      const usd = privateUsdForRoute(route.pickup, route.dropoff);
       const price = Math.round(usd * config.usdToTzsRate);
       return { price, commission: round2(price * COMMISSION_RATES.private), currency: 'TZS' };
     }
@@ -148,7 +218,7 @@ export function priceTrip(tripType, audience, route = {}) {
   let usd;
   let taux;
   if (tripType === 'private') {
-    usd = specialPrivateRouteUsd(route.pickup, route.dropoff) ?? tier.privateUsd;
+    usd = privateUsdForRoute(route.pickup, route.dropoff);
     taux = COMMISSION_RATES.private; // 10 % — le chauffeur reçoit 90 %
   } else if (tripType === 'shared_tourist' || tripType === 'posted_return') {
     usd = tier.sharedUsd;

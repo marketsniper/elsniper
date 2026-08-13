@@ -31,6 +31,7 @@ import {
   formaterDate,
   formaterMontant,
   formaterPrix,
+  totalEnTzs,
   trajetExpire,
   type Colis,
   type StatutTrajet,
@@ -301,7 +302,7 @@ export default function EcranCourses() {
                   </Text>
                   {netC !== null && (
                     <Text style={styles.prix}>
-                      {t('gain_net')} : {formaterMontant(netC, deviseC)}
+                      💰 {t('gain_net')} : {formaterMontant(totalEnTzs({ [deviseC]: netC }), 'TZS')}
                     </Text>
                   )}
                 </View>
@@ -378,7 +379,7 @@ export default function EcranCourses() {
               </Text>
               {net !== null && (
                 <Text style={styles.prix}>
-                  {t('gain_net')} : {formaterMontant(net, devise)}
+                  💰 {t('gain_net')} : {formaterMontant(totalEnTzs({ [devise]: net }), 'TZS')}
                 </Text>
               )}
             </View>
@@ -505,10 +506,14 @@ const styles = StyleSheet.create({
     color: couleurs.primaire,
     fontWeight: '800',
   },
+  // flexWrap : la date et le gain passent à la ligne au lieu de se
+  // chevaucher (gain bien lisible, en shillings).
   pied: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: espaces.s,
   },
   date: {
     fontSize: 13,

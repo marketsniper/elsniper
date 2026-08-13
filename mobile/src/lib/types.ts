@@ -495,6 +495,78 @@ export function tarifsZoneItineraire(depart: string, arrivee: string): TarifsZon
   return zone ? TARIFS_ZONE[zone] : TARIFS_ZONE_DEFAUT;
 }
 
+// ---------------------------------------------------------------------------
+// Grille privée VILLE ↔ VILLE au kilomètre — miroir exact du serveur
+// (pricingService.privateUsdForRoute) : prise en charge 20 USD +
+// 0,50 USD/km de route (vol d'oiseau × 1,35 de détour), arrondi aux 5 USD,
+// minimum 20. Les liaisons depuis/vers les hubs (Stone Town, aéroport)
+// gardent la grille par zone ; Nungwi ↔ Paje reste au trajet spécial 65 USD.
+// ---------------------------------------------------------------------------
+
+const COORDONNEES_VILLES: Record<string, [number, number]> = {
+  'aéroport (aakia)': [-6.221, 39.223],
+  aéroport: [-6.221, 39.223],
+  airport: [-6.221, 39.223],
+  'stone town': [-6.162, 39.191],
+  'stone town ferry': [-6.163, 39.19],
+  nungwi: [-5.727, 39.297],
+  kendwa: [-5.758, 39.29],
+  matemwe: [-5.869, 39.351],
+  'pwani mchangani': [-5.925, 39.37],
+  kiwengwa: [-5.986, 39.38],
+  pongwe: [-6.03, 39.395],
+  uroa: [-6.098, 39.418],
+  chwaka: [-6.16, 39.433],
+  michamvi: [-6.106, 39.496],
+  bwejuu: [-6.226, 39.538],
+  paje: [-6.266, 39.531],
+  jambiani: [-6.317, 39.541],
+  makunduchi: [-6.421, 39.457],
+  kizimkazi: [-6.437, 39.336],
+  fumba: [-6.322, 39.183],
+};
+const DETOUR_ROUTIER = 1.35;
+const PRISE_EN_CHARGE_USD = 20;
+const PRIX_PAR_KM_USD = 0.5;
+const PRIVE_MINIMUM_USD = 20;
+const HUBS_TARIFAIRES = new Set([
+  'stone town',
+  'stone town ferry',
+  'aéroport (aakia)',
+  'aéroport',
+  'airport',
+]);
+
+/** Kilomètres de route estimés entre deux villes connues, sinon null. */
+export function kmEntreVilles(depart: string, arrivee: string): number | null {
+  const a = COORDONNEES_VILLES[normaliserLieu(depart)];
+  const b = COORDONNEES_VILLES[normaliserLieu(arrivee)];
+  if (!a || !b) return null;
+  const rad = Math.PI / 180;
+  const dLat = (b[0] - a[0]) * rad;
+  const dLng = (b[1] - a[1]) * rad;
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(a[0] * rad) * Math.cos(b[0] * rad) * Math.sin(dLng / 2) ** 2;
+  return 2 * 6371 * Math.asin(Math.sqrt(h)) * DETOUR_ROUTIER;
+}
+
+/** Prix privé USD d'un itinéraire — spéciaux > hubs par zone > formule km. */
+export function tarifPriveItineraire(depart: string, arrivee: string): number {
+  const special = tarifSpecialPrive(depart, arrivee);
+  if (special !== null) return special;
+  const d = normaliserLieu(depart);
+  const a = normaliserLieu(arrivee);
+  if (!HUBS_TARIFAIRES.has(d) && !HUBS_TARIFAIRES.has(a)) {
+    const km = kmEntreVilles(depart, arrivee);
+    if (km !== null) {
+      const brut = PRISE_EN_CHARGE_USD + PRIX_PAR_KM_USD * km;
+      return Math.max(PRIVE_MINIMUM_USD, Math.round(brut / 5) * 5);
+    }
+  }
+  return tarifsZoneItineraire(depart, arrivee).priveUsd;
+}
+
 // Hôtel partenaire : même grille USD que les touristes avec −5 %
 // (appliqué dans tarifTrajetProfil).
 
@@ -522,10 +594,12 @@ export function tarifTrajetProfil(
     ? tarifsZoneItineraire(itineraire.depart, itineraire.arrivee)
     : TARIFS_ZONE_DEFAUT;
   if (profil === 'local') {
-    // Course privée : même prix que la grille touriste, converti en TZS.
+    // Course privée : même prix que la grille touriste (grille au kilomètre
+    // ville ↔ ville incluse), converti en TZS.
     if (type === 'private') {
-      const special = itineraire ? tarifSpecialPrive(itineraire.depart, itineraire.arrivee) : null;
-      const usd = special ?? zone.priveUsd;
+      const usd = itineraire
+        ? tarifPriveItineraire(itineraire.depart, itineraire.arrivee)
+        : zone.priveUsd;
       return { montant: Math.round(usd * TAUX_USD_TZS), devise: 'TZS' };
     }
     // Place en taxi partagé : tarif unifié, trajets spéciaux inclus.
@@ -536,10 +610,9 @@ export function tarifTrajetProfil(
   }
   let plein: number | undefined;
   if (type === 'private') {
-    const special = itineraire
-      ? tarifSpecialPrive(itineraire.depart, itineraire.arrivee)
-      : null;
-    plein = special ?? zone.priveUsd;
+    plein = itineraire
+      ? tarifPriveItineraire(itineraire.depart, itineraire.arrivee)
+      : zone.priveUsd;
   } else if (type === 'shared_tourist' || type === 'shared_local') {
     plein = zone.partageUsd;
   } else {
