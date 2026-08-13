@@ -13,7 +13,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { ecrireStockage, lireStockage, supprimerStockage } from '@/lib/stockage';
 import React, { useCallback, useEffect, useState } from 'react';
-import { Alert, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Selecteur } from '@/components/Selecteur';
 import {
@@ -27,7 +27,7 @@ import {
   TexteErreur,
   Titre,
 } from '@/components/ui';
-import { api, definirCleEquipe, ErreurApi, type StatsAbonnes } from '@/lib/api';
+import { api, definirCleEquipe, ErreurApi, type AttentePartage, type StatsAbonnes } from '@/lib/api';
 import { formaterDateRelativeI18n, libelleTypeTrajet, useT } from '@/lib/i18n';
 import { useRafraichissementAuto } from '@/lib/rafraichissementAuto';
 import { couleurs, espaces, ombres, rayons } from '@/lib/theme';
@@ -56,7 +56,8 @@ type SectionEquipe =
   | 'hotels'
   | 'taxis'
   | 'clients'
-  | 'locaux';
+  | 'locaux'
+  | 'attentes';
 
 // Libellé d'un chauffeur dans le sélecteur d'assignation.
 function libelleChauffeur(chauffeur: Chauffeur): string {
@@ -101,11 +102,17 @@ export default function EcranEquipe() {
   // Crédit prépayé : hôtels partenaires actifs + montant saisi par hôtel.
   const [hotelsVerifies, setHotelsVerifies] = useState<Hotel[]>([]);
   const [montantsCredit, setMontantsCredit] = useState<Record<string, string>>({});
+  // Liste d'attente du taxi partagé : demandes clients à recontacter.
+  const [attentes, setAttentes] = useState<AttentePartage[]>([]);
+  // Dates d'expiration saisies par chauffeur (permis / assurance).
+  const [datesDocs, setDatesDocs] = useState<Record<string, { permis: string; assurance: string }>>({});
+  // Sauvegarde de la base : téléchargement en cours.
+  const [sauvegardeEnCours, setSauvegardeEnCours] = useState(false);
 
   const charger = useCallback(async () => {
     setErreur('');
     try {
-      const [lesCourses, lesPaiements, lesCandidats, lesClients, lesHotels, lesChauffeurs, lesAbonnes, lesVerifies, lesRemboursements, lesRecus] =
+      const [lesCourses, lesPaiements, lesCandidats, lesClients, lesHotels, lesChauffeurs, lesAbonnes, lesVerifies, lesRemboursements, lesRecus, lesAttentes] =
         await Promise.all([
           api.listerCoursesEquipe('requested'),
           api.listerPaiementsEquipe(),
@@ -117,6 +124,7 @@ export default function EcranEquipe() {
           api.listerHotelsVerifies().catch(() => []),
           api.listerRemboursementsEquipe().catch(() => []),
           api.listerPaiementsRecus().catch(() => []),
+          api.listerAttentesPartage(true).catch(() => []),
         ]);
       setCourses(lesCourses);
       setPaiements(lesPaiements);
@@ -128,6 +136,7 @@ export default function EcranEquipe() {
       setHotelsVerifies(lesVerifies);
       setRemboursements(lesRemboursements);
       setPaiementsRecus(lesRecus);
+      setAttentes(lesAttentes);
     } catch (e) {
       setErreur(e instanceof ErreurApi ? e.message : t('equipe_action_erreur'));
     }
@@ -147,6 +156,57 @@ export default function EcranEquipe() {
       setErreur(e instanceof ErreurApi ? e.message : t('equipe_action_erreur'));
     } finally {
       setActionEnCours(null);
+    }
+  };
+
+  // Pose les dates d'expiration permis/assurance d'un chauffeur (AAAA-MM-JJ).
+  const majDatesChauffeur = async (chauffeurId: string) => {
+    const saisieDates = datesDocs[chauffeurId] ?? { permis: '', assurance: '' };
+    const permis = saisieDates.permis.trim();
+    const assurance = saisieDates.assurance.trim();
+    const formatOk = (v: string) => v === '' || /^\d{4}-\d{2}-\d{2}$/.test(v);
+    if (!formatOk(permis) || !formatOk(assurance) || (permis === '' && assurance === '')) {
+      setErreur(t('equipe_docs_format'));
+      return;
+    }
+    setActionEnCours(`docs-${chauffeurId}`);
+    setErreur('');
+    try {
+      await api.majDocumentsChauffeur(chauffeurId, {
+        licenseExpiresOn: permis || undefined,
+        insuranceExpiresOn: assurance || undefined,
+      });
+      setDatesDocs((prev) => ({ ...prev, [chauffeurId]: { permis: '', assurance: '' } }));
+      await charger();
+    } catch (e) {
+      setErreur(e instanceof ErreurApi ? e.message : t('equipe_action_erreur'));
+    } finally {
+      setActionEnCours(null);
+    }
+  };
+
+  // Sauvegarde de la base : téléchargement JSON sur la version web ; sur
+  // téléphone, on invite à passer par la version web (fichier volumineux).
+  const telechargerLaSauvegarde = async () => {
+    if (Platform.OS !== 'web') {
+      Alert.alert(t('equipe_sauvegarde_titre'), t('equipe_sauvegarde_web'));
+      return;
+    }
+    setSauvegardeEnCours(true);
+    setErreur('');
+    try {
+      const donnees = await api.telechargerSauvegarde();
+      const blob = new Blob([JSON.stringify(donnees, null, 1)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const lien = document.createElement('a');
+      lien.href = url;
+      lien.download = `zanzigo-sauvegarde-${new Date().toISOString().slice(0, 10)}.json`;
+      lien.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setErreur(e instanceof ErreurApi ? e.message : t('equipe_action_erreur'));
+    } finally {
+      setSauvegardeEnCours(false);
     }
   };
 
@@ -353,6 +413,7 @@ export default function EcranEquipe() {
     action: boolean;
   }[] = [
     { cle: 'courses', label: t('equipe_stat_courses'), icone: 'car-outline', n: courses.length, action: true },
+    { cle: 'attentes', label: t('equipe_stat_attentes'), icone: 'notifications-outline', n: attentes.filter((a) => !a.matched_at).length, action: true },
     { cle: 'paiements', label: t('equipe_stat_paiements'), icone: 'cash-outline', n: paiements.length + remboursements.length, action: true },
     { cle: 'candidatures', label: t('equipe_stat_candidatures'), icone: 'document-text-outline', n: candidats.length, action: true },
     { cle: 'comptes', label: t('equipe_stat_comptes'), icone: 'id-card-outline', n: clients.length, action: true },
@@ -1000,13 +1061,65 @@ export default function EcranEquipe() {
             const lng = Number(champ(chauffeur, 'last_lng') ?? NaN);
             const positionConnue = Number.isFinite(lat) && Number.isFinite(lng);
             const majPosition = champ(chauffeur, 'position_updated_at');
+            // Documents : date d'expiration + voyant si sous 30 jours.
+            const expPermis = champ<string>(chauffeur, 'license_expires_on', 'licenseExpiresOn');
+            const expAssurance = champ<string>(
+              chauffeur,
+              'insurance_expires_on',
+              'insuranceExpiresOn'
+            );
+            const bientot = (d?: string | null) =>
+              !!d && new Date(String(d)).getTime() < Date.now() + 30 * 86400000;
+            const docsAlerte = bientot(expPermis) || bientot(expAssurance);
+            const saisieDates = datesDocs[chauffeur.id] ?? { permis: '', assurance: '' };
             return (
               <Carte key={chauffeur.id}>
-                <Text style={styles.itineraire}>{libelleChauffeur(chauffeur)}</Text>
+                <View style={styles.ligneDetails}>
+                  <Text style={styles.itineraire}>{libelleChauffeur(chauffeur)}</Text>
+                  {docsAlerte && <Badge texte={t('equipe_docs_alerte')} ton="danger" />}
+                </View>
                 <Text style={styles.detail}>
                   {String(champ(chauffeur, 'vehicle_model', 'vehicleModel') ?? '—')} ·{' '}
                   {String(champ(chauffeur, 'phone') ?? '')}
                 </Text>
+                {/* Expiration des documents (suivies pour l'alerte auto). */}
+                <Text style={styles.detail}>
+                  📄 {t('equipe_docs_permis')} :{' '}
+                  {expPermis ? String(expPermis).slice(0, 10) : '—'} ·{' '}
+                  {t('equipe_docs_assurance')} :{' '}
+                  {expAssurance ? String(expAssurance).slice(0, 10) : '—'}
+                </Text>
+                <Champ
+                  label={`${t('equipe_docs_permis')} (AAAA-MM-JJ)`}
+                  value={saisieDates.permis}
+                  onChangeText={(v) =>
+                    setDatesDocs((prev) => ({
+                      ...prev,
+                      [chauffeur.id]: { ...saisieDates, permis: v },
+                    }))
+                  }
+                  placeholder="2026-12-31"
+                />
+                <Champ
+                  label={`${t('equipe_docs_assurance')} (AAAA-MM-JJ)`}
+                  value={saisieDates.assurance}
+                  onChangeText={(v) =>
+                    setDatesDocs((prev) => ({
+                      ...prev,
+                      [chauffeur.id]: { ...saisieDates, assurance: v },
+                    }))
+                  }
+                  placeholder="2026-12-31"
+                />
+                {(saisieDates.permis.trim() !== '' || saisieDates.assurance.trim() !== '') && (
+                  <Bouton
+                    titre={t('equipe_docs_enregistrer')}
+                    icone="save-outline"
+                    variante="secondaire"
+                    onPress={() => majDatesChauffeur(chauffeur.id)}
+                    charge={actionEnCours === `docs-${chauffeur.id}`}
+                  />
+                )}
                 {positionConnue ? (
                   <Bouton
                     titre={`${t('equipe_position')} · ${formaterDateRelativeI18n(majPosition, t)}`}
@@ -1033,6 +1146,49 @@ export default function EcranEquipe() {
         </View>
       ))}
 
+        </>
+      )}
+
+      {/* Demandes en liste d'attente du taxi partagé : clients à recontacter
+          — le voyant s'éteint quand une annonce correspondante est sortie. */}
+      {section === 'attentes' && (
+        <>
+          <Text style={styles.titreSection}>🕐 {t('equipe_stat_attentes')}</Text>
+          <EncartInfo icone="notifications-outline">{t('equipe_attentes_intro')}</EncartInfo>
+          {attentes.length === 0 && (
+            <EncartInfo icone="checkmark-circle-outline" ton="succes">
+              {t('equipe_attentes_vide')}
+            </EncartInfo>
+          )}
+          {attentes.map((demande) => (
+            <Carte key={demande.id}>
+              <View style={styles.ligneDetails}>
+                <Text style={styles.itineraire}>
+                  {demande.origin}  →  {demande.destination}
+                </Text>
+                {demande.matched_at ? (
+                  <Badge texte={t('equipe_attente_trouvee')} ton="succes" />
+                ) : (
+                  <Badge texte={t('equipe_attente_ouverte')} ton="attente" />
+                )}
+              </View>
+              <Text style={styles.detail}>
+                {demande.full_name} · {demande.phone ?? demande.email ?? '—'} ·{' '}
+                {t('places_detail', { n: demande.seats })}
+                {demande.desired_date ? ` · ${String(demande.desired_date).slice(0, 10)}` : ''}
+              </Text>
+              {!!demande.phone && (
+                <Bouton
+                  titre={t('equipe_attente_contacter')}
+                  icone="logo-whatsapp"
+                  variante="secondaire"
+                  onPress={() =>
+                    Linking.openURL(`https://wa.me/${String(demande.phone).replace('+', '')}`)
+                  }
+                />
+              )}
+            </Carte>
+          ))}
         </>
       )}
 
@@ -1076,6 +1232,14 @@ export default function EcranEquipe() {
                   )}
                 </View>
                 <Text style={styles.detail}>{String(champ(profil, 'phone') ?? '')}</Text>
+                {/* Suivi parrainage : qui a amené ce client. */}
+                {!!champ(profil, 'referred_by_name', 'referredByName') && (
+                  <Text style={styles.detail}>
+                    🤝 {t('equipe_parraine_par', {
+                      nom: String(champ(profil, 'referred_by_name', 'referredByName')),
+                    })}
+                  </Text>
+                )}
                 {bloque ? (
                   <Bouton
                     titre={t('equipe_reintegrer')}
@@ -1099,12 +1263,24 @@ export default function EcranEquipe() {
       )}
 
       {section === null && (
-        <Bouton
-          titre={t('equipe_quitter')}
-          icone="log-out-outline"
-          variante="secondaire"
-          onPress={quitter}
-        />
+        <>
+          {/* Sauvegarde complète de la base (clients, courses, paiements…) :
+              à télécharger régulièrement, surtout avant toute échéance de
+              l'hébergement de la base. */}
+          <Bouton
+            titre={t('equipe_sauvegarde_bouton')}
+            icone="download-outline"
+            variante="secondaire"
+            onPress={telechargerLaSauvegarde}
+            charge={sauvegardeEnCours}
+          />
+          <Bouton
+            titre={t('equipe_quitter')}
+            icone="log-out-outline"
+            variante="secondaire"
+            onPress={quitter}
+          />
+        </>
       )}
     </Ecran>
   );

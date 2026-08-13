@@ -27,6 +27,13 @@ const createTripSchema = z
     pickupLocation: z.string().min(2),
     dropoffLocation: z.string().min(2),
     scheduledAt: z.string().datetime({ offset: true }).optional(),
+    // Transfert aéroport : n° de vol pour vérifier l'heure d'atterrissage.
+    flightNumber: z.string().min(2).max(12).optional(),
+    // Course privée uniquement : aller-retour avec attente (prix ×1,8) et
+    // options véhicule (siège bébé, gros bagages).
+    roundTrip: z.boolean().optional(),
+    babySeat: z.boolean().optional(),
+    bulkyLuggage: z.boolean().optional(),
   })
   .refine((d) => Boolean(d.userId) !== Boolean(d.hotelId), {
     path: ['userId'],
@@ -42,6 +49,9 @@ const ratingSchema = z.object({
   rating: z.number().int().min(1).max(5),
   comment: z.string().max(1000).optional(),
 });
+// Pourboire : 100 % pour le chauffeur, plafonné à une valeur raisonnable
+// dans la devise de la course (200 USD / 500 000 TZS).
+const tipSchema = z.object({ amount: z.number().positive() });
 
 // Infos PUBLIQUES du taxi assigné, jointes aux courses : dès que tout est
 // réglé, le client sait qui vient le chercher (nom du chauffeur, plaque,
@@ -155,9 +165,17 @@ router.post(
       );
     }
 
+    // Aller-retour avec attente (course privée uniquement) : ×1,8 — le
+    // chauffeur attend sur place et ramène le client, prix figé comme le
+    // reste (commission au même taux).
+    const allerRetour = data.roundTrip === true && data.tripType === 'private';
+    const round2 = (n) => Math.round(n * 100) / 100;
+    const price = allerRetour ? round2(pricing.price * 1.8) : pricing.price;
+    const commission = allerRetour ? round2(pricing.commission * 1.8) : pricing.commission;
+
     const { rows } = await query(
-      `INSERT INTO trips (user_id, hotel_id, client_name, client_phone, trip_type, pickup_location, dropoff_location, scheduled_at, price, commission, currency)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      `INSERT INTO trips (user_id, hotel_id, client_name, client_phone, trip_type, pickup_location, dropoff_location, scheduled_at, price, commission, currency, flight_number, round_trip, baby_seat, bulky_luggage)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
        RETURNING *`,
       [
         data.userId ?? null,
@@ -168,9 +186,13 @@ router.post(
         data.pickupLocation,
         data.dropoffLocation,
         data.scheduledAt ?? null,
-        pricing.price,
-        pricing.commission,
+        price,
+        commission,
         pricing.currency,
+        data.flightNumber?.trim().toUpperCase() ?? null,
+        allerRetour,
+        data.babySeat === true,
+        data.bulkyLuggage === true,
       ]
     );
     let trip = rows[0];
@@ -598,6 +620,43 @@ router.post(
       sortie.whatsapp_link = buildTeamNotificationLink(resumeAnnulation);
     }
     res.json(sortie);
+  })
+);
+
+// POST /trips/:id/tip — pourboire pour le chauffeur (course terminée,
+// réservé au client de la course, une seule fois). 100 % au chauffeur :
+// aucune commission — l'équipe le voit et le reverse avec les gains.
+router.post(
+  '/:id/tip',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const { amount } = tipSchema.parse(req.body);
+    const trip = await getTrip(req.params.id);
+    const isBooker =
+      (trip.user_id !== null && trip.user_id === req.auth.userId) ||
+      (trip.hotel_id !== null && trip.hotel_id === req.auth.hotelId);
+    if (!isAdmin(req) && !isBooker) {
+      throw new HttpError(403, 'forbidden', 'Seul le réservateur de la course peut laisser un pourboire');
+    }
+    if (trip.status !== 'completed') {
+      throw new HttpError(409, 'invalid_status', 'Le pourboire se laisse une fois la course terminée');
+    }
+    if (trip.tip_amount !== null) {
+      throw new HttpError(409, 'already_tipped', 'Un pourboire a déjà été laissé pour cette course');
+    }
+    const plafond = trip.currency === 'TZS' ? 500000 : 200;
+    if (amount > plafond) {
+      throw new HttpError(400, 'tip_too_high', `Pourboire maximum : ${plafond} ${trip.currency}`);
+    }
+    const { rows } = await query('UPDATE trips SET tip_amount = $1 WHERE id = $2 RETURNING *', [
+      Math.round(amount * 100) / 100,
+      req.params.id,
+    ]);
+    notifierEquipe(
+      '💝 Pourboire laissé — zanziGo',
+      `Pourboire de ${rows[0].tip_amount} ${trip.currency} pour la course ${trip.pickup_location} → ${trip.dropoff_location} (réf ${trip.id}) — 100 % au chauffeur.`
+    );
+    res.json(rows[0]);
   })
 );
 

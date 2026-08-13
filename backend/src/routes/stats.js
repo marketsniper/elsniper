@@ -29,6 +29,33 @@ export function valeurReservationPlace(ligne) {
 
 const router = Router();
 
+// GET /stats/sauvegarde — export complet de la base en JSON (équipe).
+// Les tables sont découvertes dynamiquement (l'export suit les évolutions
+// du schéma) ; les codes OTP jetables sont exclus. À télécharger
+// régulièrement depuis le tableau de bord — et impérativement avant toute
+// échéance de la base gratuite.
+const TABLES_EXCLUES = new Set(['otp_codes', 'schema_migrations', 'migrations']);
+
+router.get(
+  '/sauvegarde',
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    const { rows: tables } = await query(
+      `SELECT tablename FROM pg_tables WHERE schemaname = 'public' ORDER BY tablename`
+    );
+    const dump = { exported_at: new Date().toISOString(), tables: {} };
+    for (const { tablename } of tables) {
+      if (TABLES_EXCLUES.has(tablename)) continue;
+      // Nom de table issu de pg_tables (jamais du client) — pas d'injection.
+      const { rows } = await query(`SELECT * FROM "${tablename}" LIMIT 20000`);
+      dump.tables[tablename] = rows;
+    }
+    const jour = dump.exported_at.slice(0, 10);
+    res.setHeader('Content-Disposition', `attachment; filename="zanzigo-sauvegarde-${jour}.json"`);
+    res.json(dump);
+  })
+);
+
 // GET /stats — tableau de bord équipe (réservé à la clé X-Admin-Key) :
 //  - abonnés : clients (touristes + résidents), locaux, hôtels, chauffeurs ;
 //  - chiffre d'affaires : courses TERMINÉES et colis LIVRÉS sur trois

@@ -28,11 +28,16 @@ export const AUDIENCE_LIBELLES = {
 export function tripRequestMessage(trip, bookerLabel, audience) {
   return [
     `🚕 Nouvelle réservation zanziGo`,
-    `Course: ${TRIP_TYPE_LIBELLES[trip.trip_type] ?? trip.trip_type}`,
+    `Course: ${TRIP_TYPE_LIBELLES[trip.trip_type] ?? trip.trip_type}${trip.round_trip ? ' — ALLER-RETOUR (attente incluse)' : ''}`,
     `Profil: ${AUDIENCE_LIBELLES[audience] ?? audience ?? '—'}`,
     `Client: ${bookerLabel}`,
     `Départ: ${trip.pickup_location}`,
     `Arrivée: ${trip.dropoff_location}`,
+    // Transfert aéroport : le n° de vol permet de vérifier l'heure réelle
+    // d'atterrissage avant d'envoyer le chauffeur.
+    ...(trip.flight_number ? [`✈️ Vol: ${trip.flight_number}`] : []),
+    ...(trip.baby_seat ? ['👶 Siège bébé demandé'] : []),
+    ...(trip.bulky_luggage ? ['🧳 Gros bagages — prévoir un grand véhicule'] : []),
     `Prix: ${trip.price} ${trip.currency}`,
     `Réf: ${trip.id}`,
   ].join('\n');

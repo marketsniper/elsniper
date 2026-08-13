@@ -31,6 +31,15 @@ const createDriverSchema = z.object({
   insuranceDocumentUrl: z.string().url(),
   vehiclePhotoUrl: z.string().url(),
   idDocumentUrl: z.string().url().optional(),
+  // Parrainage : code ZG-XXXXXX d'un client existant (optionnel).
+  referralCode: z.string().min(4).max(12).optional(),
+});
+
+// Dates d'expiration des documents (renseignées par l'équipe lors du
+// contrôle) : permis et assurance, format AAAA-MM-JJ.
+const documentsSchema = z.object({
+  licenseExpiresOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
+  insuranceExpiresOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
 });
 
 const verifySchema = z.object({
@@ -66,10 +75,27 @@ router.post(
         'Candidature chauffeur : créez d\'abord votre compte chauffeur (numéro + mot de passe)'
       );
     }
+    // Code parrain (un client existant recommande un chauffeur) : validé
+    // strictement, comme côté clients.
+    let parrain = null;
+    if (data.referralCode) {
+      const { rows: parrainRows } = await query(
+        'SELECT id, full_name FROM users WHERE upper(referral_code) = upper($1)',
+        [data.referralCode.trim()]
+      );
+      parrain = parrainRows[0] ?? null;
+      if (!parrain) {
+        throw new HttpError(
+          400,
+          'invalid_referral_code',
+          'Code parrain introuvable — vérifiez-le ou laissez le champ vide'
+        );
+      }
+    }
     const { rows } = await query(
       `INSERT INTO drivers (full_name, phone, license_number, vehicle_plate, vehicle_model, zone,
-                            license_document_url, insurance_document_url, vehicle_photo_url, id_document_url, password_hash)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+                            license_document_url, insurance_document_url, vehicle_photo_url, id_document_url, password_hash, referred_by_user_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
        RETURNING *`,
       [
         data.fullName,
@@ -83,6 +109,7 @@ router.post(
         data.vehiclePhotoUrl,
         data.idDocumentUrl ?? null,
         req.auth?.passwordHash ?? null,
+        parrain?.id ?? null,
       ]
     );
     // L'équipe est prévenue automatiquement qu'une candidature attend.
@@ -93,6 +120,7 @@ router.post(
         `Téléphone: ${rows[0].phone}`,
         `Véhicule: ${rows[0].vehicle_model ?? '—'} (${rows[0].vehicle_plate})`,
         `Zone: ${rows[0].zone}`,
+        ...(parrain ? [`🤝 Parrainé par: ${parrain.full_name}`] : []),
         'À faire: contrôler les documents dans le tableau de bord (Candidatures).',
       ].join('\n')
     );
@@ -128,7 +156,60 @@ router.get(
        ORDER BY d.rating_avg DESC NULLS LAST`,
       params
     );
+    // Balayage paresseux (comme la clôture des annonces) : permis ou
+    // assurance expirant sous 30 jours → l'équipe est alertée, au plus une
+    // fois par semaine et par chauffeur.
+    verifierExpirationsDocuments().catch(() => {});
     res.json(rows.map(sanitizeDriver));
+  })
+);
+
+// Alerte documents : chauffeurs VÉRIFIÉS dont le permis ou l'assurance
+// expire dans les 30 jours (ou est déjà expiré). Une notification groupée,
+// puis silence 7 jours par chauffeur (expiry_notified_at).
+async function verifierExpirationsDocuments() {
+  const { rows } = await query(
+    `UPDATE drivers SET expiry_notified_at = now()
+     WHERE verification_status = 'verified'
+       AND (license_expires_on <= current_date + 30 OR insurance_expires_on <= current_date + 30)
+       AND (expiry_notified_at IS NULL OR expiry_notified_at < now() - interval '7 days')
+     RETURNING full_name, phone, license_expires_on, insurance_expires_on`
+  );
+  if (rows.length === 0) return;
+  const lignes = rows.map((d) => {
+    const soucis = [];
+    if (d.license_expires_on && new Date(d.license_expires_on) <= new Date(Date.now() + 30 * 86400000)) {
+      soucis.push(`permis ${d.license_expires_on.toISOString?.().slice(0, 10) ?? d.license_expires_on}`);
+    }
+    if (d.insurance_expires_on && new Date(d.insurance_expires_on) <= new Date(Date.now() + 30 * 86400000)) {
+      soucis.push(`assurance ${d.insurance_expires_on.toISOString?.().slice(0, 10) ?? d.insurance_expires_on}`);
+    }
+    return `• ${d.full_name} (${d.phone}) — ${soucis.join(', ')}`;
+  });
+  notifierEquipe(
+    '📄 Documents chauffeurs à renouveler — zanziGo',
+    ['Permis/assurance expirés ou expirant sous 30 jours :', ...lignes].join('\n')
+  );
+}
+
+// PATCH /drivers/:id/documents — l'équipe pose les dates d'expiration du
+// permis et de l'assurance lors du contrôle des documents.
+router.patch(
+  '/:id/documents',
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    const data = documentsSchema.parse(req.body);
+    const { rows: existants } = await query('SELECT id FROM drivers WHERE id = $1', [req.params.id]);
+    if (!existants[0]) throw notFound('Chauffeur');
+    const { rows } = await query(
+      `UPDATE drivers SET
+         license_expires_on = COALESCE($1, license_expires_on),
+         insurance_expires_on = COALESCE($2, insurance_expires_on),
+         expiry_notified_at = NULL
+       WHERE id = $3 RETURNING *`,
+      [data.licenseExpiresOn ?? null, data.insuranceExpiresOn ?? null, req.params.id]
+    );
+    res.json(sanitizeDriver(rows[0]));
   })
 );
 

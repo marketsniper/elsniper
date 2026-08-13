@@ -345,6 +345,8 @@ export interface CreationUtilisateur {
   accountType: TypeCompte;
   /** Requis pour un compte résident (validation du document par l'équipe). */
   idDocumentUrl?: string;
+  /** Parrainage : code ZG-XXXXXX d'un client existant (optionnel). */
+  referralCode?: string;
 }
 
 /**
@@ -409,6 +411,8 @@ export interface CreationChauffeur {
   vehiclePhotoUrl: string;
   /** Devenu optionnel côté serveur — l'app ne l'envoie plus. */
   idDocumentUrl?: string;
+  /** Parrainage : code ZG-XXXXXX d'un client existant (optionnel). */
+  referralCode?: string;
 }
 
 /**
@@ -429,6 +433,12 @@ export interface CreationTrajet {
   pickupLocation: string;
   dropoffLocation: string;
   scheduledAt?: string; // ISO 8601 avec fuseau
+  /** Transfert aéroport : n° de vol (l'équipe vérifie l'heure réelle). */
+  flightNumber?: string;
+  /** Course privée : aller-retour avec attente (prix ×1,8 côté serveur). */
+  roundTrip?: boolean;
+  babySeat?: boolean;
+  bulkyLuggage?: boolean;
 }
 
 /**
@@ -456,6 +466,10 @@ export interface CreationTrajetHotel {
   pickupLocation: string;
   dropoffLocation: string;
   scheduledAt?: string; // ISO 8601 avec fuseau
+  flightNumber?: string;
+  roundTrip?: boolean;
+  babySeat?: boolean;
+  bulkyLuggage?: boolean;
 }
 
 /**
@@ -534,6 +548,74 @@ export async function noterTrajet(id: string, note: number, commentaire?: string
     methode: 'POST',
     corps: { rating: note, comment: commentaire || undefined },
   });
+}
+
+/**
+ * POST /trips/:id/tip {amount} — pourboire pour le chauffeur (course
+ * terminée, une seule fois, 100 % au chauffeur).
+ */
+export async function laisserPourboire(id: string, montant: number): Promise<Trajet> {
+  return requete<Trajet>(`/trips/${id}/tip`, { methode: 'POST', corps: { amount: montant } });
+}
+
+// ---------------------------------------------------------------------------
+// Liste d'attente du taxi partagé (backend/src/routes/rides.js /attente)
+// ---------------------------------------------------------------------------
+
+/** Demande en liste d'attente (GET /rides/attente). */
+export interface AttentePartage {
+  id: string;
+  origin: string;
+  destination: string;
+  desired_date?: string | null;
+  seats: number;
+  matched_at?: string | null;
+  full_name?: string;
+  phone?: string | null;
+  email?: string | null;
+  [cle: string]: unknown;
+}
+
+/** POST /rides/attente — laisse sa demande quand aucun taxi partagé n'existe. */
+export async function creerAttentePartage(donnees: {
+  origin: string;
+  destination: string;
+  desiredDate?: string;
+  seats?: number;
+}): Promise<AttentePartage> {
+  return requete<AttentePartage>('/rides/attente', { methode: 'POST', corps: donnees });
+}
+
+/** GET /rides/attente — ses demandes (client) ou toutes (équipe, admin:true). */
+export async function listerAttentesPartage(admin = false): Promise<AttentePartage[]> {
+  const reponse = await requete<unknown>('/rides/attente', admin ? { admin: true } : {});
+  return commeListe<AttentePartage>(reponse);
+}
+
+/** POST /rides/attente/:id/cancel — retire la demande. */
+export async function annulerAttentePartage(id: string): Promise<AttentePartage> {
+  return requete<AttentePartage>(`/rides/attente/${id}/cancel`, { methode: 'POST' });
+}
+
+// ---------------------------------------------------------------------------
+// Documents chauffeurs + sauvegarde (équipe)
+// ---------------------------------------------------------------------------
+
+/** PATCH /drivers/:id/documents — dates d'expiration permis/assurance (équipe). */
+export async function majDocumentsChauffeur(
+  id: string,
+  dates: { licenseExpiresOn?: string | null; insuranceExpiresOn?: string | null }
+): Promise<Chauffeur> {
+  return requete<Chauffeur>(`/drivers/${id}/documents`, {
+    methode: 'PATCH',
+    corps: dates,
+    admin: true,
+  });
+}
+
+/** GET /stats/sauvegarde — export JSON complet de la base (équipe). */
+export async function telechargerSauvegarde(): Promise<unknown> {
+  return requete<unknown>('/stats/sauvegarde', { admin: true });
 }
 
 // Côté chauffeur : une simple touche, pas de QR à scanner — la position GPS
@@ -1097,6 +1179,12 @@ export const api = {
   confirmerPaiement,
   confirmerPaiementEquipe,
   noterTrajet,
+  laisserPourboire,
+  creerAttentePartage,
+  listerAttentesPartage,
+  annulerAttentePartage,
+  majDocumentsChauffeur,
+  telechargerSauvegarde,
   demarrerCourse,
   terminerCourse,
   creerRide,

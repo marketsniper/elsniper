@@ -256,12 +256,128 @@ router.post(
     // L'équipe est prévenue automatiquement (e-mail) ; le lien WhatsApp
     // reste renvoyé en secours mais le chauffeur n'a plus rien à envoyer.
     notifierEquipe('📣 Nouvelle annonce taxi partagé', resumeAnnonce);
+    // Liste d'attente : des clients attendaient exactement ce trajet ?
+    // L'équipe est prévenue pour les recontacter (matching manuel).
+    signalerAttentesCorrespondantes(rows[0]).catch(() => {});
     const notificationAnnonce = buildTeamNotificationLink(resumeAnnonce);
     // Le chauffeur qui publie voit LES DEUX prix (TZS locaux + USD touristes)
     // pour comprendre que chaque client paie dans sa devise.
     res
       .status(201)
       .json({ ...serializeRide(rows[0], { mode: 'both' }), notification_link: notificationAnnonce });
+  })
+);
+
+// Quand une annonce est publiée : les demandes en attente sur le même
+// trajet (même origine/destination, date souhaitée compatible) sont
+// marquées « trouvées » et l'équipe reçoit la liste des clients à
+// recontacter avec le lien de l'annonce.
+async function signalerAttentesCorrespondantes(ride) {
+  const { rows } = await query(
+    `UPDATE ride_waitlist w SET matched_at = now()
+     FROM users u
+     WHERE w.user_id = u.id
+       AND w.matched_at IS NULL AND w.cancelled_at IS NULL
+       AND lower(trim(w.origin)) = lower(trim($1))
+       AND lower(trim(w.destination)) = lower(trim($2))
+       AND (w.desired_date IS NULL OR w.desired_date = ($3::timestamptz AT TIME ZONE 'Africa/Dar_es_Salaam')::date)
+     RETURNING w.seats, u.full_name, u.phone, u.email`,
+    [ride.origin, ride.destination, ride.departure_at]
+  );
+  if (rows.length === 0) return;
+  notifierEquipe(
+    '🎯 Clients en attente sur ce trajet — zanziGo',
+    [
+      `Une annonce ${ride.origin} → ${ride.destination} vient d'être publiée`,
+      `et ${rows.length} client(s) l'attendaient — à recontacter :`,
+      ...rows.map((c) => `• ${c.full_name} (${c.phone ?? c.email ?? 'sans contact'}) — ${c.seats} place(s)`),
+      `Réf annonce: ${ride.id}`,
+    ].join('\n')
+  );
+}
+
+// POST /rides/attente — un client laisse sa demande quand aucun taxi
+// partagé n'est annoncé sur son trajet : l'équipe le rappelle dès qu'une
+// annonce correspondante sort.
+const waitlistSchema = z.object({
+  origin: z.string().min(2),
+  destination: z.string().min(2),
+  desiredDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  seats: z.number().int().min(1).max(8).optional(),
+});
+
+router.post(
+  '/attente',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    if (!req.auth.userId) {
+      throw new HttpError(403, 'forbidden', 'Réservé aux clients connectés');
+    }
+    const data = waitlistSchema.parse(req.body);
+    const { rows } = await query(
+      `INSERT INTO ride_waitlist (user_id, origin, destination, desired_date, seats)
+       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+      [req.auth.userId, data.origin, data.destination, data.desiredDate ?? null, data.seats ?? 1]
+    );
+    const { rows: clientRows } = await query('SELECT full_name, phone, email FROM users WHERE id = $1', [
+      req.auth.userId,
+    ]);
+    notifierEquipe(
+      '🕐 Demande en liste d\'attente — zanziGo',
+      [
+        `${clientRows[0]?.full_name ?? 'Client'} (${clientRows[0]?.phone ?? clientRows[0]?.email ?? '?'})`,
+        `cherche ${rows[0].seats} place(s) en taxi partagé :`,
+        `${rows[0].origin} → ${rows[0].destination}${rows[0].desired_date ? ` le ${String(rows[0].desired_date).slice(0, 10)}` : ''}`,
+        'Vous serez re-notifié dès qu\'une annonce correspondante sort.',
+      ].join('\n')
+    );
+    res.status(201).json(rows[0]);
+  })
+);
+
+// GET /rides/attente — les demandes en attente : les siennes (client) ou
+// toutes les demandes ouvertes avec contact (équipe).
+router.get(
+  '/attente',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    if (isAdmin(req)) {
+      const { rows } = await query(
+        `SELECT w.*, u.full_name, u.phone, u.email
+         FROM ride_waitlist w JOIN users u ON u.id = w.user_id
+         WHERE w.cancelled_at IS NULL
+         ORDER BY w.created_at DESC LIMIT 100`
+      );
+      return res.json(rows);
+    }
+    if (!req.auth.userId) {
+      throw new HttpError(403, 'forbidden', 'Réservé aux clients connectés');
+    }
+    const { rows } = await query(
+      `SELECT * FROM ride_waitlist
+       WHERE user_id = $1 AND cancelled_at IS NULL
+       ORDER BY created_at DESC LIMIT 20`,
+      [req.auth.userId]
+    );
+    res.json(rows);
+  })
+);
+
+// POST /rides/attente/:id/cancel — le client retire sa demande.
+router.post(
+  '/attente/:id/cancel',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const { rows } = await query('SELECT * FROM ride_waitlist WHERE id = $1', [req.params.id]);
+    if (!rows[0]) throw notFound('Demande');
+    if (!isAdmin(req) && rows[0].user_id !== req.auth.userId) {
+      throw new HttpError(403, 'forbidden', 'Réservé au client concerné');
+    }
+    const { rows: updated } = await query(
+      'UPDATE ride_waitlist SET cancelled_at = now() WHERE id = $1 RETURNING *',
+      [req.params.id]
+    );
+    res.json(updated[0]);
   })
 );
 

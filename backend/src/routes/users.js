@@ -31,6 +31,8 @@ const createUserSchema = z
     email: z.string().email().optional(),
     accountType: z.enum(['tourist', 'resident', 'local']),
     idDocumentUrl: z.string().url().optional(),
+    // Parrainage : code ZG-XXXXXX d'un client existant (optionnel).
+    referralCode: z.string().min(4).max(12).optional(),
   })
   .refine((d) => d.accountType === 'tourist' || d.idDocumentUrl, {
     path: ['idDocumentUrl'],
@@ -95,11 +97,29 @@ router.post(
     }
     const needsVerification = data.accountType !== 'tourist';
 
+    // Code parrain : validé STRICTEMENT (une faute de frappe se corrige
+    // tout de suite plutôt que de perdre le parrainage en silence).
+    let parrain = null;
+    if (data.referralCode) {
+      const { rows: parrainRows } = await query(
+        'SELECT id, full_name FROM users WHERE upper(referral_code) = upper($1)',
+        [data.referralCode.trim()]
+      );
+      parrain = parrainRows[0] ?? null;
+      if (!parrain) {
+        throw new HttpError(
+          400,
+          'invalid_referral_code',
+          'Code parrain introuvable — vérifiez-le ou laissez le champ vide'
+        );
+      }
+    }
+
     let rows;
     try {
       ({ rows } = await query(
-        `INSERT INTO users (full_name, phone, email, account_type, currency, verification_status, id_document_url, password_hash)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        `INSERT INTO users (full_name, phone, email, account_type, currency, verification_status, id_document_url, password_hash, referred_by_user_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
          RETURNING *`,
         [
           data.fullName,
@@ -110,6 +130,7 @@ router.post(
           needsVerification ? 'pending' : 'verified',
           data.idDocumentUrl ?? null,
           passwordHash,
+          parrain?.id ?? null,
         ]
       ));
     } catch (err) {
@@ -119,6 +140,20 @@ router.post(
         throw new HttpError(409, 'duplicate', 'Ce numéro de téléphone est déjà utilisé par un autre compte');
       }
       throw err;
+    }
+    // Chaque client reçoit son propre code parrain (ZG-XXXXXX, dérivé de
+    // son identifiant — unique par construction).
+    ({ rows } = await query(
+      `UPDATE users
+       SET referral_code = 'ZG-' || upper(substr(replace(id::text, '-', ''), 1, 6))
+       WHERE id = $1 RETURNING *`,
+      [rows[0].id]
+    ));
+    if (parrain) {
+      notifierEquipe(
+        '🤝 Parrainage — zanziGo',
+        `${rows[0].full_name} (${rows[0].phone ?? rows[0].email ?? 'sans contact'}) s'est inscrit avec le code de ${parrain.full_name}. Pensez à la récompense des deux côtés (ex. 5 $ de réduction chacun) au prochain paiement.`
+      );
     }
     // Récapitulatif d'inscription par e-mail (si fourni) — au mieux, jamais
     // bloquant : l'inscription réussit même si l'e-mail ne part pas.
@@ -163,7 +198,7 @@ router.get(
     const conditions = [];
     if (verificationStatus) {
       params.push(verificationStatus);
-      conditions.push(`verification_status = $${params.length}`);
+      conditions.push(`u.verification_status = $${params.length}`);
     }
     if (accountTypes) {
       const types = accountTypes
@@ -172,16 +207,19 @@ router.get(
         .filter((type) => ['tourist', 'resident', 'local'].includes(type));
       if (types.length > 0) {
         params.push(types);
-        conditions.push(`account_type = ANY($${params.length})`);
+        conditions.push(`u.account_type = ANY($${params.length})`);
       }
     }
     if (q && q.trim()) {
       params.push(`%${q.trim()}%`);
-      conditions.push(`(full_name ILIKE $${params.length} OR phone ILIKE $${params.length})`);
+      conditions.push(`(u.full_name ILIKE $${params.length} OR u.phone ILIKE $${params.length})`);
     }
     const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    // Le nom du parrain est joint pour le tableau équipe (suivi parrainage).
     const { rows } = await query(
-      `SELECT * FROM users ${where} ORDER BY created_at DESC LIMIT 200`,
+      `SELECT u.*, p.full_name AS referred_by_name
+       FROM users u LEFT JOIN users p ON p.id = u.referred_by_user_id
+       ${where} ORDER BY u.created_at DESC LIMIT 200`,
       params
     );
     res.json(rows.map(sanitizeUser));

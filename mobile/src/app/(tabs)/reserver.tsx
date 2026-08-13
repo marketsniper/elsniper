@@ -112,6 +112,45 @@ export default function EcranReserver() {
     if (!partageDisponible && mode === 'partage') setMode('prive');
   }, [partageDisponible, mode]);
 
+  // Transfert aéroport : le n° de vol permet à l'équipe de suivre l'heure
+  // réelle d'atterrissage (taxi garanti même si le vol est en retard).
+  const trajetAeroport = /aéroport|airport/i.test(depart) || /aéroport|airport/i.test(arrivee);
+  const [numeroVol, setNumeroVol] = useState('');
+  // Course privée : aller-retour avec attente (×1,8) + options véhicule.
+  const [allerRetour, setAllerRetour] = useState(false);
+  const [siegeBebe, setSiegeBebe] = useState(false);
+  const [grosBagages, setGrosBagages] = useState(false);
+  // Liste d'attente du partagé : demande laissée à l'équipe.
+  const [attenteEnvoyee, setAttenteEnvoyee] = useState(false);
+  const [chargeAttente, setChargeAttente] = useState(false);
+  useEffect(() => {
+    setAttenteEnvoyee(false);
+  }, [depart, arrivee]);
+
+  // Prix affiché : l'aller-retour multiplie par 1,8 (même règle serveur).
+  const tarifAffiche =
+    tarifCourant && allerRetour
+      ? { montant: Math.round(tarifCourant.montant * 1.8 * 100) / 100, devise: tarifCourant.devise }
+      : tarifCourant;
+
+  // Laisse une demande en liste d'attente sur le trajet choisi (partagé).
+  const laisserDemandeAttente = async () => {
+    setErreur('');
+    if (!depart || !arrivee) {
+      setErreur(t('reserver_erreur_itineraire'));
+      return;
+    }
+    setChargeAttente(true);
+    try {
+      await api.creerAttentePartage({ origin: depart, destination: arrivee });
+      setAttenteEnvoyee(true);
+    } catch (e) {
+      setErreur(e instanceof ErreurApi ? e.message : t('reserver_erreur'));
+    } finally {
+      setChargeAttente(false);
+    }
+  };
+
   const reserver = async () => {
     setErreur('');
     if (!utilisateur && !modeHotel) {
@@ -153,6 +192,14 @@ export default function EcranReserver() {
     const dropoffLocation = arrivee;
     setCharge(true);
     try {
+      // N° de vol + aller-retour + options véhicule : mêmes champs pour les
+      // réservations client et hôtel.
+      const extras = {
+        flightNumber: trajetAeroport && numeroVol.trim() ? numeroVol.trim() : undefined,
+        roundTrip: allerRetour || undefined,
+        babySeat: siegeBebe || undefined,
+        bulkyLuggage: grosBagages || undefined,
+      };
       const trajet = modeHotel
         ? await api.creerTrajetHotel({
             hotelId: hotel!.id,
@@ -162,6 +209,7 @@ export default function EcranReserver() {
             pickupLocation,
             dropoffLocation,
             scheduledAt,
+            ...extras,
           })
         : await api.creerTrajet({
             userId: utilisateur!.id,
@@ -169,6 +217,7 @@ export default function EcranReserver() {
             pickupLocation,
             dropoffLocation,
             scheduledAt,
+            ...extras,
           });
       setDepart('');
       setArrivee('');
@@ -177,6 +226,10 @@ export default function EcranReserver() {
       setHeureProgramme('');
       setNomClient('');
       setTelClient('+255');
+      setNumeroVol('');
+      setAllerRetour(false);
+      setSiegeBebe(false);
+      setGrosBagages(false);
       router.push(`/trip/${trajet.id}`);
       // L'équipe est prévenue automatiquement par le serveur (e-mail) —
       // plus de message WhatsApp à envoyer par le client.
@@ -321,6 +374,23 @@ export default function EcranReserver() {
             {t('resa_regle_annulation')}
           </EncartInfo>
           <RidesPartages />
+          {/* Aucun taxi à son heure ? Le client laisse sa demande — l'équipe
+              est prévenue, puis re-notifiée dès qu'une annonce correspond. */}
+          {itineraireChoisi &&
+            !modeHotel &&
+            (attenteEnvoyee ? (
+              <EncartInfo icone="checkmark-circle-outline" ton="succes">
+                {t('reserver_attente_ok')}
+              </EncartInfo>
+            ) : (
+              <Bouton
+                titre={t('reserver_attente_bouton', { depart, arrivee })}
+                icone="notifications-outline"
+                variante="secondaire"
+                onPress={laisserDemandeAttente}
+                charge={chargeAttente}
+              />
+            ))}
         </>
       ) : (
         <>
@@ -372,12 +442,72 @@ export default function EcranReserver() {
             />
           )}
 
+          {/* Transfert aéroport : n° de vol — l'équipe surveille l'heure
+              réelle d'atterrissage, taxi garanti même si le vol est en retard. */}
+          {trajetAeroport && (
+            <>
+              <Champ
+                label={t('reserver_num_vol')}
+                value={numeroVol}
+                onChangeText={setNumeroVol}
+                autoCapitalize="characters"
+                placeholder="ET815"
+              />
+              <EncartInfo icone="airplane-outline">{t('reserver_num_vol_info')}</EncartInfo>
+            </>
+          )}
+
+          {/* Aller-retour + options véhicule (cases à cocher). */}
+          {(
+            [
+              {
+                cle: 'ar',
+                actif: allerRetour,
+                bascule: () => setAllerRetour(!allerRetour),
+                icone: 'repeat-outline' as const,
+                libelle: t('reserver_aller_retour'),
+              },
+              {
+                cle: 'bebe',
+                actif: siegeBebe,
+                bascule: () => setSiegeBebe(!siegeBebe),
+                icone: 'happy-outline' as const,
+                libelle: t('reserver_siege_bebe'),
+              },
+              {
+                cle: 'bagages',
+                actif: grosBagages,
+                bascule: () => setGrosBagages(!grosBagages),
+                icone: 'briefcase-outline' as const,
+                libelle: t('reserver_gros_bagages'),
+              },
+            ]
+          ).map((option) => (
+            <Pressable
+              key={option.cle}
+              onPress={option.bascule}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: option.actif }}
+              style={[styles.ligneOption, option.actif && styles.ligneOptionActive]}
+            >
+              <Ionicons name={option.icone} size={20} color={couleurs.primaireFonce} />
+              <Text style={styles.texteOption}>{option.libelle}</Text>
+              <Ionicons
+                name={option.actif ? 'checkbox' : 'square-outline'}
+                size={22}
+                color={option.actif ? couleurs.primaire : couleurs.texteSecondaire}
+              />
+            </Pressable>
+          ))}
+
           <View style={styles.cartePrix}>
             <View style={styles.lignePrix}>
-              <Text style={styles.labelPrix}>{t('reserver_prix_course')}</Text>
+              <Text style={styles.labelPrix}>
+                {allerRetour ? t('reserver_prix_aller_retour') : t('reserver_prix_course')}
+              </Text>
               <Text style={styles.valeurPrix}>
-                {tarifCourant !== null
-                  ? formaterMontant(tarifCourant.montant, tarifCourant.devise)
+                {tarifAffiche !== null
+                  ? formaterMontant(tarifAffiche.montant, tarifAffiche.devise)
                   : '—'}
               </Text>
             </View>
@@ -425,6 +555,28 @@ const styles = StyleSheet.create({
   carteModeActive: {
     borderColor: couleurs.primaire,
     backgroundColor: couleurs.primaireClair,
+  },
+  // Cases à cocher (aller-retour, siège bébé, gros bagages).
+  ligneOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: espaces.m,
+    backgroundColor: couleurs.carteTranslucide,
+    borderRadius: rayons.bouton,
+    paddingHorizontal: espaces.l,
+    paddingVertical: espaces.m,
+    borderWidth: 1.5,
+    borderColor: 'transparent',
+  },
+  ligneOptionActive: {
+    borderColor: couleurs.primaire,
+    backgroundColor: couleurs.primaireClair,
+  },
+  texteOption: {
+    flex: 1,
+    fontSize: 14.5,
+    fontWeight: '600',
+    color: couleurs.encre,
   },
   bulleIcone: {
     width: 48,

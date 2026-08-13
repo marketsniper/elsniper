@@ -81,6 +81,8 @@ export default function EcranPro() {
   const [plaque, setPlaque] = useState('');
   const [modele, setModele] = useState('');
   const [zone, setZone] = useState('');
+  // Parrainage : code ZG-XXXXXX d'un client existant (optionnel).
+  const [codeParrain, setCodeParrain] = useState('');
   // Trois documents obligatoires : permis, assurance, photo du véhicule.
   const [permisUri, setPermisUri] = useState<string | null>(null);
   const [assuranceUri, setAssuranceUri] = useState<string | null>(null);
@@ -148,6 +150,7 @@ export default function EcranPro() {
         licenseDocumentUrl: docPermis.url,
         insuranceDocumentUrl: docAssurance.url,
         vehiclePhotoUrl: photoVehicule.url,
+        referralCode: codeParrain.trim() || undefined,
       });
       // La session porte désormais le profil chauffeur (pending) : cet écran
       // bascule sur l'état « candidature envoyée ».
@@ -278,6 +281,14 @@ export default function EcranPro() {
           value={zone}
           onChangeText={setZone}
           placeholder="Stone Town, Nungwi…"
+        />
+        {/* Parrainage : un client existant recommande ce chauffeur. */}
+        <Champ
+          label={t('client_code_parrain')}
+          value={codeParrain}
+          onChangeText={setCodeParrain}
+          autoCapitalize="characters"
+          placeholder="ZG-A1B2C3"
         />
 
         <LigneDocument

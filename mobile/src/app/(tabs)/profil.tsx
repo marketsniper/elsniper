@@ -202,6 +202,34 @@ export default function EcranProfil() {
         </EncartInfo>
       )}
 
+      {/* Parrainage : le client partage son code ZG- — récompense pour les
+          deux au prochain paiement (gérée par l'équipe). */}
+      {utilisateur && !!champ(utilisateur, 'referral_code', 'referralCode') && (
+        <Carte>
+          <Text style={styles.titreBloc}>🤝 {t('parrainage_titre')}</Text>
+          <SousTitre>{t('parrainage_texte')}</SousTitre>
+          <View style={styles.blocCodeParrain}>
+            <Text style={styles.codeParrain}>
+              {String(champ(utilisateur, 'referral_code', 'referralCode'))}
+            </Text>
+          </View>
+          <Bouton
+            titre={t('parrainage_partager')}
+            icone="logo-whatsapp"
+            variante="secondaire"
+            onPress={() =>
+              Linking.openURL(
+                `https://wa.me/?text=${encodeURIComponent(
+                  t('parrainage_message', {
+                    code: String(champ(utilisateur, 'referral_code', 'referralCode')),
+                  })
+                )}`
+              )
+            }
+          />
+        </Carte>
+      )}
+
       {/* Carte de fidélité : une case par course terminée, un bon toutes
           les 10 — la récompense concrète du volume apporté par l'hôtel. */}
       {hotel && fidelite && (
@@ -378,6 +406,23 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '800',
     color: couleurs.encre,
+  },
+  // Code parrain : bien visible, facile à recopier de vive voix.
+  blocCodeParrain: {
+    alignSelf: 'center',
+    backgroundColor: couleurs.primaireClair,
+    borderWidth: 2,
+    borderColor: couleurs.primaire,
+    borderRadius: rayons.bouton,
+    paddingHorizontal: espaces.xl,
+    paddingVertical: espaces.m,
+    marginVertical: espaces.s,
+  },
+  codeParrain: {
+    fontSize: 22,
+    fontWeight: '800',
+    letterSpacing: 2,
+    color: couleurs.primaireFonce,
   },
   enTeteFidelite: {
     flexDirection: 'row',

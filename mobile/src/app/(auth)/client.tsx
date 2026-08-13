@@ -50,6 +50,8 @@ export default function EcranClient() {
   // URI locale du document requis (résident : documents de résidence ;
   // local : carte d'identité tanzanienne NIDA).
   const [documentUri, setDocumentUri] = useState<string | null>(null);
+  // Parrainage : code ZG-XXXXXX d'un ami déjà client (optionnel).
+  const [codeParrain, setCodeParrain] = useState('');
   const [erreur, setErreur] = useState('');
   const [charge, setCharge] = useState(false);
 
@@ -110,6 +112,7 @@ export default function EcranClient() {
         email: identiteEmail ? undefined : email.trim() || undefined,
         accountType: typeCompte,
         idDocumentUrl,
+        referralCode: codeParrain.trim() || undefined,
       });
       await majSession({ user: utilisateur });
       router.replace('/');
@@ -205,6 +208,15 @@ export default function EcranClient() {
             })}
           </>
         )}
+
+        {/* Parrainage : un ami déjà client a partagé son code ZG- ? */}
+        <Champ
+          label={t('client_code_parrain')}
+          value={codeParrain}
+          onChangeText={setCodeParrain}
+          autoCapitalize="characters"
+          placeholder="ZG-A1B2C3"
+        />
 
         {documentRequis && (
           <View style={styles.blocDocument}>

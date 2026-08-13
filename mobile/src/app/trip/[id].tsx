@@ -5,7 +5,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
-import { Alert, Linking, StyleSheet, Text, View } from 'react-native';
+import { Alert, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Etoiles } from '@/components/Etoiles';
 import { TimelineStatut } from '@/components/TimelineStatut';
@@ -64,6 +64,8 @@ export default function EcranTrajet() {
   const [chargeNote, setChargeNote] = useState(false);
   const [noteEnvoyee, setNoteEnvoyee] = useState(false);
   const [chargeAnnulation, setChargeAnnulation] = useState(false);
+  // Pourboire (100 % au chauffeur) : proposé une fois la course terminée.
+  const [chargePourboire, setChargePourboire] = useState(false);
 
   const charger = useCallback(async () => {
     if (!id) return;
@@ -223,6 +225,24 @@ export default function EcranTrajet() {
     ]);
   };
 
+  // Montants de pourboire proposés selon la devise de la course.
+  const deviseCourse = String(champ(trajet, 'currency') ?? 'USD');
+  const montantsPourboire = deviseCourse === 'TZS' ? [2000, 5000, 10000] : [1, 2, 5];
+  const pourboireLaisse = champ<number | string>(trajet, 'tip_amount', 'tipAmount');
+
+  const donnerPourboire = async (montant: number) => {
+    setChargePourboire(true);
+    setErreur('');
+    try {
+      await api.laisserPourboire(trajet.id, montant);
+      await charger();
+    } catch (e) {
+      setErreur(e instanceof ErreurApi ? e.message : t('trip_pourboire_erreur'));
+    } finally {
+      setChargePourboire(false);
+    }
+  };
+
   const envoyerNote = async () => {
     if (note < 1) {
       setErreur(t('trip_note_erreur'));
@@ -267,6 +287,32 @@ export default function EcranTrajet() {
           <LigneInfo
             label={t('trip_programme_le')}
             valeur={formaterDate(champ(trajet, 'scheduled_at', 'scheduledAt'))}
+          />
+        )}
+        {/* Transfert aéroport : n° de vol suivi par l'équipe. */}
+        {!!champ(trajet, 'flight_number', 'flightNumber') && (
+          <LigneInfo
+            label={t('trip_vol')}
+            valeur={`✈️ ${champ(trajet, 'flight_number', 'flightNumber')}`}
+          />
+        )}
+        {champ<boolean>(trajet, 'round_trip', 'roundTrip') === true && (
+          <LigneInfo label={t('trip_aller_retour')} valeur={t('trip_aller_retour_valeur')} />
+        )}
+        {(champ<boolean>(trajet, 'baby_seat', 'babySeat') === true ||
+          champ<boolean>(trajet, 'bulky_luggage', 'bulkyLuggage') === true) && (
+          <LigneInfo
+            label={t('trip_options')}
+            valeur={[
+              champ<boolean>(trajet, 'baby_seat', 'babySeat') === true
+                ? t('reserver_siege_bebe')
+                : null,
+              champ<boolean>(trajet, 'bulky_luggage', 'bulkyLuggage') === true
+                ? t('reserver_gros_bagages')
+                : null,
+            ]
+              .filter(Boolean)
+              .join(' · ')}
           />
         )}
         <View style={styles.blocPrix}>
@@ -363,6 +409,45 @@ export default function EcranTrajet() {
           variante="secondaire"
           onPress={() => Linking.openURL(lienWhatsapp)}
         />
+      )}
+
+      {/* Pourboire : 100 % pour le chauffeur, une seule fois. */}
+      {statut === 'completed' && (
+        <Carte>
+          {pourboireLaisse !== undefined && pourboireLaisse !== null ? (
+            <View style={styles.blocNote}>
+              <Ionicons name="heart" size={22} color={couleurs.succes} />
+              <Text style={styles.merci}>
+                {t('trip_pourboire_merci', {
+                  montant: formaterMontant(Number(pourboireLaisse), deviseCourse),
+                })}
+              </Text>
+            </View>
+          ) : (
+            <>
+              <SousTitre>{t('trip_pourboire_question')}</SousTitre>
+              <View style={styles.rangeePourboire}>
+                {montantsPourboire.map((montant) => (
+                  <Pressable
+                    key={montant}
+                    onPress={() => donnerPourboire(montant)}
+                    disabled={chargePourboire}
+                    accessibilityRole="button"
+                    style={({ pressed }) => [
+                      styles.boutonPourboire,
+                      (pressed || chargePourboire) && { opacity: 0.6 },
+                    ]}
+                  >
+                    <Text style={styles.textePourboire}>
+                      {formaterMontant(montant, deviseCourse)}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+              <Text style={styles.notePourboire}>{t('trip_pourboire_note')}</Text>
+            </>
+          )}
+        </Carte>
       )}
 
       {statut === 'completed' && (
@@ -499,5 +584,28 @@ const styles = StyleSheet.create({
   etoilesCentrees: {
     alignItems: 'center',
     paddingVertical: espaces.s,
+  },
+  rangeePourboire: {
+    flexDirection: 'row',
+    gap: espaces.m,
+    paddingVertical: espaces.s,
+  },
+  boutonPourboire: {
+    flex: 1,
+    borderWidth: 2,
+    borderColor: couleurs.primaire,
+    borderRadius: 12,
+    paddingVertical: espaces.m,
+    alignItems: 'center',
+    backgroundColor: couleurs.primaireClair,
+  },
+  textePourboire: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: couleurs.primaireFonce,
+  },
+  notePourboire: {
+    fontSize: 12.5,
+    color: couleurs.texteSecondaire,
   },
 });
