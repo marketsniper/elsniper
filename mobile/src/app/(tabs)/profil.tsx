@@ -84,7 +84,8 @@ export default function EcranProfil() {
       [
         { text: t('commun_confirmer_non'), style: 'cancel' },
         {
-          text: t('commun_confirmer_oui'),
+          // « Oui, convertir » — pas le « Oui, annuler » des annulations.
+          text: t('fidelite_convertir_oui'),
           onPress: async () => {
             setChargeConversion(true);
             try {

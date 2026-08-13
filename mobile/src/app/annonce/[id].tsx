@@ -102,7 +102,8 @@ export default function EcranAnnonce() {
       [
         { text: t('commun_confirmer_non'), style: 'cancel' },
         {
-          text: t('commun_confirmer_oui'),
+          // Clôture : « Oui, clôturer » ; annulation : « Oui, annuler ».
+          text: nouveau === 'closed' ? t('annonce_cloturer_oui') : t('commun_confirmer_oui'),
           style: nouveau === 'cancelled' ? 'destructive' : 'default',
           onPress: async () => {
             setChargeAction(true);

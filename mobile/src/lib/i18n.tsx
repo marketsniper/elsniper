@@ -1183,6 +1183,11 @@ const CHAINES = {
     sw: 'Safari imeghairiwa. Marejesho ya {montant}: timu itakulipa — ujumbe wa WhatsApp unaofunguka unawajulisha, bonyeza Tuma.',
   },
   commun_retour: { fr: 'Retour', en: 'Back', sw: 'Rudi' },
+  commun_pas_encore: { fr: 'Pas encore', en: 'Not yet', sw: 'Bado' },
+  course_demarrer_oui: { fr: 'Oui, démarrer 🚕', en: 'Yes, start 🚕', sw: 'Ndiyo, anza 🚕' },
+  course_terminer_oui: { fr: 'Oui, terminer ✅', en: 'Yes, finish ✅', sw: 'Ndiyo, maliza ✅' },
+  fidelite_convertir_oui: { fr: 'Oui, convertir', en: 'Yes, convert', sw: 'Ndiyo, badilisha' },
+  annonce_cloturer_oui: { fr: 'Oui, clôturer', en: 'Yes, close', sw: 'Ndiyo, funga' },
   commun_retour_accueil: {
     fr: 'Retour à l\'accueil',
     en: 'Back to home',

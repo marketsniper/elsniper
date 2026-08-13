@@ -94,9 +94,14 @@ export default function EcranDetailCourse() {
   const confirmerAction = (action: 'start' | 'complete') => {
     const titre = action === 'start' ? t('course_demarrer_titre') : t('course_terminer_titre');
     const texte = action === 'start' ? t('course_demarrer_confirm') : t('course_terminer_confirm');
+    // Boutons SANS ambiguïté : « Oui, démarrer » / « Oui, terminer » —
+    // jamais le « Oui, annuler » des dialogues d'annulation.
     Alert.alert(titre, texte, [
-      { text: t('commun_confirmer_non'), style: 'cancel' },
-      { text: t('commun_confirmer_oui'), onPress: () => lancerAction(action) },
+      { text: t('commun_pas_encore'), style: 'cancel' },
+      {
+        text: action === 'start' ? t('course_demarrer_oui') : t('course_terminer_oui'),
+        onPress: () => lancerAction(action),
+      },
     ]);
   };
 
