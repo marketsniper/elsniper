@@ -4,6 +4,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import request from 'supertest';
+import { pool } from '../src/db.js';
 import {
   app,
   authHeaders,
@@ -81,5 +82,60 @@ describe('Devises taxi partagé (parcours local complet)', () => {
       .send({ origin: 'Stone Town Ferry', destination: 'Jambiani', departureAt: depart, seatsTotal: 4 });
     assert.equal(standard.status, 201);
     assert.equal(Number(standard.body.price_per_seat), 15000);
+  });
+
+  it('retard de +10 min : annonce automatiquement annulée, invisible, non réservable', async () => {
+    const { token: tokenChauffeur } = await createVerifiedDriver();
+    const { token: tokenLocal } = await createLocal();
+
+    const depart = new Date(Date.now() + 6 * 3600 * 1000).toISOString();
+    const posted = await request(app)
+      .post('/api/rides')
+      .set(authHeaders(tokenChauffeur))
+      .send({ origin: 'Aéroport (AAKIA)', destination: 'Nungwi', departureAt: depart, seatsTotal: 4 });
+    assert.equal(posted.status, 201);
+
+    // On force un départ dépassé de 11 minutes (impossible via l'API,
+    // qui refuse les départs passés) — c'est le temps qui a passé.
+    await pool.query(
+      `UPDATE posted_rides SET departure_at = now() - interval '11 minutes' WHERE id = $1`,
+      [posted.body.id]
+    );
+
+    // Invisible sur la place de marché…
+    const liste = await request(app).get('/api/rides').set(authHeaders(tokenLocal));
+    assert.equal(liste.body.find((r) => r.id === posted.body.id), undefined);
+
+    // …non réservable…
+    const resa = await request(app)
+      .post(`/api/rides/${posted.body.id}/book`)
+      .set(authHeaders(tokenLocal))
+      .send({ seats: 1 });
+    assert.equal(resa.status, 409);
+    assert.equal(resa.body.error.code, 'ride_closed');
+
+    // …et marquée ANNULÉE sur la liste du chauffeur.
+    const mine = await request(app).get('/api/rides/mine').set(authHeaders(tokenChauffeur));
+    const annonce = mine.body.find((r) => r.id === posted.body.id);
+    assert.equal(annonce.status, 'cancelled');
+  });
+
+  it('retard de moins de 10 min : l\'annonce reste ouverte côté chauffeur', async () => {
+    const { token: tokenChauffeur } = await createVerifiedDriver();
+    const depart = new Date(Date.now() + 6 * 3600 * 1000).toISOString();
+    const posted = await request(app)
+      .post('/api/rides')
+      .set(authHeaders(tokenChauffeur))
+      .send({ origin: 'Aéroport (AAKIA)', destination: 'Paje', departureAt: depart, seatsTotal: 4 });
+    assert.equal(posted.status, 201);
+
+    await pool.query(
+      `UPDATE posted_rides SET departure_at = now() - interval '5 minutes' WHERE id = $1`,
+      [posted.body.id]
+    );
+
+    const mine = await request(app).get('/api/rides/mine').set(authHeaders(tokenChauffeur));
+    const annonce = mine.body.find((r) => r.id === posted.body.id);
+    assert.equal(annonce.status, 'open');
   });
 });

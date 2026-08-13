@@ -402,6 +402,11 @@ const CHAINES = {
   },
   annonces_historique: { fr: 'Historique', en: 'History', sw: 'Historia' },
   annonces_ouvertes: { fr: 'Annonces en ligne', en: 'Live listings', sw: 'Matangazo hewani' },
+  annonces_regle_retard: {
+    fr: 'Heure de départ dépassée de plus de 10 minutes = annonce automatiquement annulée. Pensez à clôturer votre annonce quand vous partez.',
+    en: 'Departure time passed by more than 10 minutes = listing automatically cancelled. Remember to close your listing when you leave.',
+    sw: 'Muda wa kuondoka ukipita kwa zaidi ya dakika 10 = tangazo linaghairiwa kiotomatiki. Kumbuka kufunga tangazo lako unapoondoka.',
+  },
   equipe_action_erreur: {
     fr: "L'action a échoué — réessayez.",
     en: 'The action failed — try again.',

@@ -356,6 +356,10 @@ export default function EcranAnnonces() {
       <Text style={styles.titreSection}>
         {t('annonces_ouvertes')} ({annoncesOuvertes.length})
       </Text>
+      {/* Règle des 10 minutes : le serveur annule automatiquement. */}
+      <EncartInfo icone="time-outline" ton="attente">
+        {t('annonces_regle_retard')}
+      </EncartInfo>
       <TexteErreur>{erreurListe}</TexteErreur>
       {annoncesOuvertes.length === 0 && !erreurListe && (
         <EtatVide

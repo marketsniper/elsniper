@@ -107,6 +107,20 @@ function serializeRide(ride, pricing) {
 
 const PRICING_TZS = { mode: 'TZS' };
 
+// Règle zanziGo : tout taxi partagé en retard de plus de 10 minutes sur son
+// heure de départ est considéré comme ANNULÉ. Balayage paresseux (pas de
+// tâche planifiée) : appelé avant chaque lecture/réservation, idempotent.
+const RETARD_ANNULATION_MINUTES = 10;
+async function annulerRidesEnRetard() {
+  await query(
+    `UPDATE posted_rides
+     SET status = 'cancelled'
+     WHERE status = 'open'
+       AND departure_at < now() - make_interval(mins => $1)`,
+    [RETARD_ANNULATION_MINUTES]
+  );
+}
+
 // GET /rides/locations — listes officielles pour les menus déroulants
 // de l'app (départs limités aux deux hubs, arrivées de l'île).
 router.get('/locations', (_req, res) => {
@@ -165,6 +179,7 @@ router.get(
   '/',
   requireAuth,
   asyncHandler(async (req, res) => {
+    await annulerRidesEnRetard();
     const { rows } = await query(
       `SELECT r.*, d.full_name AS driver_name, d.vehicle_model, d.rating_avg AS driver_rating
        FROM posted_rides r
@@ -189,6 +204,7 @@ router.get(
     if (!req.auth.driverId) {
       throw new HttpError(403, 'forbidden', 'Réservé aux chauffeurs');
     }
+    await annulerRidesEnRetard();
     const { rows } = await query(
       `SELECT * FROM posted_rides WHERE driver_id = $1 ORDER BY departure_at DESC`,
       [req.auth.driverId]
@@ -301,6 +317,7 @@ router.post(
       }
     }
 
+    await annulerRidesEnRetard();
     const { rows: rideRows } = await query('SELECT * FROM posted_rides WHERE id = $1', [
       req.params.id,
     ]);
