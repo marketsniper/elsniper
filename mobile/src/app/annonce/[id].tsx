@@ -180,11 +180,12 @@ export default function EcranAnnonce() {
             <Text style={styles.labelTotal}>{t('annonce_gain_total')}</Text>
             <Text style={styles.valeurTotal}>
               {(() => {
-                // Totaux par devise (des places USD et TZS peuvent coexister),
-                // avec l'équivalent GLOBAL en shillings quand il y a de l'USD.
+                // Totaux par devise des places PAYÉES uniquement (le compteur
+                // ne bouge qu'au paiement), avec l'équivalent global en
+                // shillings quand il y a de l'USD.
                 const totaux: Record<string, number> = {};
                 for (const resa of reservations) {
-                  if (resa.net_per_seat === undefined) continue;
+                  if (!resa.paid || resa.net_per_seat === undefined) continue;
                   totaux[resa.currency] =
                     (totaux[resa.currency] ?? 0) + resa.net_per_seat * resa.seats;
                 }

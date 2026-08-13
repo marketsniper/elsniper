@@ -1489,9 +1489,14 @@ const CHAINES = {
   gain_commission: { fr: 'Commission zanziGo', en: 'zanziGo commission', sw: 'Kamisheni ya zanziGo' },
   gain_net: { fr: 'Votre gain net', en: 'Your net earnings', sw: 'Mapato yako halisi' },
   annonce_gain_total: {
-    fr: 'Gain net estimé (places réservées)',
-    en: 'Estimated net earnings (booked seats)',
-    sw: 'Makadirio ya mapato halisi (viti vilivyohifadhiwa)',
+    fr: 'Gain net (places payées)',
+    en: 'Net earnings (paid seats)',
+    sw: 'Mapato halisi (viti vilivyolipwa)',
+  },
+  annonces_places_attente: {
+    fr: '⏳ {n} place(s) bloquée(s) en attente de paiement (5 min max)',
+    en: '⏳ {n} seat(s) held awaiting payment (5 min max)',
+    sw: '⏳ Kiti {n} kimeshikiliwa kikisubiri malipo (dakika 5)',
   },
   gain_net_par_place: { fr: 'net', en: 'net', sw: 'halisi' },
   annonces_gain_cumule: {

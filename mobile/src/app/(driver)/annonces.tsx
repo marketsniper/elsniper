@@ -216,14 +216,20 @@ export default function EcranAnnonces() {
     const restantes = Number(champ(ride, 'seats_available', 'seatsAvailable') ?? 0);
     const reservations = champ<ReservationRide[]>(ride, 'bookings') ?? [];
     const estOuverte = statut === 'open';
-    // Gain net cumulé, TOUT converti en shillings (les places touristes en
-    // USD comptent × taux) — le chauffeur voit son gain grossir en direct.
+    // Gain net cumulé des places PAYÉES uniquement, tout converti en
+    // shillings (les places touristes en USD comptent × taux) — le compteur
+    // du chauffeur ne bouge qu'au paiement. Les réservations encore dans
+    // leur fenêtre de paiement (5 min) sont affichées à part.
+    const reservationsPayees = reservations.filter((resa) => resa.paid);
     const gainTotalTzs = Math.round(
-      reservations.reduce((somme, resa) => {
+      reservationsPayees.reduce((somme, resa) => {
         const net = Number(resa.net_per_seat ?? 0) * resa.seats;
         return somme + (resa.currency === 'USD' ? net * TAUX_USD_TZS : net);
       }, 0)
     );
+    const placesEnAttente = reservations
+      .filter((resa) => !resa.paid)
+      .reduce((somme, resa) => somme + resa.seats, 0);
     const complet = estOuverte && restantes === 0;
     return (
       <Pressable
@@ -272,10 +278,16 @@ export default function EcranAnnonces() {
             })}
           </Text>
         )}
-        {/* Gain net cumulé en shillings, au fil des places vendues. */}
+        {/* Gain net cumulé en shillings — places PAYÉES uniquement. */}
         {gainTotalTzs > 0 && (
           <Text style={styles.gainRide}>
             💰 {t('annonces_gain_cumule')} : {formaterMontant(gainTotalTzs, 'TZS')}
+          </Text>
+        )}
+        {/* Blocages temporaires : payé sous 5 min ou la place se libère. */}
+        {placesEnAttente > 0 && (
+          <Text style={styles.attenteRide}>
+            {t('annonces_places_attente', { n: placesEnAttente })}
           </Text>
         )}
         <View style={styles.ligneOuvrir}>
@@ -487,6 +499,11 @@ const styles = StyleSheet.create({
     fontSize: 14.5,
     fontWeight: '800',
     color: couleurs.succes,
+  },
+  attenteRide: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: couleurs.attente,
   },
   blocReservations: {
     backgroundColor: couleurs.surface,
