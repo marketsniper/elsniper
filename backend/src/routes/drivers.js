@@ -9,6 +9,13 @@ import { valeurReservationPlace } from './stats.js';
 
 import { notifierEquipe } from '../services/emailService.js';
 
+// Le hash de mot de passe ne sort JAMAIS de l'API.
+export function sanitizeDriver(driver) {
+  if (!driver) return driver;
+  const { password_hash, ...rest } = driver;
+  return rest;
+}
+
 const router = Router();
 
 // Candidature Taxi Partner : 3 documents obligatoires — permis de conduire,
@@ -49,15 +56,20 @@ router.post(
     if (!isAdmin(req) && data.phone !== req.auth.phone) {
       throw new HttpError(403, 'phone_mismatch', 'Le téléphone doit être celui vérifié par OTP (jeton)');
     }
-    // Une candidature chauffeur exige un numéro VÉRIFIÉ par code — jamais
-    // le jeton local « numéro seul ».
-    if (!isAdmin(req) && req.auth.sansOtp) {
-      throw new HttpError(403, 'otp_required', 'Candidature chauffeur : connectez-vous avec le code reçu par SMS');
+    // Une candidature chauffeur exige un jeton CANDIDAT CHAUFFEUR (numéro +
+    // mot de passe choisis à l'inscription chauffeur) ou un numéro vérifié
+    // par code — jamais un jeton client.
+    if (!isAdmin(req) && req.auth.sansOtp && !req.auth.chauffeurCandidat) {
+      throw new HttpError(
+        403,
+        'driver_register_required',
+        'Candidature chauffeur : créez d\'abord votre compte chauffeur (numéro + mot de passe)'
+      );
     }
     const { rows } = await query(
       `INSERT INTO drivers (full_name, phone, license_number, vehicle_plate, vehicle_model, zone,
-                            license_document_url, insurance_document_url, vehicle_photo_url, id_document_url)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                            license_document_url, insurance_document_url, vehicle_photo_url, id_document_url, password_hash)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
        RETURNING *`,
       [
         data.fullName,
@@ -70,6 +82,7 @@ router.post(
         data.insuranceDocumentUrl,
         data.vehiclePhotoUrl,
         data.idDocumentUrl ?? null,
+        req.auth?.passwordHash ?? null,
       ]
     );
     // L'équipe est prévenue automatiquement qu'une candidature attend.
@@ -83,7 +96,7 @@ router.post(
         'À faire: contrôler les documents dans le tableau de bord (Candidatures).',
       ].join('\n')
     );
-    res.status(201).json(rows[0]);
+    res.status(201).json(sanitizeDriver(rows[0]));
   })
 );
 
@@ -115,7 +128,7 @@ router.get(
        ORDER BY d.rating_avg DESC NULLS LAST`,
       params
     );
-    res.json(rows);
+    res.json(rows.map(sanitizeDriver));
   })
 );
 
@@ -262,7 +275,7 @@ router.get(
     }
     const { rows } = await query('SELECT * FROM drivers WHERE id = $1', [req.params.id]);
     if (!rows[0]) throw notFound('Chauffeur');
-    res.json(rows[0]);
+    res.json(sanitizeDriver(rows[0]));
   })
 );
 
@@ -301,7 +314,7 @@ router.patch(
       'UPDATE drivers SET verification_status = $1, vehicle_qr_code = $2 WHERE id = $3 RETURNING *',
       [status, vehicleQr, req.params.id]
     );
-    res.json(updated.rows[0]);
+    res.json(sanitizeDriver(updated.rows[0]));
   })
 );
 

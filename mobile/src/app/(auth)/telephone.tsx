@@ -19,6 +19,7 @@ import {
 import { api, ErreurApi } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useT, type CleChaine } from '@/lib/i18n';
+import { champ, type StatutVerification } from '@/lib/types';
 import { couleurs, espaces } from '@/lib/theme';
 
 /** Clé i18n du libellé de chaque profil proposé sur la page d'accueil. */
@@ -41,10 +42,13 @@ export default function EcranTelephone() {
   const params = useLocalSearchParams<{ profil?: string }>();
   const profil = typeof params.profil === 'string' ? params.profil : '';
 
-  // VISITEURS (touristes/résidents) : numéro + MOT DE PASSE choisi par le
-  // client — aucun code SMS ni e-mail à recevoir, ça marche partout dans le
-  // monde. Locaux : numéro seul. Chauffeurs : code SMS.
+  // TOUS les profils téléphone (visiteurs, locaux, chauffeurs) : numéro +
+  // MOT DE PASSE choisi par le client — aucun code SMS ni e-mail à
+  // recevoir, ça marche partout dans le monde.
   const estVisiteur = profil === 'visitor';
+  const estLocalRubrique = profil === 'local';
+  const estChauffeur = profil === 'driver';
+  const avecMotDePasse = estVisiteur || estLocalRubrique || estChauffeur;
 
   const [indicatif, setIndicatif] = useState('+255');
   const [numero, setNumero] = useState('');
@@ -52,8 +56,9 @@ export default function EcranTelephone() {
   const [erreur, setErreur] = useState('');
   const [charge, setCharge] = useState(false);
 
-  // Connexion OU création de compte visiteur (numéro + mot de passe).
-  const actionVisiteur = async (creation: boolean) => {
+  // Connexion OU création de compte (numéro + mot de passe), selon la
+  // rubrique choisie sur l'accueil.
+  const actionCompte = async (creation: boolean) => {
     setErreur('');
     const telephone = normaliserTelephone(indicatif, numero);
     if (!/^\+\d{9,15}$/.test(telephone)) {
@@ -66,6 +71,31 @@ export default function EcranTelephone() {
     }
     setCharge(true);
     try {
+      // ----- CHAUFFEURS -----
+      if (estChauffeur) {
+        const reponse = creation
+          ? await api.inscriptionChauffeur(telephone, motDePasse)
+          : await api.connexionChauffeur(telephone, motDePasse);
+        await connexion({
+          token: reponse.token,
+          phone: telephone,
+          user: reponse.user ?? null,
+          driver: reponse.driver ?? null,
+          hotel: null,
+        });
+        if (!reponse.driver) {
+          // Inscription : place à la candidature (documents).
+          router.replace('/(auth)/pro');
+          return;
+        }
+        const verifie =
+          champ<StatutVerification>(reponse.driver, 'verification_status', 'verificationStatus') ===
+          'verified';
+        router.replace(verifie ? '/(driver)/courses' : '/(auth)/pro');
+        return;
+      }
+
+      // ----- CLIENTS (visiteurs ET locaux) -----
       const reponse = creation
         ? await api.inscriptionVisiteur(telephone, motDePasse)
         : await api.connexionVisiteur(telephone, motDePasse);
@@ -76,7 +106,13 @@ export default function EcranTelephone() {
         driver: null,
         hotel: null,
       });
-      router.replace(reponse.user ? '/(tabs)/reserver' : '/(auth)/client');
+      router.replace(
+        reponse.user
+          ? '/(tabs)/reserver'
+          : estLocalRubrique
+            ? { pathname: '/(auth)/client', params: { type: 'local' } }
+            : '/(auth)/client'
+      );
     } catch (e) {
       setErreur(e instanceof ErreurApi ? e.message : t('tel_erreur_envoi'));
     } finally {
@@ -84,9 +120,9 @@ export default function EcranTelephone() {
     }
   };
 
+  // Repli : rubrique inconnue (lien direct) — ancien parcours par code.
   const envoyer = async () => {
     setErreur('');
-    // ----- Identité TÉLÉPHONE -----
     const telephone = normaliserTelephone(indicatif, numero);
     if (!/^\+\d{9,15}$/.test(telephone)) {
       setErreur(t('tel_erreur_numero'));
@@ -94,26 +130,6 @@ export default function EcranTelephone() {
     }
     setCharge(true);
     try {
-      // LOCAUX : pas de code du tout — le numéro suffit, entrée directe.
-      // (Compte existant → réservation ; nouveau numéro → création de
-      // profil local. Les chauffeurs gardent le code SMS.)
-      if (profil === 'local') {
-        const reponse = await api.connexionLocale(telephone);
-        await connexion({
-          token: reponse.token,
-          phone: telephone,
-          user: reponse.user ?? null,
-          driver: null,
-          hotel: null,
-        });
-        router.replace(
-          reponse.user
-            ? '/(tabs)/reserver'
-            : { pathname: '/(auth)/client', params: { type: 'local' } }
-        );
-        return;
-      }
-
       const resultat = await api.demanderOtp(telephone);
       router.push({
         pathname: '/(auth)/otp',
@@ -175,8 +191,8 @@ export default function EcranTelephone() {
             />
           </View>
         </View>
-        {/* Visiteurs : mot de passe choisi par le client — pas de code. */}
-        {estVisiteur && (
+        {/* Mot de passe choisi par le client — pas de code. */}
+        {avecMotDePasse && (
           <Champ
             label={t('tel_mdp_label')}
             value={motDePasse}
@@ -187,19 +203,19 @@ export default function EcranTelephone() {
           />
         )}
         <TexteErreur>{erreur}</TexteErreur>
-        {estVisiteur ? (
+        {avecMotDePasse ? (
           <>
             <Bouton
               titre={t('tel_bouton_connexion')}
               icone="log-in-outline"
-              onPress={() => actionVisiteur(false)}
+              onPress={() => actionCompte(false)}
               charge={charge}
             />
             <Bouton
               titre={t('tel_bouton_creer_compte')}
               icone="person-add-outline"
               variante="secondaire"
-              onPress={() => actionVisiteur(true)}
+              onPress={() => actionCompte(true)}
               charge={charge}
             />
             <Text style={styles.lienEmail}>{t('tel_mdp_oublie')}</Text>

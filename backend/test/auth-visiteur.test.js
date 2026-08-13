@@ -1,7 +1,7 @@
 // Visiteurs (touristes/résidents) : identification par NUMÉRO + MOT DE
 // PASSE choisi par le client — aucun code à recevoir. Garde-fous : jamais
-// de pouvoirs chauffeur, comptes locaux renvoyés vers leur rubrique, hash
-// jamais exposé par l'API.
+// de pouvoirs chauffeur avec un jeton client, hash jamais exposé par
+// l'API. (Les locaux passent par les mêmes endpoints : voir auth-locale.)
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import request from 'supertest';
@@ -9,11 +9,9 @@ import {
   adminHeaders,
   app,
   authHeaders,
-  createLocal,
   createTourist,
   nextPhone,
   useTestDb,
-  DOC_URL,
 } from './setup.js';
 
 useTestDb();
@@ -97,25 +95,11 @@ describe('Visiteurs : numéro + mot de passe', () => {
     assert.equal(bon.status, 200);
   });
 
-  it('garde-fous : compte local → 409 ; jeton visiteur sans pouvoirs chauffeur ni compte local', async () => {
-    const { user: local } = await createLocal();
-    const connexionLocal = await request(app)
-      .post('/api/auth/visitor-login')
-      .send({ phone: local.phone, password: 'PeuImporte1' });
-    assert.equal(connexionLocal.status, 409);
-    assert.equal(connexionLocal.body.error.code, 'not_visitor_account');
-
+  it('garde-fous : un jeton client n\'ouvre jamais l\'espace chauffeur', async () => {
     const phone = nextPhone();
     const { body } = await request(app)
       .post('/api/auth/visitor-register')
       .send({ phone, password: 'MonSecret1' });
-    // Pas de création de compte local avec un jeton visiteur.
-    const localRefuse = await request(app)
-      .post('/api/users')
-      .set(authHeaders(body.token))
-      .send({ fullName: 'Faux Local', phone, accountType: 'local', idDocumentUrl: DOC_URL });
-    assert.equal(localRefuse.status, 403);
-    // Pas d'espace chauffeur.
     const mine = await request(app).get('/api/rides/mine').set(authHeaders(body.token));
     assert.equal(mine.status, 403);
   });

@@ -62,10 +62,11 @@ router.post(
     const identiteEmail = !isAdmin(req) && !req.auth.phone && req.auth.email;
     let email = data.email ?? null;
     let phone = data.phone ?? null;
-    // Jeton visiteur (numéro + mot de passe choisis à l'inscription) : le
+    // Jeton client (numéro + mot de passe choisis à l'inscription) : le
     // hash voyage dans le jeton signé et se pose sur le profil ici.
+    const jetonClient = !isAdmin(req) && (req.auth.client || req.auth.visiteur);
     let passwordHash = null;
-    if (!isAdmin(req) && req.auth.visiteur && req.auth.passwordHash) {
+    if (jetonClient && req.auth.passwordHash) {
       passwordHash = req.auth.passwordHash;
     }
     if (identiteEmail) {
@@ -81,17 +82,9 @@ router.post(
       if (!data.phone || data.phone !== req.auth.phone) {
         throw new HttpError(403, 'phone_mismatch', 'Le téléphone doit être celui vérifié par OTP (jeton)');
       }
-      // Jeton VISITEUR (numéro + mot de passe) : touriste/résident
-      // uniquement. Jeton local SANS code (numéro seul) : local uniquement.
-      if (req.auth.visiteur) {
-        if (data.accountType === 'local') {
-          throw new HttpError(
-            403,
-            'local_phone_required',
-            'Les comptes locaux s\'identifient par leur numéro seul (rubrique Locaux)'
-          );
-        }
-      } else if (req.auth.sansOtp && data.accountType !== 'local') {
+      // Jeton CLIENT (numéro + mot de passe) : touriste, résident ou local.
+      // Ancien jeton local « numéro seul » (30 jours max) : local uniquement.
+      if (!jetonClient && req.auth.sansOtp && data.accountType !== 'local') {
         throw new HttpError(
           403,
           'local_only',

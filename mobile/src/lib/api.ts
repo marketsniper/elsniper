@@ -246,14 +246,27 @@ export async function connexionVisiteur(
 }
 
 /**
- * CONNEXION LOCALE SANS CODE : POST /auth/local-login {phone} — le local
- * entre son numéro et entre directement (pas d'OTP ; jeton sans pouvoirs
- * chauffeur ; 409 not_local_account si le numéro est un compte visiteur).
+ * CHAUFFEURS : numéro + mot de passe aussi. L'inscription émet le jeton
+ * « candidat chauffeur » (la candidature avec documents suit) ; la
+ * connexion ouvre l'espace chauffeur.
  */
-export async function connexionLocale(phone: string): Promise<ReponseVerifieOtp> {
-  return requete<ReponseVerifieOtp>('/auth/local-login', {
+export async function inscriptionChauffeur(
+  phone: string,
+  password: string
+): Promise<ReponseVerifieOtp> {
+  return requete<ReponseVerifieOtp>('/auth/driver-register', {
     methode: 'POST',
-    corps: { phone },
+    corps: { phone, password },
+  });
+}
+
+export async function connexionChauffeur(
+  phone: string,
+  password: string
+): Promise<ReponseVerifieOtp> {
+  return requete<ReponseVerifieOtp>('/auth/driver-login', {
+    methode: 'POST',
+    corps: { phone, password },
   });
 }
 
@@ -1022,7 +1035,8 @@ export const api = {
   demanderOtpParEmail,
   inscriptionVisiteur,
   connexionVisiteur,
-  connexionLocale,
+  inscriptionChauffeur,
+  connexionChauffeur,
   verifierOtp,
   verifierOtpParEmail,
   connexionHotel,

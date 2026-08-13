@@ -653,9 +653,9 @@ const CHAINES = {
     sw: 'Weka namba yako ya simu kupokea msimbo wa kuingia.',
   },
   tel_intro_chauffeur: {
-    fr: 'Déjà Taxi Partner ? Entrez votre numéro : vous retrouvez directement votre compte. Nouveau ? Vous déposerez votre candidature juste après le code.',
-    en: 'Already a Taxi Partner? Enter your number to get straight back to your account. New? You will submit your application right after the code.',
-    sw: 'Tayari Taxi Partner? Weka namba yako urudi moja kwa moja kwenye akaunti yako. Mpya? Utawasilisha maombi yako mara baada ya msimbo.',
+    fr: 'Déjà Taxi Partner ? Numéro + mot de passe : vous retrouvez directement votre compte. Nouveau ? Créez votre compte puis déposez votre candidature.',
+    en: 'Already a Taxi Partner? Number + password gets you straight back to your account. New? Create your account, then submit your application.',
+    sw: 'Tayari Taxi Partner? Namba + nenosiri: unarudi moja kwa moja kwenye akaunti yako. Mpya? Fungua akaunti kisha uwasilishe maombi yako.',
   },
   tel_indicatif: { fr: 'Indicatif', en: 'Country code', sw: 'Msimbo wa nchi' },
   tel_numero: { fr: 'Numéro de téléphone', en: 'Phone number', sw: 'Namba ya simu' },
@@ -1184,9 +1184,9 @@ const CHAINES = {
   },
   commun_retour: { fr: 'Retour', en: 'Back', sw: 'Rudi' },
   tel_intro_local: {
-    fr: 'Entrez votre numéro de téléphone — pas de code à attendre, vous entrez directement.',
-    en: 'Enter your phone number — no code to wait for, you get straight in.',
-    sw: 'Weka namba yako ya simu — hakuna msimbo wa kusubiri, unaingia moja kwa moja.',
+    fr: 'Votre numéro + un mot de passe de votre choix — pas de code à attendre.',
+    en: 'Your number + a password of your choice — no code to wait for.',
+    sw: 'Namba yako + nenosiri unalochagua — hakuna msimbo wa kusubiri.',
   },
   tel_intro_visiteur: {
     fr: 'Votre numéro + un mot de passe de votre choix — aucun code SMS à recevoir, ça marche partout dans le monde.',

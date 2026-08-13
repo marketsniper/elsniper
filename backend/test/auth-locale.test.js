@@ -1,13 +1,13 @@
-// Connexion LOCALE SANS CODE : le numéro suffit, entrée directe — avec les
-// garde-fous (jamais de pouvoirs chauffeur, comptes visiteurs renvoyés vers
-// l'e-mail, seuls des comptes locaux peuvent être créés).
+// Locaux : même identification que les visiteurs — numéro + MOT DE PASSE
+// choisi (les endpoints clients servent tous les profils users). Garde-fous
+// conservés : jamais de pouvoirs chauffeur avec un jeton client.
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import request from 'supertest';
 import {
   app,
   authHeaders,
-  createTourist,
+  createLocal,
   createVerifiedDriver,
   nextPhone,
   useTestDb,
@@ -16,20 +16,19 @@ import {
 
 useTestDb();
 
-describe('Connexion locale sans code', () => {
-  it('nouveau numéro : entrée directe, création du profil local, réservation possible', async () => {
+describe('Locaux : numéro + mot de passe', () => {
+  it('inscription → profil local (carte NIDA) → connexion → tarif TZS', async () => {
     const phone = nextPhone();
-    const connexion = await request(app).post('/api/auth/local-login').send({ phone });
-    assert.equal(connexion.status, 200, JSON.stringify(connexion.body));
-    assert.ok(connexion.body.token);
-    assert.equal(connexion.body.user, null);
-    assert.equal(connexion.body.driver, null);
+    const inscription = await request(app)
+      .post('/api/auth/visitor-register')
+      .send({ phone, password: 'SiriYangu1' });
+    assert.equal(inscription.status, 201, JSON.stringify(inscription.body));
 
     const profil = await request(app)
       .post('/api/users')
-      .set(authHeaders(connexion.body.token))
+      .set(authHeaders(inscription.body.token))
       .send({
-        fullName: 'Juma Sans Code',
+        fullName: 'Juma MotDePasse',
         phone,
         accountType: 'local',
         idDocumentUrl: DOC_URL,
@@ -37,61 +36,40 @@ describe('Connexion locale sans code', () => {
     assert.equal(profil.status, 201, JSON.stringify(profil.body));
     assert.equal(profil.body.account_type, 'local');
     assert.equal(profil.body.currency, 'TZS');
+    assert.equal(profil.body.password_hash, undefined);
 
-    // Reconnexion : le compte est retrouvé directement.
-    const retour = await request(app).post('/api/auth/local-login').send({ phone });
-    assert.equal(retour.body.user.id, profil.body.id);
-  });
-
-  it('le jeton sans code ne crée JAMAIS un compte touriste ni une candidature chauffeur', async () => {
-    const phone = nextPhone();
-    const { body } = await request(app).post('/api/auth/local-login').send({ phone });
-
-    const touriste = await request(app)
-      .post('/api/users')
-      .set(authHeaders(body.token))
-      .send({ fullName: 'Faux Touriste', phone, accountType: 'tourist' });
-    assert.equal(touriste.status, 403);
-    assert.equal(touriste.body.error.code, 'local_only');
-
-    const candidature = await request(app)
-      .post('/api/drivers')
-      .set(authHeaders(body.token))
-      .send({
-        fullName: 'Faux Chauffeur',
-        phone,
-        licenseNumber: 'DL-123456',
-        vehiclePlate: 'Z 123 ABC',
-        zone: 'Nungwi',
-        licenseDocumentUrl: DOC_URL,
-        insuranceDocumentUrl: DOC_URL,
-        vehiclePhotoUrl: DOC_URL,
-      });
-    assert.equal(candidature.status, 403);
-    assert.equal(candidature.body.error.code, 'otp_required');
-  });
-
-  it('numéro d\'un compte visiteur → 409, renvoyé vers la connexion e-mail', async () => {
-    const { user } = await createTourist();
     const connexion = await request(app)
-      .post('/api/auth/local-login')
-      .send({ phone: user.phone });
-    assert.equal(connexion.status, 409);
-    assert.equal(connexion.body.error.code, 'not_local_account');
+      .post('/api/auth/visitor-login')
+      .send({ phone, password: 'SiriYangu1' });
+    assert.equal(connexion.status, 200, JSON.stringify(connexion.body));
+    assert.equal(connexion.body.user.id, profil.body.id);
+
+    const mauvais = await request(app)
+      .post('/api/auth/visitor-login')
+      .send({ phone, password: 'SiriMbaya1' });
+    assert.equal(mauvais.status, 401);
   });
 
-  it('numéro d\'un chauffeur : jamais les pouvoirs chauffeur sans code', async () => {
+  it('ancien compte local (sans mot de passe) : le premier mot de passe saisi est adopté', async () => {
+    const { user } = await createLocal();
+    const premiere = await request(app)
+      .post('/api/auth/visitor-login')
+      .send({ phone: user.phone, password: 'PremierMdp1' });
+    assert.equal(premiere.status, 200, JSON.stringify(premiere.body));
+    assert.equal(premiere.body.user.id, user.id);
+
+    const mauvais = await request(app)
+      .post('/api/auth/visitor-login')
+      .send({ phone: user.phone, password: 'AutreChose1' });
+    assert.equal(mauvais.status, 401);
+  });
+
+  it('numéro d\'un chauffeur via la connexion client : jamais les pouvoirs chauffeur', async () => {
     const { driver } = await createVerifiedDriver();
+    // Le chauffeur n'a pas de compte client : connexion client → 401.
     const connexion = await request(app)
-      .post('/api/auth/local-login')
-      .send({ phone: driver.phone });
-    assert.equal(connexion.status, 200);
-    assert.equal(connexion.body.driver, null);
-
-    // L'espace chauffeur reste fermé à ce jeton.
-    const mine = await request(app)
-      .get('/api/rides/mine')
-      .set(authHeaders(connexion.body.token));
-    assert.equal(mine.status, 403);
+      .post('/api/auth/visitor-login')
+      .send({ phone: driver.phone, password: 'PeuImporte1' });
+    assert.equal(connexion.status, 401);
   });
 });

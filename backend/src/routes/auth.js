@@ -19,6 +19,7 @@ import { emailCodeOtp, envoyerEmail, isEmailStub } from '../services/emailServic
 import { hashPassword, verifyPassword } from '../services/passwordService.js';
 import { sanitizeHotel } from './hotels.js';
 import { sanitizeUser } from './users.js';
+import { sanitizeDriver } from './drivers.js';
 
 export const authRouter = Router();
 
@@ -196,7 +197,7 @@ authRouter.post('/verify-otp', async (req, res, next) => {
       if (driver) payload.driverId = driver.id;
 
       const token = jwt.sign(payload, config.jwtSecret, { expiresIn: config.jwtExpiresIn });
-      return res.json({ token, user: sanitizeUser(user), driver, hotel: null });
+      return res.json({ token, user: sanitizeUser(user), driver: sanitizeDriver(driver), hotel: null });
     }
 
     // Identité E-MAIL (touristes/visiteurs) : le compte client le plus
@@ -241,10 +242,10 @@ authRouter.post('/visitor-register', async (req, res, next) => {
       );
     }
 
-    // sansOtp : jamais de pouvoirs chauffeur ; visiteur : ne crée que des
-    // comptes touriste/résident (POST /users).
+    // sansOtp : jamais de pouvoirs chauffeur ; client : crée un profil
+    // CLIENT (touriste, résident ou local — POST /users).
     const token = jwt.sign(
-      { phone, sansOtp: true, visiteur: true, passwordHash: await hashPassword(password) },
+      { phone, sansOtp: true, client: true, passwordHash: await hashPassword(password) },
       config.jwtSecret,
       { expiresIn: config.jwtExpiresIn }
     );
@@ -273,13 +274,6 @@ authRouter.post('/visitor-login', async (req, res, next) => {
         'Numéro inconnu ou mot de passe incorrect — nouveau chez zanziGo ? Créez votre compte'
       );
     }
-    if (user.account_type === 'local') {
-      throw new HttpError(
-        409,
-        'not_visitor_account',
-        'Compte local : entrez simplement votre numéro dans la rubrique Locaux (sans mot de passe)'
-      );
-    }
     if (!user.password_hash) {
       if (password.length < 8) {
         throw new HttpError(400, 'weak_password', 'Mot de passe : 8 caractères minimum');
@@ -303,32 +297,83 @@ authRouter.post('/visitor-login', async (req, res, next) => {
   }
 });
 
-// POST /api/auth/local-login {phone}
-// Connexion LOCALE SANS CODE : le local entre son numéro, c'est tout — pas
-// d'OTP. Choix produit assumé : la vérification d'identité des locaux passe
-// par la carte NIDA (validée à la main par l'équipe), pas par un code SMS.
-// GARDE-FOUS : le jeton émis est SANS pouvoirs chauffeur (un numéro de
-// chauffeur tapé ici n'ouvre jamais l'espace chauffeur — les chauffeurs
-// gardent le code) et un numéro rattaché à un compte visiteur est renvoyé
-// vers la connexion par e-mail.
-authRouter.post('/local-login', async (req, res, next) => {
+// POST /api/auth/driver-register {phone, password}
+// Un futur CHAUFFEUR choisit son numéro + un mot de passe : le jeton émis
+// (candidat chauffeur) sert à déposer la candidature avec les documents
+// (POST /drivers) — le hash s'y pose. Fini le code SMS.
+authRouter.post('/driver-register', async (req, res, next) => {
   try {
-    const { phone } = z.object({ phone: phoneSchema }).parse(req.body);
+    const { phone, password } = z
+      .object({
+        phone: phoneSchema,
+        password: z.string().min(8, 'Mot de passe : 8 caractères minimum'),
+      })
+      .parse(req.body);
 
-    const { rows } = await pool.query('SELECT * FROM users WHERE phone = $1', [phone]);
-    const user = rows[0] || null;
-    if (user && user.account_type !== 'local') {
+    const { rows } = await pool.query('SELECT id FROM drivers WHERE phone = $1', [phone]);
+    if (rows[0]) {
       throw new HttpError(
         409,
-        'not_local_account',
-        'Ce numéro appartient à un compte visiteur — connectez-vous par e-mail (rubrique Visiteur)'
+        'account_exists',
+        'Une candidature ou un compte chauffeur existe déjà avec ce numéro — connectez-vous avec votre mot de passe'
       );
     }
 
-    const payload = { phone, sansOtp: true };
+    const token = jwt.sign(
+      { phone, sansOtp: true, chauffeurCandidat: true, passwordHash: await hashPassword(password) },
+      config.jwtSecret,
+      { expiresIn: config.jwtExpiresIn }
+    );
+    res.status(201).json({ token, user: null, driver: null, hotel: null });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/auth/driver-login {phone, password}
+// Connexion CHAUFFEUR : numéro + mot de passe. Une candidature d'avant les
+// mots de passe adopte le premier mot de passe saisi. Le jeton porte
+// driverId : l'espace chauffeur s'ouvre normalement.
+authRouter.post('/driver-login', async (req, res, next) => {
+  try {
+    const { phone, password } = z
+      .object({ phone: phoneSchema, password: z.string().min(1) })
+      .parse(req.body);
+
+    const { rows } = await pool.query('SELECT * FROM drivers WHERE phone = $1', [phone]);
+    const driver = rows[0];
+    if (!driver) {
+      throw new HttpError(
+        401,
+        'invalid_credentials',
+        'Numéro inconnu ou mot de passe incorrect — nouveau chauffeur ? Créez votre compte'
+      );
+    }
+    if (!driver.password_hash) {
+      if (password.length < 8) {
+        throw new HttpError(400, 'weak_password', 'Mot de passe : 8 caractères minimum');
+      }
+      await pool.query('UPDATE drivers SET password_hash = $1 WHERE id = $2', [
+        await hashPassword(password),
+        driver.id,
+      ]);
+    } else if (!(await verifyPassword(password, driver.password_hash))) {
+      throw new HttpError(401, 'invalid_credentials', 'Numéro inconnu ou mot de passe incorrect');
+    }
+
+    // Profil client éventuel du même numéro (un chauffeur peut aussi être client).
+    const userRes = await pool.query('SELECT * FROM users WHERE phone = $1', [phone]);
+    const user = userRes.rows[0] || null;
+
+    const payload = { phone: driver.phone, driverId: driver.id };
     if (user) payload.userId = user.id;
     const token = jwt.sign(payload, config.jwtSecret, { expiresIn: config.jwtExpiresIn });
-    res.json({ token, user: sanitizeUser(user), driver: null, hotel: null });
+    res.json({
+      token,
+      user: sanitizeUser(user),
+      driver: sanitizeDriver(driver),
+      hotel: null,
+    });
   } catch (err) {
     next(err);
   }
