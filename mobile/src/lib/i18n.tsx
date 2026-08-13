@@ -1278,10 +1278,14 @@ const CHAINES = {
     sw: 'Kughairi hakuwezekani kwa sasa.',
   },
   trip_paiement_recu: {
-    fr: 'Paiement reçu — votre chauffeur scanne le QR de son véhicule au départ.',
-    en: 'Payment received — your driver scans their vehicle QR at departure.',
-    sw: 'Malipo yamepokelewa — dereva wako ataskani QR ya gari lake wakati wa kuondoka.',
+    fr: 'Course payée — tout est réglé. Votre taxi est indiqué ci-dessus : repérez la plaque au point de rendez-vous.',
+    en: 'Ride paid — all set. Your taxi is shown above: look for the plate at the meeting point.',
+    sw: 'Safari imelipwa — kila kitu tayari. Teksi yako imeonyeshwa hapo juu: tafuta namba ya gari mahali pa kukutana.',
   },
+  trip_taxi_titre: { fr: 'Votre taxi', en: 'Your taxi', sw: 'Teksi yako' },
+  trip_taxi_chauffeur: { fr: 'Chauffeur', en: 'Driver', sw: 'Dereva' },
+  trip_taxi_modele: { fr: 'Véhicule', en: 'Vehicle', sw: 'Gari' },
+  trip_taxi_plaque: { fr: 'Plaque', en: 'Plate', sw: 'Namba ya gari' },
   trip_note_question: { fr: "Comment s'est passée votre course ?", en: 'How was your ride?', sw: 'Safari yako ilikuwaje?' },
   trip_note_commentaire: { fr: 'Commentaire (optionnel)', en: 'Comment (optional)', sw: 'Maoni (hiari)' },
   trip_note_placeholder: {

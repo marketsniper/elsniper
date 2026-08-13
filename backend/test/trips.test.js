@@ -84,6 +84,16 @@ describe('Courses taxi (trips)', () => {
     assert.equal(Number(payment.amount), 50);
     const paid = await request(app).get(`/api/trips/${trip.id}`).set(authHeaders(userToken));
     assert.equal(paid.body.status, 'paid');
+    // Course payée : le client voit SON taxi — nom du chauffeur, plaque
+    // d'immatriculation et modèle du véhicule joints à la course.
+    assert.equal(paid.body.driver_name, driver.full_name);
+    assert.equal(paid.body.vehicle_plate, driver.vehicle_plate);
+    assert.equal(paid.body.vehicle_model, driver.vehicle_model);
+    const historique = await request(app)
+      .get(`/api/trips?userId=${user.id}`)
+      .set(authHeaders(userToken));
+    assert.equal(historique.status, 200);
+    assert.equal(historique.body[0].vehicle_plate, driver.vehicle_plate);
 
     // Départ (touche « Démarrer la course ») → in_progress
     const started = await request(app)

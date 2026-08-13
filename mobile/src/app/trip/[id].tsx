@@ -104,6 +104,11 @@ export default function EcranTrajet() {
   const statut = champ<StatutTrajet>(trajet, 'status', 'statut');
   const typeTrajet = champ<TypeTrajet>(trajet, 'trip_type', 'tripType');
   const nomClient = champ<string>(trajet, 'client_name', 'clientName');
+  // Le taxi assigné : dès que l'équipe a confirmé un chauffeur, le client
+  // sait qui vient le chercher — nom, plaque d'immatriculation, modèle.
+  const nomChauffeur = champ<string>(trajet, 'driver_name', 'driverName');
+  const plaqueTaxi = champ<string>(trajet, 'vehicle_plate', 'vehiclePlate');
+  const modeleTaxi = champ<string>(trajet, 'vehicle_model', 'vehicleModel');
   const lienWhatsapp = champ<string>(trajet, 'whatsapp_link', 'whatsappLink') ?? WHATSAPP_EQUIPE;
   const annule = statut === 'cancelled';
   // Règle serveur : le paiement n'est possible qu'après confirmation d'un chauffeur.
@@ -270,6 +275,23 @@ export default function EcranTrajet() {
         </View>
       </Carte>
 
+      {/* Votre taxi : visible dès l'assignation, essentiel une fois la
+          course payée — le client reconnaît le véhicule au premier regard. */}
+      {!annule && !!nomChauffeur && (
+        <Carte>
+          <View style={styles.enTeteTaxi}>
+            <Ionicons name="car-sport" size={22} color={couleurs.primaire} />
+            <Text style={styles.titreTaxi}>{t('trip_taxi_titre')}</Text>
+          </View>
+          <LigneInfo label={t('trip_taxi_chauffeur')} valeur={String(nomChauffeur)} />
+          <LigneInfo label={t('trip_taxi_modele')} valeur={String(modeleTaxi ?? '—')} />
+          <View style={styles.blocPlaque}>
+            <Text style={styles.labelPlaque}>{t('trip_taxi_plaque')}</Text>
+            <Text style={styles.plaque}>{String(plaqueTaxi ?? '—')}</Text>
+          </View>
+        </Carte>
+      )}
+
       <Carte>
         <Text style={styles.titreSuivi}>{t('trip_suivi')}</Text>
         <TimelineStatut
@@ -424,6 +446,45 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: couleurs.encre,
     marginBottom: espaces.s,
+  },
+  enTeteTaxi: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: espaces.s,
+    marginBottom: espaces.s,
+  },
+  titreTaxi: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: couleurs.encre,
+  },
+  // La plaque en évidence, façon plaque d'immatriculation.
+  blocPlaque: {
+    marginTop: espaces.s,
+    paddingTop: espaces.m,
+    borderTopWidth: 1,
+    borderTopColor: couleurs.bordure,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  labelPlaque: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: couleurs.texteSecondaire,
+  },
+  plaque: {
+    fontSize: 20,
+    fontWeight: '800',
+    letterSpacing: 2,
+    color: couleurs.encre,
+    backgroundColor: couleurs.sable,
+    borderWidth: 1.5,
+    borderColor: couleurs.encre,
+    borderRadius: 6,
+    paddingHorizontal: espaces.m,
+    paddingVertical: 4,
+    overflow: 'hidden',
   },
   blocNote: {
     flexDirection: 'row',

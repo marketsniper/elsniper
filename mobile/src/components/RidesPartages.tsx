@@ -232,6 +232,7 @@ export function RidesPartages() {
             : champ<string>(ride, 'currency') ?? 'TZS';
         const nomChauffeur = champ<string>(ride, 'driver_name', 'driverName');
         const vehicule = champ<string>(ride, 'vehicle_model', 'vehicleModel');
+        const plaque = champ<string>(ride, 'vehicle_plate', 'vehiclePlate');
         const noteBrute = champ<number | string>(ride, 'driver_rating', 'driverRating');
         const note =
           noteBrute !== undefined && Number.isFinite(Number(noteBrute))
@@ -295,6 +296,7 @@ export function RidesPartages() {
                 <Text style={styles.texteDetail}>
                   {nomChauffeur ?? t('rides_chauffeur_defaut')}
                   {vehicule ? ` · ${vehicule}` : ''}
+                  {plaque ? ` · ${plaque}` : ''}
                 </Text>
               </View>
               {note !== null && (

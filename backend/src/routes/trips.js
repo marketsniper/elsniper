@@ -43,8 +43,18 @@ const ratingSchema = z.object({
   comment: z.string().max(1000).optional(),
 });
 
+// Infos PUBLIQUES du taxi assigné, jointes aux courses : dès que tout est
+// réglé, le client sait qui vient le chercher (nom du chauffeur, plaque,
+// modèle du véhicule).
+const CHAMPS_CHAUFFEUR = `d.full_name AS driver_name, d.vehicle_plate, d.vehicle_model`;
+
 async function getTrip(id) {
-  const { rows } = await query('SELECT * FROM trips WHERE id = $1', [id]);
+  const { rows } = await query(
+    `SELECT t.*, ${CHAMPS_CHAUFFEUR}
+     FROM trips t LEFT JOIN drivers d ON d.id = t.driver_id
+     WHERE t.id = $1`,
+    [id]
+  );
   if (!rows[0]) throw notFound('Trajet');
   return rows[0];
 }
@@ -196,10 +206,13 @@ router.get(
       let where = '';
       if (status) {
         params.push(status);
-        where = 'WHERE status = $1';
+        where = 'WHERE t.status = $1';
       }
       const { rows } = await query(
-        `SELECT * FROM trips ${where} ORDER BY created_at DESC LIMIT 200`,
+        `SELECT t.*, ${CHAMPS_CHAUFFEUR}
+         FROM trips t LEFT JOIN drivers d ON d.id = t.driver_id
+         ${where}
+         ORDER BY t.created_at DESC LIMIT 200`,
         params
       );
       return res.json(rows);
@@ -210,7 +223,9 @@ router.get(
         throw new HttpError(403, 'forbidden', 'Accès réservé au titulaire du compte');
       }
       const { rows } = await query(
-        'SELECT * FROM trips WHERE user_id = $1 ORDER BY created_at DESC',
+        `SELECT t.*, ${CHAMPS_CHAUFFEUR}
+         FROM trips t LEFT JOIN drivers d ON d.id = t.driver_id
+         WHERE t.user_id = $1 ORDER BY t.created_at DESC`,
         [userId]
       );
       return res.json(rows);
@@ -220,7 +235,9 @@ router.get(
       throw new HttpError(403, 'forbidden', "Accès réservé à l'hôtel concerné");
     }
     const { rows } = await query(
-      'SELECT * FROM trips WHERE hotel_id = $1 ORDER BY created_at DESC',
+      `SELECT t.*, ${CHAMPS_CHAUFFEUR}
+       FROM trips t LEFT JOIN drivers d ON d.id = t.driver_id
+       WHERE t.hotel_id = $1 ORDER BY t.created_at DESC`,
       [hotelId]
     );
     res.json(rows);

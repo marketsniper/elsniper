@@ -109,6 +109,9 @@ export interface ReservationPlace {
   departure_at: string;
   ride_status: string;
   driver_name?: string | null;
+  /** Le client sait quel taxi vient : plaque + modèle du véhicule. */
+  vehicle_plate?: string | null;
+  vehicle_model?: string | null;
   seats: number;
   price_per_seat: number;
   amount: number;

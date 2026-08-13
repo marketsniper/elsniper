@@ -98,6 +98,9 @@ describe('Devises taxi partagé (parcours local complet)', () => {
       .set(adminHeaders());
     assert.equal(mesPlaces.body[0].currency, 'USD');
     assert.equal(Number(mesPlaces.body[0].amount), 18);
+    // Le client sait quel taxi assure le trajet : plaque + modèle visibles.
+    assert.ok(mesPlaces.body[0].vehicle_plate);
+    assert.equal(mesPlaces.body[0].vehicle_model, 'Toyota Noah');
   });
 
   it('trajet spécial local : Nungwi ↔ Paje à 20 000 TZS la place (deux sens)', async () => {

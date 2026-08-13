@@ -178,6 +178,14 @@ export default function EcranTrajets() {
                         {formaterMontant(place.amount, place.currency)}
                       </Text>
                     </View>
+                    {/* Le taxi qui assure le trajet : chauffeur, modèle, plaque. */}
+                    {!!place.driver_name && (
+                      <Text style={styles.taxiPlace}>
+                        🚕 {place.driver_name}
+                        {place.vehicle_model ? ` · ${place.vehicle_model}` : ''}
+                        {place.vehicle_plate ? ` · ${place.vehicle_plate}` : ''}
+                      </Text>
+                    )}
                     <View style={styles.lignePlace}>
                       <Text style={styles.detailPlace}>
                         {t('places_detail', { n: place.seats })}
@@ -388,6 +396,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: couleurs.texteSecondaire,
     fontWeight: '600',
+  },
+  taxiPlace: {
+    fontSize: 13.5,
+    color: couleurs.encre,
+    fontWeight: '700',
   },
   badgePlace: {
     fontSize: 12.5,
