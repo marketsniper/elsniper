@@ -532,7 +532,7 @@ const COORDONNEES_VILLES: Record<string, [number, number]> = {
   fumba: [-6.322, 39.183],
 };
 const DETOUR_ROUTIER = 1.35;
-const PRIX_PAR_KM_USD = 0.5;
+const PRIX_PAR_KM_USD = 0.85;
 const PRIVE_MINIMUM_USD = 20;
 const HUBS_TARIFAIRES = new Set([
   'stone town',
