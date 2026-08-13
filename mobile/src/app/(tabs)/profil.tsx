@@ -5,7 +5,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
-import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import {
   Badge,
@@ -70,6 +70,35 @@ export default function EcranProfil() {
       `${WHATSAPP_EQUIPE}?text=${encodeURIComponent(
         `💰 Recharge crédit zanziGo\nHôtel: ${String(champ(hotel, 'name') ?? '')}\nJe souhaite recharger mon compte crédit. Montant souhaité (USD):`
       )}`
+    );
+  };
+
+  // Transforme UN bon fidélité en crédit prépayé (l'autre usage : colis offert).
+  const [chargeConversion, setChargeConversion] = useState(false);
+  const convertirUnBon = () => {
+    if (!hotelId || !fidelite) return;
+    const montant = fidelite.voucher_credit_usd ?? 10;
+    Alert.alert(
+      t('fidelite_convertir_titre'),
+      t('fidelite_convertir_confirm', { montant }),
+      [
+        { text: t('commun_confirmer_non'), style: 'cancel' },
+        {
+          text: t('commun_confirmer_oui'),
+          onPress: async () => {
+            setChargeConversion(true);
+            try {
+              await api.convertirBonEnCredit(hotelId);
+              setFidelite(await api.fideliteHotel(hotelId));
+              setCredit(await api.creditHotel(hotelId));
+            } catch {
+              // silencieux : le solde affiché reste inchangé
+            } finally {
+              setChargeConversion(false);
+            }
+          },
+        },
+      ]
     );
   };
 
@@ -204,6 +233,15 @@ export default function EcranProfil() {
             })}
           </Text>
           <Text style={styles.noteFidelite}>{t('fidelite_regle')}</Text>
+          {fidelite.vouchers_available > 0 && (
+            <Bouton
+              titre={t('fidelite_convertir', { montant: fidelite.voucher_credit_usd ?? 10 })}
+              icone="cash-outline"
+              variante="secondaire"
+              onPress={convertirUnBon}
+              charge={chargeConversion}
+            />
+          )}
         </Carte>
       )}
 

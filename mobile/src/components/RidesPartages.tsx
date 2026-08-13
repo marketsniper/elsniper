@@ -22,9 +22,10 @@ import {
 } from 'react-native';
 
 import { api, ErreurApi } from '@/lib/api';
+import { useAuth } from '@/lib/auth';
 import { useT, type FonctionT, type Langue } from '@/lib/i18n';
 import { couleurs, espaces, ombres, rayons } from '@/lib/theme';
-import { champ, DESTINATIONS_RIDES, formaterMontant, type Ride } from '@/lib/types';
+import { champ, DESTINATIONS_RIDES, formaterMontant, type Ride, type TypeCompte } from '@/lib/types';
 
 const LOCALES: Record<Langue, string> = { fr: 'fr-FR', en: 'en-GB', sw: 'sw-TZ' };
 
@@ -53,6 +54,11 @@ function libelleJour(valeur: unknown, t: FonctionT, langue: Langue): string {
 
 export function RidesPartages() {
   const { t, langue } = useT();
+  const { session } = useAuth();
+  // Cloison tarifaire : un profil LOCAL ne doit JAMAIS voir de dollars —
+  // quoi que contienne la réponse, on affiche son prix TZS.
+  const estLocal =
+    champ<TypeCompte>(session?.user, 'account_type', 'accountType') === 'local';
   const [rides, setRides] = useState<Ride[]>([]);
   const [charge, setCharge] = useState(false);
   const [chargeInitiale, setChargeInitiale] = useState(true);
@@ -117,9 +123,15 @@ export function RidesPartages() {
   );
 
   const filtreActif = filtreDestination !== '' && filtreDestination !== toutesDestinations;
+  // Un trajet dont l'heure de départ est passée s'efface immédiatement de la
+  // liste, même si l'écran n'a pas été rechargé depuis le serveur.
+  const ridesAVenir = rides.filter((ride) => {
+    const depart = new Date(String(champ(ride, 'departure_at', 'departureAt') ?? '')).getTime();
+    return Number.isFinite(depart) && depart > Date.now();
+  });
   const ridesFiltres = filtreActif
-    ? rides.filter((ride) => champ<string>(ride, 'destination') === filtreDestination)
-    : rides;
+    ? ridesAVenir.filter((ride) => champ<string>(ride, 'destination') === filtreDestination)
+    : ridesAVenir;
 
   // Tri chronologique puis regroupement par jour : un bandeau par journée,
   // pour que l'œil retrouve d'abord LE JOUR, puis l'heure.
@@ -204,11 +216,16 @@ export function RidesPartages() {
           </View>
           {groupe.liste.map((ride) => {
         const placesRestantes = Number(champ(ride, 'seats_available', 'seatsAvailable') ?? 0);
-        // Devise selon le champ présent : USD prioritaire s'il est envoyé.
+        // Devise selon le profil : un LOCAL voit toujours son prix TZS ;
+        // les autres profils voient le prix USD si le serveur l'envoie.
         const prixUsd = champ<number | string>(ride, 'price_per_seat_usd', 'pricePerSeatUsd');
         const prixTzs = champ<number | string>(ride, 'price_per_seat', 'pricePerSeat');
-        const prixPlace = prixUsd !== undefined ? prixUsd : prixTzs;
-        const devise = prixUsd !== undefined ? 'USD' : champ<string>(ride, 'currency') ?? 'TZS';
+        const prixPlace = estLocal ? prixTzs : prixUsd !== undefined ? prixUsd : prixTzs;
+        const devise = estLocal
+          ? champ<string>(ride, 'currency') ?? 'TZS'
+          : prixUsd !== undefined
+            ? 'USD'
+            : champ<string>(ride, 'currency') ?? 'TZS';
         const nomChauffeur = champ<string>(ride, 'driver_name', 'driverName');
         const vehicule = champ<string>(ride, 'vehicle_model', 'vehicleModel');
         const noteBrute = champ<number | string>(ride, 'driver_rating', 'driverRating');

@@ -14,7 +14,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { RidesPartages } from '@/components/RidesPartages';
 import { Selecteur } from '@/components/Selecteur';
@@ -167,6 +167,10 @@ export default function EcranReserver() {
       setNomClient('');
       setTelClient('+255');
       router.push(`/trip/${trajet.id}`);
+      // Résumé « réservation postée » vers l'équipe (course, profil, prix),
+      // prêt à envoyer — l'équipe est prévenue de CHAQUE réservation.
+      const lienNotification = champ<string>(trajet, 'whatsapp_link', 'whatsappLink');
+      if (lienNotification) await Linking.openURL(lienNotification);
     } catch (e) {
       if (e instanceof ErreurApi && e.code === 'local_only') {
         setErreur(t('reserver_erreur_local_only'));

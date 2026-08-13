@@ -50,20 +50,20 @@ async function createHotelPackage(token, hotelId, extra = {}) {
 }
 
 describe('Fidélité hôtels — bons colis offerts', () => {
-  it('9 courses → 0 bon ; 10 courses → 1 bon ; pas de double octroi', async () => {
+  it('19 courses → 0 bon ; 20 courses → 1 bon ; pas de double octroi', async () => {
     const { token, hotel } = await createHotel();
     const { driver } = await createVerifiedDriver();
 
-    await seedCompletedTrips(hotel.id, driver.id, 9);
+    await seedCompletedTrips(hotel.id, driver.id, 19);
     let res = await request(app).get(`/api/hotels/${hotel.id}/fidelite`).set(authHeaders(token));
     assert.equal(res.status, 200);
-    assert.equal(res.body.completed_trips, 9);
-    assert.equal(res.body.progress, 9);
+    assert.equal(res.body.completed_trips, 19);
+    assert.equal(res.body.progress, 19);
     assert.equal(res.body.vouchers_available, 0);
 
     await seedCompletedTrips(hotel.id, driver.id, 1);
     res = await request(app).get(`/api/hotels/${hotel.id}/fidelite`).set(authHeaders(token));
-    assert.equal(res.body.completed_trips, 10);
+    assert.equal(res.body.completed_trips, 20);
     assert.equal(res.body.progress, 0);
     assert.equal(res.body.vouchers_available, 1);
 
@@ -84,7 +84,7 @@ describe('Fidélité hôtels — bons colis offerts', () => {
   it('bon utilisé à la création d\'un colis → colis PAYÉ direct, bon consommé', async () => {
     const { token, hotel } = await createHotel();
     const { driver } = await createVerifiedDriver();
-    await seedCompletedTrips(hotel.id, driver.id, 10);
+    await seedCompletedTrips(hotel.id, driver.id, 20);
     await request(app).get(`/api/hotels/${hotel.id}/fidelite`).set(authHeaders(token));
 
     const colis = await createHotelPackage(token, hotel.id, { useVoucher: true });
@@ -270,5 +270,40 @@ describe('Crédit prépayé hôtels', () => {
     // Colis medium hôtel : 10 USD − 5 % = 9,50 → 50 − 9,50 = 40,50.
     const etat = await request(app).get(`/api/hotels/${hotel.id}/credit`).set(authHeaders(token));
     assert.equal(etat.body.balance, 40.5);
+  });
+});
+
+describe('Conversion des bons en crédit', () => {
+  it('un bon converti = +10 USD de crédit ; sans bon → 409', async () => {
+    const { token, hotel } = await createHotel();
+    const { driver } = await createVerifiedDriver();
+    await seedCompletedTrips(hotel.id, driver.id, 20);
+    await request(app).get(`/api/hotels/${hotel.id}/fidelite`).set(authHeaders(token));
+
+    const conversion = await request(app)
+      .post(`/api/hotels/${hotel.id}/vouchers/convertir`)
+      .set(authHeaders(token))
+      .send({});
+    assert.equal(conversion.status, 200);
+    assert.equal(conversion.body.credited, 10);
+    assert.equal(conversion.body.balance, 10);
+
+    // Le bon est consommé : plus rien à convertir.
+    const refus = await request(app)
+      .post(`/api/hotels/${hotel.id}/vouchers/convertir`)
+      .set(authHeaders(token))
+      .send({});
+    assert.equal(refus.status, 409);
+    assert.equal(refus.body.error.code, 'no_voucher');
+
+    // La fidélité reflète le bon utilisé, le crédit la recharge.
+    const fidelite = await request(app)
+      .get(`/api/hotels/${hotel.id}/fidelite`)
+      .set(authHeaders(token));
+    assert.equal(fidelite.body.vouchers_available, 0);
+    assert.equal(fidelite.body.vouchers_used, 1);
+    const etat = await request(app).get(`/api/hotels/${hotel.id}/credit`).set(authHeaders(token));
+    assert.equal(etat.body.balance, 10);
+    assert.equal(etat.body.transactions[0].reason, 'voucher_credit');
   });
 });

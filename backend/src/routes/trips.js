@@ -153,7 +153,7 @@ router.post(
     );
     let trip = rows[0];
 
-    const whatsappLink = buildTeamNotificationLink(tripRequestMessage(trip, bookerLabel));
+    const whatsappLink = buildTeamNotificationLink(tripRequestMessage(trip, bookerLabel, audience));
     const updated = await query('UPDATE trips SET whatsapp_link = $1 WHERE id = $2 RETURNING *', [
       whatsappLink,
       trip.id,

@@ -6,10 +6,13 @@ import { asyncHandler } from '../middleware/errorHandler.js';
 import { isAdmin, requireAuth, requireAdmin } from '../middleware/auth.js';
 import { hashPassword } from '../services/passwordService.js';
 
-// Fidélité : 1 bon « colis offert » toutes les COURSES_PAR_BON courses
-// TERMINÉES réservées par l'hôtel — la rampe de lancement de zanziGo, ce
-// sont les hôtels : on récompense leur volume.
-export const COURSES_PAR_BON = 10;
+// Fidélité : 1 bon toutes les COURSES_PAR_BON courses TERMINÉES réservées
+// par l'hôtel — la rampe de lancement de zanziGo, ce sont les hôtels : on
+// récompense leur volume. Chaque bon se dépense AU CHOIX :
+//  - un envoi de colis OFFERT (useVoucher à la création du colis), ou
+//  - VOUCHER_CREDIT_USD dollars versés sur le compte crédit prépayé.
+export const COURSES_PAR_BON = 20;
+export const VOUCHER_CREDIT_USD = 10;
 
 const router = Router();
 
@@ -165,11 +168,58 @@ router.get(
     res.json({
       completed_trips: etat.n,
       trips_per_voucher: COURSES_PAR_BON,
+      voucher_credit_usd: VOUCHER_CREDIT_USD,
       progress: etat.n % COURSES_PAR_BON,
       vouchers_available: etat.bons.filter((b) => b.status === 'available').length,
       vouchers_used: etat.bons.filter((b) => b.status === 'used').length,
       vouchers: etat.bons,
     });
+  })
+);
+
+// POST /hotels/:id/vouchers/convertir — l'hôtel transforme UN bon fidélité
+// en VOUCHER_CREDIT_USD dollars de crédit prépayé (l'autre usage possible du
+// bon reste l'envoi de colis offert à la création d'un colis).
+router.post(
+  '/:id/vouchers/convertir',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    if (!isAdmin(req) && req.auth.hotelId !== req.params.id) {
+      throw new HttpError(403, 'forbidden', "Accès réservé à l'hôtel concerné");
+    }
+    const resultat = await withTransaction(async (client) => {
+      const { rows: hotelRows } = await client.query(
+        'SELECT credit_balance FROM hotels WHERE id = $1 FOR UPDATE',
+        [req.params.id]
+      );
+      if (!hotelRows[0]) throw notFound('Hôtel');
+      const { rows: bons } = await client.query(
+        `SELECT id FROM hotel_vouchers
+         WHERE hotel_id = $1 AND status = 'available'
+         ORDER BY earned_at ASC LIMIT 1
+         FOR UPDATE SKIP LOCKED`,
+        [req.params.id]
+      );
+      if (!bons[0]) {
+        throw new HttpError(409, 'no_voucher', 'Aucun bon fidélité disponible sur ce compte');
+      }
+      await client.query(
+        `UPDATE hotel_vouchers SET status = 'used', used_at = now() WHERE id = $1`,
+        [bons[0].id]
+      );
+      const solde = Number(hotelRows[0].credit_balance) + VOUCHER_CREDIT_USD;
+      await client.query('UPDATE hotels SET credit_balance = $1 WHERE id = $2', [
+        solde,
+        req.params.id,
+      ]);
+      await client.query(
+        `INSERT INTO hotel_credit_transactions (hotel_id, amount, reason, reference)
+         VALUES ($1, $2, 'voucher_credit', $3)`,
+        [req.params.id, VOUCHER_CREDIT_USD, bons[0].id]
+      );
+      return solde;
+    });
+    res.json({ balance: resultat, currency: 'USD', credited: VOUCHER_CREDIT_USD });
   })
 );
 

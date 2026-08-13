@@ -8,7 +8,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Selecteur } from '@/components/Selecteur';
 import {
@@ -33,6 +33,7 @@ import {
 } from '@/lib/i18n';
 import { couleurs, espaces, rayons } from '@/lib/theme';
 import {
+  champ,
   deviseUtilisateur,
   formaterMontant,
   TAILLES_COLIS,
@@ -153,6 +154,9 @@ export default function EcranNouveauColis() {
       const proprietaireId = (expediteurHotel ?? expediteurUser)!.id;
       await ajouterColisLocal(proprietaireId, colis.id);
       router.replace(`/package/${colis.id}`);
+      // Résumé « colis posté » vers l'équipe, prêt à envoyer.
+      const lienNotification = champ<string>(colis, 'whatsapp_link', 'whatsappLink');
+      if (lienNotification) await Linking.openURL(lienNotification);
     } catch (e) {
       setErreur(e instanceof ErreurApi ? e.message : t('ncolis_erreur_creation'));
     } finally {

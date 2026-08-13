@@ -9,7 +9,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Selecteur } from '@/components/Selecteur';
 import {
@@ -152,7 +152,7 @@ export default function EcranAnnonces() {
     }
     setCharge(true);
     try {
-      await api.creerRide({
+      const annonce = await api.creerRide({
         origin: origine,
         destination: destination,
         departureAt: departIso,
@@ -167,6 +167,9 @@ export default function EcranAnnonces() {
       setNotes('');
       setMessageOk(t('annonces_publie'));
       await rafraichir();
+      // Résumé « annonce postée » vers l'équipe, prêt à envoyer.
+      const lienNotification = champ<string>(annonce, 'notification_link', 'notificationLink');
+      if (lienNotification) await Linking.openURL(lienNotification);
     } catch (e) {
       if (e instanceof ErreurApi && e.code === 'departure_in_past') {
         setErreur(t('annonces_erreur_futur'));

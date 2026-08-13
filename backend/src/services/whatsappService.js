@@ -10,10 +10,26 @@ export function buildTeamNotificationLink(text) {
   return `https://wa.me/${number}?text=${encodeURIComponent(text)}`;
 }
 
-export function tripRequestMessage(trip, bookerLabel) {
+// Libellés lisibles pour les résumés WhatsApp de l'équipe.
+export const TRIP_TYPE_LIBELLES = {
+  private: 'Taxi privé',
+  shared_tourist: 'Taxi partagé (touristes)',
+  shared_local: 'Taxi partagé (local)',
+  posted_return: 'Retour affiché',
+};
+
+export const AUDIENCE_LIBELLES = {
+  tourist: 'Touriste',
+  resident: 'Résident',
+  local: 'Local',
+  hotel: 'Hôtel',
+};
+
+export function tripRequestMessage(trip, bookerLabel, audience) {
   return [
-    `🚕 Nouvelle demande de trajet zanziGo`,
-    `Type: ${trip.trip_type}`,
+    `🚕 Nouvelle réservation zanziGo`,
+    `Course: ${TRIP_TYPE_LIBELLES[trip.trip_type] ?? trip.trip_type}`,
+    `Profil: ${AUDIENCE_LIBELLES[audience] ?? audience ?? '—'}`,
     `Client: ${bookerLabel}`,
     `Départ: ${trip.pickup_location}`,
     `Arrivée: ${trip.dropoff_location}`,

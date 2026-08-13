@@ -426,9 +426,24 @@ const CHAINES = {
     sw: 'Safari {n} / {total} kuelekea vocha ijayo',
   },
   fidelite_regle: {
-    fr: 'Toutes les 10 courses terminées avec zanziGo, un envoi de colis vous est OFFERT. Le bon se choisit au moment de créer le colis.',
-    en: 'Every 10 completed rides with zanziGo, a parcel delivery is FREE. Pick the voucher when creating the parcel.',
-    sw: 'Kila safari 10 zilizokamilika na zanziGo, usafirishaji wa mzigo mmoja ni BURE. Chagua vocha unapotengeneza mzigo.',
+    fr: 'Toutes les 20 courses terminées avec zanziGo, vous gagnez un bon — à dépenser AU CHOIX : un envoi de colis OFFERT (au moment de créer le colis) ou 10 $ versés sur votre crédit zanziGo.',
+    en: 'Every 20 completed rides with zanziGo, you earn a voucher — spend it YOUR way: a FREE parcel delivery (when creating the parcel) or $10 added to your zanziGo credit.',
+    sw: 'Kila safari 20 zilizokamilika na zanziGo, unapata vocha — itumie UPENDAVYO: usafirishaji wa mzigo BURE (unapotengeneza mzigo) au $10 kwenye salio lako la zanziGo.',
+  },
+  fidelite_convertir: {
+    fr: '💵 Convertir un bon en {montant} $ de crédit',
+    en: '💵 Convert a voucher into ${montant} credit',
+    sw: '💵 Badilisha vocha kuwa salio la ${montant}',
+  },
+  fidelite_convertir_titre: {
+    fr: 'Convertir un bon',
+    en: 'Convert a voucher',
+    sw: 'Badilisha vocha',
+  },
+  fidelite_convertir_confirm: {
+    fr: 'Transformer un bon fidélité en {montant} $ de crédit zanziGo ? Le bon ne pourra plus servir pour un colis offert.',
+    en: 'Turn one loyalty voucher into ${montant} of zanziGo credit? The voucher can no longer be used for a free parcel.',
+    sw: 'Badilisha vocha moja kuwa salio la ${montant} la zanziGo? Vocha haitaweza kutumika tena kwa mzigo bure.',
   },
   credit_titre: { fr: 'Mon crédit zanziGo', en: 'My zanziGo credit', sw: 'Salio langu la zanziGo' },
   credit_solde: { fr: 'Solde disponible', en: 'Available balance', sw: 'Salio lililopo' },

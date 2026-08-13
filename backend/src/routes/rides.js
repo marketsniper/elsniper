@@ -167,9 +167,33 @@ router.post(
         data.notes ?? null,
       ]
     );
+    // Résumé « annonce postée » pour l'équipe (le chauffeur l'envoie d'un
+    // geste depuis l'app) — l'équipe suit ainsi TOUTES les annonces en ligne.
+    const { rows: chauffeurRows } = await query(
+      'SELECT full_name, phone FROM drivers WHERE id = $1',
+      [req.auth.driverId]
+    );
+    const departAffiche = new Date(rows[0].departure_at).toLocaleString('fr-FR', {
+      timeZone: 'Africa/Dar_es_Salaam',
+      dateStyle: 'short',
+      timeStyle: 'short',
+    });
+    const notificationAnnonce = buildTeamNotificationLink(
+      [
+        '📣 Nouvelle annonce — taxi partagé zanziGo',
+        `Chauffeur: ${chauffeurRows[0]?.full_name ?? '?'} (${chauffeurRows[0]?.phone ?? '?'})`,
+        `Trajet: ${rows[0].origin} → ${rows[0].destination}`,
+        `Départ: ${departAffiche}`,
+        `Places: ${rows[0].seats_total}`,
+        `Prix place: ${rows[0].price_per_seat} TZS (locaux) · ${sharedSeatUsdForRoute(rows[0].origin, rows[0].destination)} USD (touristes)`,
+        `Réf: ${rows[0].id}`,
+      ].join('\n')
+    );
     // Le chauffeur qui publie voit LES DEUX prix (TZS locaux + USD touristes)
     // pour comprendre que chaque client paie dans sa devise.
-    res.status(201).json(serializeRide(rows[0], { mode: 'both' }));
+    res
+      .status(201)
+      .json({ ...serializeRide(rows[0], { mode: 'both' }), notification_link: notificationAnnonce });
   })
 );
 
@@ -345,18 +369,30 @@ router.post(
     }
     const rideMaj = updated[0];
 
-    // Étiquette du réservateur pour le message à l'équipe.
+    // Étiquette + profil du réservateur pour le résumé envoyé à l'équipe.
     let booker = 'équipe zanziGo';
+    let profil = 'Équipe';
     if (req.auth.userId) {
-      const { rows } = await query('SELECT full_name, phone FROM users WHERE id = $1', [
+      const { rows } = await query('SELECT full_name, phone, account_type FROM users WHERE id = $1', [
         req.auth.userId,
       ]);
-      if (rows[0]) booker = `${rows[0].full_name} (${rows[0].phone})`;
+      if (rows[0]) {
+        booker = `${rows[0].full_name} (${rows[0].phone})`;
+        profil =
+          rows[0].account_type === 'local'
+            ? 'Local'
+            : rows[0].account_type === 'resident'
+              ? 'Résident'
+              : 'Touriste';
+      }
     } else if (req.auth.hotelId) {
       const { rows } = await query('SELECT name, phone FROM hotels WHERE id = $1', [
         req.auth.hotelId,
       ]);
-      if (rows[0]) booker = `${rows[0].name} (hôtel, ${rows[0].phone})`;
+      if (rows[0]) {
+        booker = `${rows[0].name} (hôtel, ${rows[0].phone})`;
+        profil = 'Hôtel';
+      }
     }
 
     await query(
@@ -370,19 +406,27 @@ router.post(
       dateStyle: 'short',
       timeStyle: 'short',
     });
+    // Prix par place dans la devise du CLIENT (cloison tarifaire).
+    const pricing = await viewerPricing(req);
+    const prixPlace =
+      pricing.mode === 'USD'
+        ? `${rideUsd(rideMaj, pricing)} USD`
+        : `${rideMaj.price_per_seat} ${rideMaj.currency}`;
     const notification = buildTeamNotificationLink(
       [
         '🚌 Réservation confirmée — taxi partagé zanziGo',
+        `Course: Taxi partagé`,
+        `Profil: ${profil}`,
+        `Client: ${booker}`,
         `Trajet: ${rideMaj.origin} → ${rideMaj.destination}`,
         `Départ: ${depart}`,
         `Places réservées: ${seats} (restantes: ${rideMaj.seats_available})`,
-        `Client: ${booker}`,
+        `Prix par place: ${prixPlace}`,
         `Réf: ${rideMaj.id}`,
         'Règle: retard de +10 min au départ = place annulée, due en intégralité au chauffeur (respect des autres voyageurs).',
       ].join('\n')
     );
 
-    const pricing = await viewerPricing(req);
     const sortie = serializeRide(rideMaj, pricing);
     // Le lien de CETTE réponse notifie la réservation (et remplace le lien
     // générique « demande de place »).

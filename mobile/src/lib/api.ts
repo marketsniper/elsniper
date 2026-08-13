@@ -532,6 +532,8 @@ export interface BonFidelite {
 export interface FideliteHotel {
   completed_trips: number;
   trips_per_voucher: number;
+  /** Valeur d'un bon converti en crédit (USD). */
+  voucher_credit_usd?: number;
   progress: number;
   vouchers_available: number;
   vouchers_used: number;
@@ -561,6 +563,19 @@ export interface CreditHotel {
 /** GET /hotels/:id/credit — solde prépayé + derniers mouvements. */
 export async function creditHotel(hotelId: string): Promise<CreditHotel> {
   return requete<CreditHotel>(`/hotels/${hotelId}/credit`);
+}
+
+/**
+ * POST /hotels/:id/vouchers/convertir — transforme UN bon fidélité en crédit
+ * prépayé (10 USD). 409 no_voucher si aucun bon disponible.
+ */
+export async function convertirBonEnCredit(
+  hotelId: string
+): Promise<{ balance: number; credited: number }> {
+  return requete<{ balance: number; credited: number }>(
+    `/hotels/${hotelId}/vouchers/convertir`,
+    { methode: 'POST', corps: {} }
+  );
 }
 
 /** POST /hotels/:id/credit — l'ÉQUIPE crédite/corrige le solde d'un hôtel. */
@@ -863,6 +878,7 @@ export const api = {
   fideliteHotel,
   creditHotel,
   crediterHotel,
+  convertirBonEnCredit,
   annulerTrajet,
   confirmerPaiement,
   noterTrajet,
