@@ -15,6 +15,7 @@ import { config } from '../config.js';
 import { pool, withTransaction } from '../db.js';
 import { HttpError } from '../errors.js';
 import * as smsService from '../services/smsService.js';
+import { emailCodeOtp, envoyerEmail } from '../services/emailService.js';
 import { verifyPassword } from '../services/passwordService.js';
 import { sanitizeHotel } from './hotels.js';
 
@@ -30,16 +31,59 @@ function hashCode(code) {
   return crypto.createHash('sha256').update(code).digest('hex');
 }
 
-// POST /api/auth/request-otp {phone}
+// Masque un e-mail pour l'afficher sans le révéler : a***@g***.com
+function masquerEmail(email) {
+  const [local, domaine] = email.split('@');
+  const point = domaine.lastIndexOf('.');
+  return `${local[0]}***@${domaine[0]}***${point > 0 ? domaine.slice(point) : ''}`;
+}
+
+// POST /api/auth/request-otp {phone, channel?, email?}
 // Génère un code 6 chiffres (crypto), stocke son hash (sha256) avec une
 // expiration de 10 min, invalide les codes précédents non consommés du
-// même numéro, puis envoie le SMS.
+// même numéro, puis l'ENVOIE :
+//  - channel 'sms' (défaut) : SMS via l'opérateur (Africa's Talking) ;
+//  - channel 'email' : par e-mail — le remède aux touristes à l'étranger
+//    qui ne reçoivent pas de SMS en itinérance. SÉCURITÉ : pour un compte
+//    EXISTANT, le code part UNIQUEMENT vers l'e-mail enregistré sur le
+//    compte (jamais vers un e-mail fourni à la volée — sinon n'importe qui
+//    pourrait se faire livrer le code d'autrui) ; un numéro encore inconnu
+//    peut recevoir son code sur l'e-mail de son choix (création de compte).
 // COMPORTEMENT DEV : si NODE_ENV !== "production", la réponse contient
 // devCode (le code en clair) pour permettre les tests automatisés —
 // jamais en production.
 authRouter.post('/request-otp', async (req, res, next) => {
   try {
-    const { phone } = z.object({ phone: phoneSchema }).parse(req.body);
+    const { phone, channel, email } = z
+      .object({
+        phone: phoneSchema,
+        channel: z.enum(['sms', 'email']).optional(),
+        email: z.string().email().optional(),
+      })
+      .parse(req.body);
+
+    // Canal e-mail : destinataire déterminé AVANT de créer le code.
+    let destinataireEmail = null;
+    if (channel === 'email') {
+      const { rows } = await pool.query('SELECT email FROM users WHERE phone = $1 LIMIT 1', [
+        phone,
+      ]);
+      if (rows[0]) {
+        if (!rows[0].email) {
+          throw new HttpError(
+            409,
+            'email_unavailable',
+            "Ce compte n'a pas d'adresse e-mail enregistrée — utilisez le SMS ou contactez l'équipe sur WhatsApp"
+          );
+        }
+        destinataireEmail = rows[0].email;
+      } else {
+        if (!email) {
+          throw new HttpError(400, 'email_required', 'Indiquez votre adresse e-mail pour y recevoir le code');
+        }
+        destinataireEmail = email;
+      }
+    }
 
     // Code à 6 chiffres cryptographiquement aléatoire (000000–999999)
     const code = crypto.randomInt(0, 1_000_000).toString().padStart(6, '0');
@@ -58,9 +102,18 @@ authRouter.post('/request-otp', async (req, res, next) => {
       );
     });
 
-    await smsService.sendOtp(phone, code);
+    if (destinataireEmail) {
+      const { subject, html } = emailCodeOtp(code);
+      await envoyerEmail({ to: destinataireEmail, subject, html });
+    } else {
+      await smsService.sendOtp(phone, code);
+    }
 
     const body = { sent: true, expiresInMinutes: OTP_TTL_MINUTES };
+    if (destinataireEmail) {
+      body.channel = 'email';
+      body.emailMasked = masquerEmail(destinataireEmail);
+    }
     // Exposé hors production, ou si le mode pilote est activé
     // (OTP_EXPOSE_DEV_CODE=1) — mais JAMAIS quand un vrai fournisseur SMS
     // est branché : dès que les SMS réels partent (Africa's Talking), le

@@ -25,7 +25,13 @@ export default function EcranOtp() {
   const router = useRouter();
   const { connexion } = useAuth();
   const { t } = useT();
-  const params = useLocalSearchParams<{ phone?: string; devCode?: string; profil?: string }>();
+  const params = useLocalSearchParams<{
+    phone?: string;
+    devCode?: string;
+    profil?: string;
+    canal?: string;
+    emailMasque?: string;
+  }>();
   const phone = typeof params.phone === 'string' ? params.phone : '';
   const devCode = typeof params.devCode === 'string' ? params.devCode : '';
   const profil = typeof params.profil === 'string' ? params.profil : '';
@@ -103,7 +109,11 @@ export default function EcranOtp() {
     <Ecran fond="vagues">
       <Carte>
         <Titre>{t('otp_titre')}</Titre>
-        <SousTitre>{t('otp_intro', { phone })}</SousTitre>
+        <SousTitre>
+          {params.canal === 'email'
+            ? t('otp_intro_email', { email: String(params.emailMasque ?? '') })
+            : t('otp_intro', { phone })}
+        </SousTitre>
 
         {!!devCode && (
           <Pressable

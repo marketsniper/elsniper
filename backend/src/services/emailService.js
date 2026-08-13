@@ -165,6 +165,26 @@ export async function notifierEquipe(sujet, texte) {
   return { sent: false, reason: 'no_channel' };
 }
 
+// Code de connexion par E-MAIL — le remède aux SMS qui n'arrivent pas à
+// l'étranger (itinérance coupée) : le Wi-Fi, lui, marche toujours.
+export function emailCodeOtp(code) {
+  const corps = `
+    <p style="margin:0 0 10px;font-size:15px;line-height:22px;">
+      Voici votre code de connexion zanziGo · Here is your zanziGo login code:
+    </p>
+    <p style="margin:0;text-align:center;">
+      <span style="display:inline-block;background:#FBF0E4;border-radius:14px;padding:14px 30px;font-size:34px;font-weight:800;letter-spacing:8px;color:#E4572E;">${code}</span>
+    </p>
+    <p style="margin:14px 0 0;font-size:13px;color:#8A7168;">
+      Valable 10 minutes. Si vous n'êtes pas à l'origine de cette demande, ignorez cet e-mail.<br>
+      Valid for 10 minutes. If you didn't request it, just ignore this e-mail.
+    </p>`;
+  return {
+    subject: `${code} — votre code zanziGo · your zanziGo code`,
+    html: gabarit('Votre code de connexion · Your login code', corps),
+  };
+}
+
 const LIBELLES_PROFIL = {
   tourist: 'Touriste · prix en USD',
   resident: 'Résident · prix en USD (−10 % une fois vérifié)',

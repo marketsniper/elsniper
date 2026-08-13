@@ -3,7 +3,7 @@
 // l'OTP pour orienter la création de profil.
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import {
   Bouton,
@@ -43,6 +43,10 @@ export default function EcranTelephone() {
   const [numero, setNumero] = useState('');
   const [erreur, setErreur] = useState('');
   const [charge, setCharge] = useState(false);
+  // Touristes à l'étranger : les SMS n'arrivent pas toujours en itinérance —
+  // le code peut alors être reçu par E-MAIL (le Wi-Fi marche toujours, lui).
+  const [parEmail, setParEmail] = useState(false);
+  const [email, setEmail] = useState('');
 
   const envoyer = async () => {
     setErreur('');
@@ -51,12 +55,25 @@ export default function EcranTelephone() {
       setErreur(t('tel_erreur_numero'));
       return;
     }
+    if (parEmail && !/^\S+@\S+\.\S+$/.test(email.trim())) {
+      setErreur(t('tel_erreur_email'));
+      return;
+    }
     setCharge(true);
     try {
-      const { devCode } = await api.demanderOtp(telephone);
+      const resultat = await api.demanderOtp(
+        telephone,
+        parEmail ? { channel: 'email', email: email.trim() } : undefined
+      );
       router.push({
         pathname: '/(auth)/otp',
-        params: { phone: telephone, devCode: devCode ?? '', profil },
+        params: {
+          phone: telephone,
+          devCode: resultat.devCode ?? '',
+          profil,
+          canal: resultat.channel ?? 'sms',
+          emailMasque: resultat.emailMasked ?? '',
+        },
       });
     } catch (e) {
       setErreur(e instanceof ErreurApi ? e.message : t('tel_erreur_envoi'));
@@ -102,8 +119,33 @@ export default function EcranTelephone() {
             />
           </View>
         </View>
+        {parEmail && (
+          <Champ
+            label={t('tel_email_label')}
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            placeholder="vous@exemple.com"
+          />
+        )}
         <TexteErreur>{erreur}</TexteErreur>
-        <Bouton titre={t('tel_bouton')} icone="arrow-forward" onPress={envoyer} charge={charge} />
+        <Bouton
+          titre={parEmail ? t('tel_bouton_email') : t('tel_bouton')}
+          icone={parEmail ? 'mail-outline' : 'arrow-forward'}
+          onPress={envoyer}
+          charge={charge}
+        />
+        {/* Bascule SMS ↔ e-mail : le remède aux SMS bloqués en itinérance. */}
+        <Pressable
+          onPress={() => setParEmail((v) => !v)}
+          accessibilityRole="button"
+          style={({ pressed }) => pressed && { opacity: 0.7 }}
+        >
+          <Text style={styles.lienEmail}>
+            {parEmail ? t('tel_email_retour_sms') : t('tel_email_lien')}
+          </Text>
+        </Pressable>
       </Carte>
 
       <EncartInfo icone="flask-outline" ton="attente">
@@ -138,5 +180,12 @@ const styles = StyleSheet.create({
   },
   champNumero: {
     flex: 1,
+  },
+  lienEmail: {
+    fontSize: 13.5,
+    fontWeight: '600',
+    color: couleurs.primaireFonce,
+    textAlign: 'center',
+    paddingVertical: espaces.s,
   },
 });

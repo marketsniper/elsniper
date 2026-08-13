@@ -1183,6 +1183,32 @@ const CHAINES = {
     sw: 'Safari imeghairiwa. Marejesho ya {montant}: timu itakulipa — ujumbe wa WhatsApp unaofunguka unawajulisha, bonyeza Tuma.',
   },
   commun_retour: { fr: 'Retour', en: 'Back', sw: 'Rudi' },
+  tel_email_lien: {
+    fr: '🌍 À l\'étranger ou pas de réception SMS ? Recevez le code par e-mail',
+    en: '🌍 Abroad or no SMS reception? Get the code by e-mail',
+    sw: '🌍 Uko nje ya nchi au huwezi kupokea SMS? Pokea msimbo kwa barua pepe',
+  },
+  tel_email_retour_sms: {
+    fr: '← Revenir au code par SMS',
+    en: '← Back to SMS code',
+    sw: '← Rudi kwa msimbo wa SMS',
+  },
+  tel_email_label: { fr: 'Votre adresse e-mail', en: 'Your e-mail address', sw: 'Barua pepe yako' },
+  tel_bouton_email: {
+    fr: 'Recevoir le code par e-mail',
+    en: 'Get the code by e-mail',
+    sw: 'Pokea msimbo kwa barua pepe',
+  },
+  tel_erreur_email: {
+    fr: 'Adresse e-mail invalide',
+    en: 'Invalid e-mail address',
+    sw: 'Barua pepe si sahihi',
+  },
+  otp_intro_email: {
+    fr: 'Code envoyé par e-mail à {email} — pensez aux spams.',
+    en: 'Code sent by e-mail to {email} — check your spam folder.',
+    sw: 'Msimbo umetumwa kwa barua pepe {email} — angalia pia spam.',
+  },
   commun_pas_encore: { fr: 'Pas encore', en: 'Not yet', sw: 'Bado' },
   course_demarrer_oui: { fr: 'Oui, démarrer 🚕', en: 'Yes, start 🚕', sw: 'Ndiyo, anza 🚕' },
   course_terminer_oui: { fr: 'Oui, terminer ✅', en: 'Yes, finish ✅', sw: 'Ndiyo, maliza ✅' },

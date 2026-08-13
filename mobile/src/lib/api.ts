@@ -163,16 +163,31 @@ function commeListe<T>(donnees: unknown, ...cles: string[]): T[] {
 // Auth (backend/src/routes/auth.js)
 // ---------------------------------------------------------------------------
 
-/** POST /auth/request-otp {phone} → {sent, expiresInMinutes, devCode? (hors prod)}. */
-export async function demanderOtp(phone: string): Promise<{ devCode?: string }> {
+/**
+ * POST /auth/request-otp {phone, channel?, email?} → {sent, expiresInMinutes,
+ * channel?, emailMasked?, devCode? (mode pilote)}. channel 'email' : le code
+ * part par e-mail (touristes à l'étranger sans réception SMS) — pour un
+ * compte existant, toujours vers l'e-mail enregistré.
+ */
+export async function demanderOtp(
+  phone: string,
+  options?: { channel?: 'sms' | 'email'; email?: string }
+): Promise<{ devCode?: string; channel?: string; emailMasked?: string }> {
   const donnees = await requete<Record<string, unknown>>('/auth/request-otp', {
     methode: 'POST',
-    corps: { phone },
+    corps: {
+      phone,
+      ...(options?.channel === 'email'
+        ? { channel: 'email', ...(options.email ? { email: options.email } : {}) }
+        : {}),
+    },
   });
   const devCode = donnees?.devCode ?? donnees?.dev_code;
   return {
     devCode:
       typeof devCode === 'string' || typeof devCode === 'number' ? String(devCode) : undefined,
+    channel: typeof donnees?.channel === 'string' ? donnees.channel : undefined,
+    emailMasked: typeof donnees?.emailMasked === 'string' ? donnees.emailMasked : undefined,
   };
 }
 

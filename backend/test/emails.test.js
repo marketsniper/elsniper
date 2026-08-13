@@ -11,7 +11,16 @@ import {
   isEmailStub,
   notifierEquipe,
 } from '../src/services/emailService.js';
-import { app, authHeaders, authenticate, nextHotelEmail, nextPhone, useTestDb, HOTEL_PASSWORD } from './setup.js';
+import {
+  app,
+  authHeaders,
+  authenticate,
+  createTourist,
+  nextHotelEmail,
+  nextPhone,
+  useTestDb,
+  HOTEL_PASSWORD,
+} from './setup.js';
 
 useTestDb();
 
@@ -68,6 +77,46 @@ describe('E-mails de bienvenue', () => {
     });
     assert.equal(resultat.sent, false);
     assert.equal(resultat.stub, true);
+  });
+
+  it('code OTP par e-mail : nouveau numéro → e-mail au choix ; compte existant → e-mail ENREGISTRÉ uniquement', async () => {
+    // Nouveau numéro : le code part vers l'e-mail fourni (création de compte).
+    const nouveau = await request(app)
+      .post('/api/auth/request-otp')
+      .send({ phone: '+255744556677', channel: 'email', email: 'voyageur@example.com' });
+    assert.equal(nouveau.status, 200, JSON.stringify(nouveau.body));
+    assert.equal(nouveau.body.channel, 'email');
+    assert.equal(nouveau.body.emailMasked, 'v***@e***.com');
+    // Le code fonctionne pour se connecter (mode pilote : devCode présent).
+    const verif = await request(app)
+      .post('/api/auth/verify-otp')
+      .send({ phone: '+255744556677', code: nouveau.body.devCode });
+    assert.equal(verif.status, 200);
+
+    // Compte EXISTANT avec e-mail : un e-mail fourni par un tiers est IGNORÉ
+    // — le code part vers l'adresse enregistrée sur le compte.
+    const { user } = await createTourist({ email: 'proprietaire@bonhotel.com' });
+    const attaque = await request(app)
+      .post('/api/auth/request-otp')
+      .send({ phone: user.phone, channel: 'email', email: 'pirate@evil.com' });
+    assert.equal(attaque.status, 200);
+    // Masque de l'adresse ENREGISTRÉE (b*** = bonhotel), pas de celle du tiers.
+    assert.equal(attaque.body.emailMasked, 'p***@b***.com');
+    assert.ok(!JSON.stringify(attaque.body).includes('evil'));
+
+    // Compte existant SANS e-mail : canal refusé proprement.
+    const { user: sansEmail } = await createTourist();
+    const refus = await request(app)
+      .post('/api/auth/request-otp')
+      .send({ phone: sansEmail.phone, channel: 'email', email: 'autre@example.com' });
+    assert.equal(refus.status, 409);
+    assert.equal(refus.body.error.code, 'email_unavailable');
+
+    // Nouveau numéro sans e-mail fourni : 400 explicite.
+    const manquant = await request(app)
+      .post('/api/auth/request-otp')
+      .send({ phone: '+255788990011', channel: 'email' });
+    assert.equal(manquant.status, 400);
   });
 
   it('notifierEquipe : jamais bloquant, même sans TEAM_EMAIL configuré', async () => {
