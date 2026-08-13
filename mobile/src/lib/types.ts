@@ -380,6 +380,7 @@ export const TARIFS_TRAJET_USD: Partial<Record<TypeTrajet, number>> = {
  */
 export const TRAJETS_SPECIAUX_PRIVE_USD: { villes: [string, string]; prix: number }[] = [
   { villes: ['Nungwi', 'Paje'], prix: 65 },
+  { villes: ['Nungwi', 'Kizimkazi'], prix: 70 },
 ];
 
 /** Trajets spéciaux TZS : place locale en taxi partagé (deux sens). */
@@ -503,10 +504,10 @@ export function tarifsZoneItineraire(depart: string, arrivee: string): TarifsZon
 
 // ---------------------------------------------------------------------------
 // Grille privée VILLE ↔ VILLE au kilomètre — miroir exact du serveur
-// (pricingService.privateUsdForRoute) : prise en charge 20 USD +
-// 0,50 USD/km de route (vol d'oiseau × 1,35 de détour), arrondi aux 5 USD,
-// minimum 20. Les liaisons depuis/vers les hubs (Stone Town, aéroport)
-// gardent la grille par zone ; Nungwi ↔ Paje reste au trajet spécial 65 USD.
+// (pricingService.privateUsdForRoute) : 0,85 USD/km de route (vol
+// d'oiseau × 1,35 de détour), arrondi aux 5 USD, minimum 20. Les liaisons
+// depuis/vers les hubs (Stone Town, aéroport) gardent la grille par zone ;
+// trajets spéciaux prioritaires (Nungwi ↔ Paje 65, Nungwi ↔ Kizimkazi 70).
 // ---------------------------------------------------------------------------
 
 const COORDONNEES_VILLES: Record<string, [number, number]> = {

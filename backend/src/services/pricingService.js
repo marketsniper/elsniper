@@ -55,7 +55,10 @@ const CITY_ZONES = {
 };
 
 // Trajets spéciaux à prix fixe (USD, courses privées), deux sens.
-const SPECIAL_PRIVATE_ROUTES_USD = [{ a: 'Nungwi', b: 'Paje', usd: 65 }];
+const SPECIAL_PRIVATE_ROUTES_USD = [
+  { a: 'Nungwi', b: 'Paje', usd: 65 },
+  { a: 'Nungwi', b: 'Kizimkazi', usd: 70 },
+];
 
 // Trajets spéciaux à prix fixe (TZS, place locale en taxi partagé), deux
 // sens : la traversée Nungwi ↔ Paje est plus longue que les liaisons
