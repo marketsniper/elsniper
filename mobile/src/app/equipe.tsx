@@ -465,10 +465,16 @@ export default function EcranEquipe() {
               style={({ pressed }) => [styles.bandeauCa, pressed && { opacity: 0.85 }]}
             >
               <View style={styles.enTeteCa}>
-                <Text style={styles.titreAbonnes}>💰 {t('equipe_ca_titre')}</Text>
+                {/* Le titre se replie ; le raccourci « 7 j · 30 j » reste sur
+                    UNE ligne (il s'écrasait en colonne de lettres). */}
+                <Text style={[styles.titreAbonnes, { flexShrink: 1 }]}>
+                  💰 {t('equipe_ca_titre')}
+                </Text>
                 <View style={styles.droiteEnTeteCa}>
                   {!caOuvert && (
-                    <Text style={styles.astuceCa}>{t('equipe_ca_ouvrir')}</Text>
+                    <Text style={styles.astuceCa} numberOfLines={1}>
+                      {t('equipe_ca_ouvrir')}
+                    </Text>
                   )}
                   <Ionicons
                     name={caOuvert ? 'chevron-up' : 'chevron-down'}
@@ -1480,16 +1486,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: espaces.m,
   },
+  // Jamais écrasé par le titre : le raccourci garde sa largeur.
   droiteEnTeteCa: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: espaces.xs,
-    flexShrink: 1,
+    flexShrink: 0,
   },
   astuceCa: {
     fontSize: 11,
     color: couleurs.texteSecondaire,
-    flexShrink: 1,
   },
   ligneCa: {
     flexDirection: 'row',
