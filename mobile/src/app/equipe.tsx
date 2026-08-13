@@ -542,8 +542,17 @@ export default function EcranEquipe() {
       )}
       {paiements.map((paiement) => {
         const estColis = !!paiement.package_id;
-        const depart = estColis ? paiement.package_pickup : paiement.trip_pickup;
-        const arrivee = estColis ? paiement.package_dropoff : paiement.trip_dropoff;
+        const estPlace = !!paiement.ride_booking_id;
+        const depart = estColis
+          ? paiement.package_pickup
+          : estPlace
+            ? paiement.ride_origin
+            : paiement.trip_pickup;
+        const arrivee = estColis
+          ? paiement.package_dropoff
+          : estPlace
+            ? paiement.ride_destination
+            : paiement.trip_dropoff;
         const montant = formaterMontant(
           Number(champ(paiement, 'amount') ?? 0),
           String(champ(paiement, 'currency') ?? 'TZS')
@@ -552,7 +561,13 @@ export default function EcranEquipe() {
           <Carte key={paiement.id}>
             <View style={styles.ligneDetails}>
               <Badge
-                texte={estColis ? t('equipe_paiement_colis') : t('equipe_paiement_course')}
+                texte={
+                  estColis
+                    ? t('equipe_paiement_colis')
+                    : estPlace
+                      ? t('equipe_paiement_place', { n: paiement.ride_seats ?? 1 })
+                      : t('equipe_paiement_course')
+                }
                 ton="primaire"
               />
               <Text style={styles.prix}>{montant}</Text>
@@ -565,7 +580,10 @@ export default function EcranEquipe() {
             {estColis && !!paiement.package_qr && (
               <Text style={styles.detail}>{paiement.package_qr}</Text>
             )}
-            {!estColis && !!paiement.trip_client_name && (
+            {estPlace && !!paiement.ride_client_name && (
+              <Text style={styles.detail}>{paiement.ride_client_name}</Text>
+            )}
+            {!estColis && !estPlace && !!paiement.trip_client_name && (
               <Text style={styles.detail}>{paiement.trip_client_name}</Text>
             )}
             <Bouton

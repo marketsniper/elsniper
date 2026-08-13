@@ -17,7 +17,9 @@ import { isAdmin, requireAuth } from '../middleware/auth.js';
 import { buildTeamNotificationLink } from '../services/whatsappService.js';
 import { config } from '../config.js';
 import { localSeatTzsForRoute, sharedSeatUsdForRoute } from '../services/pricingService.js';
+import { createPaymentOrder, isStubMode } from '../services/pesapalService.js';
 import { RIDE_DESTINATIONS, RIDE_ORIGINS } from '../services/locations.js';
+import { randomUUID } from 'node:crypto';
 import { assertHotelVerified } from './hotels.js';
 
 const router = Router();
@@ -238,7 +240,7 @@ router.get(
     const parRide = {};
     if (rows.length > 0) {
       const { rows: reservations } = await query(
-        `SELECT b.ride_id, b.seats, b.created_at,
+        `SELECT b.ride_id, b.seats, b.created_at, b.paid_at,
                 u.full_name AS user_name, u.account_type, u.verification_status,
                 h.name AS hotel_name
          FROM ride_bookings b
@@ -266,41 +268,52 @@ router.get(
           commission_per_seat: round2(base.price_per_seat * taux),
           net_per_seat: round2(base.price_per_seat * (1 - taux)),
         });
+        // Chaque réservation indique si la place a été payée (équipe).
+        const avecPaiement = (b, resa) => ({ ...resa, paid: b.paid_at !== null });
         out.bookings = (parRide[r.id] ?? []).map((b) => {
           if (b.hotel_name) {
-            return avecGain(
-              {
-                seats: b.seats,
-                client_type: 'hotel',
-                client_name: b.hotel_name,
-                price_per_seat: round2(usd * (1 - config.hotelDiscountRate)),
-                currency: 'USD',
-              },
-              0.2
+            return avecPaiement(
+              b,
+              avecGain(
+                {
+                  seats: b.seats,
+                  client_type: 'hotel',
+                  client_name: b.hotel_name,
+                  price_per_seat: round2(usd * (1 - config.hotelDiscountRate)),
+                  currency: 'USD',
+                },
+                0.2
+              )
             );
           }
           if (b.account_type === 'local') {
-            return avecGain(
-              {
-                seats: b.seats,
-                client_type: 'local',
-                client_name: b.user_name ?? null,
-                price_per_seat: Number(r.price_per_seat),
-                currency: 'TZS',
-              },
-              0.15
+            return avecPaiement(
+              b,
+              avecGain(
+                {
+                  seats: b.seats,
+                  client_type: 'local',
+                  client_name: b.user_name ?? null,
+                  price_per_seat: Number(r.price_per_seat),
+                  currency: 'TZS',
+                },
+                0.15
+              )
             );
           }
           const resident = b.account_type === 'resident' && b.verification_status === 'verified';
-          return avecGain(
-            {
-              seats: b.seats,
-              client_type: resident ? 'resident' : 'tourist',
-              client_name: b.user_name ?? null,
-              price_per_seat: resident ? round2(usd * (1 - config.residentDiscountRate)) : usd,
-              currency: 'USD',
-            },
-            0.2
+          return avecPaiement(
+            b,
+            avecGain(
+              {
+                seats: b.seats,
+                client_type: resident ? 'resident' : 'tourist',
+                client_name: b.user_name ?? null,
+                price_per_seat: resident ? round2(usd * (1 - config.residentDiscountRate)) : usd,
+                currency: 'USD',
+              },
+              0.2
+            )
           );
         });
         return out;
@@ -395,11 +408,13 @@ router.post(
       }
     }
 
-    await query(
+    const { rows: bookingRows } = await query(
       `INSERT INTO ride_bookings (ride_id, user_id, hotel_id, seats)
-       VALUES ($1, $2, $3, $4)`,
+       VALUES ($1, $2, $3, $4)
+       RETURNING id`,
       [rideMaj.id, req.auth.userId ?? null, req.auth.hotelId ?? null, seats]
     );
+    const bookingId = bookingRows[0].id;
 
     const depart = new Date(rideMaj.departure_at).toLocaleString('fr-FR', {
       timeZone: 'Africa/Dar_es_Salaam',
@@ -412,6 +427,42 @@ router.post(
       pricing.mode === 'USD'
         ? `${rideUsd(rideMaj, pricing)} USD`
         : `${rideMaj.price_per_seat} ${rideMaj.currency}`;
+
+    // ----- Paiement en attente : la place réservée est DUE (voir règle de
+    // ponctualité) — la ligne arrive dans le tableau de bord équipe comme
+    // pour une course privée ou un colis, à confirmer une fois l'argent reçu.
+    const montantTotal =
+      pricing.mode === 'USD'
+        ? Math.round(rideUsd(rideMaj, pricing) * seats * 100) / 100
+        : Number(rideMaj.price_per_seat) * seats;
+    const deviseClient = pricing.mode === 'USD' ? 'USD' : rideMaj.currency;
+    let circuitPaiement = null;
+    if (!isStubMode()) {
+      circuitPaiement = await createPaymentOrder({
+        amount: montantTotal,
+        currency: deviseClient,
+        description: `zanziGo taxi partagé ${rideMaj.origin} → ${rideMaj.destination} (${seats} place·s)`,
+      });
+    }
+    const referencePaiement = circuitPaiement?.reference ?? `WHATSAPP-${randomUUID()}`;
+    const lienPaiement =
+      circuitPaiement?.paymentLink ??
+      buildTeamNotificationLink(
+        [
+          '💳 Paiement place(s) taxi partagé zanziGo',
+          `Client: ${booker}`,
+          `Trajet: ${rideMaj.origin} → ${rideMaj.destination}`,
+          `Places: ${seats}`,
+          `Montant: ${montantTotal} ${deviseClient}`,
+          `Réf: ${bookingId}`,
+        ].join('\n')
+      );
+    const { rows: paymentRows } = await query(
+      `INSERT INTO payments (ride_booking_id, amount, currency, pesapal_reference, payment_link)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING *`,
+      [bookingId, montantTotal, deviseClient, referencePaiement, lienPaiement]
+    );
     const notification = buildTeamNotificationLink(
       [
         '🚌 Réservation confirmée — taxi partagé zanziGo',
@@ -432,6 +483,10 @@ router.post(
     // générique « demande de place »).
     sortie.whatsapp_link = notification;
     sortie.booked_seats = seats;
+    sortie.payment = {
+      ...paymentRows[0],
+      payment_method: circuitPaiement ? 'pesapal' : 'manual',
+    };
     res.status(201).json(sortie);
   })
 );

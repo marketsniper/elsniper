@@ -1505,6 +1505,13 @@ const CHAINES = {
     en: 'Each client pays in THEIR currency: locals in shillings (you receive 90%), tourists and residents in dollars (you receive 80%). Seeing a dollar price for a tourist is therefore normal.',
     sw: 'Kila mteja hulipa kwa sarafu YAKE: wazawa kwa shilingi (unapokea 90%), watalii na wakazi kwa dola (unapokea 80%). Kuona bei ya dola kwa mtalii ni jambo la kawaida.',
   },
+  resa_payee: { fr: 'payée', en: 'paid', sw: 'imelipwa' },
+  resa_impayee: { fr: 'à encaisser', en: 'to collect', sw: 'inasubiri malipo' },
+  equipe_paiement_place: {
+    fr: '🚌 Taxi partagé · {n} place(s)',
+    en: '🚌 Shared taxi · {n} seat(s)',
+    sw: '🚌 Teksi ya pamoja · kiti {n}',
+  },
   resa_type_tourist: { fr: 'touriste', en: 'tourist', sw: 'mtalii' },
   resa_type_resident: { fr: 'résident', en: 'resident', sw: 'mkazi' },
   resa_type_local: { fr: 'local', en: 'local', sw: 'mzawa' },

@@ -68,6 +68,8 @@ export interface ReservationRide {
   /** Commission zanziGo et gain net du chauffeur, par place. */
   commission_per_seat?: number;
   net_per_seat?: number;
+  /** Place soldée (paiement confirmé par l'équipe). */
+  paid?: boolean;
 }
 
 /** Ligne payments renvoyée par POST /trips/:id/payment et /packages/:id/payment. */
@@ -87,6 +89,12 @@ export interface PaiementEquipe extends Paiement {
   package_pickup?: string | null;
   package_dropoff?: string | null;
   package_qr?: string | null;
+  /** Place(s) de taxi partagé (ride_bookings). */
+  ride_booking_id?: string | null;
+  ride_origin?: string | null;
+  ride_destination?: string | null;
+  ride_seats?: number | null;
+  ride_client_name?: string | null;
 }
 
 /** Session authentifiée persistée dans SecureStore. */

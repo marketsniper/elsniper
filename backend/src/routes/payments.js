@@ -27,10 +27,18 @@ router.get(
               t.client_name      AS trip_client_name,
               pk.pickup_location  AS package_pickup,
               pk.dropoff_location AS package_dropoff,
-              pk.qr_code          AS package_qr
+              pk.qr_code          AS package_qr,
+              r.origin            AS ride_origin,
+              r.destination       AS ride_destination,
+              rb.seats            AS ride_seats,
+              COALESCE(u.full_name, h.name) AS ride_client_name
        FROM payments p
        LEFT JOIN trips t ON t.id = p.trip_id
        LEFT JOIN packages pk ON pk.id = p.package_id
+       LEFT JOIN ride_bookings rb ON rb.id = p.ride_booking_id
+       LEFT JOIN posted_rides r ON r.id = rb.ride_id
+       LEFT JOIN users u ON u.id = rb.user_id
+       LEFT JOIN hotels h ON h.id = rb.hotel_id
        WHERE p.status = $1
        ORDER BY p.created_at DESC
        LIMIT 200`,
@@ -46,11 +54,21 @@ async function getPayment(id) {
   return rows[0];
 }
 
-// Vrai si le porteur du jeton est le payeur de la cible du paiement
-// (client de la course, ou expéditeur du colis).
+// Vrai si le porteur du jeton est le payeur de la cible du paiement (client
+// de la course, expéditeur du colis, ou réservateur de la place partagée).
 async function isPayer(payment, auth) {
   if (payment.trip_id) {
     const { rows } = await query('SELECT user_id, hotel_id FROM trips WHERE id = $1', [payment.trip_id]);
+    if (!rows[0]) return false;
+    return (
+      (rows[0].user_id !== null && rows[0].user_id === auth.userId) ||
+      (rows[0].hotel_id !== null && rows[0].hotel_id === auth.hotelId)
+    );
+  }
+  if (payment.ride_booking_id) {
+    const { rows } = await query('SELECT user_id, hotel_id FROM ride_bookings WHERE id = $1', [
+      payment.ride_booking_id,
+    ]);
     if (!rows[0]) return false;
     return (
       (rows[0].user_id !== null && rows[0].user_id === auth.userId) ||
@@ -163,6 +181,12 @@ async function appliquerConfirmation(payment) {
         `UPDATE packages SET status = 'paid' WHERE id = $1 AND status = 'created'`,
         [payment.package_id]
       );
+    } else if (payment.ride_booking_id) {
+      // Place de taxi partagé soldée : la fiche du chauffeur l'affiche payée.
+      await client.query(
+        `UPDATE ride_bookings SET paid_at = now() WHERE id = $1 AND paid_at IS NULL`,
+        [payment.ride_booking_id]
+      );
     }
 
     // Un client qui appuie plusieurs fois sur « payer » crée plusieurs
@@ -172,8 +196,10 @@ async function appliquerConfirmation(payment) {
     await client.query(
       `UPDATE payments SET status = 'failed'
        WHERE id <> $1 AND status = 'pending'
-         AND ((trip_id IS NOT NULL AND trip_id = $2) OR (package_id IS NOT NULL AND package_id = $3))`,
-      [payment.id, payment.trip_id, payment.package_id]
+         AND ((trip_id IS NOT NULL AND trip_id = $2)
+           OR (package_id IS NOT NULL AND package_id = $3)
+           OR (ride_booking_id IS NOT NULL AND ride_booking_id = $4))`,
+      [payment.id, payment.trip_id, payment.package_id, payment.ride_booking_id]
     );
 
     return paymentRows[0];

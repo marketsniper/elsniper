@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 import request from 'supertest';
 import { pool } from '../src/db.js';
 import {
+  adminHeaders,
   app,
   authHeaders,
   createLocal,
@@ -137,5 +138,48 @@ describe('Devises taxi partagé (parcours local complet)', () => {
     const mine = await request(app).get('/api/rides/mine').set(authHeaders(tokenChauffeur));
     const annonce = mine.body.find((r) => r.id === posted.body.id);
     assert.equal(annonce.status, 'open');
+  });
+});
+
+describe('Paiement des places de taxi partagé', () => {
+  it('réservation → paiement pending au tableau équipe ; confirmation → place payée', async () => {
+    const { token: tokenChauffeur } = await createVerifiedDriver();
+    const { token: tokenLocal } = await createLocal();
+
+    const depart = new Date(Date.now() + 6 * 3600 * 1000).toISOString();
+    const posted = await request(app)
+      .post('/api/rides')
+      .set(authHeaders(tokenChauffeur))
+      .send({ origin: 'Aéroport (AAKIA)', destination: 'Nungwi', departureAt: depart, seatsTotal: 6 });
+
+    // Un local réserve 2 places → paiement en attente de 2 × 15 000 TZS.
+    const resa = await request(app)
+      .post(`/api/rides/${posted.body.id}/book`)
+      .set(authHeaders(tokenLocal))
+      .send({ seats: 2 });
+    assert.equal(resa.status, 201);
+    assert.ok(resa.body.payment, 'le paiement doit accompagner la réservation');
+    assert.equal(Number(resa.body.payment.amount), 30000);
+    assert.equal(resa.body.payment.currency, 'TZS');
+    assert.equal(resa.body.payment.status, 'pending');
+
+    // Visible dans le tableau de bord équipe, avec le contexte du trajet.
+    const enAttente = await request(app).get('/api/payments?status=pending').set(adminHeaders());
+    const ligne = enAttente.body.find((p) => p.id === resa.body.payment.id);
+    assert.ok(ligne, 'paiement absent du tableau équipe');
+    assert.equal(ligne.ride_origin, 'Aéroport (AAKIA)');
+    assert.equal(ligne.ride_destination, 'Nungwi');
+    assert.equal(ligne.ride_seats, 2);
+    assert.equal(ligne.ride_client_name, 'Juma Local');
+
+    // L'équipe confirme (argent reçu) → la fiche chauffeur passe la place en payée.
+    const confirme = await request(app)
+      .post(`/api/payments/${resa.body.payment.id}/confirm`)
+      .set(adminHeaders())
+      .send({});
+    assert.equal(confirme.status, 200);
+
+    const mine = await request(app).get('/api/rides/mine').set(authHeaders(tokenChauffeur));
+    assert.equal(mine.body[0].bookings[0].paid, true);
   });
 });
