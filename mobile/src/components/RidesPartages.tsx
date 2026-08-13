@@ -10,10 +10,11 @@
 // et price_per_seat (TZS) aux locaux/chauffeurs — on affiche le champ présent.
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from 'expo-router';
+
+import { useRafraichissementAuto } from '@/lib/rafraichissementAuto';
 import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
-  Linking,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -80,9 +81,8 @@ export function RidesPartages() {
       setMessageOk(t('rides_reservation_ok', { n: places }));
       setPlacesChoisies((prev) => ({ ...prev, [ride.id]: 1 }));
       await rafraichir();
-      // Notification WhatsApp pré-remplie vers l'équipe.
-      const lien = champ<string>(reponse, 'whatsapp_link', 'whatsappLink');
-      if (lien) await Linking.openURL(lien);
+      // L'équipe est prévenue automatiquement par le serveur (e-mail) —
+      // plus de message WhatsApp à envoyer par le client.
     } catch (e) {
       if (e instanceof ErreurApi && e.code === 'not_enough_seats') {
         setErreur(t('rides_erreur_places'));
@@ -115,6 +115,10 @@ export function RidesPartages() {
       // silencieux : repli sur la liste locale
     }
   }, []);
+
+  // Les places restantes bougent en direct : la liste se recharge toute
+  // seule tant que l'écran est affiché.
+  useRafraichissementAuto(rafraichir);
 
   useFocusEffect(
     useCallback(() => {

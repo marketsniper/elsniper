@@ -154,9 +154,8 @@ export default function EcranNouveauColis() {
       const proprietaireId = (expediteurHotel ?? expediteurUser)!.id;
       await ajouterColisLocal(proprietaireId, colis.id);
       router.replace(`/package/${colis.id}`);
-      // Résumé « colis posté » vers l'équipe, prêt à envoyer.
-      const lienNotification = champ<string>(colis, 'whatsapp_link', 'whatsappLink');
-      if (lienNotification) await Linking.openURL(lienNotification);
+      // L'équipe est prévenue automatiquement par le serveur (e-mail) —
+      // plus de message WhatsApp à envoyer par l'expéditeur.
     } catch (e) {
       setErreur(e instanceof ErreurApi ? e.message : t('ncolis_erreur_creation'));
     } finally {

@@ -167,10 +167,8 @@ export default function EcranReserver() {
       setNomClient('');
       setTelClient('+255');
       router.push(`/trip/${trajet.id}`);
-      // Résumé « réservation postée » vers l'équipe (course, profil, prix),
-      // prêt à envoyer — l'équipe est prévenue de CHAQUE réservation.
-      const lienNotification = champ<string>(trajet, 'whatsapp_link', 'whatsappLink');
-      if (lienNotification) await Linking.openURL(lienNotification);
+      // L'équipe est prévenue automatiquement par le serveur (e-mail) —
+      // plus de message WhatsApp à envoyer par le client.
     } catch (e) {
       if (e instanceof ErreurApi && e.code === 'local_only') {
         setErreur(t('reserver_erreur_local_only'));

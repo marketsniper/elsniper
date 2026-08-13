@@ -7,6 +7,8 @@ import { isAdmin, requireAuth, requireAdmin } from '../middleware/auth.js';
 import { generateVehicleQr } from '../services/qrService.js';
 import { valeurReservationPlace } from './stats.js';
 
+import { notifierEquipe } from '../services/emailService.js';
+
 const router = Router();
 
 // Candidature Taxi Partner : 3 documents obligatoires — permis de conduire,
@@ -64,6 +66,17 @@ router.post(
         data.vehiclePhotoUrl,
         data.idDocumentUrl ?? null,
       ]
+    );
+    // L'équipe est prévenue automatiquement qu'une candidature attend.
+    notifierEquipe(
+      '🚗 Nouvelle candidature chauffeur — zanziGo',
+      [
+        `Nom: ${rows[0].full_name}`,
+        `Téléphone: ${rows[0].phone}`,
+        `Véhicule: ${rows[0].vehicle_model ?? '—'} (${rows[0].vehicle_plate})`,
+        `Zone: ${rows[0].zone}`,
+        'À faire: contrôler les documents dans le tableau de bord (Candidatures).',
+      ].join('\n')
     );
     res.status(201).json(rows[0]);
   })

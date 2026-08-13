@@ -9,6 +9,7 @@ import {
   emailBienvenueHotel,
   envoyerEmail,
   isEmailStub,
+  notifierEquipe,
 } from '../src/services/emailService.js';
 import { app, authHeaders, authenticate, nextHotelEmail, nextPhone, useTestDb, HOTEL_PASSWORD } from './setup.js';
 
@@ -67,6 +68,11 @@ describe('E-mails de bienvenue', () => {
     });
     assert.equal(resultat.sent, false);
     assert.equal(resultat.stub, true);
+  });
+
+  it('notifierEquipe : jamais bloquant, même sans TEAM_EMAIL configuré', async () => {
+    const resultat = await notifierEquipe('Test', 'ligne 1\nligne 2');
+    assert.equal(resultat.sent, false);
   });
 
   it('inscriptions : client avec e-mail et hôtel réussissent en mode stub', async () => {

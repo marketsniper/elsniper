@@ -4,7 +4,7 @@ import { query } from '../db.js';
 import { HttpError, notFound } from '../errors.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { isAdmin, requireAuth, requireAdmin } from '../middleware/auth.js';
-import { emailBienvenueClient, envoyerEmail } from '../services/emailService.js';
+import { emailBienvenueClient, envoyerEmail, notifierEquipe } from '../services/emailService.js';
 
 const router = Router();
 
@@ -64,6 +64,19 @@ router.post(
     if (rows[0].email) {
       const { subject, html } = emailBienvenueClient(rows[0]);
       envoyerEmail({ to: rows[0].email, subject, html }).catch(() => {});
+    }
+    // Compte résident/local : l'équipe est prévenue qu'un document attend
+    // sa vérification (les touristes sont validés d'office).
+    if (needsVerification) {
+      notifierEquipe(
+        '🪪 Nouveau compte à vérifier — zanziGo',
+        [
+          `Nom: ${rows[0].full_name}`,
+          `Téléphone: ${rows[0].phone}`,
+          `Profil: ${rows[0].account_type}`,
+          'À faire: contrôler le document dans le tableau de bord (Comptes).',
+        ].join('\n')
+      );
     }
     res.status(201).json(rows[0]);
   })

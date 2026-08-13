@@ -5,11 +5,13 @@
 // « Faire le ménage » : masque les colis livrés/annulés antérieurs au coup
 // de balai (local à l'appareil — rien n'est supprimé chez zanziGo).
 import { useFocusEffect, useRouter } from 'expo-router';
+
+import { useRafraichissementAuto } from '@/lib/rafraichissementAuto';
 import React, { useCallback, useState } from 'react';
 import { Alert, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 
 import { FondPlage } from '@/components/FondPlage';
-import { BadgeStatutColis, Bouton, EtatVide } from '@/components/ui';
+import { BadgeStatutColis, Bouton, EtatVide, BoutonRafraichir } from '@/components/ui';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { listerColisLocaux } from '@/lib/colisLocal';
@@ -59,6 +61,9 @@ export default function EcranColis() {
       setCharge(false);
     }
   }, [proprietaireId, hotel]);
+
+  // Mise à jour automatique tant que l'écran est affiché.
+  useRafraichissementAuto(rafraichir);
 
   useFocusEffect(
     useCallback(() => {
@@ -156,6 +161,7 @@ export default function EcranColis() {
           );
         }}
       />
+      <BoutonRafraichir onPress={rafraichir} enCours={charge} />
     </FondPlage>
   );
 }

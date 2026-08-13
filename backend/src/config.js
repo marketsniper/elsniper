@@ -95,6 +95,10 @@ export const config = {
     brevoApiKey: env.BREVO_API_KEY || '',
     resendApiKey: env.RESEND_API_KEY || '',
     from: env.EMAIL_FROM || 'zanziGo <onboarding@resend.dev>',
+    // Boîte de l'ÉQUIPE : chaque action sur la plateforme (réservation,
+    // colis, annonce, annulation, paiement crédit…) y est notifiée
+    // AUTOMATIQUEMENT — le client n'a plus rien à envoyer lui-même.
+    teamEmail: env.TEAM_EMAIL || '',
   },
 
   // Stockage S3 compatible (Cloudflare R2 recommandé) — sans clés, fallback disque local

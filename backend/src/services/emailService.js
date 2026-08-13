@@ -108,6 +108,26 @@ function bouton(url, texte) {
   </p>`;
 }
 
+/**
+ * Notification AUTOMATIQUE de l'équipe : chaque action sur la plateforme
+ * (réservation, colis posté, annonce publiée, annulation, paiement crédit…)
+ * part en e-mail vers TEAM_EMAIL — le client n'a plus rien à envoyer
+ * lui-même. `texte` : les mêmes lignes que le résumé WhatsApp. Fire-and-
+ * forget : jamais bloquant, jamais d'exception.
+ */
+export function notifierEquipe(sujet, texte) {
+  const destinataire = config.emailer.teamEmail;
+  if (!destinataire) return Promise.resolve({ sent: false, reason: 'no_team_email' });
+  const corps = `
+    <p style="margin:0 0 12px;font-size:15px;line-height:24px;white-space:pre-line;">${String(texte)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')}</p>
+    <p style="margin:0;font-size:13px;color:#8A7168;">Notification automatique zanziGo — le tableau de bord équipe a le détail.</p>`;
+  return envoyerEmail({ to: destinataire, subject: sujet, html: gabarit(sujet, corps) }).catch(
+    () => ({ sent: false, reason: 'error' })
+  );
+}
+
 const LIBELLES_PROFIL = {
   tourist: 'Touriste · prix en USD',
   resident: 'Résident · prix en USD (−10 % une fois vérifié)',

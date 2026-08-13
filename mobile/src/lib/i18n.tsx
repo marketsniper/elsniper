@@ -498,6 +498,11 @@ const CHAINES = {
     en: 'Seat cancelled. {montant} refund: the team will pay you — the WhatsApp message that opens notifies them, just press Send.',
     sw: 'Kiti kimeghairiwa. Marejesho ya {montant}: timu itakulipa — ujumbe wa WhatsApp unaofunguka unawajulisha, bonyeza Tuma.',
   },
+  places_contact: {
+    fr: 'Un souci avec une place ? Contactez l\'équipe sur WhatsApp',
+    en: 'A problem with a seat? Contact the team on WhatsApp',
+    sw: 'Tatizo na kiti? Wasiliana na timu kwa WhatsApp',
+  },
   place_trop_tard: {
     fr: 'À moins de 24 h du départ, la place ne peut plus être annulée et reste due.',
     en: 'Less than 24 h before departure, the seat can no longer be cancelled and remains due.',

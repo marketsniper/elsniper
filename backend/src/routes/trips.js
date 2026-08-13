@@ -11,6 +11,7 @@ import { buildTeamNotificationLink, tripRequestMessage } from '../services/whats
 import { assertHotelVerified } from './hotels.js';
 import { randomUUID } from 'node:crypto';
 import { tauxRemboursement } from '../services/annulationService.js';
+import { notifierEquipe } from '../services/emailService.js';
 
 const router = Router();
 
@@ -159,6 +160,9 @@ router.post(
       whatsappLink,
       trip.id,
     ]);
+    // L'équipe est prévenue AUTOMATIQUEMENT (e-mail) — le client n'a plus
+    // de message à envoyer lui-même.
+    notifierEquipe('🚕 Nouvelle demande de course — zanziGo', tripRequestMessage(trip, bookerLabel, audience));
     res.status(201).json(updated.rows[0]);
   })
 );
@@ -351,20 +355,23 @@ router.post(
           soldeRestant: Math.round((solde - Number(trip.price)) * 100) / 100,
         };
       });
-      // L'équipe est ALERTÉE comme pour tout paiement : l'app de l'hôtel
-      // ouvre ce lien WhatsApp pré-rempli, et la ligne apparaît aussi dans
-      // « Derniers paiements reçus » du tableau de bord (badge crédit).
-      const alerteEquipe = buildTeamNotificationLink(
-        [
-          '💳 Paiement reçu par CRÉDIT — course zanziGo',
-          `Hôtel: ${hotelNom}`,
-          `Trajet: ${trip.pickup_location} → ${trip.dropoff_location}`,
-          `Montant: ${trip.price} ${trip.currency} (déjà encaissé — payé avec le crédit prépayé)`,
-          `Solde crédit restant: ${soldeRestant} USD`,
-          `Réf: ${trip.id}`,
-        ].join('\n')
-      );
-      res.status(201).json({ ...paiement, payment_method: 'credit', whatsapp_link: alerteEquipe });
+      // L'équipe est ALERTÉE AUTOMATIQUEMENT (e-mail) — la ligne apparaît
+      // aussi dans « Derniers paiements reçus » du tableau de bord (badge
+      // crédit). Le lien WhatsApp reste disponible en secours.
+      const resumeCredit = [
+        '💳 Paiement reçu par CRÉDIT — course zanziGo',
+        `Hôtel: ${hotelNom}`,
+        `Trajet: ${trip.pickup_location} → ${trip.dropoff_location}`,
+        `Montant: ${trip.price} ${trip.currency} (déjà encaissé — payé avec le crédit prépayé)`,
+        `Solde crédit restant: ${soldeRestant} USD`,
+        `Réf: ${trip.id}`,
+      ].join('\n');
+      notifierEquipe('💳 Paiement reçu par crédit hôtel — course', resumeCredit);
+      res.status(201).json({
+        ...paiement,
+        payment_method: 'credit',
+        whatsapp_link: buildTeamNotificationLink(resumeCredit),
+      });
       return;
     }
 
@@ -551,15 +558,17 @@ router.post(
 
     const sortie = { ...updated, refund };
     if (refund) {
-      sortie.whatsapp_link = buildTeamNotificationLink(
-        [
-          '❌ Annulation course payée — zanziGo',
-          `Trajet: ${trip.pickup_location} → ${trip.dropoff_location}`,
-          `Montant payé: ${trip.price} ${trip.currency}`,
-          `À rembourser: ${refund.amount} ${refund.currency} (${refund.rate * 100} %)`,
-          `Réf: ${trip.id}`,
-        ].join('\n')
-      );
+      const resumeAnnulation = [
+        '❌ Annulation course payée — zanziGo',
+        `Trajet: ${trip.pickup_location} → ${trip.dropoff_location}`,
+        `Montant payé: ${trip.price} ${trip.currency}`,
+        `À rembourser: ${refund.amount} ${refund.currency} (${refund.rate * 100} %)`,
+        `Réf: ${trip.id}`,
+      ].join('\n');
+      // Remboursement dû : l'équipe est prévenue automatiquement (e-mail),
+      // la ligne arrive aussi dans « Remboursements à verser ».
+      notifierEquipe('❌ Annulation course payée — remboursement à verser', resumeAnnulation);
+      sortie.whatsapp_link = buildTeamNotificationLink(resumeAnnulation);
     }
     res.json(sortie);
   })

@@ -11,6 +11,7 @@ import { circuitPaiementUsd } from '../services/paypalService.js';
 import { createPaymentOrder, isStubMode } from '../services/pesapalService.js';
 import { generatePackageQr } from '../services/qrService.js';
 import { buildTeamNotificationLink, packageRequestMessage } from '../services/whatsappService.js';
+import { notifierEquipe } from '../services/emailService.js';
 import { assertHotelVerified } from './hotels.js';
 
 const router = Router();
@@ -174,6 +175,9 @@ router.post(
       return rows[0];
     });
 
+    // L'équipe est prévenue automatiquement (e-mail) — l'expéditeur n'a
+    // plus de message à envoyer lui-même.
+    notifierEquipe('📦 Nouveau colis posté — zanziGo', packageRequestMessage(pkg, senderLabel));
     res.status(201).json({
       ...pkg,
       voucher_used: data.useVoucher === true,
@@ -403,16 +407,16 @@ router.post(
       // L'équipe est ALERTÉE comme pour tout paiement : lien WhatsApp
       // pré-rempli ouvert par l'app de l'hôtel + ligne « Derniers paiements
       // reçus » (badge crédit) dans le tableau de bord.
-      const alerteEquipe = buildTeamNotificationLink(
-        [
-          '💳 Paiement reçu par CRÉDIT — colis zanziGo',
-          `Hôtel: ${hotelNom}`,
-          `Colis: ${pkg.pickup_location} → ${pkg.dropoff_location}`,
-          `Montant: ${pkg.price} ${pkg.currency} (déjà encaissé — payé avec le crédit prépayé)`,
-          `Solde crédit restant: ${soldeRestant} USD`,
-          `Réf: ${pkg.qr_code}`,
-        ].join('\n')
-      );
+      const resumeCredit = [
+        '💳 Paiement reçu par CRÉDIT — colis zanziGo',
+        `Hôtel: ${hotelNom}`,
+        `Colis: ${pkg.pickup_location} → ${pkg.dropoff_location}`,
+        `Montant: ${pkg.price} ${pkg.currency} (déjà encaissé — payé avec le crédit prépayé)`,
+        `Solde crédit restant: ${soldeRestant} USD`,
+        `Réf: ${pkg.qr_code}`,
+      ].join('\n');
+      notifierEquipe('💳 Paiement reçu par crédit hôtel — colis', resumeCredit);
+      const alerteEquipe = buildTeamNotificationLink(resumeCredit);
       res.status(201).json({ ...paiement, payment_method: 'credit', whatsapp_link: alerteEquipe });
       return;
     }

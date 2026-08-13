@@ -5,7 +5,7 @@ import { HttpError, notFound } from '../errors.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { isAdmin, requireAuth, requireAdmin } from '../middleware/auth.js';
 import { hashPassword } from '../services/passwordService.js';
-import { emailBienvenueHotel, envoyerEmail } from '../services/emailService.js';
+import { emailBienvenueHotel, envoyerEmail, notifierEquipe } from '../services/emailService.js';
 
 // Fidélité : 1 bon toutes les COURSES_PAR_BON courses TERMINÉES réservées
 // par l'hôtel — la rampe de lancement de zanziGo, ce sont les hôtels : on
@@ -73,6 +73,19 @@ router.post(
     // jamais bloquant (le mot de passe n'est JAMAIS envoyé).
     const { subject, html } = emailBienvenueHotel(rows[0]);
     envoyerEmail({ to: rows[0].email, subject, html }).catch(() => {});
+    // …et l'équipe est prévenue automatiquement qu'un hôtel attend sa
+    // vérification.
+    notifierEquipe(
+      '🏨 Nouvel hôtel inscrit — à vérifier',
+      [
+        `Établissement: ${rows[0].name}`,
+        `Contact: ${rows[0].contact_name}`,
+        `Zone: ${rows[0].zone}`,
+        `WhatsApp: ${rows[0].phone}`,
+        `E-mail: ${rows[0].email}`,
+        'À faire: appeler l\'établissement puis Valider/Refuser dans le tableau de bord.',
+      ].join('\n')
+    );
     res.status(201).json(sanitizeHotel(rows[0]));
   })
 );

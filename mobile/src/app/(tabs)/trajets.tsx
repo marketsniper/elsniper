@@ -10,11 +10,12 @@ import { Alert, FlatList, Linking, Pressable, RefreshControl, StyleSheet, Text, 
 
 import { Etoiles } from '@/components/Etoiles';
 import { FondPlage } from '@/components/FondPlage';
-import { BadgeStatutTrajet, Bouton, EtatVide, TexteErreur } from '@/components/ui';
+import { BadgeStatutTrajet, Bouton, BoutonRafraichir, EtatVide, TexteErreur } from '@/components/ui';
 import { api, ErreurApi } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { formaterDateRelativeI18n, libelleTypeTrajet, useT } from '@/lib/i18n';
 import { estBalaye, lireCoupDeBalai, passerCoupDeBalai } from '@/lib/menageLocal';
+import { useRafraichissementAuto } from '@/lib/rafraichissementAuto';
 import { couleurs, espaces, ombres, rayons } from '@/lib/theme';
 import {
   champ,
@@ -70,6 +71,10 @@ export default function EcranTrajets() {
       rafraichir();
     }, [rafraichir])
   );
+
+  // La page se met à jour toute seule : chauffeur confirmé, paiement
+  // validé, place annulée… le client n'a rien à toucher.
+  useRafraichissementAuto(rafraichir);
 
   // Courses affichées : les actives toujours ; les terminées, annulées ou
   // EXPIRÉES (jamais payées, heure passée) seulement si elles sont
@@ -131,8 +136,7 @@ export default function EcranTrajets() {
                 })
               );
             }
-            // L'équipe est prévenue : message WhatsApp pré-rempli à envoyer.
-            if (resultat.whatsapp_link) Linking.openURL(resultat.whatsapp_link).catch(() => {});
+            // L'équipe est prévenue automatiquement par le serveur (e-mail).
             await rafraichir();
           } catch (e) {
             setErreur(e instanceof ErreurApi ? e.message : t('commun_annulation_impossible'));
@@ -184,7 +188,7 @@ export default function EcranTrajets() {
                           place.paid ? styles.badgePlacePayee : styles.badgePlaceAttente,
                         ]}
                       >
-                        {place.paid ? `✅ ${t('places_payee')}` : `⏳ ${t('places_a_payer')}`}
+                        {place.paid ? `✔ ${t('places_payee')}` : `⏳ ${t('places_a_payer')}`}
                       </Text>
                     </View>
                     {place.cancellable ? (
@@ -201,6 +205,15 @@ export default function EcranTrajets() {
                   </View>
                 ))}
                 <Text style={styles.reglePlaces}>{t('resa_regle_annulation')}</Text>
+                {/* Contact WhatsApp : uniquement EN CAS DE PROBLÈME — les
+                    notifications de routine partent automatiquement. */}
+                <Pressable
+                  onPress={() => Linking.openURL('https://wa.me/255666241749')}
+                  accessibilityRole="button"
+                  style={({ pressed }) => pressed && { opacity: 0.7 }}
+                >
+                  <Text style={styles.lienContact}>💬 {t('places_contact')}</Text>
+                </Pressable>
               </View>
             )}
           </>
@@ -288,6 +301,7 @@ export default function EcranTrajets() {
           );
         }}
       />
+      <BoutonRafraichir onPress={rafraichir} enCours={charge} />
     </FondPlage>
   );
 }
@@ -383,9 +397,10 @@ const styles = StyleSheet.create({
     borderRadius: rayons.pastille,
     overflow: 'hidden',
   },
+  // Teinte NEUTRE : le vert est réservé aux paiements par crédit hôtel.
   badgePlacePayee: {
-    color: couleurs.succes,
-    backgroundColor: couleurs.succesFond,
+    color: couleurs.encre,
+    backgroundColor: couleurs.bordure,
   },
   badgePlaceAttente: {
     color: couleurs.attente,
@@ -400,6 +415,11 @@ const styles = StyleSheet.create({
     fontSize: 12.5,
     color: couleurs.texteSecondaire,
     lineHeight: 18,
+  },
+  lienContact: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: couleurs.primaireFonce,
   },
   boutonPayer: {
     flexDirection: 'row',

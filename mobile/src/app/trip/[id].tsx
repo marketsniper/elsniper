@@ -24,6 +24,7 @@ import {
 } from '@/components/ui';
 import { api, ErreurApi } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { useRafraichissementAuto } from '@/lib/rafraichissementAuto';
 import { libelleStatutTrajet, libelleTypeTrajet, useT } from '@/lib/i18n';
 import { couleurs, espaces } from '@/lib/theme';
 import {
@@ -72,6 +73,10 @@ export default function EcranTrajet() {
       setErreur(e instanceof ErreurApi ? e.message : t('trip_introuvable'));
     }
   }, [id, t]);
+
+  // La fiche se met à jour toute seule : chauffeur confirmé par l'équipe,
+  // paiement validé… le client voit l'avancement sans rien toucher.
+  useRafraichissementAuto(charger);
 
   useFocusEffect(
     useCallback(() => {
@@ -125,10 +130,7 @@ export default function EcranTrajet() {
         api.creditHotel(hotelId).then((c) => setSoldeCredit(c.balance)).catch(() => {});
       }
       await charger();
-      // L'équipe est prévenue du paiement par crédit : le message WhatsApp
-      // pré-rempli s'ouvre, il ne reste qu'à appuyer sur Envoyer.
-      const alerte = champ<string>(paiement, 'whatsapp_link', 'whatsappLink');
-      if (alerte) Linking.openURL(alerte).catch(() => {});
+      // L'équipe est prévenue automatiquement par le serveur (e-mail).
     } catch (e) {
       setErreur(e instanceof ErreurApi ? e.message : t('trip_paiement_indisponible'));
     } finally {
@@ -194,10 +196,9 @@ export default function EcranTrajet() {
           try {
             const resultat = await api.annulerTrajet(trajet.id);
             await charger();
-            // Remboursement dû : l'équipe est prévenue par le message
-            // WhatsApp pré-rempli qui s'ouvre.
+            // Remboursement dû : l'équipe est prévenue automatiquement par
+            // le serveur (e-mail).
             const refund = champ<{ amount: number; currency: string }>(resultat, 'refund');
-            const alerte = champ<string>(resultat, 'whatsapp_link', 'whatsappLink');
             if (refund) {
               Alert.alert(
                 t('trip_annulee_titre'),
@@ -206,7 +207,6 @@ export default function EcranTrajet() {
                 })
               );
             }
-            if (alerte) Linking.openURL(alerte).catch(() => {});
           } catch (e) {
             setErreur(e instanceof ErreurApi ? e.message : t('commun_annulation_impossible'));
           } finally {

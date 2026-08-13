@@ -88,8 +88,39 @@ export function Ecran({
             <View style={styles.contenuFixe}>{children}</View>
           )}
         </KeyboardAvoidingView>
+        {/* Touche rafraîchir visible : le tirer-pour-rafraîchir n'est pas
+            connu de tout le monde — un bouton flottant est plus simple. */}
+        {onRefresh && <BoutonRafraichir onPress={rafraichir} enCours={rafraichit} />}
       </SafeAreaView>
     </FondPlage>
+  );
+}
+
+/**
+ * Bouton flottant « rafraîchir » (rond, en bas à droite) — pour les écrans
+ * clients : une simple touche recharge la page, sans geste à connaître.
+ */
+export function BoutonRafraichir({
+  onPress,
+  enCours = false,
+}: {
+  onPress: () => void;
+  enCours?: boolean;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={enCours}
+      accessibilityRole="button"
+      accessibilityLabel="Rafraîchir"
+      style={({ pressed }) => [styles.boutonRafraichir, pressed && { opacity: 0.8 }]}
+    >
+      {enCours ? (
+        <ActivityIndicator size="small" color={couleurs.surPrimaire} />
+      ) : (
+        <Ionicons name="refresh" size={22} color={couleurs.surPrimaire} />
+      )}
+    </Pressable>
   );
 }
 
@@ -385,6 +416,18 @@ const styles = StyleSheet.create({
   },
   flexible: {
     flex: 1,
+  },
+  boutonRafraichir: {
+    position: 'absolute',
+    right: espaces.l,
+    bottom: espaces.l,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: couleurs.primaire,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...ombres.carte,
   },
   rangeeLangues: {
     flexDirection: 'row',

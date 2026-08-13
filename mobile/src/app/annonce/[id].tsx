@@ -170,7 +170,7 @@ export default function EcranAnnonce() {
                 {resa.net_per_seat !== undefined
                   ? ` (${formaterMontant(resa.net_per_seat, resa.currency)} ${t('gain_net_par_place')})`
                   : ''}
-                {resa.paid ? ` · ✅ ${t('resa_payee')}` : ` · ⏳ ${t('resa_impayee')}`}
+                {resa.paid ? ` · ✔ ${t('resa_payee')}` : ` · ⏳ ${t('resa_impayee')}`}
               </Text>
             </View>
           ))

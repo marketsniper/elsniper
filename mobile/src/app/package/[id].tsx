@@ -20,6 +20,7 @@ import {
 } from '@/components/ui';
 import { api, ErreurApi } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { useRafraichissementAuto } from '@/lib/rafraichissementAuto';
 import { formaterDateRelativeI18n, libelleStatutColis, libelleTailleColis, useT } from '@/lib/i18n';
 
 import { couleurs, espaces, ombres, rayons } from '@/lib/theme';
@@ -66,6 +67,9 @@ export default function EcranDetailColis() {
     }
   }, [id, t]);
 
+  // La fiche se met à jour toute seule (payé, ramassé, livré…).
+  useRafraichissementAuto(charger);
+
   useFocusEffect(
     useCallback(() => {
       charger();
@@ -106,10 +110,7 @@ export default function EcranDetailColis() {
         api.creditHotel(hotelId).then((c) => setSoldeCredit(c.balance)).catch(() => {});
       }
       await charger();
-      // L'équipe est prévenue du paiement par crédit : le message WhatsApp
-      // pré-rempli s'ouvre, il ne reste qu'à appuyer sur Envoyer.
-      const alerte = champ<string>(paiement, 'whatsapp_link', 'whatsappLink');
-      if (alerte) Linking.openURL(alerte).catch(() => {});
+      // L'équipe est prévenue automatiquement par le serveur (e-mail).
     } catch (e) {
       setErreur(e instanceof ErreurApi ? e.message : t('trip_paiement_indisponible'));
     } finally {

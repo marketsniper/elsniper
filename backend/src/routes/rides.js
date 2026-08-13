@@ -22,6 +22,7 @@ import { RIDE_DESTINATIONS, RIDE_ORIGINS } from '../services/locations.js';
 import { randomUUID } from 'node:crypto';
 import { assertHotelVerified } from './hotels.js';
 import { tauxRemboursement } from '../services/annulationService.js';
+import { notifierEquipe } from '../services/emailService.js';
 
 const router = Router();
 
@@ -229,17 +230,19 @@ router.post(
       dateStyle: 'short',
       timeStyle: 'short',
     });
-    const notificationAnnonce = buildTeamNotificationLink(
-      [
-        '📣 Nouvelle annonce — taxi partagé zanziGo',
-        `Chauffeur: ${chauffeurRows[0]?.full_name ?? '?'} (${chauffeurRows[0]?.phone ?? '?'})`,
-        `Trajet: ${rows[0].origin} → ${rows[0].destination}`,
-        `Départ: ${departAffiche}`,
-        `Places: ${rows[0].seats_total}`,
-        `Prix place: ${rows[0].price_per_seat} TZS (locaux) · ${sharedSeatUsdForRoute(rows[0].origin, rows[0].destination)} USD (touristes)`,
-        `Réf: ${rows[0].id}`,
-      ].join('\n')
-    );
+    const resumeAnnonce = [
+      '📣 Nouvelle annonce — taxi partagé zanziGo',
+      `Chauffeur: ${chauffeurRows[0]?.full_name ?? '?'} (${chauffeurRows[0]?.phone ?? '?'})`,
+      `Trajet: ${rows[0].origin} → ${rows[0].destination}`,
+      `Départ: ${departAffiche}`,
+      `Places: ${rows[0].seats_total}`,
+      `Prix place: ${rows[0].price_per_seat} TZS (locaux) · ${sharedSeatUsdForRoute(rows[0].origin, rows[0].destination)} USD (touristes)`,
+      `Réf: ${rows[0].id}`,
+    ].join('\n');
+    // L'équipe est prévenue automatiquement (e-mail) ; le lien WhatsApp
+    // reste renvoyé en secours mais le chauffeur n'a plus rien à envoyer.
+    notifierEquipe('📣 Nouvelle annonce taxi partagé', resumeAnnonce);
+    const notificationAnnonce = buildTeamNotificationLink(resumeAnnonce);
     // Le chauffeur qui publie voit LES DEUX prix (TZS locaux + USD touristes)
     // pour comprendre que chaque client paie dans sa devise.
     res
@@ -530,8 +533,7 @@ router.post(
       dateStyle: 'short',
       timeStyle: 'short',
     });
-    const whatsappLink = buildTeamNotificationLink(
-      [
+    const resumeAnnulation = [
         '❌ Annulation place — taxi partagé zanziGo',
         `Client: ${etiquette}`,
         `Trajet: ${resultat.booking.origin} → ${resultat.booking.destination}`,
@@ -541,8 +543,12 @@ router.post(
           ? `À rembourser: ${resultat.refund.amount} ${resultat.refund.currency} (${resultat.refund.rate * 100} %)`
           : 'Aucun paiement reçu — rien à rembourser.',
         `Réf: ${resultat.booking.id}`,
-      ].join('\n')
+      ].join('\n');
+    notifierEquipe(
+      resultat.refund ? '❌ Place annulée — remboursement à verser' : '❌ Place annulée (non payée)',
+      resumeAnnulation
     );
+    const whatsappLink = buildTeamNotificationLink(resumeAnnulation);
 
     res.json({
       id: resultat.booking.id,
@@ -695,8 +701,7 @@ router.post(
        RETURNING *`,
       [bookingId, montantTotal, deviseClient, referencePaiement, lienPaiement]
     );
-    const notification = buildTeamNotificationLink(
-      [
+    const resumeResa = [
         '🚌 Réservation confirmée — taxi partagé zanziGo',
         `Course: Taxi partagé`,
         `Profil: ${profil}`,
@@ -709,8 +714,11 @@ router.post(
         'Paiement: sous 5 minutes — sinon la réservation s\'annule et les places sont remises en vente.',
         'Règle: retard de +10 min au départ = place annulée, due en intégralité au chauffeur (respect des autres voyageurs).',
         'Annulation: remboursement 100 % à 48 h ou plus du départ, 50 % entre 24 h et 48 h, impossible à moins de 24 h.',
-      ].join('\n')
-    );
+      ].join('\n');
+    // L'équipe est prévenue automatiquement (e-mail) — le client n'a plus
+    // de message à envoyer.
+    notifierEquipe('🚌 Place réservée — taxi partagé', resumeResa);
+    const notification = buildTeamNotificationLink(resumeResa);
 
     const sortie = serializeRide(rideMaj, pricing);
     // Le lien de CETTE réponse notifie la réservation (et remplace le lien
