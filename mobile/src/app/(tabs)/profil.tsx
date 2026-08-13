@@ -290,9 +290,10 @@ export default function EcranProfil() {
             <LigneInfo label={t('commun_zone')} valeur={String(champ(hotel, 'zone') ?? '—')} />
           </>
         )}
+        {/* Hôtels : grille touriste −5 % en USD — jamais TZS. */}
         <LigneInfo
           label={t('commun_devise')}
-          valeur={devise ?? (hotel || estLocal ? 'TZS' : 'USD')}
+          valeur={devise ?? (estLocal ? 'TZS' : 'USD')}
         />
       </Carte>
 
@@ -407,8 +408,10 @@ const styles = StyleSheet.create({
   },
   ligneSolde: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: espaces.s,
     backgroundColor: couleurs.sable,
     borderRadius: rayons.bouton,
     paddingHorizontal: espaces.m,
@@ -425,6 +428,8 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: couleurs.primaireFonce,
     fontVariant: ['tabular-nums'],
+    flexShrink: 1,
+    textAlign: 'right',
   },
   ligneDeconnexion: {
     flexDirection: 'row',
