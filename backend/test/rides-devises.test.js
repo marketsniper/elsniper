@@ -183,3 +183,75 @@ describe('Paiement des places de taxi partagé', () => {
     assert.equal(mine.body[0].bookings[0].paid, true);
   });
 });
+
+describe('Réservation impayée : annulation automatique après 5 minutes', () => {
+  it('non payée à +6 min → annulée, places rendues au chauffeur, paiement failed', async () => {
+    const { token: tokenChauffeur } = await createVerifiedDriver();
+    const { token: tokenLocal } = await createLocal();
+
+    const depart = new Date(Date.now() + 6 * 3600 * 1000).toISOString();
+    const posted = await request(app)
+      .post('/api/rides')
+      .set(authHeaders(tokenChauffeur))
+      .send({ origin: 'Aéroport (AAKIA)', destination: 'Nungwi', departureAt: depart, seatsTotal: 6 });
+
+    const resa = await request(app)
+      .post(`/api/rides/${posted.body.id}/book`)
+      .set(authHeaders(tokenLocal))
+      .send({ seats: 2 });
+    assert.equal(resa.status, 201);
+    assert.equal(resa.body.seats_available, 4);
+
+    // On vieillit la réservation de 6 minutes (le temps a passé, pas payé).
+    await pool.query(
+      `UPDATE ride_bookings SET created_at = now() - interval '6 minutes'
+       WHERE ride_id = $1`,
+      [posted.body.id]
+    );
+
+    // Le chauffeur recharge sa fiche : les 2 places sont revenues,
+    // la réservation annulée a disparu.
+    const mine = await request(app).get('/api/rides/mine').set(authHeaders(tokenChauffeur));
+    const annonce = mine.body.find((r) => r.id === posted.body.id);
+    assert.equal(annonce.seats_available, 6);
+    assert.equal(annonce.bookings.length, 0);
+
+    // Le paiement en attente est soldé en échec — plus rien à encaisser.
+    const enAttente = await request(app).get('/api/payments?status=pending').set(adminHeaders());
+    assert.equal(enAttente.body.find((p) => p.id === resa.body.payment.id), undefined);
+    const echoues = await request(app).get('/api/payments?status=failed').set(adminHeaders());
+    assert.ok(echoues.body.find((p) => p.id === resa.body.payment.id));
+  });
+
+  it('payée dans les temps → la réservation survit au balayage', async () => {
+    const { token: tokenChauffeur } = await createVerifiedDriver();
+    const { token: tokenLocal } = await createLocal();
+
+    const depart = new Date(Date.now() + 6 * 3600 * 1000).toISOString();
+    const posted = await request(app)
+      .post('/api/rides')
+      .set(authHeaders(tokenChauffeur))
+      .send({ origin: 'Aéroport (AAKIA)', destination: 'Paje', departureAt: depart, seatsTotal: 6 });
+
+    const resa = await request(app)
+      .post(`/api/rides/${posted.body.id}/book`)
+      .set(authHeaders(tokenLocal))
+      .send({ seats: 3 });
+    await request(app)
+      .post(`/api/payments/${resa.body.payment.id}/confirm`)
+      .set(adminHeaders())
+      .send({});
+
+    // Même vieillie de 6 minutes, une réservation PAYÉE reste en place.
+    await pool.query(
+      `UPDATE ride_bookings SET created_at = now() - interval '6 minutes'
+       WHERE ride_id = $1`,
+      [posted.body.id]
+    );
+    const mine = await request(app).get('/api/rides/mine').set(authHeaders(tokenChauffeur));
+    const annonce = mine.body.find((r) => r.id === posted.body.id);
+    assert.equal(annonce.seats_available, 3);
+    assert.equal(annonce.bookings.length, 1);
+    assert.equal(annonce.bookings[0].paid, true);
+  });
+});

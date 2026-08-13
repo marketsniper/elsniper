@@ -10,7 +10,7 @@
 // fidèle au principe MVP « humain dans la boucle ».
 import { Router } from 'express';
 import { z } from 'zod';
-import { query } from '../db.js';
+import { query, withTransaction } from '../db.js';
 import { HttpError, notFound } from '../errors.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { isAdmin, requireAuth } from '../middleware/auth.js';
@@ -123,6 +123,44 @@ async function annulerRidesEnRetard() {
   );
 }
 
+// Règle zanziGo : une place réservée doit être PAYÉE dans les 5 minutes.
+// Sinon la réservation s'annule automatiquement, les places retournent sur
+// l'annonce du chauffeur et le paiement en attente est soldé en échec.
+// Balayage paresseux, idempotent — exporté pour la liste des paiements.
+const PAIEMENT_RESERVATION_MINUTES = 5;
+export async function annulerReservationsImpayees() {
+  await withTransaction(async (client) => {
+    const { rows: expirees } = await client.query(
+      `UPDATE ride_bookings
+       SET cancelled_at = now()
+       WHERE paid_at IS NULL AND cancelled_at IS NULL
+         AND created_at < now() - make_interval(mins => $1)
+       RETURNING id, ride_id, seats`,
+      [PAIEMENT_RESERVATION_MINUTES]
+    );
+    if (expirees.length === 0) return;
+
+    // Les places libérées s'additionnent sur l'annonce (plafond : total).
+    const parRide = new Map();
+    for (const b of expirees) {
+      parRide.set(b.ride_id, (parRide.get(b.ride_id) ?? 0) + b.seats);
+    }
+    for (const [rideId, places] of parRide) {
+      await client.query(
+        `UPDATE posted_rides
+         SET seats_available = LEAST(seats_total, seats_available + $2)
+         WHERE id = $1`,
+        [rideId, places]
+      );
+    }
+    await client.query(
+      `UPDATE payments SET status = 'failed'
+       WHERE status = 'pending' AND ride_booking_id = ANY($1)`,
+      [expirees.map((b) => b.id)]
+    );
+  });
+}
+
 // GET /rides/locations — listes officielles pour les menus déroulants
 // de l'app (départs limités aux deux hubs, arrivées de l'île).
 router.get('/locations', (_req, res) => {
@@ -206,6 +244,7 @@ router.get(
   requireAuth,
   asyncHandler(async (req, res) => {
     await annulerRidesEnRetard();
+    await annulerReservationsImpayees();
     const { rows } = await query(
       `SELECT r.*, d.full_name AS driver_name, d.vehicle_model, d.rating_avg AS driver_rating
        FROM posted_rides r
@@ -231,6 +270,7 @@ router.get(
       throw new HttpError(403, 'forbidden', 'Réservé aux chauffeurs');
     }
     await annulerRidesEnRetard();
+    await annulerReservationsImpayees();
     const { rows } = await query(
       `SELECT * FROM posted_rides WHERE driver_id = $1 ORDER BY departure_at DESC`,
       [req.auth.driverId]
@@ -246,7 +286,7 @@ router.get(
          FROM ride_bookings b
          LEFT JOIN users u ON u.id = b.user_id
          LEFT JOIN hotels h ON h.id = b.hotel_id
-         WHERE b.ride_id = ANY($1)
+         WHERE b.ride_id = ANY($1) AND b.cancelled_at IS NULL
          ORDER BY b.created_at ASC`,
         [rows.map((r) => r.id)]
       );
@@ -355,6 +395,7 @@ router.post(
     }
 
     await annulerRidesEnRetard();
+    await annulerReservationsImpayees();
     const { rows: rideRows } = await query('SELECT * FROM posted_rides WHERE id = $1', [
       req.params.id,
     ]);
@@ -474,6 +515,7 @@ router.post(
         `Places réservées: ${seats} (restantes: ${rideMaj.seats_available})`,
         `Prix par place: ${prixPlace}`,
         `Réf: ${rideMaj.id}`,
+        'Paiement: sous 5 minutes — sinon la réservation s\'annule et les places sont remises en vente.',
         'Règle: retard de +10 min au départ = place annulée, due en intégralité au chauffeur (respect des autres voyageurs).',
       ].join('\n')
     );

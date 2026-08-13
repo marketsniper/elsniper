@@ -7,6 +7,7 @@ import { isAdmin, requireAdmin, requireAuth } from '../middleware/auth.js';
 import { getTransactionStatus, isStubMode } from '../services/pesapalService.js';
 import { capturePaypalOrder } from '../services/paypalService.js';
 import { config } from '../config.js';
+import { annulerReservationsImpayees } from './rides.js';
 
 const router = Router();
 
@@ -19,6 +20,10 @@ router.get(
     const { status } = z
       .object({ status: z.enum(['pending', 'confirmed', 'failed']).optional() })
       .parse(req.query);
+
+    // Les réservations de places impayées depuis +5 min sont annulées avant
+    // l'affichage : leurs paiements passent en 'failed' et sortent du tableau.
+    await annulerReservationsImpayees();
 
     const { rows } = await query(
       `SELECT p.*,

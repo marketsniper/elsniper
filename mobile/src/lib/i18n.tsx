@@ -408,9 +408,9 @@ const CHAINES = {
     sw: 'Muda wa kuondoka ukipita kwa zaidi ya dakika 10 = tangazo linaghairiwa kiotomatiki. Kumbuka kufunga tangazo lako unapoondoka.',
   },
   rides_regle_retard: {
-    fr: 'Ponctualité : plus de 10 minutes de retard au départ = place considérée comme annulée et due en intégralité au chauffeur — par respect pour les autres voyageurs.',
-    en: 'Punctuality: more than 10 minutes late at departure = seat considered cancelled and owed in full to the driver — out of respect for the other travellers.',
-    sw: 'Uwakati: kuchelewa zaidi ya dakika 10 wakati wa kuondoka = kiti kinahesabiwa kimeghairiwa na kinadaiwa kikamilifu kwa dereva — kwa heshima ya wasafiri wengine.',
+    fr: 'Paiement sous 5 minutes : au-delà, la réservation s\'annule automatiquement et les places sont remises en vente. Ponctualité : plus de 10 minutes de retard au départ = place considérée comme annulée et due en intégralité au chauffeur — par respect pour les autres voyageurs.',
+    en: 'Pay within 5 minutes: after that, the booking cancels automatically and the seats go back on sale. Punctuality: more than 10 minutes late at departure = seat considered cancelled and owed in full to the driver — out of respect for the other travellers.',
+    sw: 'Lipa ndani ya dakika 5: baada ya hapo, uhifadhi unaghairiwa kiotomatiki na viti vinarudishwa sokoni. Uwakati: kuchelewa zaidi ya dakika 10 wakati wa kuondoka = kiti kinahesabiwa kimeghairiwa na kinadaiwa kikamilifu kwa dereva — kwa heshima ya wasafiri wengine.',
   },
 
   // --- Fidélité + crédit prépayé (hôtels) -----------------------------------------
