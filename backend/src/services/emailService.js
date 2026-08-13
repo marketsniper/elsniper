@@ -1,11 +1,20 @@
-// E-mails transactionnels zanziGo — envoi via l'API Resend (simple requête
-// HTTPS, aucune dépendance). Sans clé RESEND_API_KEY : mode STUB, l'e-mail
-// est journalisé et rien d'autre. Règle d'or : un e-mail qui échoue ne doit
-// JAMAIS faire échouer l'inscription — tout est attrapé ici.
+// E-mails transactionnels zanziGo — envoi via l'API Brevo (recommandé :
+// gratuit, simple vérification d'adresse) ou Resend (demande un domaine),
+// en simple requête HTTPS, aucune dépendance. Sans clé : mode STUB,
+// l'e-mail est journalisé et rien d'autre. Règle d'or : un e-mail qui
+// échoue ne doit JAMAIS faire échouer l'inscription — tout est attrapé ici.
 import { config } from '../config.js';
 
 export function isEmailStub() {
-  return !config.emailer.resendApiKey;
+  return !config.emailer.brevoApiKey && !config.emailer.resendApiKey;
+}
+
+// « zanziGo <adresse@example.com> » → { name, email } (format Brevo).
+function expediteur() {
+  const brut = config.emailer.from;
+  const m = brut.match(/^(.*)<(.+)>$/);
+  if (m) return { name: m[1].trim() || 'zanziGo', email: m[2].trim() };
+  return { name: 'zanziGo', email: brut.trim() };
 }
 
 // Envoi « au mieux » : renvoie { sent } et n'émet jamais d'exception.
@@ -16,14 +25,29 @@ export async function envoyerEmail({ to, subject, html }) {
     return { sent: false, stub: true };
   }
   try {
-    const reponse = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${config.emailer.resendApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ from: config.emailer.from, to, subject, html }),
-    });
+    const brevo = Boolean(config.emailer.brevoApiKey);
+    const reponse = brevo
+      ? await fetch('https://api.brevo.com/v3/smtp/email', {
+          method: 'POST',
+          headers: {
+            'api-key': config.emailer.brevoApiKey,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            sender: expediteur(),
+            to: [{ email: to }],
+            subject,
+            htmlContent: html,
+          }),
+        })
+      : await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${config.emailer.resendApiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ from: config.emailer.from, to, subject, html }),
+        });
     if (!reponse.ok) {
       console.error(`[email] échec (${reponse.status}) pour ${to}`);
       return { sent: false, reason: `status_${reponse.status}` };

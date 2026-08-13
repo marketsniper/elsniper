@@ -83,10 +83,16 @@ export const config = {
       `${env.PUBLIC_API_URL || 'https://zanzigo-api.onrender.com'}/api/pesapal/retour`,
   },
 
-  // E-mails transactionnels (récapitulatif d'inscription…) via Resend
-  // (https://resend.com — clé API gratuite). Sans clé, mode stub : l'e-mail
-  // est simplement journalisé, l'inscription n'échoue JAMAIS pour un e-mail.
+  // E-mails transactionnels (récapitulatif d'inscription…). Deux
+  // fournisseurs au choix, par simple variable d'environnement :
+  //  - BREVO_API_KEY (https://brevo.com — 300 e-mails/jour gratuits, il
+  //    suffit de vérifier une adresse d'expéditeur, pas besoin de domaine) ;
+  //  - RESEND_API_KEY (https://resend.com — demande un domaine vérifié).
+  // EMAIL_FROM : « zanziGo <adresse@example.com> » (l'adresse doit être
+  // vérifiée chez le fournisseur). Sans aucune clé, mode stub : l'e-mail est
+  // journalisé, l'inscription n'échoue JAMAIS pour un e-mail.
   emailer: {
+    brevoApiKey: env.BREVO_API_KEY || '',
     resendApiKey: env.RESEND_API_KEY || '',
     from: env.EMAIL_FROM || 'zanziGo <onboarding@resend.dev>',
   },
