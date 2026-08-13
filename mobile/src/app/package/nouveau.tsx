@@ -7,7 +7,7 @@
 // Payé en ligne à 100 % par l'expéditeur.
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Selecteur } from '@/components/Selecteur';
@@ -78,6 +78,18 @@ export default function EcranNouveauColis() {
 
   const expediteurUser = session?.user ?? null;
   const expediteurHotel = session?.hotel ?? null;
+
+  // Bons fidélité de l'hôtel : proposer l'envoi GRATUIT s'il en reste.
+  const [bonsDispo, setBonsDispo] = useState(0);
+  const [utiliserBon, setUtiliserBon] = useState(false);
+  const hotelId = expediteurHotel?.id ?? null;
+  useEffect(() => {
+    if (!hotelId) return;
+    api
+      .fideliteHotel(hotelId)
+      .then((f) => setBonsDispo(f.vouchers_available))
+      .catch(() => setBonsDispo(0));
+  }, [hotelId]);
   // Devise de l'expéditeur : USD touriste/résident/hôtel, TZS local.
   // Hôtel partenaire : même grille USD que les touristes avec −5 %.
   const devise: Devise = expediteurHotel ? 'USD' : deviseUtilisateur(expediteurUser);
@@ -136,6 +148,7 @@ export default function EcranNouveauColis() {
         senderPhone: telExpediteurNormalise,
         description: description.trim() || undefined,
         pickupAt,
+        useVoucher: utiliserBon || undefined,
       });
       const proprietaireId = (expediteurHotel ?? expediteurUser)!.id;
       await ajouterColisLocal(proprietaireId, colis.id);
@@ -258,17 +271,38 @@ export default function EcranNouveauColis() {
           multiline
         />
 
+        {/* Bon fidélité hôtel : envoi GRATUIT, un bon consommé. */}
+        {bonsDispo > 0 && (
+          <Pressable
+            onPress={() => setUtiliserBon((v) => !v)}
+            accessibilityRole="button"
+            style={[styles.carteBon, utiliserBon && styles.carteBonActive]}
+          >
+            <Ionicons
+              name={utiliserBon ? 'gift' : 'gift-outline'}
+              size={22}
+              color={utiliserBon ? couleurs.surPrimaire : couleurs.primaireFonce}
+            />
+            <Text style={[styles.texteBon, utiliserBon && { color: couleurs.surPrimaire }]}>
+              {utiliserBon
+                ? t('ncolis_bon_actif')
+                : t('ncolis_bon_proposer', { n: bonsDispo })}
+            </Text>
+          </Pressable>
+        )}
+
         <View style={styles.blocPrix}>
           <View style={styles.lignePrix}>
             <Text style={styles.labelPrix}>{t('ncolis_prix_envoi')}</Text>
-            <Text style={styles.valeurPrix}>
+            <Text style={[styles.valeurPrix, utiliserBon && styles.prixBarre]}>
               {prix !== null ? formaterMontant(prix, devise) : '—'}
             </Text>
+            {utiliserBon && <Text style={styles.prixOffert}>{t('ncolis_offert')}</Text>}
           </View>
           <Text style={styles.note}>{t('ncolis_note_prix')}</Text>
         </View>
 
-        <EncartInfo icone="card-outline">{t('ncolis_paye_expediteur')}</EncartInfo>
+        {!utiliserBon && <EncartInfo icone="card-outline">{t('ncolis_paye_expediteur')}</EncartInfo>}
 
         <TexteErreur>{erreur}</TexteErreur>
         <Bouton titre={t('ncolis_bouton')} icone="cube-outline" onPress={envoyer} charge={charge} />
@@ -333,6 +367,37 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: couleurs.texteSecondaire,
     lineHeight: 16,
+  },
+  carteBon: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: espaces.m,
+    borderWidth: 1.5,
+    borderColor: couleurs.etoile,
+    backgroundColor: couleurs.surface,
+    borderRadius: rayons.bouton,
+    padding: espaces.m,
+    marginTop: espaces.s,
+  },
+  carteBonActive: {
+    backgroundColor: couleurs.primaire,
+    borderColor: couleurs.primaire,
+  },
+  texteBon: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '700',
+    color: couleurs.encre,
+    lineHeight: 19,
+  },
+  prixBarre: {
+    textDecorationLine: 'line-through',
+    color: couleurs.texteSecondaire,
+  },
+  prixOffert: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: couleurs.succes,
   },
   blocPrix: {
     backgroundColor: couleurs.primaireClair,

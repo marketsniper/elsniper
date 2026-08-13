@@ -281,6 +281,9 @@ router.post(
   '/:id/payment',
   requireAuth,
   asyncHandler(async (req, res) => {
+    const { method } = z
+      .object({ method: z.enum(['credit']).optional() })
+      .parse(req.body ?? {});
     const trip = await getTrip(req.params.id);
     const isBooker =
       (trip.user_id !== null && trip.user_id === req.auth.userId) ||
@@ -295,6 +298,56 @@ router.post(
         'invalid_status',
         `Le paiement ne peut être demandé qu'après confirmation d'un chauffeur (statut actuel: ${trip.status})`
       );
+    }
+
+    // ----- Paiement par CRÉDIT PRÉPAYÉ (hôtels partenaires) -----
+    // Débit atomique du solde, paiement confirmé immédiatement, course payée
+    // dans la foulée — aucun circuit externe.
+    if (method === 'credit') {
+      if (!trip.hotel_id || trip.hotel_id !== req.auth.hotelId) {
+        throw new HttpError(403, 'forbidden', 'Le paiement par crédit est réservé à l\'hôtel réservateur');
+      }
+      const paiement = await withTransaction(async (client) => {
+        const { rows: hotelRows } = await client.query(
+          'SELECT credit_balance FROM hotels WHERE id = $1 FOR UPDATE',
+          [trip.hotel_id]
+        );
+        const solde = Number(hotelRows[0].credit_balance);
+        if (solde < Number(trip.price)) {
+          throw new HttpError(
+            409,
+            'insufficient_credit',
+            `Crédit insuffisant (solde: ${solde} USD, course: ${trip.price} ${trip.currency})`
+          );
+        }
+        await client.query('UPDATE hotels SET credit_balance = credit_balance - $1 WHERE id = $2', [
+          trip.price,
+          trip.hotel_id,
+        ]);
+        await client.query(
+          `INSERT INTO hotel_credit_transactions (hotel_id, amount, reason, reference)
+           VALUES ($1, $2, 'trip_payment', $3)`,
+          [trip.hotel_id, -trip.price, trip.id]
+        );
+        const { rows } = await client.query(
+          `INSERT INTO payments (trip_id, amount, currency, pesapal_reference, status, confirmed_at)
+           VALUES ($1, $2, $3, $4, 'confirmed', now())
+           RETURNING *`,
+          [trip.id, trip.price, trip.currency, `CREDIT-${randomUUID()}`]
+        );
+        await client.query(
+          `UPDATE trips SET status = 'paid' WHERE id = $1 AND status = 'driver_confirmed'`,
+          [trip.id]
+        );
+        await client.query(
+          `UPDATE payments SET status = 'failed'
+           WHERE id <> $1 AND status = 'pending' AND trip_id = $2`,
+          [rows[0].id, trip.id]
+        );
+        return rows[0];
+      });
+      res.status(201).json({ ...paiement, payment_method: 'credit' });
+      return;
     }
 
     const paypal = await circuitPaiementUsd({

@@ -343,6 +343,18 @@ export async function payerTrajet(id: string): Promise<Paiement> {
 }
 
 /**
+ * POST /trips/:id/payment {method:'credit'} — l'hôtel paie avec son crédit
+ * prépayé : débit immédiat, course 'paid' dans la foulée (409
+ * insufficient_credit si le solde ne suffit pas).
+ */
+export async function payerTrajetAvecCredit(id: string): Promise<Paiement> {
+  return requete<Paiement>(`/trips/${id}/payment`, {
+    methode: 'POST',
+    corps: { method: 'credit' },
+  });
+}
+
+/**
  * POST /payments/:id/confirm — en mode stub (dev sans clés Pesapal), simule le
  * webhook de confirmation : trip → 'paid', colis → 'paid'.
  */
@@ -455,6 +467,8 @@ export interface CreationColis {
   description?: string;
   /** Heure de ramassage souhaitée (ISO) — absente = dès que possible. */
   pickupAt?: string;
+  /** Hôtel : consommer un bon fidélité « colis offert » (envoi gratuit). */
+  useVoucher?: boolean;
 }
 
 /** POST /packages → ligne packages (qr_code PKG-…, price/currency figés, whatsapp_link). */
@@ -494,6 +508,71 @@ export async function listerColisHotel(hotelId: string): Promise<Colis[]> {
  */
 export async function payerColis(id: string): Promise<Paiement> {
   return requete<Paiement>(`/packages/${id}/payment`, { methode: 'POST' });
+}
+
+/** POST /packages/:id/payment {method:'credit'} — payé avec le crédit hôtel. */
+export async function payerColisAvecCredit(id: string): Promise<Paiement> {
+  return requete<Paiement>(`/packages/${id}/payment`, {
+    methode: 'POST',
+    corps: { method: 'credit' },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Fidélité + crédit prépayé des hôtels partenaires
+// ---------------------------------------------------------------------------
+
+export interface BonFidelite {
+  id: string;
+  status: 'available' | 'used';
+  earned_at?: string;
+  used_at?: string | null;
+}
+
+export interface FideliteHotel {
+  completed_trips: number;
+  trips_per_voucher: number;
+  progress: number;
+  vouchers_available: number;
+  vouchers_used: number;
+  vouchers: BonFidelite[];
+}
+
+/** GET /hotels/:id/fidelite — carte de fidélité (attribue les bons dus). */
+export async function fideliteHotel(hotelId: string): Promise<FideliteHotel> {
+  return requete<FideliteHotel>(`/hotels/${hotelId}/fidelite`);
+}
+
+export interface TransactionCredit {
+  id: string;
+  amount: number | string;
+  currency: string;
+  reason: string;
+  reference?: string | null;
+  created_at?: string;
+}
+
+export interface CreditHotel {
+  balance: number;
+  currency: string;
+  transactions: TransactionCredit[];
+}
+
+/** GET /hotels/:id/credit — solde prépayé + derniers mouvements. */
+export async function creditHotel(hotelId: string): Promise<CreditHotel> {
+  return requete<CreditHotel>(`/hotels/${hotelId}/credit`);
+}
+
+/** POST /hotels/:id/credit — l'ÉQUIPE crédite/corrige le solde d'un hôtel. */
+export async function crediterHotel(
+  hotelId: string,
+  amount: number,
+  note?: string
+): Promise<{ balance: number }> {
+  return requete<{ balance: number }>(`/hotels/${hotelId}/credit`, {
+    methode: 'POST',
+    corps: { amount, ...(note ? { note } : {}) },
+  });
 }
 
 /**
@@ -655,6 +734,12 @@ export async function listerHotelsEnAttente(): Promise<Hotel[]> {
   return commeListe<Hotel>(reponse, 'hotels');
 }
 
+/** GET /hotels?verificationStatus=verified — les hôtels partenaires actifs (équipe). */
+export async function listerHotelsVerifies(): Promise<Hotel[]> {
+  const reponse = await requete<unknown>('/hotels?verificationStatus=verified');
+  return commeListe<Hotel>(reponse, 'hotels');
+}
+
 /** PATCH /hotels/:id/verify — valider (ou bloquer) un compte hôtel (équipe). */
 export async function verifierHotel(
   id: string,
@@ -773,6 +858,11 @@ export const api = {
   listerTrajetsHotel,
   obtenirTrajet,
   payerTrajet,
+  payerTrajetAvecCredit,
+  payerColisAvecCredit,
+  fideliteHotel,
+  creditHotel,
+  crediterHotel,
   annulerTrajet,
   confirmerPaiement,
   noterTrajet,
@@ -805,6 +895,7 @@ export const api = {
   listerCandidaturesChauffeurs,
   listerClientsEnAttente,
   listerHotelsEnAttente,
+  listerHotelsVerifies,
   statsAbonnes,
   assignerChauffeur,
   verifierChauffeur,

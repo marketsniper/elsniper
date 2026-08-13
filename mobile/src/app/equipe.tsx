@@ -92,11 +92,14 @@ export default function EcranEquipe() {
   const [choixChauffeur, setChoixChauffeur] = useState<Record<string, string>>({});
   // Id de l'élément dont l'action est en cours (bouton en chargement).
   const [actionEnCours, setActionEnCours] = useState<string | null>(null);
+  // Crédit prépayé : hôtels partenaires actifs + montant saisi par hôtel.
+  const [hotelsVerifies, setHotelsVerifies] = useState<Hotel[]>([]);
+  const [montantsCredit, setMontantsCredit] = useState<Record<string, string>>({});
 
   const charger = useCallback(async () => {
     setErreur('');
     try {
-      const [lesCourses, lesPaiements, lesCandidats, lesClients, lesHotels, lesChauffeurs, lesAbonnes] =
+      const [lesCourses, lesPaiements, lesCandidats, lesClients, lesHotels, lesChauffeurs, lesAbonnes, lesVerifies] =
         await Promise.all([
           api.listerCoursesEquipe('requested'),
           api.listerPaiementsEquipe(),
@@ -105,6 +108,7 @@ export default function EcranEquipe() {
           api.listerHotelsEnAttente(),
           api.listerChauffeursVerifies(),
           api.statsAbonnes().catch(() => null),
+          api.listerHotelsVerifies().catch(() => []),
         ]);
       setCourses(lesCourses);
       setPaiements(lesPaiements);
@@ -113,10 +117,28 @@ export default function EcranEquipe() {
       setHotels(lesHotels);
       setChauffeurs(lesChauffeurs);
       setAbonnes(lesAbonnes);
+      setHotelsVerifies(lesVerifies);
     } catch (e) {
       setErreur(e instanceof ErreurApi ? e.message : t('equipe_action_erreur'));
     }
   }, [t]);
+
+  // Crédite (montant positif) ou corrige (négatif) le compte d'un hôtel.
+  const crediterUnHotel = async (hotelId: string) => {
+    const montant = Number((montantsCredit[hotelId] ?? '').replace(',', '.'));
+    if (!Number.isFinite(montant) || montant === 0) return;
+    setActionEnCours(hotelId);
+    setErreur('');
+    try {
+      await api.crediterHotel(hotelId, montant);
+      setMontantsCredit((prev) => ({ ...prev, [hotelId]: '' }));
+      await charger();
+    } catch (e) {
+      setErreur(e instanceof ErreurApi ? e.message : t('equipe_action_erreur'));
+    } finally {
+      setActionEnCours(null);
+    }
+  };
 
   // Lecture de la clé enregistrée au montage ; si présente, mode actif direct.
   useEffect(() => {
@@ -734,6 +756,46 @@ export default function EcranEquipe() {
         );
       })}
 
+      {/* Crédit prépayé : créditer un hôtel après réception de l'argent
+          (mobile money, espèces). Montant négatif = correction. */}
+      <Text style={styles.titreSection}>
+        {t('equipe_credit_titre')} ({hotelsVerifies.length})
+      </Text>
+      {hotelsVerifies.length > 0 && (
+        <EncartInfo icone="wallet-outline">{t('equipe_credit_conseil')}</EncartInfo>
+      )}
+      {hotelsVerifies.map((lHotel) => (
+        <Carte key={`credit-${lHotel.id}`}>
+          <View style={styles.enTete}>
+            <Text style={styles.itineraire}>{String(champ(lHotel, 'name') ?? '?')}</Text>
+            <Text style={styles.soldeHotel}>
+              {formaterMontant(Number(champ(lHotel, 'credit_balance', 'creditBalance') ?? 0), 'USD')}
+            </Text>
+          </View>
+          <View style={styles.rangeeActions}>
+            <View style={styles.demiAction}>
+              <Champ
+                label={t('equipe_credit_montant')}
+                value={montantsCredit[lHotel.id] ?? ''}
+                onChangeText={(texte) =>
+                  setMontantsCredit((prev) => ({ ...prev, [lHotel.id]: texte }))
+                }
+                keyboardType="numbers-and-punctuation"
+                placeholder="50"
+              />
+            </View>
+            <View style={styles.demiAction}>
+              <Bouton
+                titre={t('equipe_crediter')}
+                icone="add-circle-outline"
+                onPress={() => crediterUnHotel(lHotel.id)}
+                charge={actionEnCours === lHotel.id}
+              />
+            </View>
+          </View>
+        </Carte>
+      ))}
+
         </>
       )}
 
@@ -888,6 +950,18 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: couleurs.encre,
     lineHeight: 21,
+  },
+  enTete: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: espaces.m,
+  },
+  soldeHotel: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: couleurs.primaireFonce,
+    fontVariant: ['tabular-nums'],
   },
   fleche: {
     color: couleurs.primaire,

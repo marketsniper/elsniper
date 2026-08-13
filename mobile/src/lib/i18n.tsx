@@ -407,6 +407,65 @@ const CHAINES = {
     en: 'Departure time passed by more than 10 minutes = listing automatically cancelled. Remember to close your listing when you leave.',
     sw: 'Muda wa kuondoka ukipita kwa zaidi ya dakika 10 = tangazo linaghairiwa kiotomatiki. Kumbuka kufunga tangazo lako unapoondoka.',
   },
+  rides_regle_retard: {
+    fr: 'Ponctualité : plus de 10 minutes de retard au départ = place considérée comme annulée et due en intégralité au chauffeur — par respect pour les autres voyageurs.',
+    en: 'Punctuality: more than 10 minutes late at departure = seat considered cancelled and owed in full to the driver — out of respect for the other travellers.',
+    sw: 'Uwakati: kuchelewa zaidi ya dakika 10 wakati wa kuondoka = kiti kinahesabiwa kimeghairiwa na kinadaiwa kikamilifu kwa dereva — kwa heshima ya wasafiri wengine.',
+  },
+
+  // --- Fidélité + crédit prépayé (hôtels) -----------------------------------------
+  fidelite_titre: { fr: 'Carte de fidélité', en: 'Loyalty card', sw: 'Kadi ya uaminifu' },
+  fidelite_bons_dispo: {
+    fr: '{n} bon(s) colis offert(s)',
+    en: '{n} free parcel voucher(s)',
+    sw: 'Vocha {n} za mzigo bure',
+  },
+  fidelite_progression: {
+    fr: '{n} / {total} courses vers le prochain bon',
+    en: '{n} / {total} rides towards the next voucher',
+    sw: 'Safari {n} / {total} kuelekea vocha ijayo',
+  },
+  fidelite_regle: {
+    fr: 'Toutes les 10 courses terminées avec zanziGo, un envoi de colis vous est OFFERT. Le bon se choisit au moment de créer le colis.',
+    en: 'Every 10 completed rides with zanziGo, a parcel delivery is FREE. Pick the voucher when creating the parcel.',
+    sw: 'Kila safari 10 zilizokamilika na zanziGo, usafirishaji wa mzigo mmoja ni BURE. Chagua vocha unapotengeneza mzigo.',
+  },
+  credit_titre: { fr: 'Mon crédit zanziGo', en: 'My zanziGo credit', sw: 'Salio langu la zanziGo' },
+  credit_solde: { fr: 'Solde disponible', en: 'Available balance', sw: 'Salio lililopo' },
+  credit_explication: {
+    fr: 'Rechargez votre compte auprès de l\'équipe (mobile money, espèces, virement) et payez ensuite chaque course ou colis en un seul geste, sans sortir le téléphone du client.',
+    en: 'Top up your account with the team (mobile money, cash, transfer) and then pay every ride or parcel in one tap.',
+    sw: 'Jaza akaunti yako kupitia timu (mobile money, taslimu, uhamisho) kisha ulipe kila safari au mzigo kwa mguso mmoja.',
+  },
+  credit_recharger: { fr: 'Recharger mon crédit', en: 'Top up my credit', sw: 'Jaza salio langu' },
+  trip_payer_credit: {
+    fr: '💳 Payer avec mon crédit',
+    en: '💳 Pay with my credit',
+    sw: '💳 Lipa kwa salio langu',
+  },
+  ncolis_bon_proposer: {
+    fr: '🎁 Utiliser un bon colis offert ({n} disponible(s)) — envoi gratuit',
+    en: '🎁 Use a free parcel voucher ({n} available) — free delivery',
+    sw: '🎁 Tumia vocha ya mzigo bure ({n} zipo) — usafirishaji bure',
+  },
+  ncolis_bon_actif: {
+    fr: '🎁 Bon appliqué : cet envoi est OFFERT. Touchez pour retirer.',
+    en: '🎁 Voucher applied: this delivery is FREE. Tap to remove.',
+    sw: '🎁 Vocha imetumika: usafirishaji huu ni BURE. Gusa kuondoa.',
+  },
+  ncolis_offert: { fr: 'OFFERT', en: 'FREE', sw: 'BURE' },
+  equipe_credit_titre: {
+    fr: 'Crédit des hôtels partenaires',
+    en: 'Partner hotel credit',
+    sw: 'Salio la hoteli washirika',
+  },
+  equipe_credit_conseil: {
+    fr: 'Créditez un hôtel APRÈS avoir reçu son argent (mobile money, espèces). Un montant négatif corrige une erreur.',
+    en: 'Credit a hotel AFTER receiving its money (mobile money, cash). A negative amount fixes a mistake.',
+    sw: 'Ongeza salio la hoteli BAADA ya kupokea pesa yake (mobile money, taslimu). Kiasi hasi hurekebisha kosa.',
+  },
+  equipe_credit_montant: { fr: 'Montant (USD)', en: 'Amount (USD)', sw: 'Kiasi (USD)' },
+  equipe_crediter: { fr: 'Créditer', en: 'Credit', sw: 'Ongeza salio' },
   equipe_action_erreur: {
     fr: "L'action a échoué — réessayez.",
     en: 'The action failed — try again.',

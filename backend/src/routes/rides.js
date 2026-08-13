@@ -372,12 +372,13 @@ router.post(
     });
     const notification = buildTeamNotificationLink(
       [
-        '🚌 Réservation confirmée — trajet partagé zanziGo',
+        '🚌 Réservation confirmée — taxi partagé zanziGo',
         `Trajet: ${rideMaj.origin} → ${rideMaj.destination}`,
         `Départ: ${depart}`,
         `Places réservées: ${seats} (restantes: ${rideMaj.seats_available})`,
         `Client: ${booker}`,
         `Réf: ${rideMaj.id}`,
+        'Règle: retard de +10 min au départ = place annulée, due en intégralité au chauffeur (respect des autres voyageurs).',
       ].join('\n')
     );
 

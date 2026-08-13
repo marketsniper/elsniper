@@ -32,6 +32,8 @@ const createPackageSchema = z
     description: z.string().max(1000).optional(),
     /** Heure de ramassage souhaitée (absent = dès que possible). */
     pickupAt: z.string().datetime({ offset: true }).optional(),
+    /** Hôtel : utiliser un bon fidélité « colis offert » (envoi gratuit). */
+    useVoucher: z.boolean().optional(),
   })
   .refine((d) => (d.senderType === 'user' ? !!d.senderUserId && !d.senderHotelId : true), {
     path: ['senderUserId'],
@@ -104,36 +106,77 @@ router.post(
       senderLabel = `${rows[0].name} (hôtel, ${senderPhone})`;
     }
 
+    // Bon fidélité : réservé aux hôtels — vérifié AVANT toute création.
+    if (data.useVoucher && data.senderType !== 'hotel') {
+      throw new HttpError(403, 'forbidden', 'Les bons fidélité sont réservés aux hôtels partenaires');
+    }
+
     const pricing = pricePackage(currency, data.size, remise);
     const qrCode = generatePackageQr();
 
-    const { rows } = await query(
-      `INSERT INTO packages (sender_type, sender_user_id, sender_hotel_id, size, qr_code, pickup_location,
-                             dropoff_location, recipient_name, recipient_phone, sender_phone, description, pickup_at, price, commission, currency)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
-       RETURNING *`,
-      [
-        data.senderType,
-        data.senderUserId ?? null,
-        data.senderHotelId ?? null,
-        data.size,
-        qrCode,
-        data.pickupLocation,
-        data.dropoffLocation,
-        data.recipientName,
-        data.recipientPhone,
-        senderPhone,
-        data.description ?? null,
-        data.pickupAt ?? null,
-        pricing.price,
-        pricing.commission,
-        pricing.currency,
-      ]
-    );
-    const pkg = rows[0];
+    const pkg = await withTransaction(async (client) => {
+      // Bon fidélité « colis offert » : on consomme UN bon disponible
+      // (verrouillé contre le double usage), le colis naît directement PAYÉ
+      // — l'hôtel ne débourse rien, le chauffeur garde son gain normal
+      // (la part est prise sur zanziGo, c'est le cadeau de fidélité).
+      let bon = null;
+      if (data.useVoucher) {
+        const { rows: bons } = await client.query(
+          `SELECT id FROM hotel_vouchers
+           WHERE hotel_id = $1 AND status = 'available'
+           ORDER BY earned_at ASC LIMIT 1
+           FOR UPDATE SKIP LOCKED`,
+          [data.senderHotelId]
+        );
+        bon = bons[0] ?? null;
+        if (!bon) {
+          throw new HttpError(409, 'no_voucher', "Aucun bon « colis offert » disponible sur ce compte");
+        }
+      }
+
+      const { rows } = await client.query(
+        `INSERT INTO packages (sender_type, sender_user_id, sender_hotel_id, size, qr_code, pickup_location,
+                               dropoff_location, recipient_name, recipient_phone, sender_phone, description, pickup_at, price, commission, currency, status)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+         RETURNING *`,
+        [
+          data.senderType,
+          data.senderUserId ?? null,
+          data.senderHotelId ?? null,
+          data.size,
+          qrCode,
+          data.pickupLocation,
+          data.dropoffLocation,
+          data.recipientName,
+          data.recipientPhone,
+          senderPhone,
+          data.description ?? null,
+          data.pickupAt ?? null,
+          pricing.price,
+          pricing.commission,
+          pricing.currency,
+          bon ? 'paid' : 'created',
+        ]
+      );
+
+      if (bon) {
+        await client.query(
+          `UPDATE hotel_vouchers SET status = 'used', used_at = now(), package_id = $1 WHERE id = $2`,
+          [rows[0].id, bon.id]
+        );
+        // Trace comptable : paiement confirmé, couvert par le bon.
+        await client.query(
+          `INSERT INTO payments (package_id, amount, currency, pesapal_reference, status, confirmed_at)
+           VALUES ($1, $2, $3, $4, 'confirmed', now())`,
+          [rows[0].id, rows[0].price, rows[0].currency, `VOUCHER-${bon.id}`]
+        );
+      }
+      return rows[0];
+    });
 
     res.status(201).json({
       ...pkg,
+      voucher_used: data.useVoucher === true,
       whatsapp_link: buildTeamNotificationLink(packageRequestMessage(pkg, senderLabel)),
     });
   })
@@ -293,6 +336,9 @@ router.post(
   '/:id/payment',
   requireAuth,
   asyncHandler(async (req, res) => {
+    const { method } = z
+      .object({ method: z.enum(['credit']).optional() })
+      .parse(req.body ?? {});
     const pkg = await getPackage(req.params.id);
     if (!isAdmin(req) && !isSender(pkg, req.auth)) {
       throw new HttpError(403, 'forbidden', "Accès réservé à l'expéditeur du colis");
@@ -304,6 +350,54 @@ router.post(
         'invalid_status',
         `Le paiement ne peut être demandé que sur un colis nouvellement créé (statut actuel: ${pkg.status})`
       );
+    }
+
+    // ----- Paiement par CRÉDIT PRÉPAYÉ (hôtels partenaires) -----
+    if (method === 'credit') {
+      if (!pkg.sender_hotel_id || pkg.sender_hotel_id !== req.auth.hotelId) {
+        throw new HttpError(403, 'forbidden', 'Le paiement par crédit est réservé à l\'hôtel expéditeur');
+      }
+      const paiement = await withTransaction(async (client) => {
+        const { rows: hotelRows } = await client.query(
+          'SELECT credit_balance FROM hotels WHERE id = $1 FOR UPDATE',
+          [pkg.sender_hotel_id]
+        );
+        const solde = Number(hotelRows[0].credit_balance);
+        if (solde < Number(pkg.price)) {
+          throw new HttpError(
+            409,
+            'insufficient_credit',
+            `Crédit insuffisant (solde: ${solde} USD, colis: ${pkg.price} ${pkg.currency})`
+          );
+        }
+        await client.query('UPDATE hotels SET credit_balance = credit_balance - $1 WHERE id = $2', [
+          pkg.price,
+          pkg.sender_hotel_id,
+        ]);
+        await client.query(
+          `INSERT INTO hotel_credit_transactions (hotel_id, amount, reason, reference)
+           VALUES ($1, $2, 'package_payment', $3)`,
+          [pkg.sender_hotel_id, -pkg.price, pkg.id]
+        );
+        const { rows } = await client.query(
+          `INSERT INTO payments (package_id, amount, currency, pesapal_reference, status, confirmed_at)
+           VALUES ($1, $2, $3, $4, 'confirmed', now())
+           RETURNING *`,
+          [pkg.id, pkg.price, pkg.currency, `CREDIT-${randomUUID()}`]
+        );
+        await client.query(
+          `UPDATE packages SET status = 'paid' WHERE id = $1 AND status = 'created'`,
+          [pkg.id]
+        );
+        await client.query(
+          `UPDATE payments SET status = 'failed'
+           WHERE id <> $1 AND status = 'pending' AND package_id = $2`,
+          [rows[0].id, pkg.id]
+        );
+        return rows[0];
+      });
+      res.status(201).json({ ...paiement, payment_method: 'credit' });
+      return;
     }
 
     // Circuit USD automatique (PayPal) si configuré ; sinon Pesapal RÉEL

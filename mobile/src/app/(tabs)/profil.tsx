@@ -1,9 +1,11 @@
 // Onglet « Profil » : informations du compte (touriste/résident/local/hôtel,
 // devise), statut de vérification des documents, langue, déconnexion.
+// Hôtels : carte de FIDÉLITÉ (1 bon colis offert / 10 courses terminées) et
+// solde de CRÉDIT prépayé (rechargé auprès de l'équipe).
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useFocusEffect, useRouter } from 'expo-router';
+import React, { useCallback, useState } from 'react';
+import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import {
   Badge,
@@ -15,11 +17,18 @@ import {
   SelecteurLangue,
   SousTitre,
 } from '@/components/ui';
-import { api } from '@/lib/api';
+import { api, type CreditHotel, type FideliteHotel } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useT } from '@/lib/i18n';
-import { couleurs, espaces, tailles } from '@/lib/theme';
-import { champ, type StatutVerification, type TypeCompte } from '@/lib/types';
+import { couleurs, espaces, rayons, tailles } from '@/lib/theme';
+import {
+  champ,
+  formaterMontant,
+  type StatutVerification,
+  type TypeCompte,
+} from '@/lib/types';
+
+const WHATSAPP_EQUIPE = 'https://wa.me/255666241749';
 
 /** Initiales (2 lettres max) d'un nom complet. */
 function initiales(nom: string): string {
@@ -37,6 +46,32 @@ export default function EcranProfil() {
   const utilisateur = session?.user ?? null;
   const hotel = session?.hotel ?? null;
   const [chargeMaj, setChargeMaj] = useState(false);
+
+  // Fidélité + crédit (hôtels uniquement) — rechargés à chaque focus.
+  const [fidelite, setFidelite] = useState<FideliteHotel | null>(null);
+  const [credit, setCredit] = useState<CreditHotel | null>(null);
+  const hotelId = hotel?.id ?? null;
+  useFocusEffect(
+    useCallback(() => {
+      if (!hotelId) return;
+      (async () => {
+        try {
+          setFidelite(await api.fideliteHotel(hotelId));
+          setCredit(await api.creditHotel(hotelId));
+        } catch {
+          // silencieux : les cartes fidélité/crédit restent masquées
+        }
+      })();
+    }, [hotelId])
+  );
+
+  const demanderRecharge = () => {
+    Linking.openURL(
+      `${WHATSAPP_EQUIPE}?text=${encodeURIComponent(
+        `💰 Recharge crédit zanziGo\nHôtel: ${String(champ(hotel, 'name') ?? '')}\nJe souhaite recharger mon compte crédit. Montant souhaité (USD):`
+      )}`
+    );
+  };
 
   const typeCompte = champ<TypeCompte>(utilisateur, 'account_type', 'accountType');
   const estResident = typeCompte === 'resident';
@@ -135,6 +170,59 @@ export default function EcranProfil() {
         <EncartInfo icone="alert-circle-outline" ton="attente">
           {t('hotel_refuse_verif')}
         </EncartInfo>
+      )}
+
+      {/* Carte de fidélité : une case par course terminée, un bon toutes
+          les 10 — la récompense concrète du volume apporté par l'hôtel. */}
+      {hotel && fidelite && (
+        <Carte>
+          <View style={styles.enTeteFidelite}>
+            <Text style={styles.titreBloc}>🎁 {t('fidelite_titre')}</Text>
+            {fidelite.vouchers_available > 0 && (
+              <Badge
+                texte={t('fidelite_bons_dispo', { n: fidelite.vouchers_available })}
+                ton="succes"
+              />
+            )}
+          </View>
+          <View style={styles.rangeeTampons}>
+            {Array.from({ length: fidelite.trips_per_voucher }, (_, i) => (
+              <View
+                key={i}
+                style={[styles.tampon, i < fidelite.progress && styles.tamponRempli]}
+              >
+                {i < fidelite.progress && (
+                  <Ionicons name="car" size={13} color={couleurs.surPrimaire} />
+                )}
+              </View>
+            ))}
+          </View>
+          <Text style={styles.texteFidelite}>
+            {t('fidelite_progression', {
+              n: fidelite.progress,
+              total: fidelite.trips_per_voucher,
+            })}
+          </Text>
+          <Text style={styles.noteFidelite}>{t('fidelite_regle')}</Text>
+        </Carte>
+      )}
+
+      {/* Crédit prépayé : payer les courses et colis en un geste. */}
+      {hotel && credit && (
+        <Carte>
+          <Text style={styles.titreBloc}>💳 {t('credit_titre')}</Text>
+          <View style={styles.ligneSolde}>
+            <Text style={styles.labelSolde}>{t('credit_solde')}</Text>
+            <Text style={styles.valeurSolde}>{formaterMontant(credit.balance, 'USD')}</Text>
+          </View>
+          <Text style={styles.noteFidelite}>{t('credit_explication')}</Text>
+          <Bouton
+            titre={t('credit_recharger')}
+            icone="logo-whatsapp"
+            variante="secondaire"
+            onPress={demanderRecharge}
+          />
+        </Carte>
       )}
 
       <Carte>
@@ -236,6 +324,69 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: couleurs.texteSecondaire,
+  },
+  titreBloc: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: couleurs.encre,
+  },
+  enTeteFidelite: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: espaces.m,
+  },
+  rangeeTampons: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: espaces.s,
+    marginVertical: espaces.s,
+  },
+  tampon: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    borderWidth: 1.5,
+    borderColor: couleurs.bordure,
+    backgroundColor: couleurs.sable,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tamponRempli: {
+    backgroundColor: couleurs.primaire,
+    borderColor: couleurs.primaire,
+  },
+  texteFidelite: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: couleurs.encre,
+  },
+  noteFidelite: {
+    fontSize: 12.5,
+    color: couleurs.texteSecondaire,
+    lineHeight: 18,
+    marginTop: 2,
+  },
+  ligneSolde: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: couleurs.sable,
+    borderRadius: rayons.bouton,
+    paddingHorizontal: espaces.m,
+    paddingVertical: espaces.m,
+    marginVertical: espaces.xs,
+  },
+  labelSolde: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: couleurs.texteSecondaire,
+  },
+  valeurSolde: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: couleurs.primaireFonce,
+    fontVariant: ['tabular-nums'],
   },
   ligneDeconnexion: {
     flexDirection: 'row',

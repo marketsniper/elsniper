@@ -290,6 +290,10 @@ export default function EcranReserver() {
         // Partagé : pas de réservation directe — liste des trajets postés.
         <>
           <EncartInfo icone="people-outline">{t('reserver_partage_info')}</EncartInfo>
+          {/* Règle de ponctualité : affichée AVANT la réservation. */}
+          <EncartInfo icone="time-outline" ton="attente">
+            {t('rides_regle_retard')}
+          </EncartInfo>
           <RidesPartages />
         </>
       ) : (

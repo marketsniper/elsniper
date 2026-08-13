@@ -23,12 +23,14 @@ import {
   Titre,
 } from '@/components/ui';
 import { api, ErreurApi } from '@/lib/api';
+import { useAuth } from '@/lib/auth';
 import { libelleStatutTrajet, libelleTypeTrajet, useT } from '@/lib/i18n';
 import { couleurs, espaces } from '@/lib/theme';
 import {
   champ,
   ETAPES_TRAJET,
   formaterDate,
+  formaterMontant,
   formaterPrix,
   type StatutTrajet,
   type Trajet,
@@ -41,9 +43,14 @@ const WHATSAPP_EQUIPE = 'https://wa.me/255666241749';
 export default function EcranTrajet() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { t } = useT();
+  const { session } = useAuth();
   const [trajet, setTrajet] = useState<Trajet | null>(null);
   const [erreur, setErreur] = useState('');
   const [chargePaiement, setChargePaiement] = useState(false);
+  // Crédit prépayé (hôtels) : solde chargé au focus, bouton dédié si suffisant.
+  const [soldeCredit, setSoldeCredit] = useState<number | null>(null);
+  const [chargeCredit, setChargeCredit] = useState(false);
+  const hotelId = session?.hotel?.id ?? null;
   // Paiement créé sur cet écran (pour la simulation de confirmation en dev).
   const [paiementId, setPaiementId] = useState<string | null>(null);
   // 'paypal' = circuit automatique (bouton « J'ai payé — vérifier »).
@@ -68,7 +75,13 @@ export default function EcranTrajet() {
   useFocusEffect(
     useCallback(() => {
       charger();
-    }, [charger])
+      if (hotelId) {
+        api
+          .creditHotel(hotelId)
+          .then((c) => setSoldeCredit(c.balance))
+          .catch(() => setSoldeCredit(null));
+      }
+    }, [charger, hotelId])
   );
 
   if (!trajet) {
@@ -94,6 +107,23 @@ export default function EcranTrajet() {
   // Notation : course terminée, jamais notée (rating null côté serveur).
   const dejaNotee = champ<number>(trajet, 'rating') !== undefined;
   const peutNoter = statut === 'completed' && !dejaNotee && !noteEnvoyee;
+
+  // Paiement en un geste avec le crédit prépayé de l'hôtel.
+  const payerAvecCredit = async () => {
+    setChargeCredit(true);
+    setErreur('');
+    try {
+      await api.payerTrajetAvecCredit(trajet.id);
+      if (hotelId) {
+        api.creditHotel(hotelId).then((c) => setSoldeCredit(c.balance)).catch(() => {});
+      }
+      await charger();
+    } catch (e) {
+      setErreur(e instanceof ErreurApi ? e.message : t('trip_paiement_indisponible'));
+    } finally {
+      setChargeCredit(false);
+    }
+  };
 
   const payer = async () => {
     setChargePaiement(true);
@@ -219,6 +249,18 @@ export default function EcranTrajet() {
           {t('trip_demande_envoyee')}
         </EncartInfo>
       )}
+      {/* Hôtel avec crédit suffisant : paiement en un geste, sans circuit externe. */}
+      {peutPayer &&
+        hotelId &&
+        soldeCredit !== null &&
+        soldeCredit >= Number(champ(trajet, 'price') ?? Infinity) && (
+          <Bouton
+            titre={`${t('trip_payer_credit')} (${formaterMontant(soldeCredit, 'USD')})`}
+            icone="wallet-outline"
+            onPress={payerAvecCredit}
+            charge={chargeCredit}
+          />
+        )}
       {peutPayer && (
         <Bouton
           titre={t('trip_payer')}

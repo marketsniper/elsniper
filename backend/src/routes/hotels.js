@@ -1,10 +1,15 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { query } from '../db.js';
+import { query, withTransaction } from '../db.js';
 import { HttpError, notFound } from '../errors.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { isAdmin, requireAuth, requireAdmin } from '../middleware/auth.js';
 import { hashPassword } from '../services/passwordService.js';
+
+// Fidélité : 1 bon « colis offert » toutes les COURSES_PAR_BON courses
+// TERMINÉES réservées par l'hôtel — la rampe de lancement de zanziGo, ce
+// sont les hôtels : on récompense leur volume.
+export const COURSES_PAR_BON = 10;
 
 const router = Router();
 
@@ -117,6 +122,123 @@ router.get(
     const { rows } = await query('SELECT * FROM hotels WHERE id = $1', [req.params.id]);
     if (!rows[0]) throw notFound('Hôtel');
     res.json(sanitizeHotel(rows[0]));
+  })
+);
+
+// GET /hotels/:id/fidelite — carte de fidélité de l'hôtel (lui-même ou
+// l'équipe). Attribution PARESSEUSE des bons : à chaque consultation, on
+// compare les courses terminées aux bons déjà émis et on rattrape l'écart —
+// aucune tâche planifiée, verrou sur la ligne hôtel contre le double octroi.
+router.get(
+  '/:id/fidelite',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    if (!isAdmin(req) && req.auth.hotelId !== req.params.id) {
+      throw new HttpError(403, 'forbidden', "Accès réservé à l'hôtel concerné");
+    }
+    const etat = await withTransaction(async (client) => {
+      const { rows: hotelRows } = await client.query(
+        'SELECT id FROM hotels WHERE id = $1 FOR UPDATE',
+        [req.params.id]
+      );
+      if (!hotelRows[0]) throw notFound('Hôtel');
+
+      const { rows: [{ n }] } = await client.query(
+        `SELECT COUNT(*)::int AS n FROM trips WHERE hotel_id = $1 AND status = 'completed'`,
+        [req.params.id]
+      );
+      const { rows: [{ emis }] } = await client.query(
+        'SELECT COUNT(*)::int AS emis FROM hotel_vouchers WHERE hotel_id = $1',
+        [req.params.id]
+      );
+      const dus = Math.floor(n / COURSES_PAR_BON);
+      for (let i = emis; i < dus; i += 1) {
+        await client.query('INSERT INTO hotel_vouchers (hotel_id) VALUES ($1)', [req.params.id]);
+      }
+      const { rows: bons } = await client.query(
+        'SELECT * FROM hotel_vouchers WHERE hotel_id = $1 ORDER BY earned_at DESC',
+        [req.params.id]
+      );
+      return { n, bons };
+    });
+
+    res.json({
+      completed_trips: etat.n,
+      trips_per_voucher: COURSES_PAR_BON,
+      progress: etat.n % COURSES_PAR_BON,
+      vouchers_available: etat.bons.filter((b) => b.status === 'available').length,
+      vouchers_used: etat.bons.filter((b) => b.status === 'used').length,
+      vouchers: etat.bons,
+    });
+  })
+);
+
+// GET /hotels/:id/credit — solde prépayé + derniers mouvements.
+router.get(
+  '/:id/credit',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    if (!isAdmin(req) && req.auth.hotelId !== req.params.id) {
+      throw new HttpError(403, 'forbidden', "Accès réservé à l'hôtel concerné");
+    }
+    const { rows: hotelRows } = await query('SELECT credit_balance FROM hotels WHERE id = $1', [
+      req.params.id,
+    ]);
+    if (!hotelRows[0]) throw notFound('Hôtel');
+    const { rows: transactions } = await query(
+      `SELECT * FROM hotel_credit_transactions
+       WHERE hotel_id = $1 ORDER BY created_at DESC LIMIT 50`,
+      [req.params.id]
+    );
+    res.json({ balance: Number(hotelRows[0].credit_balance), currency: 'USD', transactions });
+  })
+);
+
+const creditSchema = z.object({
+  // positif = recharge (l'hôtel a payé l'équipe) ; négatif = correction.
+  amount: z
+    .number()
+    .gte(-10000)
+    .lte(10000)
+    .refine((n) => n !== 0, 'Montant non nul requis'),
+  note: z.string().max(200).optional(),
+});
+
+// POST /hotels/:id/credit — l'ÉQUIPE crédite (ou corrige) le compte d'un
+// hôtel après réception de l'argent (mobile money, espèces, virement).
+// Quand les clés Pesapal seront actives, la recharge en ligne directe
+// s'ajoutera par-dessus le même livre de comptes.
+router.post(
+  '/:id/credit',
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    const { amount, note } = creditSchema.parse(req.body);
+    const resultat = await withTransaction(async (client) => {
+      const { rows: hotelRows } = await client.query(
+        'SELECT credit_balance FROM hotels WHERE id = $1 FOR UPDATE',
+        [req.params.id]
+      );
+      if (!hotelRows[0]) throw notFound('Hôtel');
+      const solde = Number(hotelRows[0].credit_balance) + amount;
+      if (solde < 0) {
+        throw new HttpError(
+          409,
+          'insufficient_credit',
+          `Solde insuffisant (actuel: ${hotelRows[0].credit_balance} USD)`
+        );
+      }
+      await client.query('UPDATE hotels SET credit_balance = $1 WHERE id = $2', [
+        solde,
+        req.params.id,
+      ]);
+      await client.query(
+        `INSERT INTO hotel_credit_transactions (hotel_id, amount, reason, reference)
+         VALUES ($1, $2, $3, $4)`,
+        [req.params.id, amount, amount > 0 ? 'topup' : 'adjustment', note ?? null]
+      );
+      return solde;
+    });
+    res.json({ balance: resultat, currency: 'USD' });
   })
 );
 

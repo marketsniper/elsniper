@@ -19,12 +19,14 @@ import {
   Titre,
 } from '@/components/ui';
 import { api, ErreurApi } from '@/lib/api';
+import { useAuth } from '@/lib/auth';
 import { formaterDateRelativeI18n, libelleStatutColis, libelleTailleColis, useT } from '@/lib/i18n';
 
 import { couleurs, espaces, ombres, rayons } from '@/lib/theme';
 import {
   champ,
   ETAPES_COLIS,
+  formaterMontant,
   formaterPrix,
   type Colis,
   type StatutColis,
@@ -37,9 +39,14 @@ const WHATSAPP_EQUIPE = 'https://wa.me/255666241749';
 export default function EcranDetailColis() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { t } = useT();
+  const { session } = useAuth();
   const [colis, setColis] = useState<Colis | null>(null);
   const [erreur, setErreur] = useState('');
   const [chargePaiement, setChargePaiement] = useState(false);
+  // Crédit prépayé (hôtels) : solde chargé au focus, bouton dédié si suffisant.
+  const [soldeCredit, setSoldeCredit] = useState<number | null>(null);
+  const [chargeCredit, setChargeCredit] = useState(false);
+  const hotelId = session?.hotel?.id ?? null;
   // Paiement créé sur cet écran (pour la simulation de confirmation en dev).
   const [paiementId, setPaiementId] = useState<string | null>(null);
   // 'paypal' = circuit automatique (bouton « J'ai payé — vérifier »).
@@ -62,7 +69,13 @@ export default function EcranDetailColis() {
   useFocusEffect(
     useCallback(() => {
       charger();
-    }, [charger])
+      if (hotelId) {
+        api
+          .creditHotel(hotelId)
+          .then((c) => setSoldeCredit(c.balance))
+          .catch(() => setSoldeCredit(null));
+      }
+    }, [charger, hotelId])
   );
 
   if (!colis) {
@@ -82,6 +95,23 @@ export default function EcranDetailColis() {
   const peutPayer = statut === 'created';
   // Annulation par l'expéditeur : uniquement avant paiement.
   const peutAnnuler = statut === 'created';
+
+  // Paiement en un geste avec le crédit prépayé de l'hôtel.
+  const payerAvecCredit = async () => {
+    setChargeCredit(true);
+    setErreur('');
+    try {
+      await api.payerColisAvecCredit(colis.id);
+      if (hotelId) {
+        api.creditHotel(hotelId).then((c) => setSoldeCredit(c.balance)).catch(() => {});
+      }
+      await charger();
+    } catch (e) {
+      setErreur(e instanceof ErreurApi ? e.message : t('trip_paiement_indisponible'));
+    } finally {
+      setChargeCredit(false);
+    }
+  };
 
   const payer = async () => {
     setChargePaiement(true);
@@ -245,6 +275,18 @@ export default function EcranDetailColis() {
         />
       </Carte>
 
+      {/* Hôtel avec crédit suffisant : paiement en un geste. */}
+      {peutPayer &&
+        hotelId &&
+        soldeCredit !== null &&
+        soldeCredit >= Number(champ(colis, 'price') ?? Infinity) && (
+          <Bouton
+            titre={`${t('trip_payer_credit')} (${formaterMontant(soldeCredit, 'USD')})`}
+            icone="wallet-outline"
+            onPress={payerAvecCredit}
+            charge={chargeCredit}
+          />
+        )}
       {peutPayer && (
         <>
           <EncartInfo icone="logo-whatsapp">{t('dcolis_whatsapp_aide')}</EncartInfo>
