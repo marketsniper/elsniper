@@ -534,9 +534,41 @@ router.patch(
       );
       return rows[0];
     });
+    // Parrainage : la récompense (5 $ chacun) est ACQUISE quand le filleul
+    // termine sa 2e course — l'équipe est alors prévenue, une seule fois.
+    validerParrainageApresCourse(trip.user_id).catch(() => {});
     res.json(updated);
   })
 );
+
+// Vérifie si ce client est un filleul qui vient d'atteindre 2 courses
+// terminées : horodate la récompense (anti-doublon) et prévient l'équipe.
+async function validerParrainageApresCourse(userId) {
+  if (!userId) return;
+  const { rows } = await query(
+    `SELECT u.full_name, u.phone, u.email, u.referral_rewarded_at, p.full_name AS parrain_nom
+     FROM users u JOIN users p ON p.id = u.referred_by_user_id
+     WHERE u.id = $1`,
+    [userId]
+  );
+  const filleul = rows[0];
+  if (!filleul || filleul.referral_rewarded_at) return;
+  const { rows: compte } = await query(
+    `SELECT COUNT(*)::int AS n FROM trips WHERE user_id = $1 AND status = 'completed'`,
+    [userId]
+  );
+  if (compte[0].n < 2) return;
+  await query('UPDATE users SET referral_rewarded_at = now() WHERE id = $1', [userId]);
+  notifierEquipe(
+    '🎁 Parrainage validé — zanziGo',
+    [
+      `${filleul.full_name} (${filleul.phone ?? filleul.email ?? 'sans contact'})`,
+      `vient de terminer sa 2e course : la récompense de parrainage est`,
+      `ACQUISE — 5 $ pour lui et 5 $ pour son parrain ${filleul.parrain_nom},`,
+      'à déduire de leur prochain paiement.',
+    ].join('\n')
+  );
+}
 
 // POST /trips/:id/cancel — annulation par le réservateur (client ou hôtel).
 // Course non payée : annulable librement. Course PAYÉE avec une date de

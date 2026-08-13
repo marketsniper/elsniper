@@ -1094,9 +1094,9 @@ const CHAINES = {
   },
   parrainage_titre: { fr: 'Parrainez vos amis', en: 'Refer your friends', sw: 'Karibisha marafiki' },
   parrainage_texte: {
-    fr: 'Partagez votre code : à l\'inscription d\'un ami, vous gagnez tous les deux une réduction sur votre prochaine course.',
-    en: 'Share your code: when a friend signs up, you both earn a discount on your next ride.',
-    sw: 'Shiriki msimbo wako: rafiki akijisajili, nyote wawili mnapata punguzo kwenye safari ijayo.',
+    fr: 'Partagez votre code : dès que votre ami a fait 2 courses avec zanziGo, vous gagnez tous les deux 5 $ de réduction.',
+    en: 'Share your code: once your friend completes 2 rides with zanziGo, you both earn a 5 $ discount.',
+    sw: 'Shiriki msimbo wako: rafiki yako akikamilisha safari 2 na zanziGo, nyote wawili mnapata punguzo la $5.',
   },
   parrainage_partager: {
     fr: 'Partager mon code sur WhatsApp',
@@ -1130,6 +1130,16 @@ const CHAINES = {
     fr: 'Parrainé par {nom}',
     en: 'Referred by {nom}',
     sw: 'Amedhaminiwa na {nom}',
+  },
+  equipe_parrainage_acquis: {
+    fr: '🎁 récompense acquise (5 $ chacun)',
+    en: '🎁 reward earned ($5 each)',
+    sw: '🎁 zawadi imepatikana ($5 kila mmoja)',
+  },
+  equipe_parrainage_progres: {
+    fr: '{n}/2 courses avant la récompense',
+    en: '{n}/2 rides before the reward',
+    sw: 'safari {n}/2 kabla ya zawadi',
   },
   equipe_docs_alerte: { fr: 'Docs à renouveler', en: 'Docs expiring', sw: 'Nyaraka zinaisha' },
   equipe_docs_permis: { fr: 'Permis expire', en: 'License expires', sw: 'Leseni inaisha' },

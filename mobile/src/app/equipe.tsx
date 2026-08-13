@@ -1232,12 +1232,25 @@ export default function EcranEquipe() {
                   )}
                 </View>
                 <Text style={styles.detail}>{String(champ(profil, 'phone') ?? '')}</Text>
-                {/* Suivi parrainage : qui a amené ce client. */}
+                {/* Suivi parrainage : qui a amené ce client, et où en est la
+                    récompense (acquise après 2 courses terminées). */}
                 {!!champ(profil, 'referred_by_name', 'referredByName') && (
                   <Text style={styles.detail}>
                     🤝 {t('equipe_parraine_par', {
                       nom: String(champ(profil, 'referred_by_name', 'referredByName')),
-                    })}
+                    })}{' '}
+                    {champ(profil, 'referral_rewarded_at', 'referralRewardedAt')
+                      ? `— ${t('equipe_parrainage_acquis')}`
+                      : `— ${t('equipe_parrainage_progres', {
+                          n: String(
+                            Math.min(
+                              Number(
+                                champ(profil, 'filleul_courses_terminees', 'filleulCoursesTerminees') ?? 0
+                              ),
+                              2
+                            )
+                          ),
+                        })}`}
                   </Text>
                 )}
                 {bloque ? (

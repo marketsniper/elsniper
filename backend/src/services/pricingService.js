@@ -142,6 +142,8 @@ function specialLocalRouteTzs(pickup, dropoff) {
 // Matemwe → Jambiani (≈ 73 km) → 60 USD ; villages voisins → 20 USD.
 const CITY_COORDS = {
   'aéroport (aakia)': [-6.221, 39.223],
+  'aéroport abeid amani karume': [-6.221, 39.223],
+  'aéroport international abeid amani karume': [-6.221, 39.223],
   aéroport: [-6.221, 39.223],
   airport: [-6.221, 39.223],
   'stone town': [-6.162, 39.191],
@@ -165,7 +167,15 @@ const CITY_COORDS = {
 const DETOUR_ROUTIER = 1.35; // les routes de l'île ne sont jamais directes
 const PRIX_PAR_KM_USD = 0.85;
 const PRIVE_MINIMUM_USD = 20;
-const HUBS = new Set(['stone town', 'stone town ferry', 'aéroport (aakia)', 'aéroport', 'airport']);
+const HUBS = new Set([
+  'stone town',
+  'stone town ferry',
+  'aéroport (aakia)',
+  'aéroport abeid amani karume',
+  'aéroport international abeid amani karume',
+  'aéroport',
+  'airport',
+]);
 
 // Kilomètres de ROUTE estimés entre deux villes connues (sinon null).
 export function kmEntreVilles(a, b) {

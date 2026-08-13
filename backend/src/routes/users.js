@@ -152,7 +152,7 @@ router.post(
     if (parrain) {
       notifierEquipe(
         '🤝 Parrainage — zanziGo',
-        `${rows[0].full_name} (${rows[0].phone ?? rows[0].email ?? 'sans contact'}) s'est inscrit avec le code de ${parrain.full_name}. Pensez à la récompense des deux côtés (ex. 5 $ de réduction chacun) au prochain paiement.`
+        `${rows[0].full_name} (${rows[0].phone ?? rows[0].email ?? 'sans contact'}) s'est inscrit avec le code de ${parrain.full_name}. La récompense (5 $ chacun) sera ACQUISE quand il aura terminé 2 courses — vous serez prévenu automatiquement.`
       );
     }
     // Récapitulatif d'inscription par e-mail (si fourni) — au mieux, jamais
@@ -215,9 +215,14 @@ router.get(
       conditions.push(`(u.full_name ILIKE $${params.length} OR u.phone ILIKE $${params.length})`);
     }
     const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
-    // Le nom du parrain est joint pour le tableau équipe (suivi parrainage).
+    // Le nom du parrain est joint pour le tableau équipe (suivi parrainage),
+    // avec le nombre de courses terminées du filleul : la récompense n'est
+    // acquise qu'à partir de 2 (referral_rewarded_at posé automatiquement).
     const { rows } = await query(
-      `SELECT u.*, p.full_name AS referred_by_name
+      `SELECT u.*, p.full_name AS referred_by_name,
+              CASE WHEN u.referred_by_user_id IS NOT NULL THEN
+                (SELECT COUNT(*)::int FROM trips t WHERE t.user_id = u.id AND t.status = 'completed')
+              END AS filleul_courses_terminees
        FROM users u LEFT JOIN users p ON p.id = u.referred_by_user_id
        ${where} ORDER BY u.created_at DESC LIMIT 200`,
       params

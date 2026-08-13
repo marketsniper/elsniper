@@ -31,8 +31,6 @@ const createDriverSchema = z.object({
   insuranceDocumentUrl: z.string().url(),
   vehiclePhotoUrl: z.string().url(),
   idDocumentUrl: z.string().url().optional(),
-  // Parrainage : code ZG-XXXXXX d'un client existant (optionnel).
-  referralCode: z.string().min(4).max(12).optional(),
 });
 
 // Dates d'expiration des documents (renseignées par l'équipe lors du
@@ -75,27 +73,10 @@ router.post(
         'Candidature chauffeur : créez d\'abord votre compte chauffeur (numéro + mot de passe)'
       );
     }
-    // Code parrain (un client existant recommande un chauffeur) : validé
-    // strictement, comme côté clients.
-    let parrain = null;
-    if (data.referralCode) {
-      const { rows: parrainRows } = await query(
-        'SELECT id, full_name FROM users WHERE upper(referral_code) = upper($1)',
-        [data.referralCode.trim()]
-      );
-      parrain = parrainRows[0] ?? null;
-      if (!parrain) {
-        throw new HttpError(
-          400,
-          'invalid_referral_code',
-          'Code parrain introuvable — vérifiez-le ou laissez le champ vide'
-        );
-      }
-    }
     const { rows } = await query(
       `INSERT INTO drivers (full_name, phone, license_number, vehicle_plate, vehicle_model, zone,
-                            license_document_url, insurance_document_url, vehicle_photo_url, id_document_url, password_hash, referred_by_user_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+                            license_document_url, insurance_document_url, vehicle_photo_url, id_document_url, password_hash)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
        RETURNING *`,
       [
         data.fullName,
@@ -109,7 +90,6 @@ router.post(
         data.vehiclePhotoUrl,
         data.idDocumentUrl ?? null,
         req.auth?.passwordHash ?? null,
-        parrain?.id ?? null,
       ]
     );
     // L'équipe est prévenue automatiquement qu'une candidature attend.
@@ -120,7 +100,6 @@ router.post(
         `Téléphone: ${rows[0].phone}`,
         `Véhicule: ${rows[0].vehicle_model ?? '—'} (${rows[0].vehicle_plate})`,
         `Zone: ${rows[0].zone}`,
-        ...(parrain ? [`🤝 Parrainé par: ${parrain.full_name}`] : []),
         'À faire: contrôler les documents dans le tableau de bord (Candidatures).',
       ].join('\n')
     );

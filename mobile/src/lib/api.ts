@@ -411,8 +411,6 @@ export interface CreationChauffeur {
   vehiclePhotoUrl: string;
   /** Devenu optionnel côté serveur — l'app ne l'envoie plus. */
   idDocumentUrl?: string;
-  /** Parrainage : code ZG-XXXXXX d'un client existant (optionnel). */
-  referralCode?: string;
 }
 
 /**

@@ -210,7 +210,8 @@ export const LIBELLES_STATUT_RIDE: Record<StatutRide, string> = {
 // Listes fermées des lieux — repli local de GET /rides/locations. Les chaînes
 // doivent matcher EXACTEMENT la validation serveur (400 hors liste au
 // POST /rides).
-export const HUBS_RIDES: string[] = ['Aéroport (AAKIA)', 'Stone Town Ferry'];
+// Le vrai nom de l'aéroport de Zanzibar : Abeid Amani Karume (AAKIA/ZNZ).
+export const HUBS_RIDES: string[] = ['Aéroport Abeid Amani Karume', 'Stone Town Ferry'];
 export const DESTINATIONS_RIDES: string[] = [
   'Stone Town',
   'Nungwi',
@@ -519,6 +520,8 @@ export function tarifsZoneItineraire(depart: string, arrivee: string): TarifsZon
 
 const COORDONNEES_VILLES: Record<string, [number, number]> = {
   'aéroport (aakia)': [-6.221, 39.223],
+  'aéroport abeid amani karume': [-6.221, 39.223],
+  'aéroport international abeid amani karume': [-6.221, 39.223],
   aéroport: [-6.221, 39.223],
   airport: [-6.221, 39.223],
   'stone town': [-6.162, 39.191],
@@ -546,6 +549,8 @@ const HUBS_TARIFAIRES = new Set([
   'stone town',
   'stone town ferry',
   'aéroport (aakia)',
+  'aéroport abeid amani karume',
+  'aéroport international abeid amani karume',
   'aéroport',
   'airport',
 ]);

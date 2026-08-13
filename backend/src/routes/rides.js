@@ -22,7 +22,7 @@ import {
   sharedSeatUsdForRoute,
 } from '../services/pricingService.js';
 import { createPaymentOrder, isStubMode } from '../services/pesapalService.js';
-import { RIDE_DESTINATIONS, RIDE_ORIGINS } from '../services/locations.js';
+import { RIDE_DESTINATIONS, RIDE_ORIGINS, RIDE_ORIGINS_ACCEPTES } from '../services/locations.js';
 import { randomUUID } from 'node:crypto';
 import { assertHotelVerified } from './hotels.js';
 import { tauxRemboursement } from '../services/annulationService.js';
@@ -31,7 +31,9 @@ import { notifierEquipe } from '../services/emailService.js';
 const router = Router();
 
 const createRideSchema = z.object({
-  origin: z.enum(RIDE_ORIGINS, { message: 'Point de départ inconnu' }),
+  // Les anciens libellés (ex. « Aéroport (AAKIA) ») restent acceptés pour
+  // les versions précédentes de l'app ; les menus n'affichent que les neufs.
+  origin: z.enum(RIDE_ORIGINS_ACCEPTES, { message: 'Point de départ inconnu' }),
   destination: z.enum(RIDE_DESTINATIONS, { message: "Ville d'arrivée inconnue" }),
   departureAt: z.string().datetime({ offset: true }),
   seatsTotal: z.number().int().min(1).max(8),

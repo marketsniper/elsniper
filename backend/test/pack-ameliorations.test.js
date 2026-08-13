@@ -182,6 +182,100 @@ describe('Pack améliorations', () => {
     assert.equal(ligneFilleul.referred_by_name, parrain.full_name);
   });
 
+  it('parrainage : la récompense est acquise à la 2e course TERMINÉE du filleul', async () => {
+    const { user: parrain } = await createTourist();
+    const phone = nextPhone();
+    const jeton = await request(app)
+      .post('/api/auth/visitor-register')
+      .send({ phone, password: 'FilleulMdp1' });
+    const filleul = await request(app)
+      .post('/api/users')
+      .set(authHeaders(jeton.body.token))
+      .send({
+        fullName: 'Filleul Assidu',
+        phone,
+        accountType: 'tourist',
+        referralCode: parrain.referral_code,
+      });
+
+    const { driver, token: driverToken } = await createVerifiedDriver();
+    const faireUneCourse = async () => {
+      const trip = await request(app)
+        .post('/api/trips')
+        .set(authHeaders(jeton.body.token))
+        .send({
+          userId: filleul.body.id,
+          tripType: 'private',
+          pickupLocation: 'Stone Town',
+          dropoffLocation: 'Paje',
+        });
+      await request(app)
+        .patch(`/api/trips/${trip.body.id}/assign-driver`)
+        .set(adminHeaders())
+        .send({ driverId: driver.id });
+      const paiement = await request(app)
+        .post(`/api/trips/${trip.body.id}/payment`)
+        .set(authHeaders(jeton.body.token));
+      await request(app)
+        .post(`/api/payments/${paiement.body.id}/confirm`)
+        .set(authHeaders(jeton.body.token));
+      await request(app)
+        .patch(`/api/trips/${trip.body.id}/start`)
+        .set(authHeaders(driverToken))
+        .send({});
+      await request(app)
+        .patch(`/api/trips/${trip.body.id}/complete`)
+        .set(authHeaders(driverToken))
+        .send({});
+    };
+
+    // 1re course terminée : rien encore.
+    await faireUneCourse();
+    await new Promise((r) => setTimeout(r, 200));
+    let { rows } = await pool.query('SELECT referral_rewarded_at FROM users WHERE id = $1', [
+      filleul.body.id,
+    ]);
+    assert.equal(rows[0].referral_rewarded_at, null);
+
+    // 2e course terminée : la récompense est acquise (horodatée une fois).
+    await faireUneCourse();
+    await new Promise((r) => setTimeout(r, 300));
+    ({ rows } = await pool.query('SELECT referral_rewarded_at FROM users WHERE id = $1', [
+      filleul.body.id,
+    ]));
+    assert.ok(rows[0].referral_rewarded_at, 'la récompense doit être acquise après 2 courses');
+  });
+
+  it('aéroport : le vrai nom « Abeid Amani Karume » est reconnu partout', async () => {
+    const { privateUsdForRoute } = await import('../src/services/pricingService.js');
+    // Grille hub inchangée sous le nouveau nom (et l'ancien reste accepté).
+    assert.equal(privateUsdForRoute('Aéroport Abeid Amani Karume', 'Nungwi'), 50);
+    assert.equal(privateUsdForRoute('Aéroport (AAKIA)', 'Nungwi'), 50);
+
+    // Les annonces partagées acceptent les deux libellés de départ.
+    const { token: tokenChauffeur } = await createVerifiedDriver();
+    const depart = new Date(Date.now() + 6 * 3600 * 1000).toISOString();
+    const nouveau = await request(app)
+      .post('/api/rides')
+      .set(authHeaders(tokenChauffeur))
+      .send({
+        origin: 'Aéroport Abeid Amani Karume',
+        destination: 'Nungwi',
+        departureAt: depart,
+        seatsTotal: 4,
+      });
+    assert.equal(nouveau.status, 201, JSON.stringify(nouveau.body));
+    const ancien = await request(app)
+      .post('/api/rides')
+      .set(authHeaders(tokenChauffeur))
+      .send({ origin: 'Aéroport (AAKIA)', destination: 'Paje', departureAt: depart, seatsTotal: 4 });
+    assert.equal(ancien.status, 201, JSON.stringify(ancien.body));
+    // Et la liste servie aux menus n'affiche QUE le nouveau nom.
+    const lieux = await request(app).get('/api/rides/locations');
+    assert.ok(lieux.body.origins.includes('Aéroport Abeid Amani Karume'));
+    assert.ok(!lieux.body.origins.includes('Aéroport (AAKIA)'));
+  });
+
   it('liste d\'attente : demande posée, marquée trouvée quand une annonce correspond', async () => {
     const { token, user } = await createTourist();
     const demande = await request(app)

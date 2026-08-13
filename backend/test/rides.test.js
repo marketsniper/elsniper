@@ -82,7 +82,7 @@ describe('Trajets partagés (rides)', () => {
   it('GET /rides/locations : listes pour les menus déroulants (2 départs)', async () => {
     const res = await request(app).get('/api/rides/locations');
     assert.equal(res.status, 200);
-    assert.ok(res.body.origins.includes('Aéroport (AAKIA)'));
+    assert.ok(res.body.origins.includes('Aéroport Abeid Amani Karume'));
     assert.ok(res.body.origins.includes('Stone Town Ferry'));
     assert.ok(res.body.origins.includes('Nungwi'), 'les villes sont aussi des départs');
     assert.ok(res.body.destinations.includes('Nungwi'));
