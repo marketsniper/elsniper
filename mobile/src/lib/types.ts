@@ -378,13 +378,16 @@ export const TARIFS_TRAJET_USD: Partial<Record<TypeTrajet, number>> = {
  * pickupLocation/dropoffLocation valent EXACTEMENT ces villes (sans précision
  * ajoutée) — d'où l'envoi des villes seules sur ces trajets.
  */
+// Commissions dédiées côté serveur : 15 % sur les spéciaux à 20 USD, 20 %
+// sur ceux à 15 USD (3 USD de commission dans les deux cas) — le serveur
+// fige prix ET commission sur chaque course, l'app n'affiche que ses valeurs.
 export const TRAJETS_SPECIAUX_PRIVE_USD: { villes: [string, string]; prix: number }[] = [
   { villes: ['Nungwi', 'Paje'], prix: 65 },
   { villes: ['Nungwi', 'Kizimkazi'], prix: 70 },
   { villes: ['Michamvi', 'Paje'], prix: 20 },
   { villes: ['Makunduchi', 'Jambiani'], prix: 20 },
-  { villes: ['Paje', 'Bwejuu'], prix: 10 },
-  { villes: ['Paje', 'Jambiani'], prix: 10 },
+  { villes: ['Paje', 'Bwejuu'], prix: 15 },
+  { villes: ['Paje', 'Jambiani'], prix: 15 },
 ];
 
 /** Trajets spéciaux TZS : place locale en taxi partagé (deux sens). */

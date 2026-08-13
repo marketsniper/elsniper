@@ -16,16 +16,34 @@ describe('Grille privée au kilomètre', () => {
     assert.equal(privateUsdForRoute('Aéroport (AAKIA)', 'Paje'), 50);
     assert.equal(privateUsdForRoute('Stone Town Ferry', 'Matemwe'), 45);
     // Trajets spéciaux : prioritaires sur la formule (et sur le minimum de
-    // 20 USD pour les petits sauts de la côte est à 10 USD).
+    // 20 USD pour les petits sauts de la côte est à 15 USD).
     assert.equal(privateUsdForRoute('Nungwi', 'Paje'), 65);
     assert.equal(privateUsdForRoute('Paje', 'Nungwi'), 65);
     assert.equal(privateUsdForRoute('Nungwi', 'Kizimkazi'), 70);
     assert.equal(privateUsdForRoute('Kizimkazi', 'Nungwi'), 70);
     assert.equal(privateUsdForRoute('Michamvi', 'Paje'), 20);
     assert.equal(privateUsdForRoute('Makunduchi', 'Jambiani'), 20);
-    assert.equal(privateUsdForRoute('Paje', 'Bwejuu'), 10);
-    assert.equal(privateUsdForRoute('Paje', 'Jambiani'), 10);
-    assert.equal(privateUsdForRoute('Jambiani', 'Paje'), 10);
+    assert.equal(privateUsdForRoute('Paje', 'Bwejuu'), 15);
+    assert.equal(privateUsdForRoute('Paje', 'Jambiani'), 15);
+    assert.equal(privateUsdForRoute('Jambiani', 'Paje'), 15);
+  });
+
+  it('commissions dédiées des petits trajets : 15 % à 20 USD, 20 % à 15 USD (3 USD partout)', () => {
+    // Spécial 20 USD → 15 % : la plateforme garde 3 USD, le chauffeur 17.
+    const vingt = priceTrip('private', 'tourist', { pickup: 'Michamvi', dropoff: 'Paje' });
+    assert.equal(vingt.price, 20);
+    assert.equal(vingt.commission, 3);
+    // Spécial 15 USD → 20 % : 3 USD aussi, le chauffeur 12.
+    const quinze = priceTrip('private', 'tourist', { pickup: 'Paje', dropoff: 'Jambiani' });
+    assert.equal(quinze.price, 15);
+    assert.equal(quinze.commission, 3);
+    // Local sur le même trajet : prix ET commission convertis (×2600, 20 %).
+    const local = priceTrip('private', 'local', { pickup: 'Paje', dropoff: 'Jambiani' });
+    assert.equal(local.price, 15 * 2600);
+    assert.equal(local.commission, 15 * 2600 * 0.2);
+    // Les autres privés gardent 10 % (Matemwe → Paje 55 → 5,50).
+    const normal = priceTrip('private', 'tourist', { pickup: 'Matemwe', dropoff: 'Paje' });
+    assert.equal(normal.commission, 5.5);
   });
 
   it('paires de villes : 0,85 USD/km, arrondi aux 5 USD, minimum 20', () => {

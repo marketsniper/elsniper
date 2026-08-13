@@ -54,16 +54,18 @@ const CITY_ZONES = {
   fumba: 'sud',
 };
 
-// Trajets spéciaux à prix fixe (USD, courses privées), deux sens. Les
-// petits sauts de la côte est passent SOUS le minimum de 20 USD — le prix
+// Trajets spéciaux à prix fixe (USD, courses privées), deux sens — le prix
 // spécial est prioritaire sur la formule au kilomètre ET sur le minimum.
+// Les petits trajets de la côte est portent une commission dédiée : 15 %
+// sur les 20 USD, 20 % sur les 15 USD — dans les deux cas la plateforme
+// garde 3 USD par course (les autres privés restent à 10 %).
 const SPECIAL_PRIVATE_ROUTES_USD = [
   { a: 'Nungwi', b: 'Paje', usd: 65 },
   { a: 'Nungwi', b: 'Kizimkazi', usd: 70 },
-  { a: 'Michamvi', b: 'Paje', usd: 20 },
-  { a: 'Makunduchi', b: 'Jambiani', usd: 20 },
-  { a: 'Paje', b: 'Bwejuu', usd: 10 },
-  { a: 'Paje', b: 'Jambiani', usd: 10 },
+  { a: 'Michamvi', b: 'Paje', usd: 20, commission: 0.15 },
+  { a: 'Makunduchi', b: 'Jambiani', usd: 20, commission: 0.15 },
+  { a: 'Paje', b: 'Bwejuu', usd: 15, commission: 0.2 },
+  { a: 'Paje', b: 'Jambiani', usd: 15, commission: 0.2 },
 ];
 
 // Trajets spéciaux à prix fixe (TZS, place locale en taxi partagé), deux
@@ -99,15 +101,24 @@ function tierForRoute(pickup, dropoff) {
   return z1 ?? z2 ?? fallback;
 }
 
-function specialPrivateRouteUsd(pickup, dropoff) {
+function specialPrivateRoute(pickup, dropoff) {
   const p = normCity(pickup);
   const d = normCity(dropoff);
-  const route = SPECIAL_PRIVATE_ROUTES_USD.find((r) => {
+  return SPECIAL_PRIVATE_ROUTES_USD.find((r) => {
     const a = r.a.toLowerCase();
     const b = r.b.toLowerCase();
     return (p === a && d === b) || (p === b && d === a);
   });
-  return route?.usd;
+}
+
+function specialPrivateRouteUsd(pickup, dropoff) {
+  return specialPrivateRoute(pickup, dropoff)?.usd;
+}
+
+// Taux de commission d'une course privée sur cet itinéraire : celui du
+// trajet spécial s'il en définit un, sinon le taux privé général (10 %).
+function privateCommissionRate(pickup, dropoff) {
+  return specialPrivateRoute(pickup, dropoff)?.commission ?? COMMISSION_RATES.private;
 }
 
 function specialLocalRouteTzs(pickup, dropoff) {
@@ -210,11 +221,13 @@ export function priceTrip(tripType, audience, route = {}) {
 
   if (audience === 'local') {
     // Course PRIVÉE : même prix que la grille touriste (grille au kilomètre
-    // ville ↔ ville incluse), converti en shillings — commission privé 10 %.
+    // ville ↔ ville incluse), converti en shillings — commission privé 10 %
+    // (ou le taux dédié du trajet spécial).
     if (tripType === 'private') {
       const usd = privateUsdForRoute(route.pickup, route.dropoff);
       const price = Math.round(usd * config.usdToTzsRate);
-      return { price, commission: round2(price * COMMISSION_RATES.private), currency: 'TZS' };
+      const taux = privateCommissionRate(route.pickup, route.dropoff);
+      return { price, commission: round2(price * taux), currency: 'TZS' };
     }
     // Taxi partagé local : tarif unifié (trajets spéciaux inclus), par
     // place — commission 15 %.
@@ -226,7 +239,8 @@ export function priceTrip(tripType, audience, route = {}) {
   let taux;
   if (tripType === 'private') {
     usd = privateUsdForRoute(route.pickup, route.dropoff);
-    taux = COMMISSION_RATES.private; // 10 % — le chauffeur reçoit 90 %
+    // 10 % (le chauffeur reçoit 90 %), sauf taux dédié du trajet spécial.
+    taux = privateCommissionRate(route.pickup, route.dropoff);
   } else if (tripType === 'shared_tourist' || tripType === 'posted_return') {
     usd = tier.sharedUsd;
     taux = COMMISSION_RATES.shared; // 20 % — le chauffeur reçoit 80 %
