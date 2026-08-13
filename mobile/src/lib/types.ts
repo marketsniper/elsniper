@@ -210,8 +210,20 @@ export const LIBELLES_STATUT_RIDE: Record<StatutRide, string> = {
 // Listes fermées des lieux — repli local de GET /rides/locations. Les chaînes
 // doivent matcher EXACTEMENT la validation serveur (400 hors liste au
 // POST /rides).
-// Le vrai nom de l'aéroport de Zanzibar : Abeid Amani Karume (AAKIA/ZNZ).
-export const HUBS_RIDES: string[] = ['Aéroport Abeid Amani Karume', 'Stone Town Ferry'];
+// Le nom officiel complet de l'aéroport de Zanzibar.
+export const HUBS_RIDES: string[] = [
+  'Aéroport international Abeid Amani Karume',
+  'Stone Town Ferry',
+];
+
+// Stone Town, le ferry et l'aéroport sont à quelques minutes les uns des
+// autres : aucune course n'est proposée entre ces trois points (même règle
+// côté serveur, code d'erreur route_indisponible).
+export const POINTS_STONE_TOWN: string[] = [
+  'Stone Town',
+  'Stone Town Ferry',
+  'Aéroport international Abeid Amani Karume',
+];
 export const DESTINATIONS_RIDES: string[] = [
   'Stone Town',
   'Nungwi',

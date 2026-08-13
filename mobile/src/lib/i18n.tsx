@@ -1066,27 +1066,6 @@ const CHAINES = {
     sw: 'Kwenda na kurudi (kusubiri kumejumuishwa)',
   },
   trip_options: { fr: 'Options', en: 'Options', sw: 'Chaguo' },
-  trip_pourboire_question: {
-    fr: 'Un pourboire pour votre chauffeur ? (100 % pour lui)',
-    en: 'A tip for your driver? (100% goes to them)',
-    sw: 'Bahashishi kwa dereva wako? (100% ni yake)',
-  },
-  trip_pourboire_note: {
-    fr: 'Optionnel — remis intégralement au chauffeur avec ses gains.',
-    en: 'Optional — handed to the driver in full with their earnings.',
-    sw: 'Hiari — anapewa dereva kikamilifu pamoja na mapato yake.',
-  },
-  trip_pourboire_merci: {
-    fr: 'Pourboire de {montant} envoyé — asante sana pour votre chauffeur ! 💛',
-    en: '{montant} tip sent — asante sana from your driver! 💛',
-    sw: 'Bahashishi ya {montant} imetumwa — asante sana kwa dereva wako! 💛',
-  },
-  trip_pourboire_erreur: {
-    fr: 'Pourboire impossible pour le moment.',
-    en: 'Tip not possible right now.',
-    sw: 'Bahashishi haiwezekani kwa sasa.',
-  },
-  course_pourboire: { fr: 'Pourboire client', en: 'Client tip', sw: 'Bahashishi ya mteja' },
   client_code_parrain: {
     fr: 'Code parrain (optionnel)',
     en: 'Referral code (optional)',

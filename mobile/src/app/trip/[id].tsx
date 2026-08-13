@@ -64,8 +64,6 @@ export default function EcranTrajet() {
   const [chargeNote, setChargeNote] = useState(false);
   const [noteEnvoyee, setNoteEnvoyee] = useState(false);
   const [chargeAnnulation, setChargeAnnulation] = useState(false);
-  // Pourboire (100 % au chauffeur) : proposé une fois la course terminée.
-  const [chargePourboire, setChargePourboire] = useState(false);
 
   const charger = useCallback(async () => {
     if (!id) return;
@@ -223,24 +221,6 @@ export default function EcranTrajet() {
         },
       },
     ]);
-  };
-
-  // Montants de pourboire proposés selon la devise de la course.
-  const deviseCourse = String(champ(trajet, 'currency') ?? 'USD');
-  const montantsPourboire = deviseCourse === 'TZS' ? [2000, 5000, 10000] : [1, 2, 5];
-  const pourboireLaisse = champ<number | string>(trajet, 'tip_amount', 'tipAmount');
-
-  const donnerPourboire = async (montant: number) => {
-    setChargePourboire(true);
-    setErreur('');
-    try {
-      await api.laisserPourboire(trajet.id, montant);
-      await charger();
-    } catch (e) {
-      setErreur(e instanceof ErreurApi ? e.message : t('trip_pourboire_erreur'));
-    } finally {
-      setChargePourboire(false);
-    }
   };
 
   const envoyerNote = async () => {
@@ -411,45 +391,6 @@ export default function EcranTrajet() {
         />
       )}
 
-      {/* Pourboire : 100 % pour le chauffeur, une seule fois. */}
-      {statut === 'completed' && (
-        <Carte>
-          {pourboireLaisse !== undefined && pourboireLaisse !== null ? (
-            <View style={styles.blocNote}>
-              <Ionicons name="heart" size={22} color={couleurs.succes} />
-              <Text style={styles.merci}>
-                {t('trip_pourboire_merci', {
-                  montant: formaterMontant(Number(pourboireLaisse), deviseCourse),
-                })}
-              </Text>
-            </View>
-          ) : (
-            <>
-              <SousTitre>{t('trip_pourboire_question')}</SousTitre>
-              <View style={styles.rangeePourboire}>
-                {montantsPourboire.map((montant) => (
-                  <Pressable
-                    key={montant}
-                    onPress={() => donnerPourboire(montant)}
-                    disabled={chargePourboire}
-                    accessibilityRole="button"
-                    style={({ pressed }) => [
-                      styles.boutonPourboire,
-                      (pressed || chargePourboire) && { opacity: 0.6 },
-                    ]}
-                  >
-                    <Text style={styles.textePourboire}>
-                      {formaterMontant(montant, deviseCourse)}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-              <Text style={styles.notePourboire}>{t('trip_pourboire_note')}</Text>
-            </>
-          )}
-        </Carte>
-      )}
-
       {statut === 'completed' && (
         <Carte>
           {noteEnvoyee || dejaNotee ? (
@@ -584,28 +525,5 @@ const styles = StyleSheet.create({
   etoilesCentrees: {
     alignItems: 'center',
     paddingVertical: espaces.s,
-  },
-  rangeePourboire: {
-    flexDirection: 'row',
-    gap: espaces.m,
-    paddingVertical: espaces.s,
-  },
-  boutonPourboire: {
-    flex: 1,
-    borderWidth: 2,
-    borderColor: couleurs.primaire,
-    borderRadius: 12,
-    paddingVertical: espaces.m,
-    alignItems: 'center',
-    backgroundColor: couleurs.primaireClair,
-  },
-  textePourboire: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: couleurs.primaireFonce,
-  },
-  notePourboire: {
-    fontSize: 12.5,
-    color: couleurs.texteSecondaire,
   },
 });

@@ -548,14 +548,6 @@ export async function noterTrajet(id: string, note: number, commentaire?: string
   });
 }
 
-/**
- * POST /trips/:id/tip {amount} — pourboire pour le chauffeur (course
- * terminée, une seule fois, 100 % au chauffeur).
- */
-export async function laisserPourboire(id: string, montant: number): Promise<Trajet> {
-  return requete<Trajet>(`/trips/${id}/tip`, { methode: 'POST', corps: { amount: montant } });
-}
-
 // ---------------------------------------------------------------------------
 // Liste d'attente du taxi partagé (backend/src/routes/rides.js /attente)
 // ---------------------------------------------------------------------------
@@ -1177,7 +1169,6 @@ export const api = {
   confirmerPaiement,
   confirmerPaiementEquipe,
   noterTrajet,
-  laisserPourboire,
   creerAttentePartage,
   listerAttentesPartage,
   annulerAttentePartage,

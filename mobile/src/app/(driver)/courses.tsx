@@ -455,16 +455,6 @@ export default function EcranCourses() {
               </Text>
               <Text style={styles.prix}>{formaterPrix(item)}</Text>
             </View>
-            {/* Pourboire laissé par le client : 100 % pour le chauffeur. */}
-            {champ(item, 'tip_amount', 'tipAmount') != null && (
-              <Text style={styles.prix}>
-                💛 {t('course_pourboire')} :{' '}
-                {formaterMontant(
-                  Number(champ(item, 'tip_amount', 'tipAmount')),
-                  String(champ(item, 'currency') ?? 'USD')
-                )}
-              </Text>
-            )}
           </Pressable>
         );
       })}

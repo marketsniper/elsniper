@@ -4,7 +4,7 @@ import { query, withTransaction } from '../db.js';
 import { HttpError, notFound } from '../errors.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { isAdmin, requireAuth, requireAdmin } from '../middleware/auth.js';
-import { priceTrip, sharedAllowedForRoute } from '../services/pricingService.js';
+import { hubToHubRoute, priceTrip, sharedAllowedForRoute } from '../services/pricingService.js';
 import { createPaymentOrder, isStubMode } from '../services/pesapalService.js';
 import { circuitPaiementUsd } from '../services/paypalService.js';
 import { buildTeamNotificationLink, tripRequestMessage } from '../services/whatsappService.js';
@@ -49,9 +49,6 @@ const ratingSchema = z.object({
   rating: z.number().int().min(1).max(5),
   comment: z.string().max(1000).optional(),
 });
-// Pourboire : 100 % pour le chauffeur, plafonné à une valeur raisonnable
-// dans la devise de la course (200 USD / 500 000 TZS).
-const tipSchema = z.object({ amount: z.number().positive() });
 
 // Infos PUBLIQUES du taxi assigné, jointes aux courses : dès que tout est
 // réglé, le client sait qui vient le chercher (nom du chauffeur, plaque,
@@ -79,6 +76,16 @@ router.post(
   requireAuth,
   asyncHandler(async (req, res) => {
     const data = createTripSchema.parse(req.body);
+
+    // Stone Town, le ferry et l'aéroport sont à quelques minutes : aucune
+    // course n'est proposée entre ces trois points.
+    if (hubToHubRoute(data.pickupLocation, data.dropoffLocation)) {
+      throw new HttpError(
+        422,
+        'route_indisponible',
+        'Pas de course entre Stone Town, le ferry et l\'aéroport — ces points sont à quelques minutes les uns des autres'
+      );
+    }
 
     // Pas de taxi partagé sur les trajets courts (course privée du même
     // trajet à moins de 35 USD) : course privée uniquement.
@@ -652,43 +659,6 @@ router.post(
       sortie.whatsapp_link = buildTeamNotificationLink(resumeAnnulation);
     }
     res.json(sortie);
-  })
-);
-
-// POST /trips/:id/tip — pourboire pour le chauffeur (course terminée,
-// réservé au client de la course, une seule fois). 100 % au chauffeur :
-// aucune commission — l'équipe le voit et le reverse avec les gains.
-router.post(
-  '/:id/tip',
-  requireAuth,
-  asyncHandler(async (req, res) => {
-    const { amount } = tipSchema.parse(req.body);
-    const trip = await getTrip(req.params.id);
-    const isBooker =
-      (trip.user_id !== null && trip.user_id === req.auth.userId) ||
-      (trip.hotel_id !== null && trip.hotel_id === req.auth.hotelId);
-    if (!isAdmin(req) && !isBooker) {
-      throw new HttpError(403, 'forbidden', 'Seul le réservateur de la course peut laisser un pourboire');
-    }
-    if (trip.status !== 'completed') {
-      throw new HttpError(409, 'invalid_status', 'Le pourboire se laisse une fois la course terminée');
-    }
-    if (trip.tip_amount !== null) {
-      throw new HttpError(409, 'already_tipped', 'Un pourboire a déjà été laissé pour cette course');
-    }
-    const plafond = trip.currency === 'TZS' ? 500000 : 200;
-    if (amount > plafond) {
-      throw new HttpError(400, 'tip_too_high', `Pourboire maximum : ${plafond} ${trip.currency}`);
-    }
-    const { rows } = await query('UPDATE trips SET tip_amount = $1 WHERE id = $2 RETURNING *', [
-      Math.round(amount * 100) / 100,
-      req.params.id,
-    ]);
-    notifierEquipe(
-      '💝 Pourboire laissé — zanziGo',
-      `Pourboire de ${rows[0].tip_amount} ${trip.currency} pour la course ${trip.pickup_location} → ${trip.dropoff_location} (réf ${trip.id}) — 100 % au chauffeur.`
-    );
-    res.json(rows[0]);
   })
 );
 

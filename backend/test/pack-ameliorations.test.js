@@ -73,73 +73,51 @@ describe('Pack améliorations', () => {
     assert.equal(Number(partage.body.price), 18);
   });
 
-  it('pourboire : course terminée uniquement, une seule fois, plafonné', async () => {
+  it('pas de course entre Stone Town, le ferry et l\'aéroport (points voisins)', async () => {
     const { token, user } = await createTourist();
-    const { driver, token: driverToken } = await createVerifiedDriver();
-    const trip = await request(app)
+    for (const [depart, arrivee] of [
+      ['Stone Town Ferry', 'Stone Town'],
+      ['Aéroport international Abeid Amani Karume', 'Stone Town'],
+      ['Aéroport (AAKIA)', 'Stone Town Ferry'],
+    ]) {
+      const refus = await request(app)
+        .post('/api/trips')
+        .set(authHeaders(token))
+        .send({
+          userId: user.id,
+          tripType: 'private',
+          pickupLocation: depart,
+          dropoffLocation: arrivee,
+        });
+      assert.equal(refus.status, 422, `${depart} → ${arrivee}`);
+      assert.equal(refus.body.error.code, 'route_indisponible');
+    }
+    // Une annonce partagée entre hubs est refusée aussi.
+    const { token: tokenChauffeur } = await createVerifiedDriver();
+    const depart = new Date(Date.now() + 6 * 3600 * 1000).toISOString();
+    const annonce = await request(app)
+      .post('/api/rides')
+      .set(authHeaders(tokenChauffeur))
+      .send({
+        origin: 'Aéroport international Abeid Amani Karume',
+        destination: 'Stone Town',
+        departureAt: depart,
+        seatsTotal: 4,
+      });
+    assert.equal(annonce.status, 422);
+    assert.equal(annonce.body.error.code, 'route_indisponible');
+    // Les vraies liaisons (aéroport → plages) restent ouvertes.
+    const ok = await request(app)
       .post('/api/trips')
       .set(authHeaders(token))
       .send({
         userId: user.id,
         tripType: 'private',
-        pickupLocation: 'Stone Town',
-        dropoffLocation: 'Paje',
+        pickupLocation: 'Aéroport international Abeid Amani Karume',
+        dropoffLocation: 'Nungwi',
       });
-
-    // Avant la fin de la course : refusé.
-    const tropTot = await request(app)
-      .post(`/api/trips/${trip.body.id}/tip`)
-      .set(authHeaders(token))
-      .send({ amount: 5 });
-    assert.equal(tropTot.status, 409);
-
-    // Assignation → paiement → départ → arrivée.
-    await request(app)
-      .patch(`/api/trips/${trip.body.id}/assign-driver`)
-      .set(adminHeaders())
-      .send({ driverId: driver.id });
-    const paiement = await request(app)
-      .post(`/api/trips/${trip.body.id}/payment`)
-      .set(authHeaders(token));
-    await request(app)
-      .post(`/api/payments/${paiement.body.id}/confirm`)
-      .set(authHeaders(token));
-    await request(app)
-      .patch(`/api/trips/${trip.body.id}/start`)
-      .set(authHeaders(driverToken))
-      .send({});
-    await request(app)
-      .patch(`/api/trips/${trip.body.id}/complete`)
-      .set(authHeaders(driverToken))
-      .send({});
-
-    // Plafond : 200 USD max sur une course en USD.
-    const tropGros = await request(app)
-      .post(`/api/trips/${trip.body.id}/tip`)
-      .set(authHeaders(token))
-      .send({ amount: 500 });
-    assert.equal(tropGros.status, 400);
-    assert.equal(tropGros.body.error.code, 'tip_too_high');
-
-    const ok = await request(app)
-      .post(`/api/trips/${trip.body.id}/tip`)
-      .set(authHeaders(token))
-      .send({ amount: 5 });
-    assert.equal(ok.status, 200, JSON.stringify(ok.body));
-    assert.equal(Number(ok.body.tip_amount), 5);
-
-    const doublon = await request(app)
-      .post(`/api/trips/${trip.body.id}/tip`)
-      .set(authHeaders(token))
-      .send({ amount: 2 });
-    assert.equal(doublon.status, 409);
-    assert.equal(doublon.body.error.code, 'already_tipped');
-
-    // Le chauffeur voit le pourboire sur sa course.
-    const courses = await request(app)
-      .get(`/api/drivers/${driver.id}/trips`)
-      .set(authHeaders(driverToken));
-    assert.equal(Number(courses.body[0].tip_amount), 5);
+    assert.equal(ok.status, 201, JSON.stringify(ok.body));
+    assert.equal(Number(ok.body.price), 50);
   });
 
   it('parrainage client : code ZG- attribué, filleul relié, code invalide refusé', async () => {
@@ -246,20 +224,21 @@ describe('Pack améliorations', () => {
     assert.ok(rows[0].referral_rewarded_at, 'la récompense doit être acquise après 2 courses');
   });
 
-  it('aéroport : le vrai nom « Abeid Amani Karume » est reconnu partout', async () => {
+  it('aéroport : le nom officiel complet est affiché, les anciens libellés restent acceptés', async () => {
     const { privateUsdForRoute } = await import('../src/services/pricingService.js');
-    // Grille hub inchangée sous le nouveau nom (et l'ancien reste accepté).
+    // Grille hub inchangée sous tous les libellés.
+    assert.equal(privateUsdForRoute('Aéroport international Abeid Amani Karume', 'Nungwi'), 50);
     assert.equal(privateUsdForRoute('Aéroport Abeid Amani Karume', 'Nungwi'), 50);
     assert.equal(privateUsdForRoute('Aéroport (AAKIA)', 'Nungwi'), 50);
 
-    // Les annonces partagées acceptent les deux libellés de départ.
+    // Les annonces partagées acceptent nouveau ET anciens libellés de départ.
     const { token: tokenChauffeur } = await createVerifiedDriver();
     const depart = new Date(Date.now() + 6 * 3600 * 1000).toISOString();
     const nouveau = await request(app)
       .post('/api/rides')
       .set(authHeaders(tokenChauffeur))
       .send({
-        origin: 'Aéroport Abeid Amani Karume',
+        origin: 'Aéroport international Abeid Amani Karume',
         destination: 'Nungwi',
         departureAt: depart,
         seatsTotal: 4,
@@ -270,10 +249,11 @@ describe('Pack améliorations', () => {
       .set(authHeaders(tokenChauffeur))
       .send({ origin: 'Aéroport (AAKIA)', destination: 'Paje', departureAt: depart, seatsTotal: 4 });
     assert.equal(ancien.status, 201, JSON.stringify(ancien.body));
-    // Et la liste servie aux menus n'affiche QUE le nouveau nom.
+    // Et la liste servie aux menus n'affiche QUE le nom officiel complet.
     const lieux = await request(app).get('/api/rides/locations');
-    assert.ok(lieux.body.origins.includes('Aéroport Abeid Amani Karume'));
+    assert.ok(lieux.body.origins.includes('Aéroport international Abeid Amani Karume'));
     assert.ok(!lieux.body.origins.includes('Aéroport (AAKIA)'));
+    assert.ok(!lieux.body.origins.includes('Aéroport Abeid Amani Karume'));
   });
 
   it('liste d\'attente : demande posée, marquée trouvée quand une annonce correspond', async () => {

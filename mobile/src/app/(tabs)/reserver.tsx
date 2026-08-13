@@ -34,6 +34,7 @@ import {
   formaterMontant,
   localVerifie,
   ORIGINES_RIDES,
+  POINTS_STONE_TOWN,
   profilTarifaireUtilisateur,
   tarifPriveItineraire,
   tarifSpecialPrive,
@@ -116,9 +117,8 @@ export default function EcranReserver() {
   // réelle d'atterrissage (taxi garanti même si le vol est en retard).
   const trajetAeroport = /aéroport|airport/i.test(depart) || /aéroport|airport/i.test(arrivee);
   const [numeroVol, setNumeroVol] = useState('');
-  // Course privée : aller-retour avec attente (×1,8) + options véhicule.
+  // Course privée : aller-retour avec attente (×1,8) + option bagages.
   const [allerRetour, setAllerRetour] = useState(false);
-  const [siegeBebe, setSiegeBebe] = useState(false);
   const [grosBagages, setGrosBagages] = useState(false);
   // Liste d'attente du partagé : demande laissée à l'équipe.
   const [attenteEnvoyee, setAttenteEnvoyee] = useState(false);
@@ -197,7 +197,6 @@ export default function EcranReserver() {
       const extras = {
         flightNumber: trajetAeroport && numeroVol.trim() ? numeroVol.trim() : undefined,
         roundTrip: allerRetour || undefined,
-        babySeat: siegeBebe || undefined,
         bulkyLuggage: grosBagages || undefined,
       };
       const trajet = modeHotel
@@ -228,7 +227,6 @@ export default function EcranReserver() {
       setTelClient('+255');
       setNumeroVol('');
       setAllerRetour(false);
-      setSiegeBebe(false);
       setGrosBagages(false);
       router.push(`/trip/${trajet.id}`);
       // L'équipe est prévenue automatiquement par le serveur (e-mail) —
@@ -285,7 +283,13 @@ export default function EcranReserver() {
       <Selecteur
         label={t('commun_arrivee')}
         valeur={arrivee}
-        options={lieux}
+        // Stone Town, ferry et aéroport sont à quelques minutes : aucune
+        // course entre ces trois points (même règle côté serveur).
+        options={
+          POINTS_STONE_TOWN.includes(depart)
+            ? lieux.filter((lieu) => !POINTS_STONE_TOWN.includes(lieu))
+            : lieux
+        }
         onChange={setArrivee}
       />
       <Champ
@@ -468,13 +472,6 @@ export default function EcranReserver() {
                 libelle: t('reserver_aller_retour'),
               },
               {
-                cle: 'bebe',
-                actif: siegeBebe,
-                bascule: () => setSiegeBebe(!siegeBebe),
-                icone: 'happy-outline' as const,
-                libelle: t('reserver_siege_bebe'),
-              },
-              {
                 cle: 'bagages',
                 actif: grosBagages,
                 bascule: () => setGrosBagages(!grosBagages),
@@ -643,20 +640,23 @@ const styles = StyleSheet.create({
     borderColor: couleurs.primaire,
     ...ombres.douce,
   },
+  // Prix CENTRÉ sous son libellé : les montants en shillings (6 chiffres)
+  // débordaient de l'écran en rangée côte à côte.
   lignePrix: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 2,
   },
   labelPrix: {
     fontSize: 14,
     fontWeight: '600',
     color: couleurs.texteSecondaire,
+    textAlign: 'center',
   },
   valeurPrix: {
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: '800',
     color: couleurs.primaire,
+    textAlign: 'center',
   },
   note: {
     fontSize: 12,

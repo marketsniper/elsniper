@@ -236,6 +236,12 @@ export function sharedAllowedForRoute(pickup, dropoff) {
   return privateUsdForRoute(pickup, dropoff) >= PARTAGE_PRIVE_MIN_USD;
 }
 
+// Stone Town, le ferry et l'aéroport sont à quelques minutes les uns des
+// autres : AUCUNE course n'est proposée entre ces trois points.
+export function hubToHubRoute(pickup, dropoff) {
+  return HUBS.has(normCity(pickup)) && HUBS.has(normCity(dropoff));
+}
+
 // Prix local (TZS) d'une place — c'est LUI qui est posé automatiquement sur
 // les trajets partagés postés par les chauffeurs (le chauffeur ne choisit
 // pas son prix).

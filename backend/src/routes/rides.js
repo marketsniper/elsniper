@@ -17,6 +17,7 @@ import { isAdmin, requireAuth } from '../middleware/auth.js';
 import { buildTeamNotificationLink } from '../services/whatsappService.js';
 import { config } from '../config.js';
 import {
+  hubToHubRoute,
   localSeatTzsForRoute,
   sharedAllowedForRoute,
   sharedSeatUsdForRoute,
@@ -205,6 +206,16 @@ router.post(
 
     if (new Date(data.departureAt).getTime() <= Date.now()) {
       throw new HttpError(400, 'departure_in_past', "L'heure de départ doit être dans le futur");
+    }
+
+    // Stone Town, le ferry et l'aéroport sont à quelques minutes : aucune
+    // course n'est proposée entre ces trois points.
+    if (hubToHubRoute(data.origin, data.destination)) {
+      throw new HttpError(
+        422,
+        'route_indisponible',
+        'Pas de course entre Stone Town, le ferry et l\'aéroport — ces points sont à quelques minutes les uns des autres'
+      );
     }
 
     // Pas de taxi partagé sur les trajets courts (course privée du même

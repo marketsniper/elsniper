@@ -4,11 +4,11 @@
 // l'île. Ces listes alimentent les menus déroulants de l'app et la
 // validation serveur — une valeur hors liste est refusée.
 
-// Le vrai nom de l'aéroport de Zanzibar : Abeid Amani Karume (AAKIA/ZNZ).
-export const AEROPORT = 'Aéroport Abeid Amani Karume';
-// Ancien libellé encore envoyé par les versions précédentes de l'app —
-// accepté à la validation, plus proposé dans les menus.
-export const AEROPORT_ANCIEN = 'Aéroport (AAKIA)';
+// Le nom officiel complet de l'aéroport de Zanzibar.
+export const AEROPORT = 'Aéroport international Abeid Amani Karume';
+// Anciens libellés encore envoyés par les versions précédentes de l'app —
+// acceptés à la validation, plus proposés dans les menus.
+export const ANCIENS_LIBELLES_AEROPORT = ['Aéroport Abeid Amani Karume', 'Aéroport (AAKIA)'];
 
 export const RIDE_DESTINATIONS = [
   'Stone Town',
@@ -33,5 +33,5 @@ export const RIDE_DESTINATIONS = [
 // l'île — permet aussi les liaisons inter-villes comme Nungwi → Paje.
 export const RIDE_ORIGINS = [AEROPORT, 'Stone Town Ferry', ...RIDE_DESTINATIONS];
 
-// Départs ACCEPTÉS à la validation : les affichés + l'ancien libellé.
-export const RIDE_ORIGINS_ACCEPTES = [...RIDE_ORIGINS, AEROPORT_ANCIEN];
+// Départs ACCEPTÉS à la validation : les affichés + les anciens libellés.
+export const RIDE_ORIGINS_ACCEPTES = [...RIDE_ORIGINS, ...ANCIENS_LIBELLES_AEROPORT];
