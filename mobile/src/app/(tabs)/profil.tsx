@@ -171,7 +171,7 @@ export default function EcranProfil() {
           <Text style={styles.initiale}>{initiales(nomAffiche)}</Text>
         </View>
         <Text style={styles.nom}>{nomAffiche}</Text>
-        <SousTitre>{session?.phone ?? ''}</SousTitre>
+        <SousTitre>{session?.phone || session?.email || ''}</SousTitre>
         {utilisateur && <Badge texte={texteBadge} ton={tonBadge} />}
         {hotel && <Badge texte={t('profil_badge_hotel')} ton="primaire" />}
       </Carte>
@@ -265,7 +265,16 @@ export default function EcranProfil() {
       )}
 
       <Carte>
-        <LigneInfo label={t('commun_telephone')} valeur={session?.phone || '—'} />
+        {/* Identité e-mail : le WhatsApp du profil (sinon l'e-mail vérifié). */}
+        <LigneInfo
+          label={t('commun_telephone')}
+          valeur={
+            session?.phone ||
+            String(champ(session?.user, 'phone') ?? '') ||
+            session?.email ||
+            '—'
+          }
+        />
         <LigneInfo
           label={t('commun_email')}
           valeur={String(champ(utilisateur ?? hotel, 'email') ?? '—')}

@@ -119,6 +119,84 @@ describe('E-mails de bienvenue', () => {
     assert.equal(manquant.status, 400);
   });
 
+  it('identité E-MAIL de bout en bout : code, connexion, profil touriste, réservation', async () => {
+    // 1. Le visiteur demande son code avec SON E-MAIL SEUL — aucun téléphone.
+    const demande = await request(app)
+      .post('/api/auth/request-otp')
+      .send({ email: 'Voyageuse@Exemple.com' });
+    assert.equal(demande.status, 200, JSON.stringify(demande.body));
+    assert.equal(demande.body.channel, 'email');
+    assert.ok(demande.body.devCode);
+
+    // 2. Connexion avec e-mail + code (la casse de l'e-mail est ignorée).
+    const verif = await request(app)
+      .post('/api/auth/verify-otp')
+      .send({ email: 'voyageuse@exemple.com', code: demande.body.devCode });
+    assert.equal(verif.status, 200, JSON.stringify(verif.body));
+    assert.ok(verif.body.token);
+    assert.equal(verif.body.user, null);
+
+    // 3. Création du profil TOURISTE : e-mail imposé par le jeton, téléphone
+    //    WhatsApp optionnel non vérifié.
+    const profil = await request(app)
+      .post('/api/users')
+      .set(authHeaders(verif.body.token))
+      .send({ fullName: 'Voyageuse Email', accountType: 'tourist', phone: '+33612345678' });
+    assert.equal(profil.status, 201, JSON.stringify(profil.body));
+    assert.equal(profil.body.email, 'voyageuse@exemple.com');
+    assert.equal(profil.body.phone, '+33612345678');
+    assert.equal(profil.body.verification_status, 'verified');
+
+    // 3 bis. Un compte LOCAL par e-mail est refusé : SIM tanzanienne requise.
+    const local = await request(app)
+      .post('/api/users')
+      .set(authHeaders(verif.body.token))
+      .send({
+        fullName: 'Local Interdit',
+        accountType: 'local',
+        idDocumentUrl: 'https://files.example.com/carte.jpg',
+      });
+    assert.equal(local.status, 403);
+    assert.equal(local.body.error.code, 'local_phone_required');
+
+    // 4. Reconnexion : le compte est retrouvé par e-mail, et il peut agir
+    //    (créer une course privée) avec son jeton hydraté.
+    const redemande = await request(app)
+      .post('/api/auth/request-otp')
+      .send({ email: 'voyageuse@exemple.com' });
+    const reverif = await request(app)
+      .post('/api/auth/verify-otp')
+      .send({ email: 'voyageuse@exemple.com', code: redemande.body.devCode });
+    assert.equal(reverif.body.user.id, profil.body.id);
+
+    const course = await request(app)
+      .post('/api/trips')
+      .set(authHeaders(reverif.body.token))
+      .send({
+        userId: profil.body.id,
+        tripType: 'private',
+        pickupLocation: 'Stone Town',
+        dropoffLocation: 'Nungwi',
+      });
+    assert.equal(course.status, 201, JSON.stringify(course.body));
+    assert.equal(course.body.currency, 'USD');
+  });
+
+  it('profil touriste par e-mail SANS téléphone du tout : accepté', async () => {
+    const demande = await request(app)
+      .post('/api/auth/request-otp')
+      .send({ email: 'sans.tel@exemple.com' });
+    const verif = await request(app)
+      .post('/api/auth/verify-otp')
+      .send({ email: 'sans.tel@exemple.com', code: demande.body.devCode });
+    const profil = await request(app)
+      .post('/api/users')
+      .set(authHeaders(verif.body.token))
+      .send({ fullName: 'Sans Téléphone', accountType: 'tourist' });
+    assert.equal(profil.status, 201, JSON.stringify(profil.body));
+    assert.equal(profil.body.phone, null);
+  });
+
   it('notifierEquipe : jamais bloquant, même sans TEAM_EMAIL configuré', async () => {
     const resultat = await notifierEquipe('Test', 'ligne 1\nligne 2');
     assert.equal(resultat.sent, false);

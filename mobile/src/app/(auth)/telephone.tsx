@@ -39,32 +39,57 @@ export default function EcranTelephone() {
   const params = useLocalSearchParams<{ profil?: string }>();
   const profil = typeof params.profil === 'string' ? params.profil : '';
 
+  // VISITEURS (touristes) : identification par E-MAIL uniquement — à
+  // l'étranger, les SMS n'arrivent pas, l'e-mail marche partout. Les locaux
+  // et chauffeurs gardent l'identification par téléphone (SIM tanzanienne).
+  const estVisiteur = profil === 'visitor';
+  const [modeTelephone, setModeTelephone] = useState(!estVisiteur);
+
   const [indicatif, setIndicatif] = useState('+255');
   const [numero, setNumero] = useState('');
   const [erreur, setErreur] = useState('');
   const [charge, setCharge] = useState(false);
-  // Touristes à l'étranger : les SMS n'arrivent pas toujours en itinérance —
-  // le code peut alors être reçu par E-MAIL (le Wi-Fi marche toujours, lui).
-  const [parEmail, setParEmail] = useState(false);
   const [email, setEmail] = useState('');
 
   const envoyer = async () => {
     setErreur('');
+    // ----- Identité E-MAIL (visiteurs) -----
+    if (!modeTelephone) {
+      const adresse = email.trim().toLowerCase();
+      if (!/^\S+@\S+\.\S+$/.test(adresse)) {
+        setErreur(t('tel_erreur_email'));
+        return;
+      }
+      setCharge(true);
+      try {
+        const resultat = await api.demanderOtpParEmail(adresse);
+        router.push({
+          pathname: '/(auth)/otp',
+          params: {
+            emailIdentite: adresse,
+            devCode: resultat.devCode ?? '',
+            profil,
+            canal: 'email',
+            emailMasque: resultat.emailMasked ?? adresse,
+          },
+        });
+      } catch (e) {
+        setErreur(e instanceof ErreurApi ? e.message : t('tel_erreur_envoi'));
+      } finally {
+        setCharge(false);
+      }
+      return;
+    }
+
+    // ----- Identité TÉLÉPHONE (locaux, chauffeurs, anciens comptes) -----
     const telephone = normaliserTelephone(indicatif, numero);
     if (!/^\+\d{9,15}$/.test(telephone)) {
       setErreur(t('tel_erreur_numero'));
       return;
     }
-    if (parEmail && !/^\S+@\S+\.\S+$/.test(email.trim())) {
-      setErreur(t('tel_erreur_email'));
-      return;
-    }
     setCharge(true);
     try {
-      const resultat = await api.demanderOtp(
-        telephone,
-        parEmail ? { channel: 'email', email: email.trim() } : undefined
-      );
+      const resultat = await api.demanderOtp(telephone);
       router.push({
         pathname: '/(auth)/otp',
         params: {
@@ -97,29 +122,14 @@ export default function EcranTelephone() {
           </Text>
         )}
         <SousTitre>
-          {profil === 'driver' ? t('tel_intro_chauffeur') : t('tel_intro')}
+          {!modeTelephone
+            ? t('tel_intro_visiteur')
+            : profil === 'driver'
+              ? t('tel_intro_chauffeur')
+              : t('tel_intro')}
         </SousTitre>
-        <View style={styles.rangeeTelephone}>
-          <Champ
-            label={t('tel_indicatif')}
-            value={indicatif}
-            onChangeText={setIndicatif}
-            keyboardType="phone-pad"
-            style={styles.champIndicatif}
-          />
-          <View style={styles.champNumero}>
-            <Champ
-              label={t('tel_numero')}
-              value={numero}
-              onChangeText={setNumero}
-              keyboardType="phone-pad"
-              textContentType="telephoneNumber"
-              placeholder="712 345 678"
-              autoFocus
-            />
-          </View>
-        </View>
-        {parEmail && (
+        {!modeTelephone ? (
+          // ----- VISITEURS : e-mail uniquement -----
           <Champ
             label={t('tel_email_label')}
             value={email}
@@ -127,25 +137,50 @@ export default function EcranTelephone() {
             keyboardType="email-address"
             autoCapitalize="none"
             placeholder="vous@exemple.com"
+            autoFocus
           />
+        ) : (
+          <View style={styles.rangeeTelephone}>
+            <Champ
+              label={t('tel_indicatif')}
+              value={indicatif}
+              onChangeText={setIndicatif}
+              keyboardType="phone-pad"
+              style={styles.champIndicatif}
+            />
+            <View style={styles.champNumero}>
+              <Champ
+                label={t('tel_numero')}
+                value={numero}
+                onChangeText={setNumero}
+                keyboardType="phone-pad"
+                textContentType="telephoneNumber"
+                placeholder="712 345 678"
+                autoFocus
+              />
+            </View>
+          </View>
         )}
         <TexteErreur>{erreur}</TexteErreur>
         <Bouton
-          titre={parEmail ? t('tel_bouton_email') : t('tel_bouton')}
-          icone={parEmail ? 'mail-outline' : 'arrow-forward'}
+          titre={!modeTelephone ? t('tel_bouton_email') : t('tel_bouton')}
+          icone={!modeTelephone ? 'mail-outline' : 'arrow-forward'}
           onPress={envoyer}
           charge={charge}
         />
-        {/* Bascule SMS ↔ e-mail : le remède aux SMS bloqués en itinérance. */}
-        <Pressable
-          onPress={() => setParEmail((v) => !v)}
-          accessibilityRole="button"
-          style={({ pressed }) => pressed && { opacity: 0.7 }}
-        >
-          <Text style={styles.lienEmail}>
-            {parEmail ? t('tel_email_retour_sms') : t('tel_email_lien')}
-          </Text>
-        </Pressable>
+        {/* Visiteurs : bascule possible vers l'ancien accès par téléphone
+            (comptes créés avant l'identification par e-mail). */}
+        {estVisiteur && (
+          <Pressable
+            onPress={() => setModeTelephone((v) => !v)}
+            accessibilityRole="button"
+            style={({ pressed }) => pressed && { opacity: 0.7 }}
+          >
+            <Text style={styles.lienEmail}>
+              {modeTelephone ? t('tel_retour_email') : t('tel_lien_telephone')}
+            </Text>
+          </Pressable>
+        )}
       </Carte>
 
       <EncartInfo icone="flask-outline" ton="attente">

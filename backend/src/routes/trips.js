@@ -101,7 +101,7 @@ router.post(
             ? 'resident'
             : 'tourist';
       }
-      bookerLabel = `${user.full_name} (${user.phone})`;
+      bookerLabel = `${user.full_name} (${user.phone ?? user.email ?? 'sans contact'})`;
     } else {
       // ----- Réservation par un hôtel partenaire, pour son client -----
       if (!isAdmin(req) && data.hotelId !== req.auth.hotelId) {

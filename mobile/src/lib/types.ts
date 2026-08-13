@@ -124,7 +124,10 @@ export interface ReservationPlace {
 /** Session authentifiée persistée dans SecureStore. */
 export interface SessionAuth {
   token: string;
+  /** Identité téléphone (locaux, chauffeurs) — '' pour une identité e-mail. */
   phone: string;
+  /** Identité e-mail (touristes/visiteurs) — absente pour une identité téléphone. */
+  email?: string;
   user: Utilisateur | null;
   driver: Chauffeur | null;
   hotel: Hotel | null;

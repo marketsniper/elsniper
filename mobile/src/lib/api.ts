@@ -200,6 +200,37 @@ export async function verifierOtp(phone: string, code: string): Promise<ReponseV
 }
 
 /**
+ * IDENTITÉ E-MAIL (touristes/visiteurs) : POST /auth/request-otp {email}
+ * seul — l'e-mail EST l'identifiant du compte, le code y est envoyé.
+ * Les locaux et chauffeurs restent sur l'identité téléphone.
+ */
+export async function demanderOtpParEmail(
+  email: string
+): Promise<{ devCode?: string; emailMasked?: string }> {
+  const donnees = await requete<Record<string, unknown>>('/auth/request-otp', {
+    methode: 'POST',
+    corps: { email },
+  });
+  const devCode = donnees?.devCode ?? donnees?.dev_code;
+  return {
+    devCode:
+      typeof devCode === 'string' || typeof devCode === 'number' ? String(devCode) : undefined,
+    emailMasked: typeof donnees?.emailMasked === 'string' ? donnees.emailMasked : undefined,
+  };
+}
+
+/** POST /auth/verify-otp {email, code} → {token, user} (identité e-mail). */
+export async function verifierOtpParEmail(
+  email: string,
+  code: string
+): Promise<ReponseVerifieOtp> {
+  return requete<ReponseVerifieOtp>('/auth/verify-otp', {
+    methode: 'POST',
+    corps: { email, code },
+  });
+}
+
+/**
  * POST /auth/hotel-login {email, password} → {token, hotel}.
  * Connexion des hôtels partenaires (401 invalid_credentials si erreur) —
  * les sessions hôtel passent par ici, plus par l'OTP.
@@ -220,7 +251,9 @@ export async function connexionHotel(
 
 export interface CreationUtilisateur {
   fullName: string;
-  phone: string; // doit être le téléphone vérifié par OTP (celui du jeton)
+  /** Identité téléphone : requis (= jeton). Identité e-mail : contact
+   * WhatsApp optionnel, non vérifié. */
+  phone?: string;
   email?: string;
   accountType: TypeCompte;
   /** Requis pour un compte résident (validation du document par l'équipe). */
@@ -948,7 +981,9 @@ export async function televerser(uri: string): Promise<{ url: string }> {
 // Regroupement pratique pour l'import : `import { api } from '@/lib/api'`.
 export const api = {
   demanderOtp,
+  demanderOtpParEmail,
   verifierOtp,
+  verifierOtpParEmail,
   connexionHotel,
   creerUtilisateur,
   obtenirUtilisateur,

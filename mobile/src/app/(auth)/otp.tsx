@@ -31,8 +31,11 @@ export default function EcranOtp() {
     profil?: string;
     canal?: string;
     emailMasque?: string;
+    emailIdentite?: string;
   }>();
   const phone = typeof params.phone === 'string' ? params.phone : '';
+  // Identité E-MAIL (visiteurs) : l'e-mail est l'identifiant du compte.
+  const emailIdentite = typeof params.emailIdentite === 'string' ? params.emailIdentite : '';
   const devCode = typeof params.devCode === 'string' ? params.devCode : '';
   const profil = typeof params.profil === 'string' ? params.profil : '';
 
@@ -89,10 +92,13 @@ export default function EcranOtp() {
     }
     setCharge(true);
     try {
-      const reponse = await api.verifierOtp(phone, code);
+      const reponse = emailIdentite
+        ? await api.verifierOtpParEmail(emailIdentite, code)
+        : await api.verifierOtp(phone, code);
       await connexion({
         token: reponse.token,
         phone,
+        ...(emailIdentite ? { email: emailIdentite } : {}),
         user: reponse.user ?? null,
         driver: reponse.driver ?? null,
         hotel: reponse.hotel ?? null,
@@ -111,7 +117,7 @@ export default function EcranOtp() {
         <Titre>{t('otp_titre')}</Titre>
         <SousTitre>
           {params.canal === 'email'
-            ? t('otp_intro_email', { email: String(params.emailMasque ?? '') })
+            ? t('otp_intro_email', { email: emailIdentite || String(params.emailMasque ?? '') })
             : t('otp_intro', { phone })}
         </SousTitre>
 

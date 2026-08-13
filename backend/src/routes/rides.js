@@ -628,7 +628,7 @@ router.post(
         req.auth.userId,
       ]);
       if (rows[0]) {
-        booker = `${rows[0].full_name} (${rows[0].phone})`;
+        booker = `${rows[0].full_name} (${rows[0].phone ?? rows[0].email ?? 'sans contact'})`;
         profil =
           rows[0].account_type === 'local'
             ? 'Local'

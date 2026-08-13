@@ -15,7 +15,10 @@ const router = Router();
 const createUserSchema = z
   .object({
     fullName: z.string().min(2),
-    phone: z.string().min(6),
+    // Identité e-mail (visiteurs) : le téléphone devient un simple contact
+    // WhatsApp optionnel, non vérifié. Identité téléphone : requis (vérifié
+    // par OTP).
+    phone: z.string().min(6).optional(),
     email: z.string().email().optional(),
     accountType: z.enum(['tourist', 'resident', 'local']),
     idDocumentUrl: z.string().url().optional(),
@@ -40,25 +43,57 @@ router.post(
   requireAuth,
   asyncHandler(async (req, res) => {
     const data = createUserSchema.parse(req.body);
-    if (!isAdmin(req) && data.phone !== req.auth.phone) {
-      throw new HttpError(403, 'phone_mismatch', 'Le téléphone doit être celui vérifié par OTP (jeton)');
+
+    // Deux identités possibles sur le jeton :
+    //  - E-MAIL (touristes/visiteurs) : l'e-mail du profil est FORCÉMENT
+    //    celui vérifié par le code ; le téléphone est un simple contact
+    //    WhatsApp optionnel ; les LOCAUX ne passent jamais par ici (leur
+    //    identité, c'est la SIM tanzanienne).
+    //  - TÉLÉPHONE (locaux, anciens comptes) : règle historique inchangée.
+    const identiteEmail = !isAdmin(req) && !req.auth.phone && req.auth.email;
+    let email = data.email ?? null;
+    let phone = data.phone ?? null;
+    if (identiteEmail) {
+      if (data.accountType === 'local') {
+        throw new HttpError(
+          403,
+          'local_phone_required',
+          'Les comptes locaux s\'identifient par téléphone (carte SIM tanzanienne)'
+        );
+      }
+      email = req.auth.email;
+    } else if (!isAdmin(req)) {
+      if (!data.phone || data.phone !== req.auth.phone) {
+        throw new HttpError(403, 'phone_mismatch', 'Le téléphone doit être celui vérifié par OTP (jeton)');
+      }
+      phone = data.phone;
     }
     const needsVerification = data.accountType !== 'tourist';
 
-    const { rows } = await query(
-      `INSERT INTO users (full_name, phone, email, account_type, currency, verification_status, id_document_url)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
-       RETURNING *`,
-      [
-        data.fullName,
-        data.phone,
-        data.email ?? null,
-        data.accountType,
-        data.accountType === 'local' ? 'TZS' : 'USD',
-        needsVerification ? 'pending' : 'verified',
-        data.idDocumentUrl ?? null,
-      ]
-    );
+    let rows;
+    try {
+      ({ rows } = await query(
+        `INSERT INTO users (full_name, phone, email, account_type, currency, verification_status, id_document_url)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         RETURNING *`,
+        [
+          data.fullName,
+          phone,
+          email,
+          data.accountType,
+          data.accountType === 'local' ? 'TZS' : 'USD',
+          needsVerification ? 'pending' : 'verified',
+          data.idDocumentUrl ?? null,
+        ]
+      ));
+    } catch (err) {
+      // Téléphone déjà pris par un autre compte (contrainte UNIQUE) — même
+      // code d'erreur « duplicate » que le gestionnaire global historique.
+      if (err.code === '23505') {
+        throw new HttpError(409, 'duplicate', 'Ce numéro de téléphone est déjà utilisé par un autre compte');
+      }
+      throw err;
+    }
     // Récapitulatif d'inscription par e-mail (si fourni) — au mieux, jamais
     // bloquant : l'inscription réussit même si l'e-mail ne part pas.
     if (rows[0].email) {

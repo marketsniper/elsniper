@@ -1183,6 +1183,31 @@ const CHAINES = {
     sw: 'Safari imeghairiwa. Marejesho ya {montant}: timu itakulipa — ujumbe wa WhatsApp unaofunguka unawajulisha, bonyeza Tuma.',
   },
   commun_retour: { fr: 'Retour', en: 'Back', sw: 'Rudi' },
+  tel_intro_visiteur: {
+    fr: 'Votre e-mail suffit : le code de connexion y est envoyé. Pas besoin de SMS — pratique quand on voyage.',
+    en: 'Your e-mail is enough: the login code is sent there. No SMS needed — handy when travelling.',
+    sw: 'Barua pepe yako inatosha: msimbo wa kuingia unatumwa huko. Hakuna haja ya SMS.',
+  },
+  tel_lien_telephone: {
+    fr: '📱 J\'ai un compte créé par téléphone — me connecter par SMS',
+    en: '📱 I have an account created by phone — log in by SMS',
+    sw: '📱 Nina akaunti ya simu — ingia kwa SMS',
+  },
+  tel_retour_email: {
+    fr: '📧 Revenir à la connexion par e-mail',
+    en: '📧 Back to e-mail login',
+    sw: '📧 Rudi kuingia kwa barua pepe',
+  },
+  client_email_verifie: {
+    fr: 'E-mail vérifié : {email}',
+    en: 'Verified e-mail: {email}',
+    sw: 'Barua pepe imethibitishwa: {email}',
+  },
+  client_whatsapp_opt: {
+    fr: 'WhatsApp (recommandé — pour que le chauffeur vous joigne)',
+    en: 'WhatsApp (recommended — so the driver can reach you)',
+    sw: 'WhatsApp (inapendekezwa — dereva aweze kukupata)',
+  },
   tel_email_lien: {
     fr: '🌍 À l\'étranger ou pas de réception SMS ? Recevez le code par e-mail',
     en: '🌍 Abroad or no SMS reception? Get the code by e-mail',

@@ -15,7 +15,7 @@ import { config } from '../config.js';
 import { pool, withTransaction } from '../db.js';
 import { HttpError } from '../errors.js';
 import * as smsService from '../services/smsService.js';
-import { emailCodeOtp, envoyerEmail } from '../services/emailService.js';
+import { emailCodeOtp, envoyerEmail, isEmailStub } from '../services/emailService.js';
 import { verifyPassword } from '../services/passwordService.js';
 import { sanitizeHotel } from './hotels.js';
 
@@ -52,19 +52,34 @@ function masquerEmail(email) {
 // COMPORTEMENT DEV : si NODE_ENV !== "production", la réponse contient
 // devCode (le code en clair) pour permettre les tests automatisés —
 // jamais en production.
+// IDENTITÉ E-MAIL (touristes/visiteurs) : sans téléphone du tout, l'e-mail
+// EST l'identifiant du compte — {email} seul suffit, le code part dans la
+// boîte mail. Les locaux et chauffeurs s'identifient toujours par téléphone.
 authRouter.post('/request-otp', async (req, res, next) => {
   try {
     const { phone, channel, email } = z
       .object({
-        phone: phoneSchema,
+        phone: phoneSchema.optional(),
         channel: z.enum(['sms', 'email']).optional(),
         email: z.string().email().optional(),
       })
+      .refine((d) => d.phone || d.email, {
+        path: ['phone'],
+        message: 'Fournir un téléphone ou un e-mail',
+      })
       .parse(req.body);
 
-    // Canal e-mail : destinataire déterminé AVANT de créer le code.
+    // Identifiant du code : le téléphone, ou l'e-mail normalisé (identité
+    // e-mail des visiteurs — jamais de collision, un e-mail n'est pas un
+    // numéro).
+    const identiteEmail = !phone;
+    const identifiant = phone ?? email.toLowerCase();
+
+    // Destinataire e-mail éventuel, déterminé AVANT de créer le code.
     let destinataireEmail = null;
-    if (channel === 'email') {
+    if (identiteEmail) {
+      destinataireEmail = email.toLowerCase();
+    } else if (channel === 'email') {
       const { rows } = await pool.query('SELECT email FROM users WHERE phone = $1 LIMIT 1', [
         phone,
       ]);
@@ -89,16 +104,16 @@ authRouter.post('/request-otp', async (req, res, next) => {
     const code = crypto.randomInt(0, 1_000_000).toString().padStart(6, '0');
 
     await withTransaction(async (client) => {
-      // Invalider (consommer) les codes précédents non consommés du même numéro
+      // Invalider (consommer) les codes précédents du même identifiant
       await client.query(
         `UPDATE otp_codes SET consumed_at = now()
          WHERE phone = $1 AND consumed_at IS NULL`,
-        [phone]
+        [identifiant]
       );
       await client.query(
         `INSERT INTO otp_codes (phone, code_hash, expires_at)
          VALUES ($1, $2, now() + interval '${OTP_TTL_MINUTES} minutes')`,
-        [phone, hashCode(code)]
+        [identifiant, hashCode(code)]
       );
     });
 
@@ -115,10 +130,11 @@ authRouter.post('/request-otp', async (req, res, next) => {
       body.emailMasked = masquerEmail(destinataireEmail);
     }
     // Exposé hors production, ou si le mode pilote est activé
-    // (OTP_EXPOSE_DEV_CODE=1) — mais JAMAIS quand un vrai fournisseur SMS
-    // est branché : dès que les SMS réels partent (Africa's Talking), le
-    // code n'apparaît plus dans l'app, automatiquement.
-    if (config.env !== 'production' || (config.exposeOtpDevCode && smsService.isSmsStub())) {
+    // (OTP_EXPOSE_DEV_CODE=1) — mais JAMAIS quand le vrai canal d'envoi est
+    // branché : dès que les SMS réels (Africa's Talking) ou les e-mails
+    // réels (Brevo/Resend) partent, le code n'apparaît plus dans l'app.
+    const canalStub = destinataireEmail ? isEmailStub() : smsService.isSmsStub();
+    if (config.env !== 'production' || (config.exposeOtpDevCode && canalStub)) {
       body.devCode = code;
     }
     res.status(200).json(body);
@@ -127,18 +143,26 @@ authRouter.post('/request-otp', async (req, res, next) => {
   }
 });
 
-// POST /api/auth/verify-otp {phone, code}
+// POST /api/auth/verify-otp {phone?, email?, code}
 // Vérifie le code (hash + non expiré + non consommé), le consomme, puis
-// signe un JWT. Réponse : {token, user, driver, hotel} — chacun null si
-// aucun profil n'existe encore pour ce numéro.
+// signe un JWT. Identité téléphone (locaux, chauffeurs) OU identité e-mail
+// (touristes/visiteurs). Réponse : {token, user, driver, hotel} — chacun
+// null si aucun profil n'existe encore pour cet identifiant.
 authRouter.post('/verify-otp', async (req, res, next) => {
   try {
-    const { phone, code } = z
+    const { phone, email, code } = z
       .object({
-        phone: phoneSchema,
+        phone: phoneSchema.optional(),
+        email: z.string().email().optional(),
         code: z.string().regex(/^\d{6}$/, 'Code à 6 chiffres requis'),
       })
+      .refine((d) => d.phone || d.email, {
+        path: ['phone'],
+        message: 'Fournir un téléphone ou un e-mail',
+      })
       .parse(req.body);
+
+    const identifiant = phone ?? email.toLowerCase();
 
     const { rows } = await pool.query(
       `UPDATE otp_codes SET consumed_at = now()
@@ -150,30 +174,43 @@ authRouter.post('/verify-otp', async (req, res, next) => {
          LIMIT 1
        )
        RETURNING id`,
-      [phone, hashCode(code)]
+      [identifiant, hashCode(code)]
     );
     if (rows.length === 0) {
       throw new HttpError(401, 'invalid_otp', 'Code OTP invalide ou expiré');
     }
 
-    // Profils éventuels rattachés à ce numéro. Les hôtels ne se connectent
-    // PAS par téléphone : voir POST /auth/hotel-login (email + mot de passe).
-    const [userRes, driverRes] = await Promise.all([
-      pool.query('SELECT * FROM users WHERE phone = $1', [phone]),
-      pool.query('SELECT * FROM drivers WHERE phone = $1', [phone]),
-    ]);
+    if (phone) {
+      // Identité TÉLÉPHONE (locaux, chauffeurs, anciens comptes). Les hôtels
+      // ne se connectent pas par téléphone : POST /auth/hotel-login.
+      const [userRes, driverRes] = await Promise.all([
+        pool.query('SELECT * FROM users WHERE phone = $1', [phone]),
+        pool.query('SELECT * FROM drivers WHERE phone = $1', [phone]),
+      ]);
+      const user = userRes.rows[0] || null;
+      const driver = driverRes.rows[0] || null;
+
+      const payload = { phone };
+      if (user) payload.userId = user.id;
+      if (driver) payload.driverId = driver.id;
+
+      const token = jwt.sign(payload, config.jwtSecret, { expiresIn: config.jwtExpiresIn });
+      return res.json({ token, user, driver, hotel: null });
+    }
+
+    // Identité E-MAIL (touristes/visiteurs) : le compte client le plus
+    // récent portant cet e-mail — jamais de profil chauffeur par e-mail.
+    const userRes = await pool.query(
+      `SELECT * FROM users WHERE lower(email) = $1 ORDER BY created_at DESC LIMIT 1`,
+      [identifiant]
+    );
     const user = userRes.rows[0] || null;
-    const driver = driverRes.rows[0] || null;
 
-    const payload = { phone };
+    const payload = { email: identifiant };
     if (user) payload.userId = user.id;
-    if (driver) payload.driverId = driver.id;
 
-    const token = jwt.sign(payload, config.jwtSecret, {
-      expiresIn: config.jwtExpiresIn,
-    });
-
-    res.json({ token, user, driver, hotel: null });
+    const token = jwt.sign(payload, config.jwtSecret, { expiresIn: config.jwtExpiresIn });
+    res.json({ token, user, driver: null, hotel: null });
   } catch (err) {
     next(err);
   }

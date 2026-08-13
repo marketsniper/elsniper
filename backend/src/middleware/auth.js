@@ -35,9 +35,10 @@ export async function requireAuth(req, _res, next) {
     );
   }
 
-  // Hydratation : un client vérifie son téléphone PUIS crée son profil —
+  // Hydratation : un client vérifie son identifiant PUIS crée son profil —
   // son jeton, émis avant la création, ne contient pas encore les ids.
-  // On complète req.auth depuis la base (lookup par phone, indexé unique).
+  // On complète req.auth depuis la base (téléphone ou e-mail selon
+  // l'identité du jeton).
   try {
     // (Les hôtels ne sont pas concernés : leur jeton, émis par hotel-login,
     // contient déjà hotelId — et leur téléphone n'est pas un identifiant.)
@@ -52,6 +53,15 @@ export async function requireAuth(req, _res, next) {
       ]);
       if (u?.rows[0]) req.auth.userId = u.rows[0].id;
       if (d?.rows[0]) req.auth.driverId = d.rows[0].id;
+    }
+    // Identité E-MAIL (touristes/visiteurs) : compte client le plus récent
+    // portant cet e-mail — jamais de profil chauffeur par e-mail.
+    if (req.auth.email && !req.auth.userId) {
+      const u = await pool.query(
+        `SELECT id FROM users WHERE lower(email) = lower($1) ORDER BY created_at DESC LIMIT 1`,
+        [req.auth.email]
+      );
+      if (u.rows[0]) req.auth.userId = u.rows[0].id;
     }
   } catch (err) {
     return next(err);

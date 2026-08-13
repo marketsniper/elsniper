@@ -39,8 +39,13 @@ export default function EcranClient() {
       ? params.type
       : null;
 
+  // Identité E-MAIL (visiteurs) : l'e-mail du compte est celui vérifié par
+  // le code — le téléphone devient un contact WhatsApp optionnel.
+  const identiteEmail = !!session?.email && !session?.phone;
+
   const [nom, setNom] = useState('');
   const [email, setEmail] = useState('');
+  const [telWhatsapp, setTelWhatsapp] = useState('');
   const [typeCompte, setTypeCompte] = useState<TypeCompte>(typePredefini ?? 'tourist');
   // URI locale du document requis (résident : documents de résidence ;
   // local : carte d'identité tanzanienne NIDA).
@@ -99,8 +104,10 @@ export default function EcranClient() {
       }
       const utilisateur = await api.creerUtilisateur({
         fullName: nom.trim(),
-        phone: session.phone, // doit correspondre au téléphone du jeton
-        email: email.trim() || undefined,
+        // Identité e-mail : WhatsApp optionnel (contact chauffeur) ;
+        // identité téléphone : le numéro vérifié par OTP (jeton).
+        phone: identiteEmail ? telWhatsapp.trim() || undefined : session.phone,
+        email: identiteEmail ? undefined : email.trim() || undefined,
         accountType: typeCompte,
         idDocumentUrl,
       });
@@ -117,7 +124,11 @@ export default function EcranClient() {
     <Ecran fond="vagues">
       <Carte>
         <Titre>{t('client_titre')}</Titre>
-        <SousTitre>{t('client_numero_verifie', { phone: session?.phone ?? '' })}</SousTitre>
+        <SousTitre>
+          {identiteEmail
+            ? t('client_email_verifie', { email: session?.email ?? '' })
+            : t('client_numero_verifie', { phone: session?.phone ?? '' })}
+        </SousTitre>
         {/* Numéro tapé par erreur : on se déconnecte et on repart de la
             saisie du téléphone, dans la même rubrique. */}
         <Pressable
@@ -146,14 +157,28 @@ export default function EcranClient() {
         )}
 
         <Champ label={t('client_nom')} value={nom} onChangeText={setNom} placeholder="Amina Hassan" />
-        <Champ
-          label={t('client_email_opt')}
-          value={email}
-          onChangeText={setEmail}
-          placeholder="amina@example.com"
-          keyboardType="email-address"
-          autoCapitalize="none"
-        />
+        {identiteEmail ? (
+          // Identité e-mail : l'e-mail est déjà vérifié — on demande plutôt
+          // un numéro WhatsApp (recommandé, pour que le chauffeur joigne le
+          // client), jamais vérifié par SMS.
+          <Champ
+            label={t('client_whatsapp_opt')}
+            value={telWhatsapp}
+            onChangeText={setTelWhatsapp}
+            placeholder="+33 6 12 34 56 78"
+            keyboardType="phone-pad"
+            textContentType="telephoneNumber"
+          />
+        ) : (
+          <Champ
+            label={t('client_email_opt')}
+            value={email}
+            onChangeText={setEmail}
+            placeholder="amina@example.com"
+            keyboardType="email-address"
+            autoCapitalize="none"
+          />
+        )}
 
         {!typePredefini && (
           <>
