@@ -1183,6 +1183,11 @@ const CHAINES = {
     sw: 'Safari imeghairiwa. Marejesho ya {montant}: timu itakulipa — ujumbe wa WhatsApp unaofunguka unawajulisha, bonyeza Tuma.',
   },
   commun_retour: { fr: 'Retour', en: 'Back', sw: 'Rudi' },
+  tel_intro_local: {
+    fr: 'Entrez votre numéro de téléphone — pas de code à attendre, vous entrez directement.',
+    en: 'Enter your phone number — no code to wait for, you get straight in.',
+    sw: 'Weka namba yako ya simu — hakuna msimbo wa kusubiri, unaingia moja kwa moja.',
+  },
   tel_intro_visiteur: {
     fr: 'Votre e-mail suffit : le code de connexion y est envoyé. Pas besoin de SMS — pratique quand on voyage.',
     en: 'Your e-mail is enough: the login code is sent there. No SMS needed — handy when travelling.',

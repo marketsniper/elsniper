@@ -49,6 +49,11 @@ router.post(
     if (!isAdmin(req) && data.phone !== req.auth.phone) {
       throw new HttpError(403, 'phone_mismatch', 'Le téléphone doit être celui vérifié par OTP (jeton)');
     }
+    // Une candidature chauffeur exige un numéro VÉRIFIÉ par code — jamais
+    // le jeton local « numéro seul ».
+    if (!isAdmin(req) && req.auth.sansOtp) {
+      throw new HttpError(403, 'otp_required', 'Candidature chauffeur : connectez-vous avec le code reçu par SMS');
+    }
     const { rows } = await query(
       `INSERT INTO drivers (full_name, phone, license_number, vehicle_plate, vehicle_model, zone,
                             license_document_url, insurance_document_url, vehicle_photo_url, id_document_url)

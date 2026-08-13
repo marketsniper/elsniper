@@ -66,6 +66,16 @@ router.post(
       if (!data.phone || data.phone !== req.auth.phone) {
         throw new HttpError(403, 'phone_mismatch', 'Le téléphone doit être celui vérifié par OTP (jeton)');
       }
+      // Jeton local SANS code (numéro seul) : il ne crée QUE des comptes
+      // locaux — les visiteurs passent par l'e-mail, les chauffeurs par
+      // le code.
+      if (req.auth.sansOtp && data.accountType !== 'local') {
+        throw new HttpError(
+          403,
+          'local_only',
+          'Ce mode de connexion (numéro seul) est réservé aux comptes locaux'
+        );
+      }
       phone = data.phone;
     }
     const needsVerification = data.accountType !== 'tourist';

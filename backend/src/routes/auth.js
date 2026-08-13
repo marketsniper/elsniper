@@ -216,6 +216,37 @@ authRouter.post('/verify-otp', async (req, res, next) => {
   }
 });
 
+// POST /api/auth/local-login {phone}
+// Connexion LOCALE SANS CODE : le local entre son numéro, c'est tout — pas
+// d'OTP. Choix produit assumé : la vérification d'identité des locaux passe
+// par la carte NIDA (validée à la main par l'équipe), pas par un code SMS.
+// GARDE-FOUS : le jeton émis est SANS pouvoirs chauffeur (un numéro de
+// chauffeur tapé ici n'ouvre jamais l'espace chauffeur — les chauffeurs
+// gardent le code) et un numéro rattaché à un compte visiteur est renvoyé
+// vers la connexion par e-mail.
+authRouter.post('/local-login', async (req, res, next) => {
+  try {
+    const { phone } = z.object({ phone: phoneSchema }).parse(req.body);
+
+    const { rows } = await pool.query('SELECT * FROM users WHERE phone = $1', [phone]);
+    const user = rows[0] || null;
+    if (user && user.account_type !== 'local') {
+      throw new HttpError(
+        409,
+        'not_local_account',
+        'Ce numéro appartient à un compte visiteur — connectez-vous par e-mail (rubrique Visiteur)'
+      );
+    }
+
+    const payload = { phone, sansOtp: true };
+    if (user) payload.userId = user.id;
+    const token = jwt.sign(payload, config.jwtSecret, { expiresIn: config.jwtExpiresIn });
+    res.json({ token, user, driver: null, hotel: null });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // POST /api/auth/hotel-login {email, password}
 // Connexion des hôtels partenaires — email + mot de passe (pas d'OTP).
 // Réponse : {token, hotel}. Échec → 401 invalid_credentials (sans préciser

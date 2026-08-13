@@ -47,7 +47,9 @@ export async function requireAuth(req, _res, next) {
         req.auth.userId
           ? null
           : pool.query('SELECT id FROM users WHERE phone = $1', [req.auth.phone]),
-        req.auth.driverId
+        // Jeton local SANS code (sansOtp) : JAMAIS de pouvoirs chauffeur —
+        // taper le numéro d'un chauffeur n'ouvre pas son espace.
+        req.auth.driverId || req.auth.sansOtp
           ? null
           : pool.query('SELECT id FROM drivers WHERE phone = $1', [req.auth.phone]),
       ]);

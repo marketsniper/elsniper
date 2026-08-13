@@ -219,6 +219,18 @@ export async function demanderOtpParEmail(
   };
 }
 
+/**
+ * CONNEXION LOCALE SANS CODE : POST /auth/local-login {phone} — le local
+ * entre son numéro et entre directement (pas d'OTP ; jeton sans pouvoirs
+ * chauffeur ; 409 not_local_account si le numéro est un compte visiteur).
+ */
+export async function connexionLocale(phone: string): Promise<ReponseVerifieOtp> {
+  return requete<ReponseVerifieOtp>('/auth/local-login', {
+    methode: 'POST',
+    corps: { phone },
+  });
+}
+
 /** POST /auth/verify-otp {email, code} → {token, user} (identité e-mail). */
 export async function verifierOtpParEmail(
   email: string,
@@ -982,6 +994,7 @@ export async function televerser(uri: string): Promise<{ url: string }> {
 export const api = {
   demanderOtp,
   demanderOtpParEmail,
+  connexionLocale,
   verifierOtp,
   verifierOtpParEmail,
   connexionHotel,

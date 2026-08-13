@@ -17,6 +17,7 @@ import {
   Titre,
 } from '@/components/ui';
 import { api, ErreurApi } from '@/lib/api';
+import { useAuth } from '@/lib/auth';
 import { useT, type CleChaine } from '@/lib/i18n';
 import { couleurs, espaces } from '@/lib/theme';
 
@@ -35,6 +36,7 @@ function normaliserTelephone(indicatif: string, numero: string): string {
 
 export default function EcranTelephone() {
   const router = useRouter();
+  const { connexion } = useAuth();
   const { t } = useT();
   const params = useLocalSearchParams<{ profil?: string }>();
   const profil = typeof params.profil === 'string' ? params.profil : '';
@@ -81,7 +83,7 @@ export default function EcranTelephone() {
       return;
     }
 
-    // ----- Identité TÉLÉPHONE (locaux, chauffeurs, anciens comptes) -----
+    // ----- Identité TÉLÉPHONE -----
     const telephone = normaliserTelephone(indicatif, numero);
     if (!/^\+\d{9,15}$/.test(telephone)) {
       setErreur(t('tel_erreur_numero'));
@@ -89,6 +91,26 @@ export default function EcranTelephone() {
     }
     setCharge(true);
     try {
+      // LOCAUX : pas de code du tout — le numéro suffit, entrée directe.
+      // (Compte existant → réservation ; nouveau numéro → création de
+      // profil local. Les chauffeurs gardent le code SMS.)
+      if (profil === 'local') {
+        const reponse = await api.connexionLocale(telephone);
+        await connexion({
+          token: reponse.token,
+          phone: telephone,
+          user: reponse.user ?? null,
+          driver: null,
+          hotel: null,
+        });
+        router.replace(
+          reponse.user
+            ? '/(tabs)/reserver'
+            : { pathname: '/(auth)/client', params: { type: 'local' } }
+        );
+        return;
+      }
+
       const resultat = await api.demanderOtp(telephone);
       router.push({
         pathname: '/(auth)/otp',
@@ -126,7 +148,9 @@ export default function EcranTelephone() {
             ? t('tel_intro_visiteur')
             : profil === 'driver'
               ? t('tel_intro_chauffeur')
-              : t('tel_intro')}
+              : profil === 'local'
+                ? t('tel_intro_local')
+                : t('tel_intro')}
         </SousTitre>
         {!modeTelephone ? (
           // ----- VISITEURS : e-mail uniquement -----
