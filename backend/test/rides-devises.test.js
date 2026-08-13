@@ -85,7 +85,7 @@ describe('Devises taxi partagé (parcours local complet)', () => {
     assert.equal(Number(standard.body.price_per_seat), 15000);
   });
 
-  it('retard de +10 min : annonce automatiquement annulée, invisible, non réservable', async () => {
+  it('départ passé de +10 min : annonce automatiquement CLÔTURÉE (pas annulée), invisible, non réservable', async () => {
     const { token: tokenChauffeur } = await createVerifiedDriver();
     const { token: tokenLocal } = await createLocal();
 
@@ -115,13 +115,14 @@ describe('Devises taxi partagé (parcours local complet)', () => {
     assert.equal(resa.status, 409);
     assert.equal(resa.body.error.code, 'ride_closed');
 
-    // …et marquée ANNULÉE sur la liste du chauffeur.
+    // …et marquée CLÔTURÉE (le trajet a eu lieu — jamais « annulée » : la
+    // règle des 10 minutes sanctionne les passagers en retard, pas le taxi).
     const mine = await request(app).get('/api/rides/mine').set(authHeaders(tokenChauffeur));
     const annonce = mine.body.find((r) => r.id === posted.body.id);
-    assert.equal(annonce.status, 'cancelled');
+    assert.equal(annonce.status, 'closed');
   });
 
-  it('retard de moins de 10 min : l\'annonce reste ouverte côté chauffeur', async () => {
+  it('départ passé de moins de 10 min : l\'annonce reste ouverte côté chauffeur', async () => {
     const { token: tokenChauffeur } = await createVerifiedDriver();
     const depart = new Date(Date.now() + 6 * 3600 * 1000).toISOString();
     const posted = await request(app)

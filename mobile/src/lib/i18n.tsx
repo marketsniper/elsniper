@@ -450,9 +450,9 @@ const CHAINES = {
   annonces_historique: { fr: 'Historique', en: 'History', sw: 'Historia' },
   annonces_ouvertes: { fr: 'Annonces en ligne', en: 'Live listings', sw: 'Matangazo hewani' },
   annonces_regle_retard: {
-    fr: 'Heure de départ dépassée de plus de 10 minutes = annonce automatiquement annulée. Pensez à clôturer votre annonce quand vous partez.',
-    en: 'Departure time passed by more than 10 minutes = listing automatically cancelled. Remember to close your listing when you leave.',
-    sw: 'Muda wa kuondoka ukipita kwa zaidi ya dakika 10 = tangazo linaghairiwa kiotomatiki. Kumbuka kufunga tangazo lako unapoondoka.',
+    fr: 'Un passager en retard de plus de 10 minutes au départ perd sa place — elle vous reste due en intégralité. Après le départ, votre annonce se clôture automatiquement et vos places payées restent acquises.',
+    en: 'A passenger more than 10 minutes late at departure loses their seat — it is still owed to you in full. After departure, your listing closes automatically and your paid seats remain yours.',
+    sw: 'Abiria anayechelewa zaidi ya dakika 10 wakati wa kuondoka anapoteza kiti chake — bado kinakudai kikamilifu. Baada ya kuondoka, tangazo lako linafungwa kiotomatiki na viti vilivyolipwa vinabaki vyako.',
   },
   rides_regle_retard: {
     fr: 'Paiement sous 5 minutes : au-delà, la réservation s\'annule automatiquement et les places sont remises en vente. Ponctualité : plus de 10 minutes de retard au départ = place considérée comme annulée et due en intégralité au chauffeur — par respect pour les autres voyageurs.',

@@ -110,17 +110,21 @@ function serializeRide(ride, pricing) {
 
 const PRICING_TZS = { mode: 'TZS' };
 
-// Règle zanziGo : tout taxi partagé en retard de plus de 10 minutes sur son
-// heure de départ est considéré comme ANNULÉ. Balayage paresseux (pas de
-// tâche planifiée) : appelé avant chaque lecture/réservation, idempotent.
-const RETARD_ANNULATION_MINUTES = 10;
-async function annulerRidesEnRetard() {
+// La règle des 10 minutes de retard s'applique aux PASSAGERS : un client en
+// retard de +10 min au départ perd sa place et la doit en intégralité (voir
+// messages de réservation). L'annonce du CHAUFFEUR, elle, n'est jamais
+// « annulée » pour ça : une fois l'heure de départ passée (10 min de marge),
+// elle se CLÔTURE simplement — le trajet a eu lieu, plus aucune réservation,
+// et les places déjà payées restent acquises au chauffeur. Balayage
+// paresseux (pas de tâche planifiée), idempotent.
+const CLOTURE_APRES_DEPART_MINUTES = 10;
+async function cloturerRidesPartis() {
   await query(
     `UPDATE posted_rides
-     SET status = 'cancelled'
+     SET status = 'closed'
      WHERE status = 'open'
        AND departure_at < now() - make_interval(mins => $1)`,
-    [RETARD_ANNULATION_MINUTES]
+    [CLOTURE_APRES_DEPART_MINUTES]
   );
 }
 
@@ -244,7 +248,7 @@ router.get(
   '/',
   requireAuth,
   asyncHandler(async (req, res) => {
-    await annulerRidesEnRetard();
+    await cloturerRidesPartis();
     await annulerReservationsImpayees();
     const { rows } = await query(
       `SELECT r.*, d.full_name AS driver_name, d.vehicle_model, d.rating_avg AS driver_rating
@@ -270,7 +274,7 @@ router.get(
     if (!req.auth.driverId) {
       throw new HttpError(403, 'forbidden', 'Réservé aux chauffeurs');
     }
-    await annulerRidesEnRetard();
+    await cloturerRidesPartis();
     await annulerReservationsImpayees();
     const { rows } = await query(
       `SELECT * FROM posted_rides WHERE driver_id = $1 ORDER BY departure_at DESC`,
@@ -373,7 +377,7 @@ router.get(
     if (!req.auth.userId && !req.auth.hotelId) {
       throw new HttpError(403, 'forbidden', 'Réservé aux clients et aux hôtels partenaires');
     }
-    await annulerRidesEnRetard();
+    await cloturerRidesPartis();
     await annulerReservationsImpayees();
     const { rows } = await query(
       `SELECT b.id, b.seats, b.created_at, b.paid_at, b.cancelled_at,
@@ -575,7 +579,7 @@ router.post(
       }
     }
 
-    await annulerRidesEnRetard();
+    await cloturerRidesPartis();
     await annulerReservationsImpayees();
     const { rows: rideRows } = await query('SELECT * FROM posted_rides WHERE id = $1', [
       req.params.id,
