@@ -407,6 +407,7 @@ export default function EcranEquipe() {
                         {t('gains_detail_compte', {
                           courses: fenetre.courses,
                           colis: fenetre.colis,
+                          places: fenetre.places ?? 0,
                         })}
                       </Text>
                     )}

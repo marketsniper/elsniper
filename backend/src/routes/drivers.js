@@ -5,6 +5,7 @@ import { HttpError, notFound } from '../errors.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { isAdmin, requireAuth, requireAdmin } from '../middleware/auth.js';
 import { generateVehicleQr } from '../services/qrService.js';
+import { valeurReservationPlace } from './stats.js';
 
 const router = Router();
 
@@ -151,7 +152,7 @@ router.get(
       month: new Date(minuitEat - 29 * JOUR_MS),
     };
 
-    const [{ rows: courses }, { rows: colis }] = await Promise.all([
+    const [{ rows: courses }, { rows: colis }, { rows: places }] = await Promise.all([
       query(
         `SELECT completed_at AS quand, price, commission, currency
          FROM trips
@@ -164,17 +165,31 @@ router.get(
          WHERE driver_id = $1 AND status = 'delivered' AND delivered_at >= $2`,
         [req.params.id, debuts.month]
       ),
+      // Places de taxi partagé PAYÉES sur SES annonces : acquises dès le
+      // paiement (annulation client impossible à moins de 24 h du départ).
+      query(
+        `SELECT b.paid_at AS quand, b.seats,
+                r.origin, r.destination, r.price_per_seat,
+                u.account_type, u.verification_status,
+                (b.hotel_id IS NOT NULL) AS par_hotel
+         FROM ride_bookings b
+         JOIN posted_rides r ON r.id = b.ride_id
+         LEFT JOIN users u ON u.id = b.user_id
+         WHERE r.driver_id = $1 AND b.paid_at IS NOT NULL
+           AND b.cancelled_at IS NULL AND b.paid_at >= $2`,
+        [req.params.id, debuts.month]
+      ),
     ]);
 
     const round2 = (n) => Math.round(n * 100) / 100;
-    const fenetreVide = () => ({ courses: 0, colis: 0, gains: {} });
+    const fenetreVide = () => ({ courses: 0, colis: 0, places: 0, gains: {} });
     const stats = { today: fenetreVide(), week: fenetreVide(), month: fenetreVide() };
-    const ajouter = (ligne, type) => {
+    const ajouter = (ligne, type, increment = 1) => {
       const quand = new Date(ligne.quand).getTime();
       const net = Number(ligne.price) - Number(ligne.commission);
       for (const cle of ['today', 'week', 'month']) {
         if (quand >= debuts[cle].getTime()) {
-          stats[cle][type] += 1;
+          stats[cle][type] += increment;
           stats[cle].gains[ligne.currency] = round2(
             (stats[cle].gains[ligne.currency] ?? 0) + net
           );
@@ -183,6 +198,10 @@ router.get(
     };
     for (const ligne of courses) ajouter(ligne, 'courses');
     for (const ligne of colis) ajouter(ligne, 'colis');
+    for (const ligne of places) {
+      const valeur = valeurReservationPlace(ligne);
+      ajouter({ quand: ligne.quand, ...valeur }, 'places', ligne.seats);
+    }
 
     res.json(stats);
   })

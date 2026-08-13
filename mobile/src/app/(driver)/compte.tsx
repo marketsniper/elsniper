@@ -105,7 +105,7 @@ export default function EcranCompteChauffeur() {
               <View style={styles.colonneGains}>
                 <Text style={styles.labelGains}>{t(cle)}</Text>
                 <Text style={styles.detailGains}>
-                  {t('gains_detail_compte', { courses: fenetre.courses, colis: fenetre.colis })}
+                  {t('gains_detail_compte', { courses: fenetre.courses, colis: fenetre.colis, places: fenetre.places ?? 0 })}
                 </Text>
               </View>
               <Text style={styles.montantGains}>

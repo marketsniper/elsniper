@@ -29,10 +29,11 @@ cp "$RACINE/backend/pwa/"* "$RACINE/backend/public/web/"
 # Balises PWA dans <head> : manifest, couleur de thème, icône iOS, plein écran iOS.
 sed -i 's|  <link rel="icon" href="/web/favicon.ico" /></head>|  <link rel="icon" href="/web/favicon.ico" />\n    <link rel="manifest" href="/web/manifest.webmanifest" />\n    <meta name="theme-color" content="#E4572E" />\n    <link rel="apple-touch-icon" href="/web/apple-touch-icon.png" />\n    <meta name="apple-mobile-web-app-capable" content="yes" />\n    <meta name="apple-mobile-web-app-status-bar-style" content="default" />\n    <meta name="apple-mobile-web-app-title" content="zanziGo" />\n  </head>|' "$INDEX"
 
-# Enregistrement du service worker en fin de <body>.
-sed -i 's|</body>|  <script>\n    if ("serviceWorker" in navigator) {\n      window.addEventListener("load", function () {\n        navigator.serviceWorker.register("/web/service-worker.js");\n      });\n    }\n  </script>\n</body>|' "$INDEX"
+# Enregistrement du service worker + bouton « Installer » en fin de <body>.
+sed -i 's|</body>|  <script>\n    if ("serviceWorker" in navigator) {\n      window.addEventListener("load", function () {\n        navigator.serviceWorker.register("/web/service-worker.js");\n      });\n    }\n  </script>\n  <script src="/web/installation.js" defer></script>\n</body>|' "$INDEX"
 
 grep -q 'zanzigo-web' "$INDEX" || { echo "ERREUR : retouche CSS non appliquée" >&2; exit 1; }
 grep -q 'manifest.webmanifest' "$INDEX" || { echo "ERREUR : balises PWA non appliquées" >&2; exit 1; }
 grep -q 'service-worker.js' "$INDEX" || { echo "ERREUR : enregistrement SW non appliqué" >&2; exit 1; }
+grep -q 'installation.js' "$INDEX" || { echo "ERREUR : bouton installer non appliqué" >&2; exit 1; }
 echo "OK — backend/public/web rafraîchi, PWA incluse (API: $API_URL)"

@@ -626,6 +626,8 @@ export interface StatsChauffeur {
 export interface FenetreStats {
   courses: number;
   colis: number;
+  /** Places de taxi partagé payées. */
+  places?: number;
   gains: Record<string, number>;
 }
 
@@ -767,6 +769,8 @@ export async function verifierHotel(
 export interface FenetreCa {
   courses: number;
   colis: number;
+  /** Places de taxi partagé payées. */
+  places?: number;
   /** CA encaissé (prix payés) par devise. */
   ca: Record<string, number>;
   /** Net zanziGo (commissions) par devise. */

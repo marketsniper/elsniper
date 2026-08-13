@@ -2,6 +2,30 @@ import { Router } from 'express';
 import { query } from '../db.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { requireAdmin } from '../middleware/auth.js';
+import { config } from '../config.js';
+import { sharedSeatUsdForRoute } from '../services/pricingService.js';
+
+// Prix, commission et devise d'une réservation de place PAYÉE, selon le
+// profil du client (même cloison que partout ailleurs) :
+//  - hôtel : grille USD −5 %, commission 20 % ;
+//  - local : prix TZS de l'annonce, commission 15 % ;
+//  - résident vérifié : USD −10 %, commission 20 % ; touriste : USD, 20 %.
+export function valeurReservationPlace(ligne) {
+  const round2 = (x) => Math.round(x * 100) / 100;
+  const usd = sharedSeatUsdForRoute(ligne.origin, ligne.destination);
+  if (ligne.par_hotel) {
+    const price = round2(usd * (1 - config.hotelDiscountRate) * ligne.seats);
+    return { price, commission: round2(price * 0.2), currency: 'USD' };
+  }
+  if (ligne.account_type === 'local') {
+    const price = Number(ligne.price_per_seat) * ligne.seats;
+    return { price, commission: round2(price * 0.15), currency: 'TZS' };
+  }
+  const resident =
+    ligne.account_type === 'resident' && ligne.verification_status === 'verified';
+  const price = round2((resident ? usd * (1 - config.residentDiscountRate) : usd) * ligne.seats);
+  return { price, commission: round2(price * 0.2), currency: 'USD' };
+}
 
 const router = Router();
 
@@ -31,7 +55,7 @@ router.get(
       month: new Date(minuitEat - 29 * JOUR_MS),
     };
 
-    const [{ rows: parType }, { rows: hotels }, { rows: drivers }, { rows: courses }, { rows: colis }] =
+    const [{ rows: parType }, { rows: hotels }, { rows: drivers }, { rows: courses }, { rows: colis }, { rows: places }] =
       await Promise.all([
         query('SELECT account_type, COUNT(*)::int AS n FROM users GROUP BY account_type'),
         query(
@@ -53,17 +77,30 @@ router.get(
            FROM packages WHERE status = 'delivered' AND delivered_at >= $1`,
           [debuts.month]
         ),
+        // Places de taxi partagé PAYÉES : acquises dès le paiement (un
+        // client ne peut plus annuler à moins de 24 h du départ).
+        query(
+          `SELECT b.paid_at AS quand, b.seats,
+                  r.origin, r.destination, r.price_per_seat,
+                  u.account_type, u.verification_status,
+                  (b.hotel_id IS NOT NULL) AS par_hotel
+           FROM ride_bookings b
+           JOIN posted_rides r ON r.id = b.ride_id
+           LEFT JOIN users u ON u.id = b.user_id
+           WHERE b.paid_at IS NOT NULL AND b.cancelled_at IS NULL AND b.paid_at >= $1`,
+          [debuts.month]
+        ),
       ]);
 
     const round2 = (x) => Math.round(x * 100) / 100;
-    const fenetreVide = () => ({ courses: 0, colis: 0, ca: {}, gains: {} });
+    const fenetreVide = () => ({ courses: 0, colis: 0, places: 0, ca: {}, gains: {} });
     const revenue = { today: fenetreVide(), week: fenetreVide(), month: fenetreVide() };
-    const ajouter = (ligne, type) => {
+    const ajouter = (ligne, type, increment = 1) => {
       const quand = new Date(ligne.quand).getTime();
       for (const cle of ['today', 'week', 'month']) {
         if (quand >= debuts[cle].getTime()) {
           const fenetre = revenue[cle];
-          fenetre[type] += 1;
+          fenetre[type] += increment;
           fenetre.ca[ligne.currency] = round2(
             (fenetre.ca[ligne.currency] ?? 0) + Number(ligne.price)
           );
@@ -75,6 +112,10 @@ router.get(
     };
     for (const ligne of courses) ajouter(ligne, 'courses');
     for (const ligne of colis) ajouter(ligne, 'colis');
+    for (const ligne of places) {
+      const valeur = valeurReservationPlace(ligne);
+      ajouter({ quand: ligne.quand, ...valeur }, 'places', ligne.seats);
+    }
 
     const n = (type) => parType.find((ligne) => ligne.account_type === type)?.n ?? 0;
     res.json({

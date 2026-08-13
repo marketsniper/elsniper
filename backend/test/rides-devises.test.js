@@ -143,7 +143,7 @@ describe('Devises taxi partagé (parcours local complet)', () => {
 
 describe('Paiement des places de taxi partagé', () => {
   it('réservation → paiement pending au tableau équipe ; confirmation → place payée', async () => {
-    const { token: tokenChauffeur } = await createVerifiedDriver();
+    const { token: tokenChauffeur, driver } = await createVerifiedDriver();
     const { token: tokenLocal } = await createLocal();
 
     const depart = new Date(Date.now() + 6 * 3600 * 1000).toISOString();
@@ -181,6 +181,21 @@ describe('Paiement des places de taxi partagé', () => {
 
     const mine = await request(app).get('/api/rides/mine').set(authHeaders(tokenChauffeur));
     assert.equal(mine.body[0].bookings[0].paid, true);
+
+    // Les compteurs de gains se mettent à jour AUTOMATIQUEMENT au paiement :
+    // équipe (CA + net zanziGo) et chauffeur (net), sans attendre le départ.
+    const statsEquipe = await request(app).get('/api/stats').set(adminHeaders());
+    assert.equal(statsEquipe.body.revenue.today.places, 2);
+    assert.equal(Number(statsEquipe.body.revenue.today.ca.TZS), 30000);
+    // Commission 15 % sur le partagé local : 4 500 TZS pour zanziGo.
+    assert.equal(Number(statsEquipe.body.revenue.today.gains.TZS), 4500);
+
+    const statsChauffeur = await request(app)
+      .get(`/api/drivers/${driver.id}/stats`)
+      .set(authHeaders(tokenChauffeur));
+    assert.equal(statsChauffeur.body.today.places, 2);
+    // Net chauffeur : 85 % de 30 000 = 25 500 TZS.
+    assert.equal(Number(statsChauffeur.body.today.gains.TZS), 25500);
   });
 });
 

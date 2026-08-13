@@ -155,9 +155,9 @@ const CHAINES = {
   gains_7j: { fr: '7 derniers jours', en: 'Last 7 days', sw: 'Siku 7 zilizopita' },
   gains_30j: { fr: '30 derniers jours', en: 'Last 30 days', sw: 'Siku 30 zilizopita' },
   gains_detail_compte: {
-    fr: '{courses} course·s · {colis} colis',
-    en: '{courses} ride·s · {colis} parcel·s',
-    sw: 'safari {courses} · mizigo {colis}',
+    fr: '{courses} course·s · {colis} colis · {places} place·s payée·s',
+    en: '{courses} ride·s · {colis} parcel·s · {places} paid seat·s',
+    sw: 'safari {courses} · mizigo {colis} · viti {places} vilivyolipwa',
   },
   gains_note_paiement: {
     fr: 'Gains nets, commission zanziGo déjà déduite — vous êtes payé après chaque course.',
