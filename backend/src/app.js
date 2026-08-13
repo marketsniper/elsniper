@@ -164,6 +164,43 @@ deux fois. <a href="/confidentialite">Politique de confidentialité</a></small>
       );
   });
 
+  // Espace chauffeurs : cible du QR « chauffeurs » (affiches, cartes) —
+  // le taxi scanne et tombe DIRECTEMENT sur l'installation de l'app,
+  // sans passer par la page générale. Bilingue swahili/français : les
+  // chauffeurs sont locaux.
+  app.get('/chauffeur', (_req, res) => {
+    res
+      .type('html')
+      .send(
+        `<!doctype html><html lang="sw"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>zanziGo — Madereva / Chauffeurs</title>
+<style>body{font-family:system-ui,sans-serif;background:#FBF0E4;color:#33222B;display:flex;min-height:100vh;align-items:center;justify-content:center;margin:0}
+main{text-align:center;padding:28px;max-width:480px}h1{color:#E4572E;font-size:40px;margin:0 0 4px}
+h2{font-size:19px;margin:6px 0 0}
+p{color:#8A7168;margin:10px auto;line-height:1.5}
+.bouton{display:block;background:#E4572E;color:#FFF8F2;text-decoration:none;font-weight:700;font-size:18px;padding:16px 22px;border-radius:14px;margin:18px auto}
+.secondaire{background:#FFFDFA;color:#B93C1B;border:2px solid #E4572E}
+ol{text-align:left;color:#8A7168;line-height:1.7;margin:10px auto;max-width:40ch}
+small{color:#8A7168;display:block;margin-top:14px;line-height:1.5}small a{color:#B93C1B}</style>
+</head><body><main>
+<h1>zanziGo</h1>
+<h2>🚕 Madereva — Chauffeurs</h2>
+<p><strong>Pokea safari na mizigo kwenye simu yako.</strong><br>
+Recevez des courses et des colis directement sur votre téléphone.</p>
+<a class="bouton" href="https://expo.dev/artifacts/eas/kM6cP9BmGjkwOHQH2LenHGHHF0oBldgFlQYLQTRUCx0.apk">📥 Sakinisha app — Installer l'app (Android)</a>
+<ol>
+<li><strong>Sakinisha</strong> — touchez le bouton, acceptez « Installer quand même » si le téléphone le demande.</li>
+<li><strong>Jisajili</strong> — ouvrez l'app, choisissez « Chauffeur », entrez votre numéro.</li>
+<li><strong>Endesha</strong> — l'équipe valide vos papiers, et les courses arrivent.</li>
+</ol>
+<a class="bouton secondaire" href="https://wa.me/255666241749?text=${encodeURIComponent('🚕 Nataka kuwa dereva wa zanziGo — Je veux devenir chauffeur zanziGo')}">💬 Maswali ? WhatsApp équipe zanziGo</a>
+<small>iPhone : accès sur invitation — écrivez-nous sur WhatsApp.<br>
+<a href="/confidentialite">Sera ya faragha — Politique de confidentialité</a></small>
+</main></body></html>`
+      );
+  });
+
   // Politique de confidentialité : exigée par Google Play / App Store, et
   // liée depuis la fiche du store. Page statique, sobre, bilingue FR/EN.
   app.get('/confidentialite', (_req, res) => {

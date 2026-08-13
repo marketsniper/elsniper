@@ -24,4 +24,12 @@ describe('Page /app', () => {
       'le lien /web doit apparaître avant la section chauffeur (priorité au zéro-installation)'
     );
   });
+
+  it('/chauffeur : cible du QR chauffeurs — APK direct + contact WhatsApp', async () => {
+    const res = await request(app).get('/chauffeur');
+    assert.equal(res.status, 200);
+    assert.ok(res.text.includes('.apk'), 'bouton APK absent');
+    assert.ok(res.text.includes('wa.me'), 'contact WhatsApp absent');
+    assert.ok(res.text.includes('Madereva'), 'version swahili absente');
+  });
 });
