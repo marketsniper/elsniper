@@ -1016,6 +1016,11 @@ const CHAINES = {
     sw: 'Panga kuondoka (hiari)',
   },
   reserver_prix_course: { fr: 'Prix de la course', en: 'Ride price', sw: 'Bei ya safari' },
+  reserver_prix_selon_trajet: {
+    fr: 'Prix affiché après le choix du trajet',
+    en: 'Price shown once you pick your route',
+    sw: 'Bei itaonyeshwa baada ya kuchagua safari',
+  },
   reserver_note_prix: {
     fr: 'Tarif plat selon la formule (grille zanziGo). Le prix est figé à la réservation — aucun supplément ensuite.',
     en: 'Flat fare by ride mode (zanziGo price list). The price is locked at booking — no extra charges later.',

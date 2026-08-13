@@ -97,9 +97,13 @@ export default function EcranReserver() {
   // « Partagé » = navette locale pour un local vérifié, navette touristes sinon.
   const typePartage: TypeTrajet = estLocalVerifie ? 'shared_local' : 'shared_tourist';
   const itineraire = { depart, arrivee };
+  // Pas de prix affiché tant que le trajet n'est pas choisi : le tarif
+  // dépend du trajet (grille au km + trajets spéciaux), un montant « par
+  // défaut » serait trompeur.
+  const itineraireChoisi = depart !== '' && arrivee !== '';
   // Trajet spécial (privé uniquement) : villes exactes, deux sens.
   const estSpecial = mode === 'prive' && tarifSpecialPrive(depart, arrivee) !== null;
-  const tarifCourant = tarifTrajetProfil('private', profil, itineraire);
+  const tarifCourant = itineraireChoisi ? tarifTrajetProfil('private', profil, itineraire) : null;
 
   const reserver = async () => {
     setErreur('');
@@ -272,10 +276,12 @@ export default function EcranReserver() {
               </Text>
               <Text style={styles.descriptionMode}>{option.description}</Text>
               <Text style={styles.sousTypeMode}>{libelleTypeTrajet(option.type, t)}</Text>
-              {tarif !== null && (
+              {itineraireChoisi && tarif !== null ? (
                 <Text style={styles.prixMode}>
                   {formaterMontant(tarif.montant, tarif.devise)}
                 </Text>
+              ) : (
+                <Text style={styles.prixModeAttente}>{t('reserver_prix_selon_trajet')}</Text>
               )}
               {profilUsd && (
                 <View style={styles.ligneClim}>
@@ -437,6 +443,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '800',
     color: couleurs.primaire,
+    marginTop: espaces.xs,
+  },
+  // En attendant le choix du trajet : pas de montant, juste une invitation.
+  prixModeAttente: {
+    fontSize: 12.5,
+    fontWeight: '600',
+    color: couleurs.texteSecondaire,
     marginTop: espaces.xs,
   },
   ligneClim: {
