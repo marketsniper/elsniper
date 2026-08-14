@@ -432,8 +432,17 @@ authRouter.post('/driver-register', async (req, res, next) => {
       );
     }
 
+    // L'inscription est conservée : le chauffeur part souvent chercher ses
+    // papiers avant de déposer son dossier, il doit pouvoir se reconnecter.
+    const passwordHash = await hashPassword(password);
+    await pool.query(
+      `INSERT INTO driver_signups (phone, password_hash) VALUES ($1, $2)
+       ON CONFLICT (phone) DO UPDATE SET password_hash = EXCLUDED.password_hash, updated_at = now()`,
+      [phone, passwordHash]
+    );
+
     const token = jwt.sign(
-      { phone, sansOtp: true, chauffeurCandidat: true, passwordHash: await hashPassword(password) },
+      { phone, sansOtp: true, chauffeurCandidat: true, passwordHash },
       config.jwtSecret,
       { expiresIn: config.jwtExpiresIn }
     );
@@ -456,6 +465,25 @@ authRouter.post('/driver-login', async (req, res, next) => {
     const { rows } = await pool.query('SELECT * FROM drivers WHERE phone = $1', [phone]);
     const driver = rows[0];
     if (!driver) {
+      // Inscription commencée mais dossier pas encore déposé : on le
+      // reconnaît et on le renvoie déposer ses documents là où il s'était
+      // arrêté, au lieu de lui dire que son numéro est inconnu.
+      const attente = await pool.query('SELECT * FROM driver_signups WHERE phone = $1', [phone]);
+      const inscription = attente.rows[0];
+      if (inscription && (await verifyPassword(password, inscription.password_hash))) {
+        const token = jwt.sign(
+          {
+            phone,
+            sansOtp: true,
+            chauffeurCandidat: true,
+            passwordHash: inscription.password_hash,
+          },
+          config.jwtSecret,
+          { expiresIn: config.jwtExpiresIn }
+        );
+        res.json({ token, user: null, driver: null, hotel: null });
+        return;
+      }
       throw new HttpError(
         401,
         'invalid_credentials',

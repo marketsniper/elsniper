@@ -86,6 +86,50 @@ describe('Chauffeurs : numéro + mot de passe', () => {
     assert.equal(mauvais.status, 401);
   });
 
+  it('inscrit mais dossier pas encore déposé : il se reconnecte et reprend où il en était', async () => {
+    const phone = nextPhone();
+    const inscription = await request(app)
+      .post('/api/auth/driver-register')
+      .send({ phone, password: 'DerevaMdp1' });
+    assert.equal(inscription.status, 201);
+
+    // Il ferme l'application pour aller chercher ses papiers, puis revient.
+    const retour = await request(app)
+      .post('/api/auth/driver-login')
+      .send({ phone, password: 'DerevaMdp1' });
+    assert.equal(retour.status, 200, JSON.stringify(retour.body));
+    assert.equal(retour.body.driver, null); // dossier encore à déposer
+    assert.ok(retour.body.token);
+
+    const mauvais = await request(app)
+      .post('/api/auth/driver-login')
+      .send({ phone, password: 'PasLeBon1' });
+    assert.equal(mauvais.status, 401);
+
+    // Le jeton de reconnexion dépose bien la candidature.
+    const candidature = await request(app)
+      .post('/api/drivers')
+      .set(authHeaders(retour.body.token))
+      .send({
+        fullName: 'Chauffeur Revenu',
+        phone,
+        licenseNumber: 'DL-424242',
+        vehiclePlate: nextPlate(),
+        zone: 'Paje',
+        licenseDocumentUrl: DOC_URL,
+        insuranceDocumentUrl: DOC_URL,
+        vehiclePhotoUrl: DOC_URL,
+      });
+    assert.equal(candidature.status, 201, JSON.stringify(candidature.body));
+
+    // Dossier déposé : la connexion ouvre maintenant sa fiche chauffeur.
+    const apres = await request(app)
+      .post('/api/auth/driver-login')
+      .send({ phone, password: 'DerevaMdp1' });
+    assert.equal(apres.status, 200);
+    assert.equal(apres.body.driver.id, candidature.body.id);
+  });
+
   it('un jeton CLIENT ne dépose jamais de candidature chauffeur', async () => {
     const phone = nextPhone();
     const { body } = await request(app)

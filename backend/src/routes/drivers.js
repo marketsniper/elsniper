@@ -92,6 +92,9 @@ router.post(
         req.auth?.passwordHash ?? null,
       ]
     );
+    // Le dossier est déposé : l'inscription en attente n'a plus lieu d'être,
+    // le mot de passe vit désormais sur la fiche du chauffeur.
+    await query('DELETE FROM driver_signups WHERE phone = $1', [data.phone]);
     // L'équipe est prévenue automatiquement qu'une candidature attend.
     notifierEquipe(
       '🚗 Nouvelle candidature chauffeur — zanziGo',
