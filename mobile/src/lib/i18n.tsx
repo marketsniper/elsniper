@@ -833,9 +833,9 @@ const CHAINES = {
     sw: 'Hakuna simu iliyojisajili kwa arifa bado.',
   },
   alertes_iphone: {
-    fr: "Sur iPhone, les alertes demandent d'ajouter zanziGo à l'écran d'accueil : bouton Partager (le carré avec la flèche), puis « Sur l'écran d'accueil ». Rouvrez zanziGo depuis cette icône, et le bouton apparaîtra ici.",
-    en: 'On iPhone, alerts require adding zanziGo to the home screen: Share button, then "Add to Home Screen". Reopen zanziGo from that icon and the button will appear here.',
-    sw: 'Kwenye iPhone, arifa zinahitaji kuongeza zanziGo kwenye skrini ya kwanza: kitufe cha Share, kisha "Add to Home Screen". Fungua zanziGo kutoka aikoni hiyo na kitufe kitaonekana hapa.',
+    fr: "Sur iPhone, Apple n'autorise les alertes que depuis l'écran d'accueil — jamais depuis un onglet Safari. Rien à télécharger : 1) bouton Partager (le carré avec la flèche, en bas) ; 2) « Sur l'écran d'accueil » ; 3) rouvrez zanziGo par cette icône. L'iPhone garde cette icône à part de Safari : reconnectez-vous et ressaisissez la clé équipe une fois, puis le bouton d'activation apparaîtra ici.",
+    en: 'On iPhone, Apple only allows alerts from the home screen — never from a Safari tab. Nothing to download: 1) Share button (the square with the arrow, at the bottom); 2) "Add to Home Screen"; 3) reopen zanziGo from that icon. iPhone keeps that icon separate from Safari: log in and re-enter the team key once, then the activation button will appear here.',
+    sw: 'Kwenye iPhone, Apple huruhusu arifa tu kutoka skrini ya kwanza — kamwe si kutoka kichupo cha Safari. Hakuna cha kupakua: 1) kitufe cha Share (mraba wenye mshale, chini); 2) "Add to Home Screen"; 3) fungua zanziGo kwa aikoni hiyo. iPhone huhifadhi aikoni hiyo tofauti na Safari: ingia tena na uweke ufunguo wa timu mara moja, kisha kitufe cha kuwasha kitaonekana hapa.',
   },
   alertes_indisponible: {
     fr: "Ce navigateur ne sait pas recevoir d'alertes. Les messages WhatsApp continuent d'arriver normalement.",
