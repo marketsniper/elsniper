@@ -17,6 +17,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Alert, Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Selecteur } from '@/components/Selecteur';
+import { VisionneuseDocument } from '@/components/VisionneuseDocument';
 import {
   Badge,
   BadgeStatutTrajet,
@@ -116,6 +117,8 @@ export default function EcranEquipe() {
   const [sauvegardeEnCours, setSauvegardeEnCours] = useState(false);
   // Courses passées : jours dépliés dans l'historique (repliés par défaut).
   const [joursOuverts, setJoursOuverts] = useState<Record<string, boolean>>({});
+  // Document affiché en plein écran (permis, assurance, carte NIDA…).
+  const [documentOuvert, setDocumentOuvert] = useState<{ url: string; titre: string } | null>(null);
 
   const charger = useCallback(async () => {
     setErreur('');
@@ -470,6 +473,13 @@ export default function EcranEquipe() {
   // ----- Tableau de bord ----------------------------------------------------
   return (
     <Ecran fond="vagues" onRefresh={charger}>
+      {/* Document affiché PAR-DESSUS le tableau de bord : on ne quitte
+          jamais l'application pour vérifier un permis. */}
+      <VisionneuseDocument
+        url={documentOuvert?.url ?? null}
+        titre={documentOuvert?.titre ?? ''}
+        onFermer={() => setDocumentOuvert(null)}
+      />
       <TexteErreur>{erreur}</TexteErreur>
 
       {/* Menu principal : grille de cases, chaque case ouvre sa rubrique. */}
@@ -990,10 +1000,8 @@ export default function EcranEquipe() {
             <View style={styles.rangeeDocs}>
               {documents.map(([libelle, url]) => {
                 if (typeof url !== 'string' || !url) return null;
-                // Documents des toutes premières candidatures : ils
-                // pointaient sur le disque du serveur (« localhost »),
-                // effacé à chaque mise à jour — ils sont perdus, autant le
-                // dire clairement plutôt que d'ouvrir un lien mort.
+                // Le document s'ouvre DANS l'application (visionneuse) :
+                // plus de sortie vers le navigateur qui ramenait à l'accueil.
                 const perdu = /localhost|127\.0\.0\.1/.test(url);
                 return (
                   <Bouton
@@ -1001,11 +1009,7 @@ export default function EcranEquipe() {
                     titre={perdu ? `${libelle} — ${t('equipe_doc_indisponible')}` : libelle}
                     icone={perdu ? 'alert-circle-outline' : 'document-attach-outline'}
                     variante="secondaire"
-                    onPress={() =>
-                      perdu
-                        ? Alert.alert(t('equipe_doc_indisponible'), t('equipe_doc_perdu_texte'))
-                        : Linking.openURL(url)
-                    }
+                    onPress={() => setDocumentOuvert({ url, titre: libelle })}
                   />
                 );
               })}
@@ -1061,7 +1065,7 @@ export default function EcranEquipe() {
                 titre={t('equipe_document')}
                 icone="document-attach-outline"
                 variante="secondaire"
-                onPress={() => Linking.openURL(document)}
+                onPress={() => setDocumentOuvert({ url: document, titre: t('equipe_document') })}
               />
             )}
             <View style={styles.rangeeActions}>

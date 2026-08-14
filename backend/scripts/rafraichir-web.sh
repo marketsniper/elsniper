@@ -9,7 +9,10 @@ RACINE="$(cd "$(dirname "$0")/../.." && pwd)"
 API_URL="${EXPO_PUBLIC_API_URL:-https://zanzigo-api.onrender.com/api}"
 
 cd "$RACINE/mobile"
-EXPO_PUBLIC_API_URL="$API_URL" npx expo export --platform web --output-dir dist-web
+# --clear : sans ça, le cache de compilation peut resservir un bundle
+# construit avec une AUTRE adresse d'API (une session de test en local a
+# déjà failli être mise en ligne à la place de la production).
+EXPO_PUBLIC_API_URL="$API_URL" npx expo export --platform web --output-dir dist-web --clear
 
 rm -rf "$RACINE/backend/public/web"
 cp -r dist-web "$RACINE/backend/public/web"
@@ -31,6 +34,17 @@ sed -i 's|  <link rel="icon" href="/web/favicon.ico" /></head>|  <link rel="icon
 
 # Enregistrement du service worker + bouton « Installer » en fin de <body>.
 sed -i 's|</body>|  <script>\n    if ("serviceWorker" in navigator) {\n      window.addEventListener("load", function () {\n        navigator.serviceWorker.register("/web/service-worker.js");\n      });\n    }\n  </script>\n  <script src="/web/installation.js" defer></script>\n</body>|' "$INDEX"
+
+# GARDE-FOU : le bundle doit interroger l'API demandée, et JAMAIS une
+# adresse locale (sinon la version en ligne ne parlerait à aucun serveur).
+if grep -rqE 'https?://(127\.0\.0\.1|localhost):[0-9]+/api' "$RACINE/backend/public/web/_expo/"; then
+  echo "ERREUR : le bundle pointe sur une API LOCALE — reconstruction nécessaire" >&2
+  exit 1
+fi
+grep -rq "$API_URL" "$RACINE/backend/public/web/_expo/" || {
+  echo "ERREUR : l'adresse d'API attendue ($API_URL) est absente du bundle" >&2
+  exit 1
+}
 
 grep -q 'zanzigo-web' "$INDEX" || { echo "ERREUR : retouche CSS non appliquée" >&2; exit 1; }
 grep -q 'manifest.webmanifest' "$INDEX" || { echo "ERREUR : balises PWA non appliquées" >&2; exit 1; }

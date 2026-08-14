@@ -59,6 +59,7 @@ function PilesNavigation() {
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="(driver)" options={{ headerShown: false }} />
       <Stack.Screen name="trip/[id]" options={{ title: t('titre_trajet'), headerLeft: retourClient }} />
+      <Stack.Screen name="place/[id]" options={{ title: t('place_fiche_titre'), headerLeft: retourClient }} />
       <Stack.Screen name="package/nouveau" options={{ title: t('titre_nouveau_colis'), headerLeft: retourColis }} />
       <Stack.Screen name="package/[id]" options={{ title: t('titre_colis'), headerLeft: retourColis }} />
       <Stack.Screen name="course/[id]" options={{ title: t('titre_course'), headerLeft: retourChauffeur }} />

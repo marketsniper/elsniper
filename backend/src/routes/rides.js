@@ -873,6 +873,9 @@ router.post(
     // générique « demande de place »).
     sortie.whatsapp_link = notification;
     sortie.booked_seats = seats;
+    // Identifiant de LA PLACE réservée : l'app ouvre sa fiche de suivi
+    // (étapes + paiement) juste après la réservation.
+    sortie.booking_id = bookingId;
     sortie.payment = {
       ...paymentRows[0],
       payment_method: circuitPaiement ? 'pesapal' : 'manual',

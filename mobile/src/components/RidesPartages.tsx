@@ -9,7 +9,7 @@
 // Devise affichée : le serveur envoie price_per_seat_usd aux profils USD
 // et price_per_seat (TZS) aux locaux/chauffeurs — on affiche le champ présent.
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 
 import { useRafraichissementAuto } from '@/lib/rafraichissementAuto';
 import React, { useCallback, useState } from 'react';
@@ -55,6 +55,7 @@ function libelleJour(valeur: unknown, t: FonctionT, langue: Langue): string {
 
 export function RidesPartages() {
   const { t, langue } = useT();
+  const router = useRouter();
   const { session } = useAuth();
   // Cloison tarifaire : un profil LOCAL ne doit JAMAIS voir de dollars —
   // quoi que contienne la réponse, on affiche son prix TZS.
@@ -78,8 +79,22 @@ export function RidesPartages() {
     setMessageOk('');
     try {
       const reponse = await api.reserverPlacesRide(ride.id, places);
-      setMessageOk(t('rides_reservation_ok', { n: places }));
       setPlacesChoisies((prev) => ({ ...prev, [ride.id]: 1 }));
+      // Place réservée : on emmène TOUT DE SUITE le client sur sa fiche —
+      // c'est là qu'il voit le montant, règle sa place et suit les étapes.
+      // (Sans ça, il restait sur la liste sans savoir quoi faire.)
+      const idPlace =
+        champ<string>(reponse, 'booking_id', 'bookingId') ??
+        champ<string>(
+          (champ<Record<string, unknown>>(reponse, 'payment') ?? {}) as Record<string, unknown>,
+          'ride_booking_id',
+          'rideBookingId'
+        );
+      if (idPlace) {
+        router.push(`/place/${idPlace}`);
+        return;
+      }
+      setMessageOk(t('rides_reservation_ok', { n: places }));
       await rafraichir();
       // L'équipe est prévenue automatiquement par le serveur (e-mail) —
       // plus de message WhatsApp à envoyer par le client.

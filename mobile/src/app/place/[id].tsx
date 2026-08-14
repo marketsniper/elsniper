@@ -3,7 +3,7 @@
 // régler avec la marche à suivre, et annulation au barème 24/48 h.
 // Source : GET /rides/reservations (la place est retrouvée par son id).
 import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import { Alert, Linking, StyleSheet, Text, View } from 'react-native';
 
@@ -49,6 +49,13 @@ export default function EcranPlace() {
     }
   }, [id, t]);
 
+  // Chargement à l'ouverture de la fiche (le rafraîchissement automatique
+  // ne fait, lui, que revenir régulièrement ensuite).
+  useFocusEffect(
+    useCallback(() => {
+      charger();
+    }, [charger])
+  );
   // La fiche se met à jour toute seule : dès que l'équipe valide le
   // paiement, le client voit « Paiement validé » sans rien toucher.
   useRafraichissementAuto(charger);

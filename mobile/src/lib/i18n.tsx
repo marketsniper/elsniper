@@ -1133,6 +1133,22 @@ const CHAINES = {
     sw: '👉 Gusa kulipa na kufuatilia kiti changu',
   },
   places_annulee: { fr: 'Annulée', en: 'Cancelled', sw: 'Imeghairiwa' },
+  commun_fermer: { fr: 'Fermer', en: 'Close', sw: 'Funga' },
+  doc_perdu_texte: {
+    fr: 'Ce document a été envoyé avant la correction du stockage : il n\'a pas été conservé. Demandez au chauffeur (ou au client) de refaire sa candidature — les nouveaux documents s\'affichent ici normalement.',
+    en: 'This document was sent before the storage fix and was not kept. Ask the driver (or client) to submit again — new documents display here normally.',
+    sw: 'Hati hii ilitumwa kabla ya marekebisho ya hifadhi na haikuhifadhiwa. Mwombe dereva (au mteja) awasilishe tena — hati mpya zinaonekana hapa kawaida.',
+  },
+  doc_echec_texte: {
+    fr: 'Impossible d\'afficher ce document ici (format non reconnu ou connexion interrompue).',
+    en: 'This document cannot be displayed here (unrecognised format or connection lost).',
+    sw: 'Haiwezekani kuonyesha hati hii hapa (muundo haujulikani au muunganisho umekatika).',
+  },
+  doc_ouvrir_navigateur: {
+    fr: 'Ouvrir dans le navigateur',
+    en: 'Open in the browser',
+    sw: 'Fungua kwenye kivinjari',
+  },
   equipe_doc_indisponible: {
     fr: 'document indisponible',
     en: 'document unavailable',
