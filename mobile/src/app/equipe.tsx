@@ -12,6 +12,13 @@
 // La clé est persistée localement et vérifiée par un premier appel.
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import {
+  activerAlertes,
+  desactiverAlertes,
+  etatAlertes,
+  surIphoneSansInstallation,
+  type EtatAlertes,
+} from '@/lib/alertesPush';
 import { ecrireStockage, lireStockage, supprimerStockage } from '@/lib/stockage';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Alert, Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -117,6 +124,44 @@ export default function EcranEquipe() {
   const [joursOuverts, setJoursOuverts] = useState<Record<string, boolean>>({});
   // Document affiché en plein écran (permis, assurance, carte NIDA…).
   const [documentOuvert, setDocumentOuvert] = useState<{ url: string; titre: string } | null>(null);
+  // Alertes instantanées sur CE téléphone.
+  const [etatPush, setEtatPush] = useState<EtatAlertes>('inactif');
+  const [messageAlertes, setMessageAlertes] = useState('');
+
+  // État des alertes de ce téléphone, relu à chaque ouverture du tableau.
+  useEffect(() => {
+    etatAlertes().then(setEtatPush).catch(() => {});
+  }, []);
+
+  const allumerAlertes = async () => {
+    setMessageAlertes('');
+    setActionEnCours('alerte-on');
+    const souci = await activerAlertes(t('alertes_nom_appareil'));
+    setMessageAlertes(souci ?? t('alertes_ok'));
+    setEtatPush(await etatAlertes());
+    setActionEnCours(null);
+  };
+
+  const couperAlertes = async () => {
+    await desactiverAlertes();
+    setMessageAlertes(t('alertes_coupees'));
+    setEtatPush(await etatAlertes());
+  };
+
+  const essayerAlerte = async () => {
+    setMessageAlertes('');
+    setActionEnCours('alerte-test');
+    try {
+      const resultat = await api.testerAlertes();
+      setMessageAlertes(
+        resultat.envoyes > 0 ? t('alertes_test_envoye', { n: String(resultat.envoyes) }) : t('alertes_test_vide')
+      );
+    } catch (e) {
+      setMessageAlertes(e instanceof ErreurApi ? e.message : t('equipe_action_erreur'));
+    } finally {
+      setActionEnCours(null);
+    }
+  };
 
   const charger = useCallback(async () => {
     setErreur('');
@@ -1346,6 +1391,48 @@ export default function EcranEquipe() {
 
       {section === null && (
         <>
+          {/* Alertes instantanées : une réservation fait sonner ce téléphone
+              en une à trois secondes, là où la passerelle WhatsApp gratuite
+              met une trentaine de secondes à remettre son message. */}
+          <Carte>
+            <Text style={styles.titreSection}>{t('alertes_titre')}</Text>
+            {etatPush === 'actif' ? (
+              <>
+                <EncartInfo icone="notifications" ton="succes">
+                  {t('alertes_actives')}
+                </EncartInfo>
+                <Bouton
+                  titre={t('alertes_tester')}
+                  icone="volume-high-outline"
+                  variante="secondaire"
+                  onPress={essayerAlerte}
+                  charge={actionEnCours === 'alerte-test'}
+                />
+                <Bouton
+                  titre={t('alertes_couper')}
+                  icone="notifications-off-outline"
+                  variante="secondaire"
+                  onPress={couperAlertes}
+                />
+              </>
+            ) : etatPush === 'indisponible' ? (
+              <EncartInfo icone="information-circle-outline" ton="attente">
+                {surIphoneSansInstallation() ? t('alertes_iphone') : t('alertes_indisponible')}
+              </EncartInfo>
+            ) : (
+              <>
+                <EncartInfo icone="notifications-outline">{t('alertes_intro')}</EncartInfo>
+                <Bouton
+                  titre={t('alertes_activer')}
+                  icone="notifications-outline"
+                  onPress={allumerAlertes}
+                  charge={actionEnCours === 'alerte-on'}
+                />
+              </>
+            )}
+            {!!messageAlertes && <Text style={styles.detail}>{messageAlertes}</Text>}
+          </Carte>
+
           {/* Sauvegarde complète de la base (clients, courses, paiements…) :
               à télécharger régulièrement, surtout avant toute échéance de
               l'hébergement de la base. */}

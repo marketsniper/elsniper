@@ -109,6 +109,16 @@ export const config = {
   // messages », recevoir la clé, la poser dans CALLMEBOT_APIKEY. Dès que la
   // clé est là, chaque action de la plateforme arrive en WhatsApp sur le
   // téléphone de l'équipe — automatiquement, sans action des clients.
+  // Alertes INSTANTANÉES sur le téléphone de l'équipe (notifications web).
+  // Les clés VAPID identifient notre serveur auprès d'Apple et de Google ;
+  // elles se génèrent une fois pour toutes (npx web-push generate-vapid-keys)
+  // et ne changent plus — en changer déconnecterait tous les téléphones.
+  push: {
+    publicKey: env.VAPID_PUBLIC_KEY || '',
+    privateKey: env.VAPID_PRIVATE_KEY || '',
+    subject: env.VAPID_SUBJECT || 'mailto:zanzigo@zanzigo.com',
+  },
+
   callmebot: {
     apiKey: env.CALLMEBOT_APIKEY || '',
     phone: env.CALLMEBOT_PHONE || env.TEAM_WHATSAPP_NUMBER || '+255666241749',

@@ -781,6 +781,72 @@ const CHAINES = {
     en: 'Allow photo access to add your document.',
     sw: 'Ruhusu ufikiaji wa picha ili kuongeza nyaraka yako.',
   },
+  // --- Alertes instantanées sur le téléphone de l'équipe ---
+  alertes_titre: {
+    fr: '🔔 Alertes instantanées',
+    en: '🔔 Instant alerts',
+    sw: '🔔 Arifa za papo hapo',
+  },
+  alertes_intro: {
+    fr: "Faites sonner CE téléphone dès qu'une réservation arrive : une à trois secondes, au lieu d'une trentaine de secondes par WhatsApp. Le message WhatsApp continue d'arriver, il garde la trace écrite.",
+    en: 'Make THIS phone ring as soon as a booking arrives: one to three seconds instead of about thirty by WhatsApp. The WhatsApp message still arrives as a written record.',
+    sw: 'Fanya SIMU HII iite mara tu uhifadhi unapoingia: sekunde moja hadi tatu badala ya thelathini kwa WhatsApp. Ujumbe wa WhatsApp bado unafika kama kumbukumbu.',
+  },
+  alertes_activer: {
+    fr: 'Recevoir les alertes sur ce téléphone',
+    en: 'Get alerts on this phone',
+    sw: 'Pokea arifa kwenye simu hii',
+  },
+  alertes_actives: {
+    fr: 'Ce téléphone reçoit les alertes instantanées.',
+    en: 'This phone receives instant alerts.',
+    sw: 'Simu hii inapokea arifa za papo hapo.',
+  },
+  alertes_couper: {
+    fr: 'Ne plus recevoir les alertes ici',
+    en: 'Stop alerts on this phone',
+    sw: 'Acha kupokea arifa hapa',
+  },
+  alertes_tester: {
+    fr: 'Envoyer une alerte d\'essai',
+    en: 'Send a test alert',
+    sw: 'Tuma arifa ya majaribio',
+  },
+  alertes_ok: {
+    fr: '✓ Alertes activées. Faites un essai pour vérifier que le téléphone sonne.',
+    en: '✓ Alerts on. Send a test to check the phone rings.',
+    sw: '✓ Arifa zimewashwa. Jaribu ili kuthibitisha simu inaita.',
+  },
+  alertes_coupees: {
+    fr: 'Alertes coupées sur ce téléphone.',
+    en: 'Alerts stopped on this phone.',
+    sw: 'Arifa zimezimwa kwenye simu hii.',
+  },
+  alertes_test_envoye: {
+    fr: "Alerte d'essai envoyée à {n} téléphone(s) — elle doit arriver tout de suite.",
+    en: 'Test alert sent to {n} phone(s) — it should arrive right away.',
+    sw: 'Arifa ya majaribio imetumwa kwa simu {n} — inapaswa kufika mara moja.',
+  },
+  alertes_test_vide: {
+    fr: "Aucun téléphone n'est encore abonné aux alertes.",
+    en: 'No phone is subscribed to alerts yet.',
+    sw: 'Hakuna simu iliyojisajili kwa arifa bado.',
+  },
+  alertes_iphone: {
+    fr: "Sur iPhone, les alertes demandent d'ajouter zanziGo à l'écran d'accueil : bouton Partager (le carré avec la flèche), puis « Sur l'écran d'accueil ». Rouvrez zanziGo depuis cette icône, et le bouton apparaîtra ici.",
+    en: 'On iPhone, alerts require adding zanziGo to the home screen: Share button, then "Add to Home Screen". Reopen zanziGo from that icon and the button will appear here.',
+    sw: 'Kwenye iPhone, arifa zinahitaji kuongeza zanziGo kwenye skrini ya kwanza: kitufe cha Share, kisha "Add to Home Screen". Fungua zanziGo kutoka aikoni hiyo na kitufe kitaonekana hapa.',
+  },
+  alertes_indisponible: {
+    fr: "Ce navigateur ne sait pas recevoir d'alertes. Les messages WhatsApp continuent d'arriver normalement.",
+    en: "This browser can't receive alerts. WhatsApp messages keep arriving as usual.",
+    sw: 'Kivinjari hiki hakiwezi kupokea arifa. Ujumbe wa WhatsApp unaendelea kufika.',
+  },
+  alertes_nom_appareil: {
+    fr: "Téléphone de l'équipe",
+    en: 'Team phone',
+    sw: 'Simu ya timu',
+  },
   version_etiquette: {
     fr: 'Version {version} — appuyez ici si l\'application semble bloquée',
     en: 'Version {version} — tap here if the app seems stuck',

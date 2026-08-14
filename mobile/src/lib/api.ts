@@ -1088,6 +1088,44 @@ export async function listerClientsEnAttente(): Promise<Utilisateur[]> {
   return commeListe<Utilisateur>(reponse, 'users');
 }
 
+// ---------------------------------------------------------------------------
+// Alertes instantanées (backend/src/routes/notifications.js)
+// ---------------------------------------------------------------------------
+
+/** GET /notifications/cle — clé publique nécessaire pour créer l'abonnement. */
+export async function clePush(): Promise<{ publicKey: string | null; actif: boolean }> {
+  return requete<{ publicKey: string | null; actif: boolean }>('/notifications/cle');
+}
+
+export interface AbonnementPush {
+  endpoint: string;
+  keys: { p256dh: string; auth: string };
+  label?: string;
+}
+
+/** POST /notifications/abonner — ce téléphone recevra les alertes (équipe). */
+export async function abonnerAlertes(abonnement: AbonnementPush): Promise<unknown> {
+  return requete<unknown>('/notifications/abonner', {
+    methode: 'POST',
+    corps: abonnement,
+    admin: true,
+  });
+}
+
+/** POST /notifications/desabonner — ce téléphone ne sera plus alerté. */
+export async function desabonnerAlertes(endpoint: string): Promise<unknown> {
+  return requete<unknown>('/notifications/desabonner', {
+    methode: 'POST',
+    corps: { endpoint },
+    admin: true,
+  });
+}
+
+/** POST /notifications/test — alerte d'essai, pour vérifier et chronométrer. */
+export async function testerAlertes(): Promise<{ envoyes: number }> {
+  return requete<{ envoyes: number }>('/notifications/test', { methode: 'POST', admin: true });
+}
+
 /** GET /hotels?verificationStatus=pending — comptes hôtels à vérifier (équipe). */
 export async function listerHotelsEnAttente(): Promise<Hotel[]> {
   const reponse = await requete<unknown>('/hotels?verificationStatus=pending', { admin: true });
@@ -1252,6 +1290,10 @@ export const api = {
   creerAttentePartage,
   listerAttentesPartage,
   annulerAttentePartage,
+  clePush,
+  abonnerAlertes,
+  desabonnerAlertes,
+  testerAlertes,
   majDocumentsChauffeur,
   obtenirChauffeur,
   definirMotDePasseChauffeur,

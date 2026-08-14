@@ -15,6 +15,7 @@ import paymentsRouter from './routes/payments.js';
 import ridesRouter from './routes/rides.js';
 import { uploadsRouter } from './routes/uploads.js';
 import statsRouter from './routes/stats.js';
+import { notificationsRouter } from './routes/notifications.js';
 import { localUploadsDir } from './services/storageService.js';
 
 // ===== Rate limiting =====
@@ -309,6 +310,7 @@ p{color:#8A7168;max-width:44ch;margin:8px auto}</style>
   app.use('/api/packages', packagesRouter);
   app.use('/api/payments', paymentsRouter);
   app.use('/api/rides', ridesRouter);
+  app.use('/api/notifications', notificationsRouter);
   app.use('/api/uploads', uploadsRouter);
   app.use('/api/stats', statsRouter);
 

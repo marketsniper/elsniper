@@ -4,6 +4,7 @@
 // l'e-mail est journalisé et rien d'autre. Règle d'or : un e-mail qui
 // échoue ne doit JAMAIS faire échouer l'inscription — tout est attrapé ici.
 import { config } from '../config.js';
+import { envoyerPush } from './pushService.js';
 
 export function isEmailStub() {
   return !config.emailer.brevoApiKey && !config.emailer.resendApiKey;
@@ -118,6 +119,12 @@ function bouton(url, texte) {
  * Fire-and-forget : jamais bloquant, jamais d'exception.
  */
 export async function notifierEquipe(sujet, texte) {
+  // 0. ALERTE INSTANTANÉE sur le téléphone de l'équipe (notification web).
+  // Elle part la première et arrive en une à trois secondes, là où la
+  // passerelle WhatsApp gratuite met une trentaine de secondes à remettre
+  // son message. Les deux partent : le push prévient, WhatsApp archive.
+  envoyerPush(sujet, texte).catch(() => {});
+
   // 1. WhatsApp (CallMeBot) — le canal que l'équipe lit en premier.
   // Chaque tentative est JOURNALISÉE (succès compris) : les journaux Render
   // permettent de vérifier qu'une notification est bien partie.

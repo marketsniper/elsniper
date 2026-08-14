@@ -20,6 +20,47 @@ self.addEventListener('activate', (evenement) => {
   );
 });
 
+// ----- ALERTES INSTANTANÉES ------------------------------------------------
+// Le serveur pousse l'alerte ; c'est ce service worker qui l'affiche, même
+// quand l'application est fermée. C'est ce qui remplace l'attente de 35 s de
+// la passerelle WhatsApp gratuite.
+self.addEventListener('push', (evenement) => {
+  let donnees = { titre: 'zanziGo', corps: '' };
+  try {
+    if (evenement.data) donnees = { ...donnees, ...evenement.data.json() };
+  } catch (e) {
+    if (evenement.data) donnees.corps = evenement.data.text();
+  }
+  evenement.waitUntil(
+    self.registration.showNotification(donnees.titre, {
+      body: donnees.corps,
+      icon: '/web/icone-192.png',
+      badge: '/web/icone-192.png',
+      // Un même sujet remplace l'alerte précédente au lieu de s'empiler.
+      tag: donnees.tag || 'zanzigo',
+      renotify: true,
+      data: { url: donnees.url || '/web/equipe' },
+    })
+  );
+});
+
+// Toucher l'alerte ouvre le tableau de bord (ou le ramène au premier plan).
+self.addEventListener('notificationclick', (evenement) => {
+  evenement.notification.close();
+  const cible = (evenement.notification.data && evenement.notification.data.url) || '/web/equipe';
+  evenement.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((fenetres) => {
+      for (const fenetre of fenetres) {
+        if (fenetre.url.includes('/web') && 'focus' in fenetre) {
+          fenetre.navigate(cible).catch(function () {});
+          return fenetre.focus();
+        }
+      }
+      return self.clients.openWindow(cible);
+    })
+  );
+});
+
 self.addEventListener('fetch', (evenement) => {
   const requete = evenement.request;
   if (requete.method !== 'GET') return;
