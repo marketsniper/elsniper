@@ -61,17 +61,25 @@ router.post(
     //    WhatsApp optionnel ; les LOCAUX ne passent jamais par ici (leur
     //    identité, c'est la SIM tanzanienne).
     //  - TÉLÉPHONE (locaux, anciens comptes) : règle historique inchangée.
-    const identiteEmail = !isAdmin(req) && !req.auth.phone && req.auth.email;
+    //  - IDENTIFIANT choisi (parcours actuel) : le téléphone n'est plus
+    //    qu'un contact facultatif pour le chauffeur.
+    const identiteIdentifiant = !isAdmin(req) && !!req.auth.username && !req.auth.userId;
+    const identiteEmail =
+      !isAdmin(req) && !identiteIdentifiant && !req.auth.phone && req.auth.email;
     let email = data.email ?? null;
     let phone = data.phone ?? null;
-    // Jeton client (numéro + mot de passe choisis à l'inscription) : le
-    // hash voyage dans le jeton signé et se pose sur le profil ici.
+    // Jeton client (identifiant ou numéro + mot de passe choisis à
+    // l'inscription) : le hash voyage dans le jeton signé et se pose ici.
     const jetonClient = !isAdmin(req) && (req.auth.client || req.auth.visiteur);
     let passwordHash = null;
     if (jetonClient && req.auth.passwordHash) {
       passwordHash = req.auth.passwordHash;
     }
-    if (identiteEmail) {
+    if (identiteIdentifiant) {
+      // Le téléphone reste facultatif ici (contact WhatsApp du client) et
+      // n'est plus une identité : aucun contrôle de correspondance.
+      phone = data.phone?.trim() || null;
+    } else if (identiteEmail) {
       if (data.accountType === 'local') {
         throw new HttpError(
           403,
@@ -118,8 +126,8 @@ router.post(
     let rows;
     try {
       ({ rows } = await query(
-        `INSERT INTO users (full_name, phone, email, account_type, currency, verification_status, id_document_url, password_hash, referred_by_user_id)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        `INSERT INTO users (full_name, phone, email, account_type, currency, verification_status, id_document_url, password_hash, referred_by_user_id, username)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
          RETURNING *`,
         [
           data.fullName,
@@ -131,13 +139,21 @@ router.post(
           data.idDocumentUrl ?? null,
           passwordHash,
           parrain?.id ?? null,
+          identiteIdentifiant ? req.auth.username : null,
         ]
       ));
     } catch (err) {
-      // Téléphone déjà pris par un autre compte (contrainte UNIQUE) — même
-      // code d'erreur « duplicate » que le gestionnaire global historique.
+      // Identifiant ou téléphone déjà pris (contraintes UNIQUE) — même code
+      // d'erreur « duplicate » que le gestionnaire global historique.
       if (err.code === '23505') {
-        throw new HttpError(409, 'duplicate', 'Ce numéro de téléphone est déjà utilisé par un autre compte');
+        const surIdentifiant = String(err.detail ?? err.constraint ?? '').includes('username');
+        throw new HttpError(
+          409,
+          surIdentifiant ? 'username_taken' : 'duplicate',
+          surIdentifiant
+            ? 'Cet identifiant est déjà pris — choisissez-en un autre'
+            : 'Ce numéro de téléphone est déjà utilisé par un autre compte'
+        );
       }
       throw err;
     }

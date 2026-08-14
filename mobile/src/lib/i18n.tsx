@@ -1134,6 +1134,90 @@ const CHAINES = {
   },
   places_annulee: { fr: 'Annulée', en: 'Cancelled', sw: 'Imeghairiwa' },
   commun_fermer: { fr: 'Fermer', en: 'Close', sw: 'Funga' },
+  // ----- Identification simplifiée des clients (identifiant + mot de passe)
+  ident_intro: {
+    fr: 'Un identifiant et un mot de passe, c\'est tout : aucun code à recevoir, ça marche partout dans le monde.',
+    en: 'A username and a password, that\'s all: no code to receive, works anywhere in the world.',
+    sw: 'Jina la mtumiaji na nenosiri, ndio yote: hakuna msimbo wa kupokea, inafanya kazi popote duniani.',
+  },
+  ident_nouveau_titre: {
+    fr: '👋 Vous êtes nouveau ?',
+    en: '👋 New here?',
+    sw: '👋 Wewe ni mpya?',
+  },
+  ident_nouveau_texte: {
+    fr: 'Créez votre compte en 30 secondes : choisissez un identifiant et un mot de passe. Vos informations viendront juste après.',
+    en: 'Create your account in 30 seconds: choose a username and a password. Your details come right after.',
+    sw: 'Fungua akaunti kwa sekunde 30: chagua jina la mtumiaji na nenosiri. Taarifa zako zitafuata.',
+  },
+  ident_creer_bouton: {
+    fr: 'Créer mon compte',
+    en: 'Create my account',
+    sw: 'Fungua akaunti yangu',
+  },
+  ident_ou: { fr: 'OU', en: 'OR', sw: 'AU' },
+  ident_deja_titre: {
+    fr: 'Vous avez déjà un compte ?',
+    en: 'Already have an account?',
+    sw: 'Tayari una akaunti?',
+  },
+  ident_connexion_bouton: { fr: 'Se connecter', en: 'Sign in', sw: 'Ingia' },
+  ident_creation_intro: {
+    fr: 'Choisissez un identifiant facile à retenir (par exemple amina2026) et un mot de passe.',
+    en: 'Choose a username that is easy to remember (for example amina2026) and a password.',
+    sw: 'Chagua jina la mtumiaji rahisi kukumbuka (mfano amina2026) na nenosiri.',
+  },
+  ident_creation_intro_chauffeur: {
+    fr: 'Votre numéro de téléphone est votre identifiant Taxi Partner. Choisissez un mot de passe, puis déposez votre candidature.',
+    en: 'Your phone number is your Taxi Partner ID. Choose a password, then submit your application.',
+    sw: 'Namba yako ya simu ndio kitambulisho chako cha Taxi Partner. Chagua nenosiri, kisha wasilisha maombi.',
+  },
+  ident_connexion_intro: {
+    fr: 'Entrez votre identifiant (ou votre numéro de téléphone si vous vous êtes inscrit avant) et votre mot de passe.',
+    en: 'Enter your username (or your phone number if you signed up earlier) and your password.',
+    sw: 'Weka jina lako la mtumiaji (au namba ya simu ikiwa ulijisajili awali) na nenosiri lako.',
+  },
+  ident_connexion_intro_chauffeur: {
+    fr: 'Entrez votre numéro de téléphone et votre mot de passe.',
+    en: 'Enter your phone number and your password.',
+    sw: 'Weka namba yako ya simu na nenosiri lako.',
+  },
+  ident_choisir_label: {
+    fr: 'Choisissez votre identifiant',
+    en: 'Choose your username',
+    sw: 'Chagua jina lako la mtumiaji',
+  },
+  ident_label: {
+    fr: 'Identifiant (ou numéro de téléphone)',
+    en: 'Username (or phone number)',
+    sw: 'Jina la mtumiaji (au namba ya simu)',
+  },
+  ident_placeholder: { fr: 'amina2026', en: 'amina2026', sw: 'amina2026' },
+  ident_placeholder_connexion: {
+    fr: 'amina2026 ou +255712345678',
+    en: 'amina2026 or +255712345678',
+    sw: 'amina2026 au +255712345678',
+  },
+  ident_mdp_choisir: {
+    fr: 'Choisissez un mot de passe (8 caractères minimum)',
+    en: 'Choose a password (8 characters minimum)',
+    sw: 'Chagua nenosiri (angalau herufi 8)',
+  },
+  ident_erreur_format: {
+    fr: 'Identifiant : 3 à 20 caractères, lettres et chiffres (sans espace ni accent).',
+    en: 'Username: 3 to 20 characters, letters and digits (no space or accent).',
+    sw: 'Jina la mtumiaji: herufi 3 hadi 20, herufi na tarakimu (bila nafasi wala lafudhi).',
+  },
+  client_compte_cree: {
+    fr: 'Compte créé ✓ — dites-nous simplement qui vous êtes.',
+    en: 'Account created ✓ — just tell us who you are.',
+    sw: 'Akaunti imefunguliwa ✓ — tuambie tu wewe ni nani.',
+  },
+  ident_erreur_vide: {
+    fr: 'Entrez votre identifiant.',
+    en: 'Enter your username.',
+    sw: 'Weka jina lako la mtumiaji.',
+  },
   doc_perdu_texte: {
     fr: 'Ce document a été envoyé avant la correction du stockage : il n\'a pas été conservé. Demandez au chauffeur (ou au client) de refaire sa candidature — les nouveaux documents s\'affichent ici normalement.',
     en: 'This document was sent before the storage fix and was not kept. Ask the driver (or client) to submit again — new documents display here normally.',

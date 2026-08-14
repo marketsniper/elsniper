@@ -42,6 +42,10 @@ export default function EcranClient() {
   // Identité E-MAIL (visiteurs) : l'e-mail du compte est celui vérifié par
   // le code — le téléphone devient un contact WhatsApp optionnel.
   const identiteEmail = !!session?.email && !session?.phone;
+  // Identité par IDENTIFIANT (parcours actuel) : pas de numéro vérifié —
+  // le téléphone n'est qu'un contact WhatsApp facultatif, comme l'e-mail.
+  const identiteIdentifiant = !session?.phone && !session?.email;
+  const sansNumeroVerifie = identiteEmail || identiteIdentifiant;
 
   const [nom, setNom] = useState('');
   const [email, setEmail] = useState('');
@@ -108,7 +112,7 @@ export default function EcranClient() {
         fullName: nom.trim(),
         // Identité e-mail : WhatsApp optionnel (contact chauffeur) ;
         // identité téléphone : le numéro vérifié par OTP (jeton).
-        phone: identiteEmail ? telWhatsapp.trim() || undefined : session.phone,
+        phone: sansNumeroVerifie ? telWhatsapp.trim() || undefined : session.phone,
         email: identiteEmail ? undefined : email.trim() || undefined,
         accountType: typeCompte,
         idDocumentUrl,
@@ -128,12 +132,14 @@ export default function EcranClient() {
       <Carte>
         <Titre>{t('client_titre')}</Titre>
         <SousTitre>
-          {identiteEmail
-            ? t('client_email_verifie', { email: session?.email ?? '' })
-            : t('client_numero_verifie', { phone: session?.phone ?? '' })}
+          {identiteIdentifiant
+            ? t('client_compte_cree')
+            : identiteEmail
+              ? t('client_email_verifie', { email: session?.email ?? '' })
+              : t('client_numero_verifie', { phone: session?.phone ?? '' })}
         </SousTitre>
-        {/* Numéro tapé par erreur : on se déconnecte et on repart de la
-            saisie du téléphone, dans la même rubrique. */}
+        {/* Erreur de saisie : on se déconnecte et on repart de l'entrée,
+            dans la même rubrique. */}
         <Pressable
           onPress={async () => {
             await deconnexion();
@@ -160,10 +166,23 @@ export default function EcranClient() {
         )}
 
         <Champ label={t('client_nom')} value={nom} onChangeText={setNom} placeholder="Amina Hassan" />
-        {identiteEmail ? (
-          // Identité e-mail : l'e-mail est déjà vérifié — on demande plutôt
-          // un numéro WhatsApp (recommandé, pour que le chauffeur joigne le
-          // client), jamais vérifié par SMS.
+        {/* Identité par identifiant : on demande l'e-mail ET le WhatsApp,
+            tous deux facultatifs (le chauffeur doit pouvoir joindre le
+            client le jour de la course). */}
+        {identiteIdentifiant && (
+          <Champ
+            label={t('client_email_opt')}
+            value={email}
+            onChangeText={setEmail}
+            placeholder="amina@example.com"
+            keyboardType="email-address"
+            autoCapitalize="none"
+          />
+        )}
+        {sansNumeroVerifie ? (
+          // Pas de numéro vérifié (identifiant ou e-mail) : on demande un
+          // numéro WhatsApp — facultatif mais vivement recommandé, c'est
+          // par là que le chauffeur joint le client le jour de la course.
           <Champ
             label={t('client_whatsapp_opt')}
             value={telWhatsapp}

@@ -261,6 +261,36 @@ export async function demanderOtpParEmail(
  * L'inscription émet un jeton (le profil se crée juste après) ; la
  * connexion renvoie le compte. Jetons sans pouvoirs chauffeur.
  */
+/**
+ * CLIENTS : création de compte avec un IDENTIFIANT choisi + mot de passe
+ * (POST /auth/register). Ni indicatif ni numéro à saisir — le profil
+ * (nom, type de compte, documents) suit immédiatement.
+ */
+export async function creerCompteClient(
+  username: string,
+  password: string
+): Promise<ReponseVerifieOtp> {
+  return requete<ReponseVerifieOtp>('/auth/register', {
+    methode: 'POST',
+    corps: { username, password },
+  });
+}
+
+/**
+ * CLIENTS : connexion (POST /auth/login). L'identifiant accepté est le nom
+ * choisi à l'inscription OU, pour les comptes créés avant, le numéro de
+ * téléphone — personne n'est laissé dehors.
+ */
+export async function connexionClient(
+  identifier: string,
+  password: string
+): Promise<ReponseVerifieOtp> {
+  return requete<ReponseVerifieOtp>('/auth/login', {
+    methode: 'POST',
+    corps: { identifier, password },
+  });
+}
+
 export async function inscriptionVisiteur(
   phone: string,
   password: string
@@ -1155,6 +1185,8 @@ export async function televerser(uri: string): Promise<{ url: string }> {
 export const api = {
   demanderOtp,
   demanderOtpParEmail,
+  creerCompteClient,
+  connexionClient,
   inscriptionVisiteur,
   connexionVisiteur,
   inscriptionChauffeur,

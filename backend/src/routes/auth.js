@@ -218,6 +218,119 @@ authRouter.post('/verify-otp', async (req, res, next) => {
   }
 });
 
+// Identifiant client : 3 à 20 caractères, lettres/chiffres/._- — pas
+// d'espace ni d'accent (facile à dicter, à retenir et à retaper).
+const usernameSchema = z
+  .string()
+  .trim()
+  .min(3, 'Identifiant : 3 caractères minimum')
+  .max(20, 'Identifiant : 20 caractères maximum')
+  .regex(
+    /^[a-zA-Z0-9._-]+$/,
+    'Identifiant : lettres, chiffres, point, tiret ou souligné uniquement (sans espace ni accent)'
+  );
+
+// POST /api/auth/register {username, password}
+// CRÉATION DE COMPTE CLIENT (touriste, résident, local) : un identifiant
+// choisi + un mot de passe. Ni numéro à saisir avec son indicatif, ni code
+// à recevoir — c'est le parcours le plus simple, identique partout dans le
+// monde. Le jeton émis porte le hash (signé par nous) : il se pose sur le
+// profil à sa création (POST /users), juste après.
+authRouter.post('/register', async (req, res, next) => {
+  try {
+    const { username, password } = z
+      .object({
+        username: usernameSchema,
+        password: z.string().min(8, 'Mot de passe : 8 caractères minimum'),
+      })
+      .parse(req.body);
+
+    const { rows } = await pool.query('SELECT id FROM users WHERE lower(username) = lower($1)', [
+      username,
+    ]);
+    if (rows[0]) {
+      throw new HttpError(
+        409,
+        'username_taken',
+        'Cet identifiant est déjà pris — choisissez-en un autre'
+      );
+    }
+
+    const token = jwt.sign(
+      { username, sansOtp: true, client: true, passwordHash: await hashPassword(password) },
+      config.jwtSecret,
+      { expiresIn: config.jwtExpiresIn }
+    );
+    res.status(201).json({ token, user: null, driver: null, hotel: null });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/auth/login {identifier, password}
+// CONNEXION CLIENT : l'identifiant saisi est soit le nom choisi à
+// l'inscription, soit — pour les comptes créés avant — le numéro de
+// téléphone. Un compte d'avant les mots de passe adopte le PREMIER mot de
+// passe saisi (simplicité MVP assumée, l'équipe tranche sur WhatsApp).
+authRouter.post('/login', async (req, res, next) => {
+  try {
+    const { identifier, password } = z
+      .object({
+        identifier: z.string().trim().min(3),
+        password: z.string().min(1),
+      })
+      .parse(req.body);
+
+    // Identifiant OU numéro (avec ou sans espaces) — on cherche les deux.
+    const numero = identifier.replace(/[\s-]/g, '');
+    const { rows } = await pool.query(
+      `SELECT * FROM users
+       WHERE lower(username) = lower($1) OR phone = $2
+       ORDER BY (lower(username) = lower($1)) DESC
+       LIMIT 1`,
+      [identifier, numero]
+    );
+    const user = rows[0];
+    if (!user) {
+      throw new HttpError(
+        401,
+        'invalid_credentials',
+        'Identifiant inconnu ou mot de passe incorrect — nouveau chez zanziGo ? Créez votre compte'
+      );
+    }
+    if (!user.password_hash) {
+      if (password.length < 8) {
+        throw new HttpError(400, 'weak_password', 'Mot de passe : 8 caractères minimum');
+      }
+      await pool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [
+        await hashPassword(password),
+        user.id,
+      ]);
+    } else if (!(await verifyPassword(password, user.password_hash))) {
+      throw new HttpError(
+        401,
+        'invalid_credentials',
+        'Identifiant inconnu ou mot de passe incorrect'
+      );
+    }
+
+    const token = jwt.sign(
+      {
+        userId: user.id,
+        username: user.username ?? undefined,
+        phone: user.phone ?? undefined,
+        sansOtp: true,
+        visiteur: true,
+      },
+      config.jwtSecret,
+      { expiresIn: config.jwtExpiresIn }
+    );
+    res.json({ token, user: sanitizeUser(user), driver: null, hotel: null });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // POST /api/auth/visitor-register {phone, password}
 // Création de compte VISITEUR (touriste/résident) : le client choisit son
 // numéro + un MOT DE PASSE — aucun code SMS ni e-mail à recevoir, ça marche

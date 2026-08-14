@@ -56,6 +56,14 @@ export async function requireAuth(req, _res, next) {
       if (u?.rows[0]) req.auth.userId = u.rows[0].id;
       if (d?.rows[0]) req.auth.driverId = d.rows[0].id;
     }
+    // Identité IDENTIFIANT (parcours client actuel) : le compte qui porte
+    // ce nom d'utilisateur — jamais de profil chauffeur par identifiant.
+    if (req.auth.username && !req.auth.userId) {
+      const u = await pool.query('SELECT id FROM users WHERE lower(username) = lower($1)', [
+        req.auth.username,
+      ]);
+      if (u.rows[0]) req.auth.userId = u.rows[0].id;
+    }
     // Identité E-MAIL (touristes/visiteurs) : compte client le plus récent
     // portant cet e-mail — jamais de profil chauffeur par e-mail.
     if (req.auth.email && !req.auth.userId) {
