@@ -8,12 +8,16 @@ import { generateVehicleQr } from '../services/qrService.js';
 import { valeurReservationPlace } from './stats.js';
 
 import { notifierEquipe } from '../services/emailService.js';
+import { hashPassword } from '../services/passwordService.js';
 
 // Le hash de mot de passe ne sort JAMAIS de l'API.
 export function sanitizeDriver(driver) {
   if (!driver) return driver;
   const { password_hash, ...rest } = driver;
-  return rest;
+  // Le mot de passe est chiffré à sens unique : impossible de le relire, même
+  // pour l'équipe. On indique seulement s'il en a un — le tableau de bord
+  // propose alors d'en définir un nouveau plutôt que de « voir » l'ancien.
+  return { ...rest, has_password: !!password_hash };
 }
 
 const router = Router();
@@ -120,7 +124,9 @@ router.get(
     const { zone, available, verificationStatus } = searchSchema.parse(req.query);
 
     const params = [verificationStatus ?? 'verified'];
-    const conditions = ['d.verification_status = $1'];
+    // Un chauffeur radié n'apparaît plus nulle part (ses courses passées
+    // restent, elles, dans les comptes).
+    const conditions = ['d.verification_status = $1', 'd.archived_at IS NULL'];
     if (zone) {
       params.push(zone);
       conditions.push(`d.zone = $${params.length}`);
@@ -378,6 +384,78 @@ router.patch(
       [status, vehicleQr, req.params.id]
     );
     res.json(sanitizeDriver(updated.rows[0]));
+  })
+);
+
+const motDePasseSchema = z.object({
+  password: z.string().min(8, 'Mot de passe : 8 caractères minimum'),
+});
+
+// POST /drivers/:id/mot-de-passe — l'ÉQUIPE définit un nouveau mot de passe
+// pour un chauffeur qui a oublié le sien. Les mots de passe sont chiffrés à
+// sens unique : personne ne peut relire l'ancien, on ne peut que le
+// remplacer, puis communiquer le nouveau au chauffeur.
+router.post(
+  '/:id/mot-de-passe',
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    const { password } = motDePasseSchema.parse(req.body);
+    const { rows } = await query('SELECT id, phone, archived_at FROM drivers WHERE id = $1', [
+      req.params.id,
+    ]);
+    if (!rows[0]) throw notFound('Chauffeur');
+    if (rows[0].archived_at) {
+      throw new HttpError(409, 'driver_archived', 'Ce chauffeur est radié — sa fiche est close');
+    }
+    await query('UPDATE drivers SET password_hash = $1 WHERE id = $2', [
+      await hashPassword(password),
+      req.params.id,
+    ]);
+    res.json({ ok: true });
+  })
+);
+
+// POST /drivers/:id/radier — RADIATION DÉFINITIVE (équipe).
+// La fiche est archivée : elle sort de toutes les listes, les annonces
+// ouvertes se ferment, le chauffeur ne peut plus se connecter. Ses courses
+// passées restent dans les comptes. Son numéro et sa plaque redeviennent
+// libres : s'il revient, il redépose une candidature complète, avec des
+// documents à jour, que l'équipe examine à nouveau.
+router.post(
+  '/:id/radier',
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    const { rows } = await query('SELECT * FROM drivers WHERE id = $1', [req.params.id]);
+    const chauffeur = rows[0];
+    if (!chauffeur) throw notFound('Chauffeur');
+    if (chauffeur.archived_at) {
+      throw new HttpError(409, 'already_archived', 'Ce chauffeur est déjà radié');
+    }
+
+    await query(
+      `UPDATE posted_rides SET status = 'closed' WHERE driver_id = $1 AND status = 'open'`,
+      [req.params.id]
+    );
+    // L'inscription en attente éventuelle part avec la fiche.
+    await query('DELETE FROM driver_signups WHERE phone = $1', [chauffeur.phone]);
+    const misAJour = await query(
+      `UPDATE drivers
+       SET archived_at = now(), available = false, verification_status = 'rejected'
+       WHERE id = $1 RETURNING *`,
+      [req.params.id]
+    );
+
+    notifierEquipe(
+      '🚫 Chauffeur radié — zanziGo',
+      [
+        `Nom: ${chauffeur.full_name}`,
+        `Téléphone: ${chauffeur.phone}`,
+        `Véhicule: ${chauffeur.vehicle_model ?? '—'} (${chauffeur.vehicle_plate})`,
+        'Sa fiche est close. Son numéro est de nouveau libre : il peut redéposer une candidature.',
+      ].join('\n')
+    );
+
+    res.json(sanitizeDriver(misAJour.rows[0]));
   })
 );
 

@@ -924,16 +924,46 @@ export interface FenetreStats {
  * GET /drivers/:id/stats — courses terminées, colis livrés et gains NETS
  * (commission déduite) sur aujourd'hui / 7 jours / 30 jours.
  */
-export async function statsChauffeur(driverId: string): Promise<StatsChauffeur> {
-  return requete<StatsChauffeur>(`/drivers/${driverId}/stats`);
+export async function statsChauffeur(driverId: string, equipe = false): Promise<StatsChauffeur> {
+  return requete<StatsChauffeur>(`/drivers/${driverId}/stats`, { admin: equipe });
+}
+
+/** GET /drivers/:id — fiche chauffeur (lui-même, ou l'équipe avec `equipe`). */
+export async function obtenirChauffeur(driverId: string, equipe = false): Promise<Chauffeur> {
+  return requete<Chauffeur>(`/drivers/${driverId}`, { admin: equipe });
+}
+
+/**
+ * POST /drivers/:id/mot-de-passe — l'ÉQUIPE remplace le mot de passe d'un
+ * chauffeur qui a oublié le sien (les mots de passe sont chiffrés à sens
+ * unique : on ne peut pas relire l'ancien, seulement en poser un nouveau).
+ */
+export async function definirMotDePasseChauffeur(
+  driverId: string,
+  motDePasse: string
+): Promise<{ ok: boolean }> {
+  return requete<{ ok: boolean }>(`/drivers/${driverId}/mot-de-passe`, {
+    methode: 'POST',
+    corps: { password: motDePasse },
+    admin: true,
+  });
+}
+
+/**
+ * POST /drivers/:id/radier — RADIATION DÉFINITIVE (équipe) : la fiche est
+ * close et sort de toutes les listes, mais le numéro redevient libre — le
+ * chauffeur peut redéposer une candidature complète plus tard.
+ */
+export async function radierDefinitivement(driverId: string): Promise<Chauffeur> {
+  return requete<Chauffeur>(`/drivers/${driverId}/radier`, { methode: 'POST', admin: true });
 }
 
 /**
  * GET /drivers/:id/trips — les courses assignées au chauffeur par l'équipe
  * (les plus récentes d'abord). C'est la source de l'onglet « Courses ».
  */
-export async function listerCoursesChauffeur(driverId: string): Promise<Trajet[]> {
-  const reponse = await requete<unknown>(`/drivers/${driverId}/trips`);
+export async function listerCoursesChauffeur(driverId: string, equipe = false): Promise<Trajet[]> {
+  const reponse = await requete<unknown>(`/drivers/${driverId}/trips`, { admin: equipe });
   return commeListe<Trajet>(reponse, 'trips');
 }
 
@@ -1223,6 +1253,9 @@ export const api = {
   listerAttentesPartage,
   annulerAttentePartage,
   majDocumentsChauffeur,
+  obtenirChauffeur,
+  definirMotDePasseChauffeur,
+  radierDefinitivement,
   telechargerSauvegarde,
   demarrerCourse,
   terminerCourse,

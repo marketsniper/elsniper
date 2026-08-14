@@ -111,7 +111,6 @@ export default function EcranEquipe() {
   // Liste d'attente du taxi partagé : demandes clients à recontacter.
   const [attentes, setAttentes] = useState<AttentePartage[]>([]);
   // Dates d'expiration saisies par chauffeur (permis / assurance).
-  const [datesDocs, setDatesDocs] = useState<Record<string, { permis: string; assurance: string }>>({});
   // Sauvegarde de la base : téléchargement en cours.
   const [sauvegardeEnCours, setSauvegardeEnCours] = useState(false);
   // Courses passées : jours dépliés dans l'historique (repliés par défaut).
@@ -153,30 +152,6 @@ export default function EcranEquipe() {
   }, [t]);
 
   // Pose les dates d'expiration permis/assurance d'un chauffeur (AAAA-MM-JJ).
-  const majDatesChauffeur = async (chauffeurId: string) => {
-    const saisieDates = datesDocs[chauffeurId] ?? { permis: '', assurance: '' };
-    const permis = saisieDates.permis.trim();
-    const assurance = saisieDates.assurance.trim();
-    const formatOk = (v: string) => v === '' || /^\d{4}-\d{2}-\d{2}$/.test(v);
-    if (!formatOk(permis) || !formatOk(assurance) || (permis === '' && assurance === '')) {
-      setErreur(t('equipe_docs_format'));
-      return;
-    }
-    setActionEnCours(`docs-${chauffeurId}`);
-    setErreur('');
-    try {
-      await api.majDocumentsChauffeur(chauffeurId, {
-        licenseExpiresOn: permis || undefined,
-        insuranceExpiresOn: assurance || undefined,
-      });
-      setDatesDocs((prev) => ({ ...prev, [chauffeurId]: { permis: '', assurance: '' } }));
-      await charger();
-    } catch (e) {
-      setErreur(e instanceof ErreurApi ? e.message : t('equipe_action_erreur'));
-    } finally {
-      setActionEnCours(null);
-    }
-  };
 
   // Sauvegarde de la base : téléchargement JSON sur la version web ; sur
   // téléphone, on invite à passer par la version web (fichier volumineux).
@@ -342,17 +317,6 @@ export default function EcranEquipe() {
   // Radiation d'un chauffeur qui ne respecte plus les normes zanziGo :
   // confirmation obligatoire (action forte — il disparaît des assignations
   // et ses annonces ouvertes sont fermées).
-  const radierChauffeur = (chauffeur: Chauffeur) => {
-    const nom = champ<string>(chauffeur, 'full_name', 'fullName') ?? '?';
-    Alert.alert(t('equipe_radier_titre'), t('equipe_radier_texte', { nom }), [
-      { text: t('commun_annuler'), style: 'cancel' },
-      {
-        text: t('equipe_radier_confirmer'),
-        style: 'destructive',
-        onPress: () => agir(chauffeur.id, () => api.verifierChauffeur(chauffeur.id, 'rejected')),
-      },
-    ]);
-  };
 
   if (cle === null) {
     return <ChargementCentre message="…" />;
@@ -1211,76 +1175,41 @@ export default function EcranEquipe() {
             const bientot = (d?: string | null) =>
               !!d && new Date(String(d)).getTime() < Date.now() + 30 * 86400000;
             const docsAlerte = bientot(expPermis) || bientot(expAssurance);
-            const saisieDates = datesDocs[chauffeur.id] ?? { permis: '', assurance: '' };
             return (
-              <Carte key={chauffeur.id}>
-                <View style={styles.ligneDetails}>
-                  <Text style={styles.itineraire}>{libelleChauffeur(chauffeur)}</Text>
-                  {docsAlerte && <Badge texte={t('equipe_docs_alerte')} ton="danger" />}
-                </View>
-                <Text style={styles.detail}>
-                  {String(champ(chauffeur, 'vehicle_model', 'vehicleModel') ?? '—')} ·{' '}
-                  {String(champ(chauffeur, 'phone') ?? '')}
-                </Text>
-                {/* Expiration des documents (suivies pour l'alerte auto). */}
-                <Text style={styles.detail}>
-                  📄 {t('equipe_docs_permis')} :{' '}
-                  {expPermis ? String(expPermis).slice(0, 10) : '—'} ·{' '}
-                  {t('equipe_docs_assurance')} :{' '}
-                  {expAssurance ? String(expAssurance).slice(0, 10) : '—'}
-                </Text>
-                <Champ
-                  label={`${t('equipe_docs_permis')} (AAAA-MM-JJ)`}
-                  value={saisieDates.permis}
-                  onChangeText={(v) =>
-                    setDatesDocs((prev) => ({
-                      ...prev,
-                      [chauffeur.id]: { ...saisieDates, permis: v },
-                    }))
-                  }
-                  placeholder="2026-12-31"
-                />
-                <Champ
-                  label={`${t('equipe_docs_assurance')} (AAAA-MM-JJ)`}
-                  value={saisieDates.assurance}
-                  onChangeText={(v) =>
-                    setDatesDocs((prev) => ({
-                      ...prev,
-                      [chauffeur.id]: { ...saisieDates, assurance: v },
-                    }))
-                  }
-                  placeholder="2026-12-31"
-                />
-                {(saisieDates.permis.trim() !== '' || saisieDates.assurance.trim() !== '') && (
-                  <Bouton
-                    titre={t('equipe_docs_enregistrer')}
-                    icone="save-outline"
-                    variante="secondaire"
-                    onPress={() => majDatesChauffeur(chauffeur.id)}
-                    charge={actionEnCours === `docs-${chauffeur.id}`}
-                  />
-                )}
-                {positionConnue ? (
-                  <Bouton
-                    titre={`${t('equipe_position')} · ${formaterDateRelativeI18n(majPosition, t)}`}
-                    icone="location-outline"
-                    variante="secondaire"
-                    onPress={() => Linking.openURL(`https://www.google.com/maps?q=${lat},${lng}`)}
-                  />
-                ) : (
-                  <View style={styles.ligneDetail}>
-                    <Ionicons name="location-outline" size={14} color={couleurs.texteSecondaire} />
-                    <Text style={styles.detail}>{t('equipe_position_inconnue')}</Text>
+              <Pressable
+                key={chauffeur.id}
+                onPress={() => router.push(`/taxi/${chauffeur.id}`)}
+                accessibilityRole="button"
+                style={({ pressed }) => pressed && { opacity: 0.7 }}
+              >
+                <Carte>
+                  <View style={styles.ligneDetails}>
+                    <Text style={styles.nomHotelLien}>{libelleChauffeur(chauffeur)}</Text>
+                    {docsAlerte && <Badge texte={t('equipe_docs_alerte')} ton="danger" />}
                   </View>
-                )}
-                <Bouton
-                  titre={t('equipe_radier')}
-                  icone="close-circle-outline"
-                  variante="danger"
-                  onPress={() => radierChauffeur(chauffeur)}
-                  charge={actionEnCours === chauffeur.id}
-                />
-              </Carte>
+                  <Text style={styles.detail}>
+                    {String(champ(chauffeur, 'vehicle_model', 'vehicleModel') ?? '—')} ·{' '}
+                    {String(champ(chauffeur, 'vehicle_plate', 'vehiclePlate') ?? '—')} ·{' '}
+                    {String(champ(chauffeur, 'phone') ?? '')}
+                  </Text>
+                  <Text style={styles.detail}>
+                    📄 {t('equipe_docs_permis')} :{' '}
+                    {expPermis ? String(expPermis).slice(0, 10) : '—'} ·{' '}
+                    {t('equipe_docs_assurance')} :{' '}
+                    {expAssurance ? String(expAssurance).slice(0, 10) : '—'}
+                  </Text>
+                  <Text style={styles.detail}>
+                    📍{' '}
+                    {positionConnue
+                      ? formaterDateRelativeI18n(majPosition, t)
+                      : t('equipe_position_inconnue')}
+                  </Text>
+                  <View style={styles.lienHotel}>
+                    <Text style={styles.lienFicheEquipe}>{t('taxi_fiche_ouvrir')}</Text>
+                    <Ionicons name="chevron-forward" size={18} color={couleurs.primaire} />
+                  </View>
+                </Carte>
+              </Pressable>
             );
           })}
         </View>

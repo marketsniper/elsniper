@@ -67,6 +67,7 @@ function PilesNavigation() {
       <Stack.Screen name="course/[id]" options={{ title: t('titre_course'), headerLeft: retourChauffeur }} />
       <Stack.Screen name="equipe" options={{ title: t('titre_equipe'), headerLeft: retourProfil }} />
       <Stack.Screen name="hotel/[id]" options={{ title: t('hotel_fiche_titre'), headerLeft: retourEquipe }} />
+      <Stack.Screen name="taxi/[id]" options={{ title: t('taxi_fiche_titre'), headerLeft: retourEquipe }} />
       <Stack.Screen name="annonce/[id]" options={{ title: t('titre_annonce'), headerLeft: retourChauffeur }} />
       <Stack.Screen name="colis-dispo/[id]" options={{ title: t('titre_colis_dispo'), headerLeft: retourChauffeur }} />
     </Stack>

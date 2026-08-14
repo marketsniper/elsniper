@@ -423,7 +423,10 @@ authRouter.post('/driver-register', async (req, res, next) => {
       })
       .parse(req.body);
 
-    const { rows } = await pool.query('SELECT id FROM drivers WHERE phone = $1', [phone]);
+    const { rows } = await pool.query(
+      'SELECT id FROM drivers WHERE phone = $1 AND archived_at IS NULL',
+      [phone]
+    );
     if (rows[0]) {
       throw new HttpError(
         409,
@@ -462,7 +465,10 @@ authRouter.post('/driver-login', async (req, res, next) => {
       .object({ phone: phoneSchema, password: z.string().min(1) })
       .parse(req.body);
 
-    const { rows } = await pool.query('SELECT * FROM drivers WHERE phone = $1', [phone]);
+    const { rows } = await pool.query(
+      'SELECT * FROM drivers WHERE phone = $1 AND archived_at IS NULL',
+      [phone]
+    );
     const driver = rows[0];
     if (!driver) {
       // Inscription commencée mais dossier pas encore déposé : on le

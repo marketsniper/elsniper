@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { query } from '../db.js';
+import { HttpError } from '../errors.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { requireAdmin } from '../middleware/auth.js';
 import { config } from '../config.js';
@@ -53,6 +54,63 @@ router.get(
     const jour = dump.exported_at.slice(0, 10);
     res.setHeader('Content-Disposition', `attachment; filename="zanzigo-sauvegarde-${jour}.json"`);
     res.json(dump);
+  })
+);
+
+// POST /stats/reinitialiser — REMISE À ZÉRO complète des données métier :
+// chauffeurs, clients, hôtels et tout ce qui en découle (courses, colis,
+// paiements, annonces, places, bons, crédits, documents).
+// Sert une seule fois, avant le vrai démarrage, pour repartir d'une base
+// propre après la période d'essai. Volontairement ABSENT du tableau de
+// bord : il faut la clé de l'équipe ET la phrase exacte « REINITIALISER »
+// dans la requête, pour qu'aucun geste malheureux ne puisse l'appeler.
+// Le compte à rebours des identifiants (numéros, identifiants clients,
+// e-mails d'hôtels) repart à zéro : tout redevient disponible.
+const TABLES_A_VIDER = [
+  // L'ordre suit les dépendances : les enfants d'abord.
+  'ride_waitlist',
+  'ride_bookings',
+  'posted_rides',
+  'payments',
+  'packages',
+  'trips',
+  'hotel_vouchers',
+  'hotel_credit_transactions',
+  'driver_monthly_stats',
+  'driver_positions',
+  'driver_signups',
+  'drivers',
+  'hotels',
+  'users',
+  'uploaded_files',
+  'otp_codes',
+];
+
+router.post(
+  '/reinitialiser',
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    if (req.body?.confirmation !== 'REINITIALISER') {
+      throw new HttpError(
+        400,
+        'confirmation_requise',
+        'Remise à zéro refusée : envoyer {"confirmation":"REINITIALISER"} pour confirmer'
+      );
+    }
+    const avant = {};
+    const apres = {};
+    for (const table of TABLES_A_VIDER) {
+      const { rows } = await query(`SELECT COUNT(*)::int AS n FROM "${table}"`);
+      avant[table] = rows[0].n;
+    }
+    // TRUNCATE en une seule commande : les contraintes entre tables ne
+    // gênent pas, et soit tout part, soit rien ne part.
+    await query(`TRUNCATE TABLE ${TABLES_A_VIDER.map((t) => `"${t}"`).join(', ')} CASCADE`);
+    for (const table of TABLES_A_VIDER) {
+      const { rows } = await query(`SELECT COUNT(*)::int AS n FROM "${table}"`);
+      apres[table] = rows[0].n;
+    }
+    res.json({ reinitialise: true, lignes_supprimees: avant, restant: apres });
   })
 );
 

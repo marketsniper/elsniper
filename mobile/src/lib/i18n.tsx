@@ -1105,6 +1105,121 @@ const CHAINES = {
   equipe_stat_attentes: { fr: 'Liste d\'attente', en: 'Waitlist', sw: 'Orodha ya kusubiri' },
   equipe_paiement_demande: { fr: 'Demandé le', en: 'Requested on', sw: 'Iliombwa' },
   equipe_paiement_depart: { fr: 'Départ prévu', en: 'Departure', sw: 'Kuondoka' },
+  // --- Fiche complète d'un chauffeur (équipe) ---
+  taxi_fiche_titre: { fr: 'Fiche taxi', en: 'Taxi file', sw: 'Faili la teksi' },
+  taxi_fiche_introuvable: {
+    fr: 'Chauffeur introuvable.',
+    en: 'Driver not found.',
+    sw: 'Dereva hajapatikana.',
+  },
+  taxi_fiche_ouvrir: {
+    fr: 'Ouvrir la fiche complète',
+    en: 'Open full file',
+    sw: 'Fungua faili kamili',
+  },
+  taxi_fiche_statut_radie: { fr: 'Radié', en: 'Removed', sw: 'Ameondolewa' },
+  taxi_fiche_note: { fr: 'Note des clients', en: 'Customer rating', sw: 'Kiwango cha wateja' },
+  taxi_fiche_vehicule: { fr: 'Son véhicule', en: 'Their vehicle', sw: 'Gari lake' },
+  taxi_fiche_plaque: { fr: 'Plaque', en: 'Plate', sw: 'Namba ya gari' },
+  taxi_fiche_modele: { fr: 'Modèle', en: 'Model', sw: 'Aina' },
+  taxi_fiche_permis_numero: {
+    fr: 'N° de permis',
+    en: 'License number',
+    sw: 'Namba ya leseni',
+  },
+  taxi_fiche_qr: { fr: 'QR du véhicule', en: 'Vehicle QR', sw: 'QR ya gari' },
+  taxi_fiche_pieces: {
+    fr: 'Pièces jointes en mémoire',
+    en: 'Documents on file',
+    sw: 'Nyaraka zilizohifadhiwa',
+  },
+  taxi_fiche_piece_identite: {
+    fr: "Pièce d'identité",
+    en: 'ID document',
+    sw: 'Kitambulisho',
+  },
+  taxi_fiche_aucune_piece: {
+    fr: 'Aucune pièce jointe enregistrée.',
+    en: 'No document on file.',
+    sw: 'Hakuna nyaraka iliyohifadhiwa.',
+  },
+  taxi_fiche_expirations: {
+    fr: 'Dates de fin de validité',
+    en: 'Expiry dates',
+    sw: 'Tarehe za mwisho',
+  },
+  taxi_fiche_dates_ok: {
+    fr: 'Dates enregistrées.',
+    en: 'Dates saved.',
+    sw: 'Tarehe zimehifadhiwa.',
+  },
+  taxi_fiche_mdp_titre: { fr: 'Mot de passe', en: 'Password', sw: 'Nenosiri' },
+  taxi_fiche_mdp_explication: {
+    fr: "Ce chauffeur a un mot de passe. Il est chiffré : personne ne peut le relire, pas même vous. S'il l'a oublié, donnez-lui-en un nouveau ici, puis communiquez-le-lui.",
+    en: "This driver has a password. It is encrypted: nobody can read it back, not even you. If they forgot it, set a new one here and tell them.",
+    sw: 'Dereva huyu ana nenosiri. Limefichwa: hakuna anayeweza kulisoma, hata wewe. Akilisahau, weka jipya hapa kisha mwambie.',
+  },
+  taxi_fiche_mdp_absent: {
+    fr: "Ce chauffeur n'a pas encore de mot de passe. Vous pouvez lui en poser un ici.",
+    en: "This driver has no password yet. You can set one here.",
+    sw: 'Dereva huyu bado hana nenosiri. Unaweza kuweka moja hapa.',
+  },
+  taxi_fiche_mdp_nouveau: {
+    fr: 'Nouveau mot de passe (8 caractères minimum)',
+    en: 'New password (8 characters minimum)',
+    sw: 'Nenosiri jipya (angalau herufi 8)',
+  },
+  taxi_fiche_mdp_bouton: {
+    fr: 'Définir ce mot de passe',
+    en: 'Set this password',
+    sw: 'Weka nenosiri hili',
+  },
+  taxi_fiche_mdp_ok: {
+    fr: 'Nouveau mot de passe posé : {mdp} — communiquez-le au chauffeur, il ne sera plus affiché.',
+    en: 'New password set: {mdp} — pass it on to the driver, it will not be shown again.',
+    sw: 'Nenosiri jipya limewekwa: {mdp} — mpe dereva, halitaonyeshwa tena.',
+  },
+  taxi_fiche_gains: { fr: 'Ses gains', en: 'Their earnings', sw: 'Mapato yake' },
+  taxi_fiche_gains_jour: { fr: "Aujourd'hui", en: 'Today', sw: 'Leo' },
+  taxi_fiche_gains_semaine: { fr: '7 derniers jours', en: 'Last 7 days', sw: 'Siku 7 zilizopita' },
+  taxi_fiche_gains_mois: { fr: '30 derniers jours', en: 'Last 30 days', sw: 'Siku 30 zilizopita' },
+  taxi_fiche_courses: { fr: 'Ses courses', en: 'Their rides', sw: 'Safari zake' },
+  taxi_fiche_aucune_course: {
+    fr: "Aucune course ne lui a encore été confiée.",
+    en: 'No ride assigned yet.',
+    sw: 'Bado hajapewa safari.',
+  },
+  taxi_fiche_radiation_titre: {
+    fr: 'Radiation définitive',
+    en: 'Permanent removal',
+    sw: 'Kuondolewa kabisa',
+  },
+  taxi_fiche_radiation_explication: {
+    fr: "La fiche est close : le chauffeur disparaît de toutes les listes, ses annonces se ferment et il ne peut plus se connecter. Ses courses passées restent dans vos comptes. Son numéro redevient libre : s'il revient un jour, il redépose une candidature complète que vous examinerez.",
+    en: 'The file is closed: the driver disappears from all lists, their listings close and they can no longer log in. Their past rides stay in your accounts. Their number becomes free again: if they come back one day, they submit a full new application for you to review.',
+    sw: 'Faili linafungwa: dereva anatoweka kwenye orodha zote, matangazo yake yanafungwa na hawezi kuingia tena. Safari zake za nyuma zinabaki kwenye hesabu zako. Namba yake inakuwa huru tena: akirudi, atatuma maombi mapya kamili.',
+  },
+  taxi_fiche_radiation_bouton: {
+    fr: 'Radier définitivement',
+    en: 'Remove permanently',
+    sw: 'Ondoa kabisa',
+  },
+  taxi_fiche_radiation_confirme: {
+    fr: 'Radier {nom} définitivement ? Cette fiche sera close.',
+    en: 'Permanently remove {nom}? This file will be closed.',
+    sw: 'Kumwondoa {nom} kabisa? Faili hili litafungwa.',
+  },
+  taxi_fiche_radiation_oui: {
+    fr: 'Oui, radier ce chauffeur',
+    en: 'Yes, remove this driver',
+    sw: 'Ndiyo, mwondoe dereva huyu',
+  },
+  taxi_fiche_radie_explication: {
+    fr: "Ce chauffeur est radié. Son numéro est de nouveau libre : il peut redéposer une candidature, qui apparaîtra dans « Candidatures ».",
+    en: 'This driver has been removed. Their number is free again: they can submit a new application, which will appear under "Applications".',
+    sw: 'Dereva huyu ameondolewa. Namba yake iko huru tena: anaweza kutuma maombi mapya, yatakayoonekana kwenye "Maombi".',
+  },
+
   // --- Fiche complète d'un hôtel partenaire (équipe) ---
   hotel_fiche_titre: { fr: 'Fiche hôtel', en: 'Hotel file', sw: 'Faili la hoteli' },
   hotel_fiche_introuvable: {
