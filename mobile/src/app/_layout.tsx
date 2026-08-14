@@ -6,6 +6,7 @@ import { StatusBar } from 'expo-status-bar';
 import React, { useEffect } from 'react';
 import { Pressable, Text } from 'react-native';
 
+import { FournisseurDialogues } from '@/components/BoiteDialogue';
 import { reparerAlertesWeb } from '@/lib/alerteWeb';
 import { reveillerServeur } from '@/lib/api';
 import { AuthProvider } from '@/lib/auth';
@@ -91,7 +92,10 @@ export default function LayoutRacine() {
     <LangueProvider>
       <AuthProvider>
         <StatusBar style="dark" />
-        <PilesNavigation />
+        {/* Les fenêtres de confirmation s'affichent par-dessus tout écran. */}
+        <FournisseurDialogues>
+          <PilesNavigation />
+        </FournisseurDialogues>
       </AuthProvider>
     </LangueProvider>
   );

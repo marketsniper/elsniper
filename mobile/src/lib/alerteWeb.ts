@@ -12,12 +12,15 @@
 // d'un client, et les messages de remboursement.
 //
 // LA RÉPARATION
-// On remplace cette fonction vide par les boîtes du navigateur, qui existent
-// partout (Safari sur iPhone compris) :
-//   • sans bouton ou avec un seul  → un simple message ;
-//   • avec plusieurs boutons        → une question OK / Annuler.
+// On remplace cette fonction vide par les FENÊTRES ZANZIGO (composant
+// <FournisseurDialogues>, monté à la racine) : même carte blanche, mêmes
+// boutons, même corail que le reste de l'application.
+// Si jamais ce fournisseur n'était pas encore monté, on se rabat sur les
+// boîtes du navigateur — une question ne doit jamais se perdre.
 // Les appels existants n'ont pas à changer, et ceux à venir marcheront aussi.
 import { Alert, Platform, type AlertButton } from 'react-native';
+
+import { ouvrirDialogue } from './dialogue';
 
 export function reparerAlertesWeb(): void {
   if (Platform.OS !== 'web') return;
@@ -29,8 +32,15 @@ export function reparerAlertesWeb(): void {
   if (typeof demander !== 'function') return;
 
   Alert.alert = (titre: string, message?: string, boutons?: AlertButton[]) => {
-    const texte = [titre, message].filter(Boolean).join('\n\n');
     const liste = boutons ?? [];
+
+    // Chemin normal : la fenêtre dessinée par zanziGo.
+    if (ouvrirDialogue({ titre, message, boutons: liste.length ? liste : [{ text: 'OK' }] })) {
+      return;
+    }
+
+    // Repli (fournisseur pas encore monté) : les boîtes du navigateur.
+    const texte = [titre, message].filter(Boolean).join('\n\n');
 
     // Simple information : on affiche, puis on exécute l'action éventuelle.
     if (liste.length <= 1) {
