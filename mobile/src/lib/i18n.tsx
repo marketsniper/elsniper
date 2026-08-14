@@ -544,9 +544,9 @@ const CHAINES = {
   credit_titre: { fr: 'Mon crédit zanziGo', en: 'My zanziGo credit', sw: 'Salio langu la zanziGo' },
   credit_solde: { fr: 'Solde disponible', en: 'Available balance', sw: 'Salio lililopo' },
   credit_explication: {
-    fr: 'Rechargez votre compte auprès de l\'équipe (mobile money, espèces, virement) et payez ensuite chaque course ou colis en un seul geste, sans sortir le téléphone du client.',
-    en: 'Top up your account with the team (mobile money, cash, transfer) and then pay every ride or parcel in one tap.',
-    sw: 'Jaza akaunti yako kupitia timu (mobile money, taslimu, uhamisho) kisha ulipe kila safari au mzigo kwa mguso mmoja.',
+    fr: 'Rechargez votre compte auprès de l\'équipe (carte bancaire, portefeuille mobile, virement) et payez ensuite chaque course ou colis en un seul geste, sans sortir le téléphone du client.',
+    en: 'Top up your account with the team (credit card, mobile wallet, transfer) and then pay every ride or parcel in one tap.',
+    sw: 'Jaza akaunti yako kupitia timu (kadi ya benki, pochi ya simu, uhamisho) kisha ulipe kila safari au mzigo kwa mguso mmoja.',
   },
   credit_recharger: { fr: 'Recharger mon crédit', en: 'Top up my credit', sw: 'Jaza salio langu' },
   trip_payer_credit: {
@@ -576,9 +576,9 @@ const CHAINES = {
     sw: 'Gusa hoteli kufungua faili lake: mawasiliano, salio, historia na kuongeza salio.',
   },
   equipe_credit_conseil: {
-    fr: 'Créditez un hôtel APRÈS avoir reçu son argent (mobile money, espèces). Un montant négatif corrige une erreur.',
-    en: 'Credit a hotel AFTER receiving its money (mobile money, cash). A negative amount fixes a mistake.',
-    sw: 'Ongeza salio la hoteli BAADA ya kupokea pesa yake (mobile money, taslimu). Kiasi hasi hurekebisha kosa.',
+    fr: 'Créditez un hôtel APRÈS avoir reçu son argent (carte bancaire, portefeuille mobile, virement). Un montant négatif corrige une erreur.',
+    en: 'Credit a hotel AFTER receiving its money (credit card, mobile wallet, transfer). A negative amount fixes a mistake.',
+    sw: 'Ongeza salio la hoteli BAADA ya kupokea pesa yake (kadi ya benki, pochi ya simu, uhamisho). Kiasi hasi hurekebisha kosa.',
   },
   equipe_credit_montant: { fr: 'Montant (USD)', en: 'Amount (USD)', sw: 'Kiasi (USD)' },
   equipe_crediter: { fr: 'Créditer', en: 'Credit', sw: 'Ongeza salio' },
@@ -1390,9 +1390,9 @@ const CHAINES = {
   },
   hotel_fiche_note: { fr: 'Note (facultatif)', en: 'Note (optional)', sw: 'Maelezo (hiari)' },
   hotel_fiche_note_exemple: {
-    fr: 'Reçu en espèces le 14/08',
-    en: 'Cash received on 14/08',
-    sw: 'Fedha taslimu 14/08',
+    fr: 'Reçu par carte le 14/08',
+    en: 'Card payment received on 14/08',
+    sw: 'Malipo ya kadi 14/08',
   },
   hotel_fiche_credit_ok: {
     fr: 'Crédit enregistré — nouveau solde : {solde}',
@@ -1465,9 +1465,9 @@ const CHAINES = {
     sw: 'Hakuna cha kulipa bado: tunakupangia teksi (kawaida dakika chache). Itakapothibitishwa, kitufe cha kulipa {montant} kitaonekana hapa.',
   },
   trip_paiement_instructions: {
-    fr: 'Votre taxi est confirmé — il reste {montant} à régler. Vous payez comme vous voulez : carte bancaire, portefeuille mobile ou espèces. Appuyez sur « Payer » : votre message part tout prêt à l\'équipe. Dès qu\'elle encaisse, « Course payée » s\'affiche ici.',
-    en: 'Your taxi is confirmed — {montant} left to pay. Pay however you like: credit card, mobile wallet or cash. Tap "Pay": your message goes ready-made to the team. Once received, "Ride paid" appears here.',
-    sw: 'Teksi yako imethibitishwa — imebaki {montant} kulipa. Lipa upendavyo: kadi ya benki, pochi ya simu au pesa taslimu. Bonyeza "Lipa": ujumbe wako unakwenda tayari kwa timu. Ikipokelewa, "Safari imelipwa" itaonekana hapa.',
+    fr: 'Votre taxi est confirmé — il reste {montant} à régler. Le paiement se fait par carte bancaire ou par portefeuille mobile. Appuyez sur « Payer » : votre message part tout prêt à l\'équipe. Dès qu\'elle encaisse, « Course payée » s\'affiche ici.',
+    en: 'Your taxi is confirmed — {montant} left to pay. Payment is by credit card or mobile wallet. Tap "Pay": your message goes ready-made to the team. Once received, "Ride paid" appears here.',
+    sw: 'Teksi yako imethibitishwa — imebaki {montant} kulipa. Malipo ni kwa kadi ya benki au pochi ya simu. Bonyeza "Lipa": ujumbe wako unakwenda tayari kwa timu. Ikipokelewa, "Safari imelipwa" itaonekana hapa.',
   },
   place_fiche_titre: { fr: 'Ma place', en: 'My seat', sw: 'Kiti changu' },
   place_depart: { fr: 'Départ', en: 'Departure', sw: 'Kuondoka' },
@@ -1477,9 +1477,9 @@ const CHAINES = {
   place_etape_depart: { fr: 'En route', en: 'On the way', sw: 'Njiani' },
   place_etape_terminee: { fr: 'Trajet terminé', en: 'Trip completed', sw: 'Safari imekamilika' },
   place_paiement_instructions: {
-    fr: 'Il reste {montant} à régler. Payez l\'équipe zanziGo par carte bancaire, portefeuille mobile ou en espèces : appuyez ci-dessous, votre message part tout prêt. Dès que l\'équipe encaisse, « Paiement validé » s\'affiche ici.',
-    en: '{montant} left to pay. Pay the zanziGo team by credit card, mobile wallet or cash: tap below, your message is ready to send. As soon as the team receives it, "Payment confirmed" appears here.',
-    sw: 'Imebaki {montant} kulipa. Lipa timu ya zanziGo kwa kadi ya benki, pochi ya simu au pesa taslimu: bonyeza hapa chini, ujumbe wako uko tayari. Timu ikipokea, "Malipo yamethibitishwa" itaonekana hapa.',
+    fr: 'Il reste {montant} à régler. Payez l\'équipe zanziGo par carte bancaire ou par portefeuille mobile : appuyez ci-dessous, votre message part tout prêt. Dès que l\'équipe encaisse, « Paiement validé » s\'affiche ici.',
+    en: '{montant} left to pay. Pay the zanziGo team by credit card or mobile wallet: tap below, your message is ready to send. As soon as the team receives it, "Payment confirmed" appears here.',
+    sw: 'Imebaki {montant} kulipa. Lipa timu ya zanziGo kwa kadi ya benki au pochi ya simu: bonyeza hapa chini, ujumbe wako uko tayari. Timu ikipokea, "Malipo yamethibitishwa" itaonekana hapa.',
   },
   place_payer_bouton: {
     fr: 'Régler ma place ({montant})',
