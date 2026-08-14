@@ -6,11 +6,14 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { asyncHandler } from '../middleware/errorHandler.js';
-import { requireAdmin } from '../middleware/auth.js';
+import { requireAdmin, requireAuth } from '../middleware/auth.js';
+import { HttpError } from '../errors.js';
+import { query } from '../db.js';
 import {
   clePubliquePush,
   enregistrerAbonnement,
   envoyerPush,
+  envoyerPushChauffeur,
   listerAbonnements,
   pushActif,
   retirerAbonnement,
@@ -74,6 +77,80 @@ notificationsRouter.post(
     const resultat = await envoyerPush(
       '🔔 Essai zanziGo',
       'Si vous lisez ceci, les alertes instantanées fonctionnent sur ce téléphone.',
+      { test: true }
+    );
+    res.json(resultat);
+  })
+);
+
+// ===== CÔTÉ CHAUFFEUR =======================================================
+// Un chauffeur abonne SON téléphone avec SON jeton : il ne reçoit que ce qui
+// le concerne (course attribuée, payée, annulée), jamais les alertes internes
+// de l'équipe. Le cloisonnement tient en deux points : le rôle enregistré
+// ici, et la requête d'envoi côté service.
+
+/**
+ * Le chauffeur identifié par le jeton — sinon 403.
+ *
+ * Cas particulier du chauffeur qui vient de déposer sa candidature : son
+ * jeton a été émis AVANT que sa fiche n'existe, il ne porte donc pas encore
+ * son identifiant. On le retrouve par son numéro, ce qui est sûr : ce jeton
+ * n'est délivré qu'à qui a choisi le mot de passe de ce numéro, et
+ * l'inscription est refusée si un chauffeur existe déjà avec ce numéro.
+ * Sans ça, un chauffeur fraîchement validé devrait se déconnecter et se
+ * reconnecter avant de pouvoir être alerté de sa première course.
+ */
+async function chauffeurDuJeton(req) {
+  if (req.auth?.driverId) return req.auth.driverId;
+  if (req.auth?.chauffeurCandidat && req.auth.phone) {
+    const { rows } = await query(
+      'SELECT id FROM drivers WHERE phone = $1 AND archived_at IS NULL',
+      [req.auth.phone]
+    );
+    if (rows[0]) return rows[0].id;
+  }
+  throw new HttpError(403, 'forbidden', 'Réservé aux chauffeurs zanziGo');
+}
+
+notificationsRouter.post(
+  '/chauffeur/abonner',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const driverId = await chauffeurDuJeton(req);
+    const data = abonnementSchema.parse(req.body);
+    const abonnement = await enregistrerAbonnement({
+      endpoint: data.endpoint,
+      p256dh: data.keys.p256dh,
+      auth: data.keys.auth,
+      label: data.label,
+      role: 'chauffeur',
+      driverId,
+    });
+    res.status(201).json(abonnement);
+  })
+);
+
+notificationsRouter.post(
+  '/chauffeur/desabonner',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const driverId = await chauffeurDuJeton(req);
+    const { endpoint } = z.object({ endpoint: z.string().url() }).parse(req.body);
+    // Le retrait est limité aux téléphones de CE chauffeur.
+    res.json({ retire: await retirerAbonnement(endpoint, driverId) });
+  })
+);
+
+// Essai : le chauffeur vérifie lui-même que son téléphone sonne.
+notificationsRouter.post(
+  '/chauffeur/test',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const driverId = await chauffeurDuJeton(req);
+    const resultat = await envoyerPushChauffeur(
+      driverId,
+      '🔔 Essai zanziGo',
+      'Si vous lisez ceci, vous serez prévenu dès qu’une course vous sera attribuée.',
       { test: true }
     );
     res.json(resultat);

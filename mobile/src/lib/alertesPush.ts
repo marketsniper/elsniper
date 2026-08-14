@@ -66,7 +66,16 @@ function cleEnOctets(base64: string): ArrayBuffer {
  * Active les alertes sur CE téléphone. Renvoie un message d'erreur en
  * français si ça n'a pas pu se faire, ou null en cas de succès.
  */
-export async function activerAlertes(nomAppareil: string): Promise<string | null> {
+/**
+ * À qui appartient ce téléphone. C'est ce qui décide de ce qu'il recevra :
+ * l'équipe voit tout de la plateforme, un chauffeur uniquement SES courses.
+ */
+export type CibleAlertes = 'equipe' | 'chauffeur';
+
+export async function activerAlertes(
+  nomAppareil: string,
+  cible: CibleAlertes = 'equipe'
+): Promise<string | null> {
   if (!alertesPossibles()) {
     return surIphoneSansInstallation()
       ? "Sur iPhone, il faut d'abord ajouter zanziGo à l'écran d'accueil : bouton Partager, puis « Sur l'écran d'accueil ». Rouvrez ensuite zanziGo depuis cette icône."
@@ -93,7 +102,8 @@ export async function activerAlertes(nomAppareil: string): Promise<string | null
     if (!brut.endpoint || !brut.keys?.p256dh || !brut.keys?.auth) {
       return "L'abonnement n'a pas pu être créé. Réessayez.";
     }
-    await api.abonnerAlertes({
+    const abonner = cible === 'chauffeur' ? api.abonnerAlertesChauffeur : api.abonnerAlertes;
+    await abonner({
       endpoint: brut.endpoint,
       keys: { p256dh: brut.keys.p256dh, auth: brut.keys.auth },
       label: nomAppareil,
@@ -105,12 +115,14 @@ export async function activerAlertes(nomAppareil: string): Promise<string | null
 }
 
 /** Coupe les alertes sur ce téléphone. */
-export async function desactiverAlertes(): Promise<void> {
+export async function desactiverAlertes(cible: CibleAlertes = 'equipe'): Promise<void> {
   if (!alertesPossibles()) return;
   const enregistrement = await navigator.serviceWorker.ready;
   const abonnement = await enregistrement.pushManager.getSubscription();
   if (!abonnement) return;
-  await api.desabonnerAlertes(abonnement.endpoint).catch(() => {});
+  const desabonner =
+    cible === 'chauffeur' ? api.desabonnerAlertesChauffeur : api.desabonnerAlertes;
+  await desabonner(abonnement.endpoint).catch(() => {});
   await abonnement.unsubscribe().catch(() => {});
 }
 

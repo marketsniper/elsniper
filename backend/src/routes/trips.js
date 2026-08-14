@@ -12,6 +12,11 @@ import { assertHotelVerified } from './hotels.js';
 import { randomUUID } from 'node:crypto';
 import { tauxRemboursement } from '../services/annulationService.js';
 import { notifierEquipe } from '../services/emailService.js';
+import {
+  alerterCourseAnnulee,
+  alerterCoursePayee,
+  alerterNouvelleCourse,
+} from '../services/alertesChauffeur.js';
 
 const router = Router();
 
@@ -331,6 +336,9 @@ router.patch(
       `UPDATE trips SET driver_id = $1, status = 'driver_confirmed' WHERE id = $2 RETURNING *`,
       [driverId, req.params.id]
     );
+    // Son téléphone sonne dans la seconde : c'est l'alerte qui fait gagner le
+    // plus de temps sur chaque réservation.
+    alerterNouvelleCourse(rows[0]);
     res.json(rows[0]);
   })
 );
@@ -423,6 +431,8 @@ router.post(
         `Réf: ${trip.id}`,
       ].join('\n');
       notifierEquipe('💳 Paiement reçu par crédit hôtel — course', resumeCredit);
+      // Le chauffeur assigné apprend tout de suite qu'il peut démarrer.
+      alerterCoursePayee(trip);
       res.status(201).json({
         ...paiement,
         payment_method: 'credit',
@@ -643,6 +653,9 @@ router.post(
       );
       return { updated: rows[0], refund };
     });
+
+    // Le chauffeur déjà assigné est prévenu : il ne se déplacera pas pour rien.
+    alerterCourseAnnulee(updated);
 
     const sortie = { ...updated, refund };
     if (refund) {

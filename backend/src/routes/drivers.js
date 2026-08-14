@@ -9,6 +9,7 @@ import { valeurReservationPlace } from './stats.js';
 
 import { notifierEquipe } from '../services/emailService.js';
 import { hashPassword } from '../services/passwordService.js';
+import { alerterCompteValide } from '../services/alertesChauffeur.js';
 
 // Le hash de mot de passe ne sort JAMAIS de l'API.
 export function sanitizeDriver(driver) {
@@ -383,6 +384,9 @@ router.patch(
       'UPDATE drivers SET verification_status = $1, vehicle_qr_code = $2 WHERE id = $3 RETURNING *',
       [status, vehicleQr, req.params.id]
     );
+    // Bonne nouvelle rare mais très attendue : il l'apprend sans avoir à
+    // rouvrir l'application toutes les heures.
+    if (status === 'verified') alerterCompteValide(updated.rows[0]);
     res.json(sanitizeDriver(updated.rows[0]));
   })
 );

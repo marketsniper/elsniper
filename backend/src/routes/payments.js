@@ -8,6 +8,7 @@ import { getTransactionStatus, isStubMode } from '../services/pesapalService.js'
 import { capturePaypalOrder } from '../services/paypalService.js';
 import { config } from '../config.js';
 import { annulerReservationsImpayees } from './rides.js';
+import { alerterCoursePayeeParId } from '../services/alertesChauffeur.js';
 
 const router = Router();
 
@@ -274,6 +275,12 @@ async function appliquerConfirmation(payment) {
     );
 
     return paymentRows[0];
+  }).then((confirme) => {
+    // Course réglée : le chauffeur assigné apprend qu'il peut démarrer.
+    // Après la transaction, et sans l'attendre : une alerte ne doit jamais
+    // retenir ni annuler un paiement confirmé.
+    if (payment.trip_id) alerterCoursePayeeParId(payment.trip_id);
+    return confirme;
   });
 }
 

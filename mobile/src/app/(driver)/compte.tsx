@@ -12,6 +12,7 @@ import {
   SelecteurLangue,
   SousTitre,
 } from '@/components/ui';
+import { CarteAlertes } from '@/components/CarteAlertes';
 import { CarteVersion } from '@/components/Version';
 import { api, type StatsChauffeur } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
@@ -162,6 +163,18 @@ export default function EcranCompteChauffeur() {
         <Text style={styles.labelLangue}>{t('commun_langue')}</Text>
         <SelecteurLangue compact />
       </Carte>
+
+      {/* Alertes instantanées : son téléphone sonne dès qu'une course lui est
+          attribuée. Réservé aux chauffeurs validés — avant, il n'a pas encore
+          de courses à recevoir. */}
+      {verifie && (
+        <CarteAlertes
+          cible="chauffeur"
+          titre={t('alertes_chauffeur_titre')}
+          intro={t('alertes_chauffeur_intro')}
+          nomAppareil={t('alertes_chauffeur_appareil')}
+        />
+      )}
 
       <CarteVersion />
 

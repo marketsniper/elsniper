@@ -1149,6 +1149,28 @@ export async function testerAlertes(): Promise<{ envoyes: number }> {
   return requete<{ envoyes: number }>('/notifications/test', { methode: 'POST', admin: true });
 }
 
+// ----- Alertes CHAUFFEUR -----------------------------------------------
+// Le chauffeur s'abonne avec SON jeton (pas la clé équipe) : il ne recevra
+// que ses propres courses, jamais les alertes internes de l'équipe.
+
+export async function abonnerAlertesChauffeur(abonnement: AbonnementPush): Promise<unknown> {
+  return requete<unknown>('/notifications/chauffeur/abonner', {
+    methode: 'POST',
+    corps: abonnement,
+  });
+}
+
+export async function desabonnerAlertesChauffeur(endpoint: string): Promise<unknown> {
+  return requete<unknown>('/notifications/chauffeur/desabonner', {
+    methode: 'POST',
+    corps: { endpoint },
+  });
+}
+
+export async function testerAlertesChauffeur(): Promise<{ envoyes: number }> {
+  return requete<{ envoyes: number }>('/notifications/chauffeur/test', { methode: 'POST' });
+}
+
 /** GET /hotels?verificationStatus=pending — comptes hôtels à vérifier (équipe). */
 export async function listerHotelsEnAttente(): Promise<Hotel[]> {
   const reponse = await requete<unknown>('/hotels?verificationStatus=pending', { admin: true });
@@ -1317,6 +1339,9 @@ export const api = {
   abonnerAlertes,
   desabonnerAlertes,
   testerAlertes,
+  abonnerAlertesChauffeur,
+  desabonnerAlertesChauffeur,
+  testerAlertesChauffeur,
   majDocumentsChauffeur,
   obtenirChauffeur,
   definirMotDePasseChauffeur,

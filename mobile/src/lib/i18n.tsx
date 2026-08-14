@@ -857,6 +857,21 @@ const CHAINES = {
     en: "This browser can't receive alerts. WhatsApp messages keep arriving as usual.",
     sw: 'Kivinjari hiki hakiwezi kupokea arifa. Ujumbe wa WhatsApp unaendelea kufika.',
   },
+  alertes_chauffeur_titre: {
+    fr: '🔔 Alertes de courses',
+    en: '🔔 Ride alerts',
+    sw: '🔔 Arifa za safari',
+  },
+  alertes_chauffeur_intro: {
+    fr: "Soyez prévenu en une seconde dès qu'une course vous est attribuée, payée ou annulée — même application fermée. Vous ne recevez que VOS courses : rien des autres chauffeurs, rien de l'équipe.",
+    en: 'Be alerted within a second when a ride is assigned to you, paid or cancelled — even with the app closed. You only receive YOUR rides: nothing about other drivers, nothing from the team.',
+    sw: 'Pata taarifa ndani ya sekunde moja safari inapokabidhiwa kwako, kulipwa au kufutwa — hata programu ikiwa imefungwa. Unapokea safari ZAKO pekee: hakuna za madereva wengine, hakuna za timu.',
+  },
+  alertes_chauffeur_appareil: {
+    fr: 'Téléphone du chauffeur',
+    en: 'Driver phone',
+    sw: 'Simu ya dereva',
+  },
   alertes_nom_appareil: {
     fr: "Téléphone de l'équipe",
     en: 'Team phone',
