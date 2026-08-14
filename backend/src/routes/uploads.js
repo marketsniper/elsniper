@@ -22,13 +22,31 @@ const ALLOWED_MIME_TYPES = [
 
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10 Mo
+  // 25 Mo : les photos des appareils récents (Samsung…) dépassent
+  // facilement 10 Mo — au-delà, message clair plutôt qu'une erreur brute.
+  limits: { fileSize: 25 * 1024 * 1024 },
 });
+
+// Traduit l'erreur multer « fichier trop gros » en message compréhensible.
+function uploadUnFichier(req, res, next) {
+  upload.single('file')(req, res, (err) => {
+    if (err && err.code === 'LIMIT_FILE_SIZE') {
+      return next(
+        new HttpError(
+          400,
+          'file_too_large',
+          'Photo trop lourde (25 Mo maximum) — reprenez-la en qualité normale et réessayez'
+        )
+      );
+    }
+    next(err);
+  });
+}
 
 uploadsRouter.post(
   '/',
   requireAuth,
-  upload.single('file'),
+  uploadUnFichier,
   async (req, res, next) => {
     try {
       if (!req.file) {

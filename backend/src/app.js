@@ -62,10 +62,26 @@ export function createApp() {
     'public',
     'web'
   );
-  app.use('/web', express.static(webAppDir, { maxAge: '1h' }));
-  app.get('/web/*', (_req, res) =>
-    res.sendFile(path.join(webAppDir, 'index.html'))
+  // Cache : les assets HACHÉS (leur nom change à chaque version) peuvent
+  // être gardés longtemps ; la page HTML, le service worker et le manifest
+  // JAMAIS — sinon les tablettes/téléphones restent sur une vieille version
+  // pendant une heure après chaque correctif.
+  const sansCache = (res) => res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+  app.use(
+    '/web',
+    express.static(webAppDir, {
+      maxAge: '7d',
+      setHeaders: (res, fichier) => {
+        if (/\.(html|webmanifest)$/.test(fichier) || fichier.endsWith('service-worker.js')) {
+          sansCache(res);
+        }
+      },
+    })
   );
+  app.get('/web/*', (_req, res) => {
+    sansCache(res);
+    res.sendFile(path.join(webAppDir, 'index.html'));
+  });
 
   app.get('/health', (_req, res) => res.json({ status: 'ok' }));
   app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
