@@ -4,7 +4,6 @@
 // (Le départ/arrivée d'une course se fait par simple touche dans
 // course/[id].tsx, sans scan — voir demarrerCourse/terminerCourse.)
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import * as ImagePicker from 'expo-image-picker';
 import React, { useCallback, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -20,6 +19,7 @@ import {
   TexteErreur,
   Titre,
 } from '@/components/ui';
+import { ChoixDocument } from '@/components/ChoixDocument';
 import { api, ErreurApi, prochaineActionColis } from '@/lib/api';
 import { libelleTailleColis, useT } from '@/lib/i18n';
 import { couleurs, espaces, rayons } from '@/lib/theme';
@@ -52,6 +52,8 @@ export default function EcranScanner() {
   const scanEnCours = useRef(false);
   const [charge, setCharge] = useState(false);
   const [erreur, setErreur] = useState('');
+  // Photo de preuve choisie par le chauffeur, avant de valider l'opération.
+  const [photoPreuve, setPhotoPreuve] = useState<string | null>(null);
   const [message, setMessage] = useState('');
   const [colis, setColis] = useState<Colis | null>(null);
   const [qrColis, setQrColis] = useState('');
@@ -94,20 +96,20 @@ export default function EcranScanner() {
   );
 
   // Collecte ou livraison du colis scanné, avec photo de preuve.
+  // La photo est prise AVANT (bloc ChoixDocument ci-dessous) : sur le web,
+  // l'appareil photo ne peut s'ouvrir que sur un vrai geste du chauffeur,
+  // jamais depuis du code lancé après coup.
   const traiterColis = async (action: 'pickup' | 'deliver') => {
     if (!colis || !qrColis) return;
     setErreur('');
-    const permissionPhoto = await ImagePicker.requestCameraPermissionsAsync();
-    if (!permissionPhoto.granted) {
+    if (!photoPreuve) {
       setErreur(t('scanner_erreur_photo'));
       return;
     }
-    const photo = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.6 });
-    if (photo.canceled || !photo.assets[0]) return;
 
     setCharge(true);
     try {
-      const televersement = await api.televerser(photo.assets[0].uri);
+      const televersement = await api.televerser(photoPreuve);
       const maj =
         action === 'pickup'
           ? await api.recupererColis(colis.id, {
@@ -119,6 +121,7 @@ export default function EcranScanner() {
               photoUrl: televersement.url,
             });
       setColis(maj);
+      setPhotoPreuve(null);
       setMessage(action === 'pickup' ? t('scanner_colis_ramasse') : t('scanner_colis_livre'));
     } catch (e) {
       setErreur(e instanceof ErreurApi ? e.message : t('scanner_erreur_operation'));
@@ -200,20 +203,34 @@ export default function EcranScanner() {
         )}
         <TexteErreur>{erreur}</TexteErreur>
 
+        {action !== null && (
+          <ChoixDocument
+            camera
+            label={t('scanner_photo_titre')}
+            uri={photoPreuve}
+            onFichier={setPhotoPreuve}
+            onErreur={setErreur}
+            texteAjouter={t('scanner_photo_prendre')}
+            texteAjoute={t('scanner_photo_prise')}
+            texteChanger={t('scanner_photo_refaire')}
+          />
+        )}
         {action === 'pickup' && (
           <Bouton
             titre={t('scanner_ramasser')}
-            icone="camera-outline"
+            icone="checkmark-circle-outline"
             onPress={() => traiterColis('pickup')}
             charge={charge}
+            desactive={!photoPreuve}
           />
         )}
         {action === 'deliver' && (
           <Bouton
             titre={t('scanner_livrer')}
-            icone="camera-outline"
+            icone="checkmark-circle-outline"
             onPress={() => traiterColis('deliver')}
             charge={charge}
+            desactive={!photoPreuve}
           />
         )}
         {action === null && (

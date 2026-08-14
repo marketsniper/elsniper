@@ -781,6 +781,31 @@ const CHAINES = {
     en: 'Allow photo access to add your document.',
     sw: 'Ruhusu ufikiaji wa picha ili kuongeza nyaraka yako.',
   },
+  doc_erreur_camera: {
+    fr: "Autorisez l'appareil photo pour prendre la preuve de livraison.",
+    en: 'Allow camera access to take the delivery proof.',
+    sw: 'Ruhusu kamera ili kupiga picha ya uthibitisho wa utoaji.',
+  },
+  scanner_photo_titre: {
+    fr: 'Photo de preuve',
+    en: 'Proof photo',
+    sw: 'Picha ya uthibitisho',
+  },
+  scanner_photo_prendre: {
+    fr: 'Prendre la photo',
+    en: 'Take the photo',
+    sw: 'Piga picha',
+  },
+  scanner_photo_prise: {
+    fr: 'Photo prise',
+    en: 'Photo taken',
+    sw: 'Picha imepigwa',
+  },
+  scanner_photo_refaire: {
+    fr: 'Refaire',
+    en: 'Retake',
+    sw: 'Piga tena',
+  },
   doc_erreur_lourd: {
     fr: 'Document trop lourd (25 Mo maximum). Reprenez la photo en qualité normale.',
     en: 'Document too heavy (25 MB max). Take the photo again in normal quality.',

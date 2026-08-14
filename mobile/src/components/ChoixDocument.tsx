@@ -102,11 +102,14 @@ function ZoneFichier({
   onFichier,
   onErreur,
   libelle,
+  camera = false,
 }: {
   children: React.ReactNode;
   onFichier: (uri: string, mime: string) => void;
   onErreur: (message: string) => void;
   libelle: string;
+  /** Preuve de livraison : on veut une photo prise sur le moment. */
+  camera?: boolean;
 }) {
   const { t } = useT();
   const conteneur = useRef<View | null>(null);
@@ -122,7 +125,11 @@ function ZoneFichier({
 
     const champ = document.createElement('input');
     champ.type = 'file';
-    champ.accept = 'image/*,application/pdf';
+    champ.accept = camera ? 'image/*' : 'image/*,application/pdf';
+    // « capture » ouvre directement l'appareil photo du téléphone : une
+    // preuve de livraison doit être prise sur place, pas ressortie de la
+    // galerie.
+    if (camera) champ.setAttribute('capture', 'environment');
     champ.setAttribute('aria-label', libelle);
     Object.assign(champ.style, {
       position: 'absolute',
@@ -158,22 +165,33 @@ function ZoneFichier({
       champ.removeEventListener('change', surChoix);
       champ.remove();
     };
-  }, [libelle]);
+  }, [libelle, camera]);
 
-  // Application installée : sélecteur de photos du téléphone.
+  // Application installée : appareil photo (preuve) ou galerie du téléphone.
+  //
+  // ATTENTION : on NE demande PAS l'autorisation « accès aux photos » avant
+  // d'ouvrir la galerie. Le sélecteur système n'en a pas besoin (il ne rend
+  // que le fichier choisi), et la demander enfermait le client : un seul
+  // « Ne pas autoriser » et le bouton refusait de fonctionner à jamais.
+  // L'appareil photo, lui, exige bien une autorisation.
   const choisirSurTelephone = async () => {
     onErreur('');
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      onErreur(t('client_erreur_photos'));
-      return;
-    }
-    const resultat = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      quality: 0.7,
-    });
-    if (!resultat.canceled && resultat.assets[0]) {
-      onFichier(resultat.assets[0].uri, resultat.assets[0].mimeType ?? 'image/jpeg');
+    try {
+      if (camera) {
+        const permission = await ImagePicker.requestCameraPermissionsAsync();
+        if (!permission.granted) {
+          onErreur(t('doc_erreur_camera'));
+          return;
+        }
+      }
+      const resultat = camera
+        ? await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.6 })
+        : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.7 });
+      if (!resultat.canceled && resultat.assets[0]) {
+        onFichier(resultat.assets[0].uri, resultat.assets[0].mimeType ?? 'image/jpeg');
+      }
+    } catch {
+      onErreur(t('doc_erreur_lecture'));
     }
   };
 
@@ -203,6 +221,7 @@ export function ChoixDocument({
   texteAjouter,
   texteAjoute,
   texteChanger,
+  camera = false,
 }: {
   uri: string | null;
   onFichier: (uri: string) => void;
@@ -211,6 +230,8 @@ export function ChoixDocument({
   texteAjouter: string;
   texteAjoute: string;
   texteChanger: string;
+  /** Preuve de livraison : photo prise sur le moment. */
+  camera?: boolean;
 }) {
   const [typeMime, setTypeMime] = useState<string | null>(null);
   const recevoir = (adresse: string, mime: string) => {
@@ -236,13 +257,13 @@ export function ChoixDocument({
               <Ionicons name="checkmark-circle" size={18} color={couleurs.succes} />
               <Text style={styles.documentOk}>{texteAjoute}</Text>
             </View>
-            <ZoneFichier onFichier={recevoir} onErreur={onErreur} libelle={texteChanger}>
+            <ZoneFichier onFichier={recevoir} onErreur={onErreur} libelle={texteChanger} camera={camera}>
               <Text style={styles.changer}>{texteChanger}</Text>
             </ZoneFichier>
           </View>
         </View>
       ) : (
-        <ZoneFichier onFichier={recevoir} onErreur={onErreur} libelle={texteAjouter}>
+        <ZoneFichier onFichier={recevoir} onErreur={onErreur} libelle={texteAjouter} camera={camera}>
           <Bouton
             titre={texteAjouter}
             icone="cloud-upload-outline"
