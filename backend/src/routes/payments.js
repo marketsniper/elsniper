@@ -9,6 +9,7 @@ import { capturePaypalOrder } from '../services/paypalService.js';
 import { config } from '../config.js';
 import { annulerReservationsImpayees } from './rides.js';
 import { alerterCoursePayeeParId } from '../services/alertesChauffeur.js';
+import { aValiderALaMain } from '../services/paiementManuel.js';
 
 const router = Router();
 
@@ -209,7 +210,7 @@ router.post(
     let status;
     if (reference.startsWith('PAYPAL-')) {
       status = await capturePaypalOrder(reference.slice('PAYPAL-'.length));
-    } else if (reference.startsWith('WHATSAPP-') || reference.startsWith('PAYPALME-')) {
+    } else if (aValiderALaMain(reference)) {
       if (config.env === 'production' && !isAdmin(req)) {
         throw new HttpError(
           403,

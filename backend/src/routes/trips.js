@@ -16,6 +16,7 @@ import {
 import { assertHotelVerified } from './hotels.js';
 import { randomUUID } from 'node:crypto';
 import { tauxRemboursement } from '../services/annulationService.js';
+import { alertePaiementCourse, aValiderALaMain } from '../services/paiementManuel.js';
 import { notifierEquipe } from '../services/emailService.js';
 import {
   alerterCourseAnnulee,
@@ -509,6 +510,18 @@ router.post(
        RETURNING *`,
       [trip.id, trip.price, trip.currency, reference, paymentLink]
     );
+
+    // Paiement que l'ÉQUIPE devra encaisser puis valider à la main : elle est
+    // prévenue à la seconde où le client demande à payer. Avant, elle ne
+    // l'apprenait que si le client pensait à envoyer son message WhatsApp —
+    // et le paiement pouvait dormir des heures dans « à valider ».
+    // Les paiements qui se confirment tout seuls (Pesapal, capture PayPal)
+    // n'ont rien à annoncer : personne n'a de geste à faire.
+    if (aValiderALaMain(reference)) {
+      const alerte = alertePaiementCourse(trip);
+      notifierEquipe(alerte.sujet, alerte.texte);
+    }
+
     // payment_method (non stocké) : l'app affiche « J'ai payé — vérifier »
     // pour les circuits vérifiables (PayPal capture, Pesapal statut réel).
     res.status(201).json({

@@ -12,6 +12,7 @@ import { createPaymentOrder, isStubMode } from '../services/pesapalService.js';
 import { generatePackageQr } from '../services/qrService.js';
 import { buildTeamNotificationLink, packageRequestMessage } from '../services/whatsappService.js';
 import { notifierEquipe } from '../services/emailService.js';
+import { alertePaiementColis, aValiderALaMain } from '../services/paiementManuel.js';
 import { assertHotelVerified } from './hotels.js';
 
 const router = Router();
@@ -459,6 +460,15 @@ router.post(
        RETURNING *`,
       [pkg.id, pkg.price, pkg.currency, reference, paymentLink]
     );
+
+    // Paiement que l'équipe devra encaisser puis valider : son téléphone
+    // sonne tout de suite, sans dépendre du message que le client pense à
+    // envoyer.
+    if (aValiderALaMain(reference)) {
+      const alerte = alertePaiementColis(pkg);
+      notifierEquipe(alerte.sujet, alerte.texte);
+    }
+
     res.status(201).json({
       ...rows[0],
       payment_method: paypal?.method ?? (isStubMode() ? 'manual' : 'pesapal'),
