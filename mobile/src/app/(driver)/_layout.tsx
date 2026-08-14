@@ -5,6 +5,7 @@ import { Tabs } from 'expo-router';
 import React from 'react';
 import type { ColorValue } from 'react-native';
 
+import { useRetourSiDeconnecte } from '@/lib/auth';
 import { useT } from '@/lib/i18n';
 import { couleurs } from '@/lib/theme';
 
@@ -15,6 +16,7 @@ function icone(nom: React.ComponentProps<typeof Ionicons>['name']) {
 }
 
 export default function LayoutChauffeur() {
+  useRetourSiDeconnecte();
   const { t } = useT();
   return (
     <Tabs

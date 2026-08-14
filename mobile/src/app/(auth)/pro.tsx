@@ -21,7 +21,7 @@ import {
   Titre,
 } from '@/components/ui';
 import { api, ErreurApi } from '@/lib/api';
-import { useAuth } from '@/lib/auth';
+import { useAuth, useRetourSiDeconnecte } from '@/lib/auth';
 import { useT } from '@/lib/i18n';
 import { couleurs, espaces } from '@/lib/theme';
 import { champ, type StatutVerification } from '@/lib/types';
@@ -30,6 +30,7 @@ import { champ, type StatutVerification } from '@/lib/types';
 const WHATSAPP_EQUIPE = 'https://wa.me/255666241749';
 
 export default function EcranPro() {
+  useRetourSiDeconnecte();
   const router = useRouter();
   const { session, majSession, deconnexion } = useAuth();
   const { t } = useT();
