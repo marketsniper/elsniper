@@ -39,7 +39,10 @@ cp "$RACINE/backend/pwa/"* "$RACINE/backend/public/web/"
 sed -i 's|  <link rel="icon" href="/web/favicon.ico" /></head>|  <link rel="icon" href="/web/favicon.ico" />\n    <link rel="manifest" href="/web/manifest.webmanifest" />\n    <meta name="theme-color" content="#E4572E" />\n    <link rel="apple-touch-icon" href="/web/apple-touch-icon.png" />\n    <meta name="apple-mobile-web-app-capable" content="yes" />\n    <meta name="apple-mobile-web-app-status-bar-style" content="default" />\n    <meta name="apple-mobile-web-app-title" content="zanziGo" />\n  </head>|' "$INDEX"
 
 # Enregistrement du service worker + bouton « Installer » en fin de <body>.
-sed -i 's|</body>|  <script>\n    if ("serviceWorker" in navigator) {\n      window.addEventListener("load", function () {\n        navigator.serviceWorker.register("/web/service-worker.js");\n      });\n    }\n  </script>\n  <script src="/web/installation.js" defer></script>\n</body>|' "$INDEX"
+# mise-a-jour.js est appelé depuis la PAGE, qui est vérifiée à chaque
+# ouverture : c'est le seul chemin qui atteint à coup sûr un appareil resté
+# en arrière, même s'il garde encore l'ancien installation.js en mémoire.
+sed -i 's|</body>|  <script>\n    if ("serviceWorker" in navigator) {\n      window.addEventListener("load", function () {\n        navigator.serviceWorker.register("/web/service-worker.js");\n      });\n    }\n  </script>\n  <script src="/web/mise-a-jour.js" defer></script>\n  <script src="/web/installation.js" defer></script>\n</body>|' "$INDEX"
 
 # ===== CARTE D'IDENTITÉ DE LA VERSION EN LIGNE =====
 # Un fichier minuscule, jamais mis en cache, qui dit quelle version le serveur
@@ -75,4 +78,5 @@ grep -q "$ENTREE" "$INDEX" || {
 }
 grep -q 'service-worker.js' "$INDEX" || { echo "ERREUR : enregistrement SW non appliqué" >&2; exit 1; }
 grep -q 'installation.js' "$INDEX" || { echo "ERREUR : bouton installer non appliqué" >&2; exit 1; }
+grep -q 'mise-a-jour.js' "$INDEX" || { echo "ERREUR : mise à jour automatique non appliquée" >&2; exit 1; }
 echo "OK — backend/public/web rafraîchi, PWA incluse (API: $API_URL)"

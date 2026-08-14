@@ -17,6 +17,7 @@ import {
   SelecteurLangue,
   SousTitre,
 } from '@/components/ui';
+import { CarteVersion } from '@/components/Version';
 import { api, type CreditHotel, type FideliteHotel } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useT } from '@/lib/i18n';
@@ -360,6 +361,8 @@ export default function EcranProfil() {
           onPress={() => router.push('/(auth)/hotel-inscription')}
         />
       )}
+
+      <CarteVersion />
 
       <Pressable
         onPress={seDeconnecter}

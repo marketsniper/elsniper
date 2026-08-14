@@ -12,6 +12,7 @@ import {
   SelecteurLangue,
   SousTitre,
 } from '@/components/ui';
+import { CarteVersion } from '@/components/Version';
 import { api, type StatsChauffeur } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useT } from '@/lib/i18n';
@@ -161,6 +162,8 @@ export default function EcranCompteChauffeur() {
         <Text style={styles.labelLangue}>{t('commun_langue')}</Text>
         <SelecteurLangue compact />
       </Carte>
+
+      <CarteVersion />
 
       <Pressable
         onPress={seDeconnecter}

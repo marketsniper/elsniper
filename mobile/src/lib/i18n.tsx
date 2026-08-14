@@ -852,6 +852,21 @@ const CHAINES = {
     en: 'Version {version} — tap here if the app seems stuck',
     sw: 'Toleo {version} — gusa hapa ikiwa programu imekwama',
   },
+  version_carte_titre: {
+    fr: 'Version de l\'application',
+    en: 'App version',
+    sw: 'Toleo la programu',
+  },
+  version_carte_texte: {
+    fr: 'Vous utilisez la version {version}. L\'application se met à jour toute seule ; si un écran semble figé ou périmé, ce bouton réinstalle la dernière version. Vous restez connecté, rien n\'est perdu.',
+    en: 'You are running version {version}. The app updates itself; if a screen looks frozen or out of date, this button reinstalls the latest version. You stay logged in, nothing is lost.',
+    sw: 'Unatumia toleo {version}. Programu hujisasisha yenyewe; skrini ikionekana imeganda au ni ya zamani, kitufe hiki husakinisha toleo jipya. Unabaki umeingia, hakuna kinachopotea.',
+  },
+  version_bouton: {
+    fr: 'Installer la dernière version',
+    en: 'Install the latest version',
+    sw: 'Sakinisha toleo jipya',
+  },
   version_forcer: {
     fr: '⟳ Appuyez encore pour installer la dernière version',
     en: '⟳ Tap again to install the latest version',
@@ -1430,9 +1445,9 @@ const CHAINES = {
     sw: 'Hakuna cha kulipa bado: tunakupangia teksi (kawaida dakika chache). Itakapothibitishwa, kitufe cha kulipa {montant} kitaonekana hapa.',
   },
   trip_paiement_instructions: {
-    fr: 'Votre taxi est confirmé — il reste {montant} à régler. Appuyez sur « Payer » : votre message part tout prêt à l\'équipe (espèces ou mobile money). Dès qu\'elle encaisse, « Course payée » s\'affiche ici.',
-    en: 'Your taxi is confirmed — {montant} left to pay. Tap "Pay": your message goes ready-made to the team (cash or mobile money). Once received, "Ride paid" appears here.',
-    sw: 'Teksi yako imethibitishwa — imebaki {montant} kulipa. Bonyeza "Lipa": ujumbe wako unakwenda tayari kwa timu (pesa taslimu au mobile money). Ikipokelewa, "Safari imelipwa" itaonekana hapa.',
+    fr: 'Votre taxi est confirmé — il reste {montant} à régler. Vous payez comme vous voulez : carte bancaire, portefeuille mobile ou espèces. Appuyez sur « Payer » : votre message part tout prêt à l\'équipe. Dès qu\'elle encaisse, « Course payée » s\'affiche ici.',
+    en: 'Your taxi is confirmed — {montant} left to pay. Pay however you like: credit card, mobile wallet or cash. Tap "Pay": your message goes ready-made to the team. Once received, "Ride paid" appears here.',
+    sw: 'Teksi yako imethibitishwa — imebaki {montant} kulipa. Lipa upendavyo: kadi ya benki, pochi ya simu au pesa taslimu. Bonyeza "Lipa": ujumbe wako unakwenda tayari kwa timu. Ikipokelewa, "Safari imelipwa" itaonekana hapa.',
   },
   place_fiche_titre: { fr: 'Ma place', en: 'My seat', sw: 'Kiti changu' },
   place_depart: { fr: 'Départ', en: 'Departure', sw: 'Kuondoka' },
@@ -1442,9 +1457,9 @@ const CHAINES = {
   place_etape_depart: { fr: 'En route', en: 'On the way', sw: 'Njiani' },
   place_etape_terminee: { fr: 'Trajet terminé', en: 'Trip completed', sw: 'Safari imekamilika' },
   place_paiement_instructions: {
-    fr: 'Il reste {montant} à régler. Payez en espèces ou par mobile money à l\'équipe zanziGo : appuyez ci-dessous, votre message part tout prêt. Dès que l\'équipe encaisse, « Paiement validé » s\'affiche ici.',
-    en: '{montant} left to pay. Pay in cash or by mobile money to the zanziGo team: tap below, your message is ready to send. As soon as the team receives it, "Payment confirmed" appears here.',
-    sw: 'Imebaki {montant} kulipa. Lipa kwa pesa taslimu au mobile money kwa timu ya zanziGo: bonyeza hapa chini, ujumbe wako uko tayari. Timu ikipokea, "Malipo yamethibitishwa" itaonekana hapa.',
+    fr: 'Il reste {montant} à régler. Payez l\'équipe zanziGo par carte bancaire, portefeuille mobile ou en espèces : appuyez ci-dessous, votre message part tout prêt. Dès que l\'équipe encaisse, « Paiement validé » s\'affiche ici.',
+    en: '{montant} left to pay. Pay the zanziGo team by credit card, mobile wallet or cash: tap below, your message is ready to send. As soon as the team receives it, "Payment confirmed" appears here.',
+    sw: 'Imebaki {montant} kulipa. Lipa timu ya zanziGo kwa kadi ya benki, pochi ya simu au pesa taslimu: bonyeza hapa chini, ujumbe wako uko tayari. Timu ikipokea, "Malipo yamethibitishwa" itaonekana hapa.',
   },
   place_payer_bouton: {
     fr: 'Régler ma place ({montant})',

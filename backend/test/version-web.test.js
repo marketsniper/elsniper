@@ -34,12 +34,29 @@ describe('Version web : le téléphone ne peut pas rester en arrière', () => {
     );
   });
 
-  it('page, service worker et script de dépannage sont revalidés à chaque ouverture', async () => {
-    for (const chemin of ['/web/', '/web/service-worker.js', '/web/installation.js']) {
+  it('page, service worker et scripts de dépannage sont revalidés à chaque ouverture', async () => {
+    for (const chemin of [
+      '/web/',
+      '/web/service-worker.js',
+      '/web/mise-a-jour.js',
+      '/web/installation.js',
+    ]) {
       const res = await request(app).get(chemin);
       assert.equal(res.status, 200, `${chemin} introuvable`);
       assert.ok(revalide(res), `${chemin} gardé en cache : ${res.headers['cache-control']}`);
     }
+  });
+
+  it('la page appelle le script de mise à jour, seul chemin sûr vers un appareil en retard', async () => {
+    // Un appareil peut garder installation.js une semaine en mémoire ; la
+    // PAGE, elle, est revérifiée à chaque ouverture. C'est donc par elle que
+    // la mise à jour automatique doit arriver.
+    const page = await request(app).get('/web/');
+    assert.ok(page.text.includes('/web/mise-a-jour.js'), 'script de mise à jour absent de la page');
+    const script = await request(app).get('/web/mise-a-jour.js');
+    assert.ok(/version\.json/.test(script.text), 'la comparaison de version a disparu');
+    assert.ok(/zanzigoForcerMiseAJour/.test(script.text), 'la remise à neuf a disparu');
+    assert.ok(/visibilitychange/.test(script.text), 'le contrôle au retour à l’écran a disparu');
   });
 
   it('les fichiers dont le nom change restent gardés longtemps', async () => {
