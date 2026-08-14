@@ -1119,13 +1119,23 @@ export async function bannirClient(id: string, banned: boolean): Promise<Utilisa
 
 /** POST /uploads (multipart, champ `file`) → {url, size, mimeType}. */
 export async function televerser(uri: string): Promise<{ url: string }> {
-  const nom = uri.split('/').pop() ?? 'photo.jpg';
-  const extension = nom.includes('.') ? nom.split('.').pop()!.toLowerCase() : 'jpg';
+  const brut = uri.split('/').pop() ?? 'photo.jpg';
+  const extension = brut.includes('.') ? brut.split('.').pop()!.toLowerCase() : 'jpg';
+  const nom = brut.includes('.') ? brut : `${brut}.jpg`;
   const mime =
     extension === 'png' ? 'image/png' : extension === 'webp' ? 'image/webp' : 'image/jpeg';
   const formData = new FormData();
-  // React Native accepte { uri, name, type } comme valeur multipart.
-  formData.append('file', { uri, name: nom, type: mime } as unknown as Blob);
+  if (uri.startsWith('blob:') || uri.startsWith('data:')) {
+    // VERSION WEB (PWA) : le sélecteur d'images donne une URI blob:/data: —
+    // l'objet { uri, name, type } de React Native n'y est PAS un fichier
+    // (le serveur répondait « Champ "file" manquant ») : on récupère le
+    // vrai contenu et on l'envoie comme un fichier de navigateur.
+    const contenu = await (await fetch(uri)).blob();
+    formData.append('file', new File([contenu], nom, { type: contenu.type || mime }));
+  } else {
+    // Application native : React Native accepte { uri, name, type }.
+    formData.append('file', { uri, name: nom, type: mime } as unknown as Blob);
+  }
   const reponse = await requete<Record<string, unknown>>('/uploads', {
     methode: 'POST',
     formData,
