@@ -791,6 +791,11 @@ const CHAINES = {
     en: '⟳ Tap again to install the latest version',
     sw: '⟳ Gusa tena kusakinisha toleo jipya',
   },
+  doc_secours: {
+    fr: 'Le bouton ci-dessus ne réagit pas ? Utilisez celui-ci :',
+    en: "Button above not responding? Use this one:",
+    sw: 'Kitufe cha juu hakifanyi kazi? Tumia hiki:',
+  },
   doc_erreur_camera: {
     fr: "Autorisez l'appareil photo pour prendre la preuve de livraison.",
     en: 'Allow camera access to take the delivery proof.',

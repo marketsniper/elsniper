@@ -139,8 +139,38 @@ function ZoneFichier({
       height: '100%',
       opacity: '0',
       cursor: 'pointer',
-      zIndex: '3',
     });
+
+    // ÉTIQUETTE (<label>) posée par-dessus le bouton, le champ à l'intérieur.
+    // C'est LE mécanisme que tous les navigateurs, Safari compris, savent
+    // traiter : appuyer sur une étiquette active le champ qu'elle contient,
+    // nativement, sans passer par le moindre code. Un champ transparent seul
+    // suffit sur Android mais reste capricieux sur iPhone ; l'étiquette, non.
+    const etiquette = document.createElement('label');
+    etiquette.appendChild(champ);
+    Object.assign(etiquette.style, {
+      position: 'absolute',
+      top: '0',
+      left: '0',
+      width: '100%',
+      height: '100%',
+      display: 'block',
+      cursor: 'pointer',
+      zIndex: '3',
+      // Safari iOS ignore les appuis sur un élément sans fond : une couleur
+      // totalement transparente suffit à lui donner une surface tactile.
+      backgroundColor: 'rgba(0,0,0,0)',
+      WebkitTapHighlightColor: 'transparent',
+    });
+
+    // Dernier filet : si jamais l'activation native n'aboutit pas, on ouvre
+    // le sélecteur nous-mêmes — depuis un VRAI appui, donc autorisé partout.
+    const surAppui = (evenement: Event) => {
+      if (evenement.target === champ) return; // déjà pris en charge
+      evenement.preventDefault();
+      champ.click();
+    };
+    etiquette.addEventListener('click', surAppui);
 
     const surChoix = async () => {
       const fichier = champ.files?.[0];
@@ -160,10 +190,11 @@ function ZoneFichier({
     };
 
     champ.addEventListener('change', surChoix);
-    hote.appendChild(champ);
+    hote.appendChild(etiquette);
     return () => {
       champ.removeEventListener('change', surChoix);
-      champ.remove();
+      etiquette.removeEventListener('click', surAppui);
+      etiquette.remove();
     };
   }, [libelle, camera]);
 
@@ -210,6 +241,61 @@ function ZoneFichier({
 }
 
 /**
+ * Champ fichier NATIF, visible tel que le navigateur le dessine.
+ *
+ * Le bouton principal est dessiné par l'application ; s'il ne réagissait pas
+ * sur un navigateur particulier, le client se retrouvait sans issue. Ce
+ * champ-ci n'est stylé par personne : c'est le contrôle du navigateur
+ * lui-même, celui qui marche partout, y compris sur les vieux Safari.
+ */
+function SecoursNatif({
+  onFichier,
+  onErreur,
+  camera,
+}: {
+  onFichier: (uri: string, mime: string) => void;
+  onErreur: (message: string) => void;
+  camera: boolean;
+}) {
+  const hote = useRef<View | null>(null);
+  const rappels = useRef({ onFichier, onErreur });
+  rappels.current = { onFichier, onErreur };
+
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+    const noeud = hote.current as unknown as HTMLElement | null;
+    if (!noeud || typeof noeud.appendChild !== 'function') return;
+    const champ = document.createElement('input');
+    champ.type = 'file';
+    champ.accept = camera ? 'image/*' : 'image/*,application/pdf';
+    if (camera) champ.setAttribute('capture', 'environment');
+    Object.assign(champ.style, { fontSize: '15px', maxWidth: '100%' });
+    const surChoix = async () => {
+      const fichier = champ.files?.[0];
+      champ.value = '';
+      if (!fichier) return;
+      try {
+        const prepare = await preparerFichierWeb(fichier);
+        rappels.current.onFichier(prepare.uri, prepare.mime);
+      } catch (e) {
+        rappels.current.onErreur(
+          e instanceof Error && e.message === 'trop_lourd' ? 'trop_lourd' : 'illisible'
+        );
+      }
+    };
+    champ.addEventListener('change', surChoix);
+    noeud.appendChild(champ);
+    return () => {
+      champ.removeEventListener('change', surChoix);
+      champ.remove();
+    };
+  }, [camera]);
+
+  if (Platform.OS !== 'web') return null;
+  return <View ref={hote} collapsable={false} style={styles.secours} />;
+}
+
+/**
  * Bloc complet « joindre un document » : bouton tant que rien n'est joint,
  * puis aperçu du document avec la possibilité de le changer.
  */
@@ -233,6 +319,7 @@ export function ChoixDocument({
   /** Preuve de livraison : photo prise sur le moment. */
   camera?: boolean;
 }) {
+  const { t } = useT();
   const [typeMime, setTypeMime] = useState<string | null>(null);
   // Le message d'erreur s'affiche ICI, sous le bouton. Placé en bas du
   // formulaire, il tombait hors de l'écran : le client appuyait, ne voyait
@@ -282,6 +369,18 @@ export function ChoixDocument({
             onPress={() => {}}
           />
         </ZoneFichier>
+      )}
+      {!uri && Platform.OS === 'web' && (
+        <>
+          <Text style={styles.secoursTexte}>{t('doc_secours')}</Text>
+          <SecoursNatif
+            onFichier={recevoir}
+            onErreur={(code) =>
+              signaler(code === 'trop_lourd' ? t('doc_erreur_lourd') : t('doc_erreur_lecture'))
+            }
+            camera={camera}
+          />
+        </>
       )}
       {!!erreurLocale && (
         <View style={styles.ligneErreur}>
@@ -345,6 +444,14 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: couleurs.primaire,
     paddingVertical: espaces.xs,
+  },
+  secours: {
+    paddingVertical: espaces.xs,
+  },
+  secoursTexte: {
+    fontSize: 12.5,
+    color: couleurs.texteSecondaire,
+    fontStyle: 'italic',
   },
   ligneErreur: {
     flexDirection: 'row',
