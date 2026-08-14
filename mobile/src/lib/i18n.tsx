@@ -1088,6 +1088,17 @@ const CHAINES = {
     sw: 'Jiunge nami zanziGo (teksi na mizigo Zanzibar)! Jisajili kwa msimbo wangu {code} tupate punguzo sote 🚕🌴 https://zanzigo-api.onrender.com/web',
   },
   equipe_stat_attentes: { fr: 'Liste d\'attente', en: 'Waitlist', sw: 'Orodha ya kusubiri' },
+  equipe_courses_passees: {
+    fr: 'Courses passées',
+    en: 'Past rides',
+    sw: 'Safari zilizopita',
+  },
+  equipe_hier: { fr: 'Hier', en: 'Yesterday', sw: 'Jana' },
+  equipe_jour_compte: {
+    fr: '{n} course·s',
+    en: '{n} ride·s',
+    sw: 'safari {n}',
+  },
   equipe_attentes_intro: {
     fr: 'Clients qui cherchent un taxi partagé sans annonce disponible : recontactez-les dès qu\'un chauffeur poste le trajet (vous êtes aussi prévenu automatiquement).',
     en: 'Clients looking for a shared taxi with no posted ride: contact them as soon as a driver posts the route (you are also notified automatically).',

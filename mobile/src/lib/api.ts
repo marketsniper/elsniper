@@ -971,8 +971,12 @@ export function prochaineActionColis(statut: StatutColis | undefined): 'pickup' 
 // ---------------------------------------------------------------------------
 
 /** GET /trips?status= — toutes les courses d'un statut donné (équipe). */
-export async function listerCoursesEquipe(statut: StatutTrajet): Promise<Trajet[]> {
-  const reponse = await requete<unknown>(`/trips?status=${statut}`, { admin: true });
+export async function listerCoursesEquipe(statut?: StatutTrajet): Promise<Trajet[]> {
+  // Sans statut : TOUTES les courses (limite 200) — le tableau équipe trie
+  // lui-même « à traiter » et « courses passées » (rangées par date).
+  const reponse = await requete<unknown>(statut ? `/trips?status=${statut}` : '/trips', {
+    admin: true,
+  });
   return commeListe<Trajet>(reponse, 'trips');
 }
 

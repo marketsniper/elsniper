@@ -18,6 +18,7 @@ import { Alert, Linking, Platform, Pressable, StyleSheet, Text, View } from 'rea
 import { Selecteur } from '@/components/Selecteur';
 import {
   Badge,
+  BadgeStatutTrajet,
   Bouton,
   Carte,
   Champ,
@@ -36,9 +37,11 @@ import {
   formaterMontant,
   formaterPrix,
   totalEnTzs,
+  trajetExpire,
   type Chauffeur,
   type Hotel,
   type PaiementEquipe,
+  type StatutTrajet,
   type Trajet,
   type TypeTrajet,
   type Utilisateur,
@@ -67,7 +70,7 @@ function libelleChauffeur(chauffeur: Chauffeur): string {
 }
 
 export default function EcranEquipe() {
-  const { t } = useT();
+  const { t, langue } = useT();
   // null = lecture du stockage en cours ; '' = pas de clé enregistrée.
   const [cle, setCle] = useState<string | null>(null);
   const [saisie, setSaisie] = useState('');
@@ -108,13 +111,15 @@ export default function EcranEquipe() {
   const [datesDocs, setDatesDocs] = useState<Record<string, { permis: string; assurance: string }>>({});
   // Sauvegarde de la base : téléchargement en cours.
   const [sauvegardeEnCours, setSauvegardeEnCours] = useState(false);
+  // Courses passées : jours dépliés dans l'historique (repliés par défaut).
+  const [joursOuverts, setJoursOuverts] = useState<Record<string, boolean>>({});
 
   const charger = useCallback(async () => {
     setErreur('');
     try {
       const [lesCourses, lesPaiements, lesCandidats, lesClients, lesHotels, lesChauffeurs, lesAbonnes, lesVerifies, lesRemboursements, lesRecus, lesAttentes] =
         await Promise.all([
-          api.listerCoursesEquipe('requested'),
+          api.listerCoursesEquipe(),
           api.listerPaiementsEquipe(),
           api.listerCandidaturesChauffeurs(),
           api.listerClientsEnAttente(),
@@ -402,6 +407,42 @@ export default function EcranEquipe() {
     else groupesTaxis.push({ ville, liste: [chauffeur] });
   }
 
+  // Courses : les demandes fraîches « à traiter » sont séparées des courses
+  // PASSÉES (terminées, annulées, payées, demandes expirées), rangées par
+  // jour — l'écran reste léger, l'historique se déplie à la demande.
+  const dateCourse = (c: Trajet) =>
+    String(champ(c, 'scheduled_at', 'scheduledAt', 'created_at', 'createdAt') ?? '');
+  const coursesATraiter = courses.filter(
+    (c) => champ<StatutTrajet>(c, 'status', 'statut') === 'requested' && !trajetExpire(c)
+  );
+  const coursesPassees = [...courses]
+    .filter((c) => !coursesATraiter.includes(c))
+    .sort((a, b) => dateCourse(b).localeCompare(dateCourse(a)));
+  const localeDate = langue === 'fr' ? 'fr-FR' : langue === 'sw' ? 'sw-TZ' : 'en-GB';
+  // Clé stable AAAA-MM-JJ du jour (heure de Zanzibar).
+  const cleJour = (c: Trajet) =>
+    new Date(dateCourse(c)).toLocaleDateString('fr-CA', { timeZone: 'Africa/Dar_es_Salaam' });
+  const libelleJour = (jour: string) => {
+    const aujourdHui = new Date().toLocaleDateString('fr-CA', { timeZone: 'Africa/Dar_es_Salaam' });
+    const hier = new Date(Date.now() - 86400000).toLocaleDateString('fr-CA', {
+      timeZone: 'Africa/Dar_es_Salaam',
+    });
+    if (jour === aujourdHui) return t('sel_aujourdhui');
+    if (jour === hier) return t('equipe_hier');
+    return new Date(`${jour}T12:00:00`).toLocaleDateString(localeDate, {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+    });
+  };
+  const groupesPasses: { jour: string; liste: Trajet[] }[] = [];
+  for (const course of coursesPassees) {
+    const jour = cleJour(course);
+    const dernier = groupesPasses[groupesPasses.length - 1];
+    if (dernier && dernier.jour === jour) dernier.liste.push(course);
+    else groupesPasses.push({ jour, liste: [course] });
+  }
+
   // Les six cases du menu — compteur ORANGE dès qu'une action attend
   // (paiements pas encore encaissés compris : le vert est réservé aux
   // paiements par crédit hôtel, déjà dans la caisse).
@@ -412,7 +453,7 @@ export default function EcranEquipe() {
     n: number;
     action: boolean;
   }[] = [
-    { cle: 'courses', label: t('equipe_stat_courses'), icone: 'car-outline', n: courses.length, action: true },
+    { cle: 'courses', label: t('equipe_stat_courses'), icone: 'car-outline', n: coursesATraiter.length, action: true },
     { cle: 'attentes', label: t('equipe_stat_attentes'), icone: 'notifications-outline', n: attentes.filter((a) => !a.matched_at).length, action: true },
     { cle: 'paiements', label: t('equipe_stat_paiements'), icone: 'cash-outline', n: paiements.length + remboursements.length, action: true },
     { cle: 'candidatures', label: t('equipe_stat_candidatures'), icone: 'document-text-outline', n: candidats.length, action: true },
@@ -591,14 +632,14 @@ export default function EcranEquipe() {
       {section === 'courses' && (
         <>
       <Text style={styles.titreSection}>
-        {t('equipe_courses')} ({courses.length})
+        {t('equipe_courses')} ({coursesATraiter.length})
       </Text>
-      {courses.length === 0 && (
+      {coursesATraiter.length === 0 && (
         <EncartInfo icone="checkmark-circle-outline" ton="succes">
           {t('equipe_courses_vide')}
         </EncartInfo>
       )}
-      {courses.map((course) => {
+      {coursesATraiter.map((course) => {
         const type = champ<TypeTrajet>(course, 'trip_type', 'tripType');
         const nomClient = champ<string>(course, 'client_name', 'clientName');
         return (
@@ -671,6 +712,68 @@ export default function EcranEquipe() {
           </Carte>
         );
       })}
+
+      {/* Courses PASSÉES : rangées par jour, repliées par défaut — on
+          touche une date pour voir le détail du jour. */}
+      {groupesPasses.length > 0 && (
+        <>
+          <Text style={styles.titreSection}>
+            🗂 {t('equipe_courses_passees')} ({coursesPassees.length})
+          </Text>
+          {groupesPasses.map((groupe) => {
+            const ouvert = !!joursOuverts[groupe.jour];
+            return (
+              <View key={groupe.jour}>
+                <Pressable
+                  onPress={() =>
+                    setJoursOuverts((prev) => ({ ...prev, [groupe.jour]: !ouvert }))
+                  }
+                  accessibilityRole="button"
+                  style={({ pressed }) => [styles.enTeteJour, pressed && { opacity: 0.7 }]}
+                >
+                  <Ionicons
+                    name={ouvert ? 'chevron-down' : 'chevron-forward'}
+                    size={16}
+                    color={couleurs.primaireFonce}
+                  />
+                  <Text style={styles.texteJour}>{libelleJour(groupe.jour)}</Text>
+                  <Text style={styles.compteJour}>
+                    {t('equipe_jour_compte', { n: groupe.liste.length })}
+                  </Text>
+                </Pressable>
+                {ouvert &&
+                  groupe.liste.map((course) => {
+                    const statut = champ<StatutTrajet>(course, 'status', 'statut');
+                    const heure = new Date(dateCourse(course)).toLocaleTimeString(localeDate, {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      timeZone: 'Africa/Dar_es_Salaam',
+                    });
+                    const chauffeurCourse = champ<string>(course, 'driver_name', 'driverName');
+                    return (
+                      <View key={course.id} style={styles.lignePassee}>
+                        <View style={styles.entetePassee}>
+                          <Text style={styles.itineraire} numberOfLines={1}>
+                            {String(champ(course, 'pickup_location', 'pickupLocation') ?? '?')} →{' '}
+                            {String(champ(course, 'dropoff_location', 'dropoffLocation') ?? '?')}
+                          </Text>
+                          <Text style={styles.prixPassee}>{formaterPrix(course)}</Text>
+                        </View>
+                        <View style={styles.piedPassee}>
+                          <Text style={styles.detail}>
+                            {heure}
+                            {chauffeurCourse ? ` · 🚕 ${chauffeurCourse}` : ''}
+                          </Text>
+                          {statut && <BadgeStatutTrajet statut={statut} />}
+                        </View>
+                      </View>
+                    );
+                  })}
+              </View>
+            );
+          })}
+        </>
+      )}
 
         </>
       )}
@@ -1344,6 +1447,51 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   ligneDetails: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: espaces.m,
+  },
+  // Historique des courses passées : en-têtes de jour + lignes compactes.
+  enTeteJour: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: espaces.s,
+    paddingVertical: espaces.m,
+    paddingHorizontal: espaces.s,
+  },
+  texteJour: {
+    flex: 1,
+    fontSize: 14.5,
+    fontWeight: '700',
+    color: couleurs.primaireFonce,
+    textTransform: 'capitalize',
+  },
+  compteJour: {
+    fontSize: 12.5,
+    fontWeight: '600',
+    color: couleurs.texteSecondaire,
+  },
+  lignePassee: {
+    backgroundColor: couleurs.carteTranslucide,
+    borderRadius: rayons.bouton,
+    padding: espaces.m,
+    marginBottom: espaces.s,
+    gap: 4,
+  },
+  entetePassee: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: espaces.m,
+  },
+  prixPassee: {
+    fontSize: 13.5,
+    fontWeight: '800',
+    color: couleurs.primaire,
+    flexShrink: 0,
+  },
+  piedPassee: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
