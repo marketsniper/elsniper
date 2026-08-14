@@ -15,12 +15,13 @@ import { useRouter } from 'expo-router';
 import {
   activerAlertes,
   desactiverAlertes,
+  ecouterAlertes,
   etatAlertes,
   surIphoneSansInstallation,
   type EtatAlertes,
 } from '@/lib/alertesPush';
 import { ecrireStockage, lireStockage, supprimerStockage } from '@/lib/stockage';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Selecteur } from '@/components/Selecteur';
@@ -127,11 +128,17 @@ export default function EcranEquipe() {
   // Alertes instantanées sur CE téléphone.
   const [etatPush, setEtatPush] = useState<EtatAlertes>('inactif');
   const [messageAlertes, setMessageAlertes] = useState('');
+  // Référence vers le rechargement, utilisable avant sa définition.
+  const chargerRef = useRef<(() => void) | null>(null);
 
   // État des alertes de ce téléphone, relu à chaque ouverture du tableau.
   useEffect(() => {
     etatAlertes().then(setEtatPush).catch(() => {});
   }, []);
+
+  // Une alerte arrive alors que le tableau est ouvert : on recharge tout de
+  // suite, sans attendre le rafraîchissement automatique.
+  useEffect(() => ecouterAlertes(() => { chargerRef.current?.(); }), []);
 
   const allumerAlertes = async () => {
     setMessageAlertes('');
@@ -195,6 +202,7 @@ export default function EcranEquipe() {
       setErreur(e instanceof ErreurApi ? e.message : t('equipe_action_erreur'));
     }
   }, [t]);
+  chargerRef.current = charger;
 
   // Pose les dates d'expiration permis/assurance d'un chauffeur (AAAA-MM-JJ).
 

@@ -113,3 +113,19 @@ export async function desactiverAlertes(): Promise<void> {
   await api.desabonnerAlertes(abonnement.endpoint).catch(() => {});
   await abonnement.unsubscribe().catch(() => {});
 }
+
+/**
+ * Le service worker prévient la page quand une alerte arrive : le tableau de
+ * bord se met alors à jour tout de suite, sans attendre son rafraîchissement
+ * automatique. Renvoie de quoi arrêter d'écouter.
+ */
+export function ecouterAlertes(auSignal: () => void): () => void {
+  if (Platform.OS !== 'web' || typeof navigator === 'undefined' || !('serviceWorker' in navigator)) {
+    return () => {};
+  }
+  const surMessage = (evenement: MessageEvent) => {
+    if ((evenement.data as { type?: string } | null)?.type === 'zanzigo-alerte') auSignal();
+  };
+  navigator.serviceWorker.addEventListener('message', surMessage);
+  return () => navigator.serviceWorker.removeEventListener('message', surMessage);
+}

@@ -32,7 +32,15 @@ self.addEventListener('push', (evenement) => {
     if (evenement.data) donnees.corps = evenement.data.text();
   }
   evenement.waitUntil(
-    self.registration.showNotification(donnees.titre, {
+    Promise.all([
+      // Si le tableau de bord est ouvert, il se met à jour tout de suite
+      // au lieu d'attendre son rafraîchissement automatique.
+      self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((fenetres) => {
+        for (const fenetre of fenetres) {
+          fenetre.postMessage({ type: 'zanzigo-alerte', titre: donnees.titre, corps: donnees.corps });
+        }
+      }),
+      self.registration.showNotification(donnees.titre, {
       body: donnees.corps,
       icon: '/web/icone-192.png',
       badge: '/web/icone-192.png',
@@ -40,7 +48,8 @@ self.addEventListener('push', (evenement) => {
       tag: donnees.tag || 'zanzigo',
       renotify: true,
       data: { url: donnees.url || '/web/equipe' },
-    })
+      }),
+    ])
   );
 });
 
