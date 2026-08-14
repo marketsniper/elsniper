@@ -8,11 +8,17 @@ set -euo pipefail
 RACINE="$(cd "$(dirname "$0")/../.." && pwd)"
 API_URL="${EXPO_PUBLIC_API_URL:-https://zanzigo-api.onrender.com/api}"
 
+# Estampille de version, affichée dans l'application : elle permet de savoir
+# d'un coup d'œil, à distance, quelle version tourne réellement sur le
+# téléphone d'un chauffeur ou d'un client.
+VERSION="${EXPO_PUBLIC_VERSION:-$(date -u +%Y-%m-%d.%H%M)-$(git -C "$RACINE" rev-parse --short HEAD 2>/dev/null || echo local)}"
+
 cd "$RACINE/mobile"
 # --clear : sans ça, le cache de compilation peut resservir un bundle
 # construit avec une AUTRE adresse d'API (une session de test en local a
 # déjà failli être mise en ligne à la place de la production).
-EXPO_PUBLIC_API_URL="$API_URL" npx expo export --platform web --output-dir dist-web --clear
+EXPO_PUBLIC_API_URL="$API_URL" EXPO_PUBLIC_VERSION="$VERSION" \
+  npx expo export --platform web --output-dir dist-web --clear
 
 rm -rf "$RACINE/backend/public/web"
 cp -r dist-web "$RACINE/backend/public/web"
@@ -48,6 +54,9 @@ grep -rq "$API_URL" "$RACINE/backend/public/web/_expo/" || {
 
 grep -q 'zanzigo-web' "$INDEX" || { echo "ERREUR : retouche CSS non appliquée" >&2; exit 1; }
 grep -q 'manifest.webmanifest' "$INDEX" || { echo "ERREUR : balises PWA non appliquées" >&2; exit 1; }
+grep -rq "$VERSION" "$RACINE/backend/public/web/_expo/" || {
+  echo "ERREUR : l'estampille de version ($VERSION) est absente du bundle" >&2; exit 1;
+}
 grep -q 'service-worker.js' "$INDEX" || { echo "ERREUR : enregistrement SW non appliqué" >&2; exit 1; }
 grep -q 'installation.js' "$INDEX" || { echo "ERREUR : bouton installer non appliqué" >&2; exit 1; }
 echo "OK — backend/public/web rafraîchi, PWA incluse (API: $API_URL)"

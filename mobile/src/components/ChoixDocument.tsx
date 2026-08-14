@@ -234,9 +234,20 @@ export function ChoixDocument({
   camera?: boolean;
 }) {
   const [typeMime, setTypeMime] = useState<string | null>(null);
+  // Le message d'erreur s'affiche ICI, sous le bouton. Placé en bas du
+  // formulaire, il tombait hors de l'écran : le client appuyait, ne voyait
+  // rien, et croyait le bouton mort.
+  const [erreurLocale, setErreurLocale] = useState('');
   const recevoir = (adresse: string, mime: string) => {
     setTypeMime(mime);
+    setErreurLocale('');
     onFichier(adresse);
+  };
+  // Le message est affiché ICI. On efface seulement celui du formulaire,
+  // pour ne pas le montrer deux fois.
+  const signaler = (message: string) => {
+    setErreurLocale(message);
+    onErreur('');
   };
   const estPdf = typeMime === 'application/pdf';
   return (
@@ -257,13 +268,13 @@ export function ChoixDocument({
               <Ionicons name="checkmark-circle" size={18} color={couleurs.succes} />
               <Text style={styles.documentOk}>{texteAjoute}</Text>
             </View>
-            <ZoneFichier onFichier={recevoir} onErreur={onErreur} libelle={texteChanger} camera={camera}>
+            <ZoneFichier onFichier={recevoir} onErreur={signaler} libelle={texteChanger} camera={camera}>
               <Text style={styles.changer}>{texteChanger}</Text>
             </ZoneFichier>
           </View>
         </View>
       ) : (
-        <ZoneFichier onFichier={recevoir} onErreur={onErreur} libelle={texteAjouter} camera={camera}>
+        <ZoneFichier onFichier={recevoir} onErreur={signaler} libelle={texteAjouter} camera={camera}>
           <Bouton
             titre={texteAjouter}
             icone="cloud-upload-outline"
@@ -271,6 +282,12 @@ export function ChoixDocument({
             onPress={() => {}}
           />
         </ZoneFichier>
+      )}
+      {!!erreurLocale && (
+        <View style={styles.ligneErreur}>
+          <Ionicons name="alert-circle" size={18} color={couleurs.danger} />
+          <Text style={styles.texteErreur}>{erreurLocale}</Text>
+        </View>
       )}
     </View>
   );
@@ -328,5 +345,20 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: couleurs.primaire,
     paddingVertical: espaces.xs,
+  },
+  ligneErreur: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: espaces.xs,
+    backgroundColor: couleurs.dangerFond,
+    borderRadius: rayons.bouton,
+    padding: espaces.s,
+  },
+  texteErreur: {
+    flex: 1,
+    fontSize: 13.5,
+    fontWeight: '600',
+    color: couleurs.danger,
+    lineHeight: 19,
   },
 });

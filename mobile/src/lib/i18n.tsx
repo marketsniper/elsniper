@@ -781,6 +781,16 @@ const CHAINES = {
     en: 'Allow photo access to add your document.',
     sw: 'Ruhusu ufikiaji wa picha ili kuongeza nyaraka yako.',
   },
+  version_etiquette: {
+    fr: 'Version {version} — appuyez ici si l\'application semble bloquée',
+    en: 'Version {version} — tap here if the app seems stuck',
+    sw: 'Toleo {version} — gusa hapa ikiwa programu imekwama',
+  },
+  version_forcer: {
+    fr: '⟳ Appuyez encore pour installer la dernière version',
+    en: '⟳ Tap again to install the latest version',
+    sw: '⟳ Gusa tena kusakinisha toleo jipya',
+  },
   doc_erreur_camera: {
     fr: "Autorisez l'appareil photo pour prendre la preuve de livraison.",
     en: 'Allow camera access to take the delivery proof.',

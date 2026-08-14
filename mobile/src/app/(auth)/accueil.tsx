@@ -8,6 +8,7 @@ import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FondPlage } from '@/components/FondPlage';
+import { EtiquetteVersion } from '@/components/Version';
 import { SelecteurLangue } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { useT } from '@/lib/i18n';
@@ -159,6 +160,7 @@ export default function EcranAccueil() {
             <Ionicons name="key-outline" size={13} color="rgba(255,255,255,0.75)" />
             <Text style={styles.texteLienEquipe}>{t('equipe_lien_accueil')}</Text>
           </Pressable>
+          <EtiquetteVersion />
         </ScrollView>
       </SafeAreaView>
     </FondPlage>
