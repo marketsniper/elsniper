@@ -108,7 +108,6 @@ export default function EcranEquipe() {
   const [actionEnCours, setActionEnCours] = useState<string | null>(null);
   // Crédit prépayé : hôtels partenaires actifs + montant saisi par hôtel.
   const [hotelsVerifies, setHotelsVerifies] = useState<Hotel[]>([]);
-  const [montantsCredit, setMontantsCredit] = useState<Record<string, string>>({});
   // Liste d'attente du taxi partagé : demandes clients à recontacter.
   const [attentes, setAttentes] = useState<AttentePartage[]>([]);
   // Dates d'expiration saisies par chauffeur (permis / assurance).
@@ -152,23 +151,6 @@ export default function EcranEquipe() {
       setErreur(e instanceof ErreurApi ? e.message : t('equipe_action_erreur'));
     }
   }, [t]);
-
-  // Crédite (montant positif) ou corrige (négatif) le compte d'un hôtel.
-  const crediterUnHotel = async (hotelId: string) => {
-    const montant = Number((montantsCredit[hotelId] ?? '').replace(',', '.'));
-    if (!Number.isFinite(montant) || montant === 0) return;
-    setActionEnCours(hotelId);
-    setErreur('');
-    try {
-      await api.crediterHotel(hotelId, montant);
-      setMontantsCredit((prev) => ({ ...prev, [hotelId]: '' }));
-      await charger();
-    } catch (e) {
-      setErreur(e instanceof ErreurApi ? e.message : t('equipe_action_erreur'));
-    } finally {
-      setActionEnCours(null);
-    }
-  };
 
   // Pose les dates d'expiration permis/assurance d'un chauffeur (AAAA-MM-JJ).
   const majDatesChauffeur = async (chauffeurId: string) => {
@@ -1112,7 +1094,15 @@ export default function EcranEquipe() {
         const telephone = String(champ(lHotel, 'phone') ?? '');
         return (
           <Carte key={lHotel.id}>
-            <Text style={styles.itineraire}>{String(champ(lHotel, 'name') ?? '?')}</Text>
+            {/* Le nom ouvre la fiche complète de l'établissement. */}
+            <Pressable
+              onPress={() => router.push(`/hotel/${lHotel.id}`)}
+              accessibilityRole="button"
+              style={({ pressed }) => [styles.lienHotel, pressed && { opacity: 0.6 }]}
+            >
+              <Text style={styles.nomHotelLien}>{String(champ(lHotel, 'name') ?? '?')}</Text>
+              <Ionicons name="chevron-forward" size={18} color={couleurs.primaire} />
+            </Pressable>
             <Text style={styles.detail}>
               {String(champ(lHotel, 'contact_name', 'contactName') ?? '—')} ·{' '}
               {String(champ(lHotel, 'zone') ?? '—')} · {telephone}
@@ -1155,38 +1145,33 @@ export default function EcranEquipe() {
         {t('equipe_credit_titre')} ({hotelsVerifies.length})
       </Text>
       {hotelsVerifies.length > 0 && (
-        <EncartInfo icone="wallet-outline">{t('equipe_credit_conseil')}</EncartInfo>
+        <EncartInfo icone="business-outline">{t('equipe_hotels_conseil_fiche')}</EncartInfo>
       )}
+      {/* Chaque établissement ouvre sa fiche : coordonnées, solde, historique
+          des mouvements, fidélité, réservations — et la case pour créditer. */}
       {hotelsVerifies.map((lHotel) => (
-        <Carte key={`credit-${lHotel.id}`}>
-          <View style={styles.enTete}>
-            <Text style={styles.itineraire}>{String(champ(lHotel, 'name') ?? '?')}</Text>
-            <Text style={styles.soldeHotel}>
-              {formaterMontant(Number(champ(lHotel, 'credit_balance', 'creditBalance') ?? 0), 'USD')}
-            </Text>
-          </View>
-          <View style={styles.rangeeActions}>
-            <View style={styles.demiAction}>
-              <Champ
-                label={t('equipe_credit_montant')}
-                value={montantsCredit[lHotel.id] ?? ''}
-                onChangeText={(texte) =>
-                  setMontantsCredit((prev) => ({ ...prev, [lHotel.id]: texte }))
-                }
-                keyboardType="numbers-and-punctuation"
-                placeholder="50"
-              />
+        <Pressable
+          key={`credit-${lHotel.id}`}
+          onPress={() => router.push(`/hotel/${lHotel.id}`)}
+          accessibilityRole="button"
+          style={({ pressed }) => pressed && { opacity: 0.7 }}
+        >
+          <Carte>
+            <View style={styles.enTete}>
+              <Text style={styles.nomHotelLien}>{String(champ(lHotel, 'name') ?? '?')}</Text>
+              <Text style={styles.soldeHotel}>
+                {formaterMontant(
+                  Number(champ(lHotel, 'credit_balance', 'creditBalance') ?? 0),
+                  'USD'
+                )}
+              </Text>
             </View>
-            <View style={styles.demiAction}>
-              <Bouton
-                titre={t('equipe_crediter')}
-                icone="add-circle-outline"
-                onPress={() => crediterUnHotel(lHotel.id)}
-                charge={actionEnCours === lHotel.id}
-              />
+            <View style={styles.lienHotel}>
+              <Text style={styles.lienFicheEquipe}>{t('hotel_fiche_ouvrir')}</Text>
+              <Ionicons name="chevron-forward" size={18} color={couleurs.primaire} />
             </View>
-          </View>
-        </Carte>
+          </Carte>
+        </Pressable>
       ))}
 
         </>
@@ -1481,6 +1466,18 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     gap: espaces.m,
+  },
+  lienHotel: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: espaces.xs,
+  },
+  nomHotelLien: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '800',
+    color: couleurs.primaireFonce,
   },
   soldeHotel: {
     fontSize: 16,

@@ -51,6 +51,10 @@ export function FondPlage({
 const styles = StyleSheet.create({
   image: {
     flex: 1,
+    // Sur le web, la photo de fond est posée à sa taille d'origine
+    // (1200 px de large) : sans découpe, la page se laissait tirer sur le
+    // côté au doigt et découvrait la plage à droite du contenu.
+    overflow: 'hidden',
   },
   voileClair: {
     flex: 1,

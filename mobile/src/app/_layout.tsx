@@ -44,6 +44,8 @@ function PilesNavigation() {
   const retourColis = () => <RetourEntete accueil="/(tabs)/colis" />;
   const retourChauffeur = () => <RetourEntete accueil="/(driver)/courses" />;
   const retourProfil = () => <RetourEntete accueil="/(tabs)/profil" />;
+  // Fiches ouvertes depuis le tableau de bord : on revient au tableau.
+  const retourEquipe = () => <RetourEntete accueil="/equipe" />;
   return (
     <Stack
       screenOptions={{
@@ -64,6 +66,7 @@ function PilesNavigation() {
       <Stack.Screen name="package/[id]" options={{ title: t('titre_colis'), headerLeft: retourColis }} />
       <Stack.Screen name="course/[id]" options={{ title: t('titre_course'), headerLeft: retourChauffeur }} />
       <Stack.Screen name="equipe" options={{ title: t('titre_equipe'), headerLeft: retourProfil }} />
+      <Stack.Screen name="hotel/[id]" options={{ title: t('hotel_fiche_titre'), headerLeft: retourEquipe }} />
       <Stack.Screen name="annonce/[id]" options={{ title: t('titre_annonce'), headerLeft: retourChauffeur }} />
       <Stack.Screen name="colis-dispo/[id]" options={{ title: t('titre_colis_dispo'), headerLeft: retourChauffeur }} />
     </Stack>

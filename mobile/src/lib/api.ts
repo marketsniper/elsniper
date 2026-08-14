@@ -417,9 +417,13 @@ export async function creerHotel(donnees: CreationHotel): Promise<Hotel> {
   return requete<Hotel>('/hotels', { methode: 'POST', corps: donnees });
 }
 
-/** GET /hotels/:id — fiche hôtel (rafraîchit le statut de vérification). */
-export async function obtenirHotel(id: string): Promise<Hotel> {
-  return requete<Hotel>(`/hotels/${id}`);
+/**
+ * GET /hotels/:id — fiche hôtel. `equipe` fait signer la requête avec la clé
+ * de l'équipe : c'est ce qui permet au tableau de bord d'ouvrir la fiche
+ * complète d'un partenaire (l'hôtel, lui, n'ouvre que la sienne).
+ */
+export async function obtenirHotel(id: string, equipe = false): Promise<Hotel> {
+  return requete<Hotel>(`/hotels/${id}`, { admin: equipe });
 }
 
 // ---------------------------------------------------------------------------
@@ -510,9 +514,9 @@ export async function creerTrajetHotel(donnees: CreationTrajetHotel): Promise<Tr
 }
 
 /** GET /trips?hotelId= → historique des réservations d'un hôtel partenaire. */
-export async function listerTrajetsHotel(hotelId: string): Promise<Trajet[]> {
+export async function listerTrajetsHotel(hotelId: string, equipe = false): Promise<Trajet[]> {
   const query = new URLSearchParams({ hotelId });
-  const reponse = await requete<unknown>(`/trips?${query.toString()}`);
+  const reponse = await requete<unknown>(`/trips?${query.toString()}`, { admin: equipe });
   return commeListe<Trajet>(reponse, 'trips');
 }
 
@@ -754,8 +758,8 @@ export async function listerMesColisChauffeur(): Promise<Colis[]> {
 }
 
 /** GET /hotels/:id/packages — colis expédiés par un hôtel. */
-export async function listerColisHotel(hotelId: string): Promise<Colis[]> {
-  const reponse = await requete<unknown>(`/hotels/${hotelId}/packages`);
+export async function listerColisHotel(hotelId: string, equipe = false): Promise<Colis[]> {
+  const reponse = await requete<unknown>(`/hotels/${hotelId}/packages`, { admin: equipe });
   return commeListe<Colis>(reponse, 'packages');
 }
 
@@ -798,8 +802,8 @@ export interface FideliteHotel {
 }
 
 /** GET /hotels/:id/fidelite — carte de fidélité (attribue les bons dus). */
-export async function fideliteHotel(hotelId: string): Promise<FideliteHotel> {
-  return requete<FideliteHotel>(`/hotels/${hotelId}/fidelite`);
+export async function fideliteHotel(hotelId: string, equipe = false): Promise<FideliteHotel> {
+  return requete<FideliteHotel>(`/hotels/${hotelId}/fidelite`, { admin: equipe });
 }
 
 export interface TransactionCredit {
@@ -818,8 +822,8 @@ export interface CreditHotel {
 }
 
 /** GET /hotels/:id/credit — solde prépayé + derniers mouvements. */
-export async function creditHotel(hotelId: string): Promise<CreditHotel> {
-  return requete<CreditHotel>(`/hotels/${hotelId}/credit`);
+export async function creditHotel(hotelId: string, equipe = false): Promise<CreditHotel> {
+  return requete<CreditHotel>(`/hotels/${hotelId}/credit`, { admin: equipe });
 }
 
 /**
