@@ -7,11 +7,11 @@
 // validé). Le flux « visiteur » de l'accueil laisse le choix touriste ou
 // résident ; le flux « local » préremplit accountType='local'.
 import { Ionicons } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { ChoixDocument } from '@/components/ChoixDocument';
 import {
   Bouton,
   Carte,
@@ -67,24 +67,6 @@ export default function EcranClient() {
     { cle: 'tourist', titre: t('client_type_touriste'), description: t('client_type_touriste_desc') },
     { cle: 'resident', titre: t('client_type_resident'), description: t('client_type_resident_desc') },
   ];
-
-  // Sélection du document dans la galerie (ou l'appareil photo du téléphone
-  // via la galerie système).
-  const choisirDocument = async () => {
-    setErreur('');
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      setErreur(t('client_erreur_photos'));
-      return;
-    }
-    const resultat = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      quality: 0.8,
-    });
-    if (!resultat.canceled && resultat.assets[0]) {
-      setDocumentUri(resultat.assets[0].uri);
-    }
-  };
 
   const valider = async () => {
     setErreur('');
@@ -247,22 +229,14 @@ export default function EcranClient() {
                 ? t('client_doc_local_desc', { prix: prixLocal })
                 : t('client_doc_resident_desc')}
             </SousTitre>
-            {documentUri ? (
-              <View style={styles.ligneDocument}>
-                <Ionicons name="checkmark-circle" size={22} color={couleurs.succes} />
-                <Text style={styles.documentOk}>{t('client_doc_ajoute')}</Text>
-                <Pressable onPress={choisirDocument} hitSlop={8}>
-                  <Text style={styles.changer}>{t('client_doc_changer')}</Text>
-                </Pressable>
-              </View>
-            ) : (
-              <Bouton
-                titre={t('client_doc_ajouter')}
-                icone="cloud-upload-outline"
-                variante="secondaire"
-                onPress={choisirDocument}
-              />
-            )}
+            <ChoixDocument
+              uri={documentUri}
+              onFichier={setDocumentUri}
+              onErreur={setErreur}
+              texteAjouter={t('client_doc_ajouter')}
+              texteAjoute={t('client_doc_ajoute')}
+              texteChanger={t('client_doc_changer')}
+            />
           </View>
         )}
 
@@ -328,17 +302,6 @@ const styles = StyleSheet.create({
   blocDocument: {
     gap: espaces.s,
     marginTop: espaces.xs,
-  },
-  ligneDocument: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: espaces.s,
-  },
-  documentOk: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: couleurs.encre,
-    flex: 1,
   },
   changer: {
     fontSize: 14,

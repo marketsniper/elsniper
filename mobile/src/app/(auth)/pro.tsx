@@ -5,11 +5,11 @@
 // Le compte reste 'pending' jusqu'à validation manuelle par l'équipe : un
 // chauffeur en attente qui se reconnecte retrouve cet écran d'attente.
 import { Ionicons } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { ChoixDocument } from '@/components/ChoixDocument';
 import {
   Bouton,
   Carte,
@@ -28,45 +28,6 @@ import { champ, type StatutVerification } from '@/lib/types';
 
 // Numéro WhatsApp de l'équipe zanziGo (placeholder MVP).
 const WHATSAPP_EQUIPE = 'https://wa.me/255666241749';
-
-/** Ligne de sélection d'un document (permis, pièce d'identité). */
-function LigneDocument({
-  label,
-  uri,
-  onChoisir,
-  texteAjoute,
-  texteChanger,
-  texteAjouter,
-}: {
-  label: string;
-  uri: string | null;
-  onChoisir: () => void;
-  texteAjoute: string;
-  texteChanger: string;
-  texteAjouter: string;
-}) {
-  return (
-    <View style={styles.blocDocument}>
-      <Text style={styles.labelDocument}>{label}</Text>
-      {uri ? (
-        <View style={styles.ligneDocumentOk}>
-          <Ionicons name="checkmark-circle" size={22} color={couleurs.succes} />
-          <Text style={styles.documentOk}>{texteAjoute}</Text>
-          <Pressable onPress={onChoisir} hitSlop={8}>
-            <Text style={styles.changer}>{texteChanger}</Text>
-          </Pressable>
-        </View>
-      ) : (
-        <Bouton
-          titre={texteAjouter}
-          icone="cloud-upload-outline"
-          variante="secondaire"
-          onPress={onChoisir}
-        />
-      )}
-    </View>
-  );
-}
 
 export default function EcranPro() {
   const router = useRouter();
@@ -87,22 +48,6 @@ export default function EcranPro() {
   const [vehiculeUri, setVehiculeUri] = useState<string | null>(null);
   const [erreur, setErreur] = useState('');
   const [charge, setCharge] = useState(false);
-
-  const choisirImage = async (definir: (uri: string) => void) => {
-    setErreur('');
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      setErreur(t('client_erreur_photos'));
-      return;
-    }
-    const resultat = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      quality: 0.8,
-    });
-    if (!resultat.canceled && resultat.assets[0]) {
-      definir(resultat.assets[0].uri);
-    }
-  };
 
   const envoyerCandidature = async () => {
     setErreur('');
@@ -279,26 +224,29 @@ export default function EcranPro() {
           onChangeText={setZone}
           placeholder="Stone Town, Nungwi…"
         />
-        <LigneDocument
+        <ChoixDocument
           label={t('pro_doc_permis')}
           uri={permisUri}
-          onChoisir={() => choisirImage(setPermisUri)}
+          onFichier={setPermisUri}
+          onErreur={setErreur}
           texteAjoute={t('client_doc_ajoute')}
           texteChanger={t('client_doc_changer')}
           texteAjouter={t('pro_doc_ajouter')}
         />
-        <LigneDocument
+        <ChoixDocument
           label={t('pro_doc_assurance')}
           uri={assuranceUri}
-          onChoisir={() => choisirImage(setAssuranceUri)}
+          onFichier={setAssuranceUri}
+          onErreur={setErreur}
           texteAjoute={t('client_doc_ajoute')}
           texteChanger={t('client_doc_changer')}
           texteAjouter={t('pro_doc_ajouter')}
         />
-        <LigneDocument
+        <ChoixDocument
           label={t('pro_doc_vehicule')}
           uri={vehiculeUri}
-          onChoisir={() => choisirImage(setVehiculeUri)}
+          onFichier={setVehiculeUri}
+          onErreur={setErreur}
           texteAjoute={t('client_doc_ajoute')}
           texteChanger={t('client_doc_changer')}
           texteAjouter={t('pro_doc_ajouter')}
@@ -341,26 +289,6 @@ const styles = StyleSheet.create({
     backgroundColor: couleurs.succesFond,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  blocDocument: {
-    gap: espaces.s,
-    marginTop: espaces.xs,
-  },
-  labelDocument: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: couleurs.texteSecondaire,
-  },
-  ligneDocumentOk: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: espaces.s,
-  },
-  documentOk: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: couleurs.encre,
-    flex: 1,
   },
   changer: {
     fontSize: 14,

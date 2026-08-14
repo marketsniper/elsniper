@@ -776,6 +776,16 @@ const CHAINES = {
     en: 'Allow photo access to add your document.',
     sw: 'Ruhusu ufikiaji wa picha ili kuongeza nyaraka yako.',
   },
+  doc_erreur_lourd: {
+    fr: 'Document trop lourd (25 Mo maximum). Reprenez la photo en qualité normale.',
+    en: 'Document too heavy (25 MB max). Take the photo again in normal quality.',
+    sw: 'Nyaraka ni nzito mno (MB 25 kiwango cha juu). Piga picha tena kwa ubora wa kawaida.',
+  },
+  doc_erreur_lecture: {
+    fr: "Ce document n'a pas pu être lu. Prenez une photo de votre pièce et réessayez.",
+    en: "This document couldn't be read. Take a photo of your ID and try again.",
+    sw: 'Nyaraka hii haikusomeka. Piga picha ya kitambulisho chako na ujaribu tena.',
+  },
   client_erreur_creation: {
     fr: 'Impossible de créer le profil. Réessayez.',
     en: "Couldn't create the profile. Try again.",
