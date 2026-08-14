@@ -7,7 +7,12 @@ import { isAdmin, requireAuth, requireAdmin } from '../middleware/auth.js';
 import { hubToHubRoute, priceTrip, sharedAllowedForRoute } from '../services/pricingService.js';
 import { createPaymentOrder, isStubMode } from '../services/pesapalService.js';
 import { circuitPaiementUsd } from '../services/paypalService.js';
-import { buildTeamNotificationLink, tripRequestMessage } from '../services/whatsappService.js';
+import {
+  buildTeamNotificationLink,
+  lienGroupeChauffeurs,
+  messageGroupeChauffeurs,
+  tripRequestMessage,
+} from '../services/whatsappService.js';
 import { assertHotelVerified } from './hotels.js';
 import { randomUUID } from 'node:crypto';
 import { tauxRemboursement } from '../services/annulationService.js';
@@ -19,6 +24,22 @@ import {
 } from '../services/alertesChauffeur.js';
 
 const router = Router();
+
+/**
+ * Ajoute à une course, POUR L'ÉQUIPE SEULEMENT, l'annonce prête à coller dans
+ * le groupe WhatsApp des chauffeurs (anglais + swahili). Calculée à la volée :
+ * si le prix ou l'heure changent, l'annonce suit, sans copie périmée en base.
+ * Réservée aux courses privées — les taxis partagés se remplissent par la
+ * bourse aux places, pas par le groupe.
+ */
+function avecAnnonceGroupe(trip, req) {
+  if (!trip || !isAdmin(req) || trip.trip_type !== 'private') return trip;
+  return {
+    ...trip,
+    message_groupe_chauffeurs: messageGroupeChauffeurs(trip),
+    lien_groupe_chauffeurs: lienGroupeChauffeurs(trip),
+  };
+}
 
 // Une course est réservée soit par un compte client (userId), soit par un
 // hôtel partenaire pour l'un de ses clients (hotelId + nom et téléphone).
@@ -216,7 +237,16 @@ router.post(
     ]);
     // L'équipe est prévenue AUTOMATIQUEMENT (e-mail) — le client n'a plus
     // de message à envoyer lui-même.
-    notifierEquipe('🚕 Nouvelle demande de course — zanziGo', tripRequestMessage(trip, bookerLabel, audience));
+    // L'alerte de l'équipe emporte, pour une course privée, l'annonce toute
+    // prête à recoller dans le groupe WhatsApp des chauffeurs : plus rien à
+    // rédiger dans l'urgence.
+    const resume = tripRequestMessage(trip, bookerLabel, audience);
+    notifierEquipe(
+      '🚕 Nouvelle demande de course — zanziGo',
+      trip.trip_type === 'private'
+        ? `${resume}\n\n— — — À COLLER DANS LE GROUPE CHAUFFEURS — — —\n${messageGroupeChauffeurs(trip)}`
+        : resume
+    );
     res.status(201).json(updated.rows[0]);
   })
 );
@@ -259,7 +289,7 @@ router.get(
          ORDER BY t.created_at DESC LIMIT 200`,
         params
       );
-      return res.json(rows);
+      return res.json(rows.map((trip) => avecAnnonceGroupe(trip, req)));
     }
 
     if (userId) {
@@ -302,7 +332,7 @@ router.get(
     if (!allowed) {
       throw new HttpError(403, 'forbidden', 'Accès réservé au réservateur, au chauffeur assigné ou à l\'équipe');
     }
-    res.json(trip);
+    res.json(avecAnnonceGroupe(trip, req));
   })
 );
 

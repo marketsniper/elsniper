@@ -857,6 +857,11 @@ const CHAINES = {
     en: "This browser can't receive alerts. WhatsApp messages keep arriving as usual.",
     sw: 'Kivinjari hiki hakiwezi kupokea arifa. Ujumbe wa WhatsApp unaendelea kufika.',
   },
+  equipe_annonce_groupe: {
+    fr: 'Annoncer au groupe des chauffeurs',
+    en: 'Post to the drivers group',
+    sw: 'Tangaza kwenye kikundi cha madereva',
+  },
   alertes_chauffeur_titre: {
     fr: '🔔 Alertes de courses',
     en: '🔔 Ride alerts',

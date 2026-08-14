@@ -671,6 +671,19 @@ export default function EcranEquipe() {
                 <Text style={styles.detail}>{String(nomClient)}</Text>
               </View>
             )}
+            {/* Course privée : l'annonce toute prête (anglais + swahili) pour
+                le groupe WhatsApp des chauffeurs. Un appui, on choisit le
+                groupe, c'est envoyé — sans nom ni numéro du client. */}
+            {!!champ(course, 'lien_groupe_chauffeurs') && (
+              <Bouton
+                titre={t('equipe_annonce_groupe')}
+                icone="logo-whatsapp"
+                variante="secondaire"
+                onPress={() =>
+                  Linking.openURL(String(champ(course, 'lien_groupe_chauffeurs')))
+                }
+              />
+            )}
             {chauffeurs.length === 0 ? (
               <EncartInfo icone="alert-circle-outline" ton="attente">
                 {t('equipe_aucun_chauffeur')}
