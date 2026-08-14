@@ -321,6 +321,62 @@ describe('Pack améliorations', () => {
     assert.ok(rows[0].expiry_notified_at, 'l\'alerte doit être marquée envoyée');
   });
 
+  it('place non payée : libérée automatiquement, SANS que personne consulte', async () => {
+    const { token: tokenChauffeur, driver } = await createVerifiedDriver();
+    const { token, user } = await createTourist();
+    const depart = new Date(Date.now() + 6 * 3600 * 1000).toISOString();
+    const annonce = await request(app)
+      .post('/api/rides')
+      .set(authHeaders(tokenChauffeur))
+      .send({ origin: 'Stone Town', destination: 'Nungwi', departureAt: depart, seatsTotal: 4 });
+    assert.equal(annonce.status, 201, JSON.stringify(annonce.body));
+
+    const resa = await request(app)
+      .post(`/api/rides/${annonce.body.id}/book`)
+      .set(authHeaders(token))
+      .send({ seats: 2 });
+    assert.equal(resa.status, 201, JSON.stringify(resa.body));
+    const bookingId = resa.body.booking_id;
+    assert.ok(bookingId, 'la réponse doit porter l\'identifiant de la place');
+
+    // On antidate la réservation : elle a été faite il y a 10 minutes.
+    await pool.query(
+      `UPDATE ride_bookings SET created_at = now() - interval '10 minutes' WHERE id = $1`,
+      [bookingId]
+    );
+    await pool.query(
+      `UPDATE payments SET created_at = now() - interval '10 minutes' WHERE ride_booking_id = $1`,
+      [bookingId]
+    );
+
+    // ENTRETIEN AUTOMATIQUE : personne n'ouvre l'application, c'est le
+    // serveur qui fait le ménage tout seul.
+    const { passageEntretien } = await import('../src/services/entretienService.js');
+    const liberees = await passageEntretien();
+    assert.ok(
+      liberees.some((b) => b.id === bookingId),
+      'la place impayée doit être libérée par le passage automatique'
+    );
+
+    // La place est annulée, le paiement soldé, les sièges remis en vente.
+    const { rows: apres } = await pool.query(
+      'SELECT cancelled_at FROM ride_bookings WHERE id = $1',
+      [bookingId]
+    );
+    assert.ok(apres[0].cancelled_at, 'la réservation doit être annulée');
+    const { rows: paiement } = await pool.query(
+      'SELECT status FROM payments WHERE ride_booking_id = $1',
+      [bookingId]
+    );
+    assert.equal(paiement[0].status, 'failed');
+    const { rows: place } = await pool.query(
+      'SELECT seats_available, seats_total FROM posted_rides WHERE id = $1',
+      [annonce.body.id]
+    );
+    assert.equal(place[0].seats_available, place[0].seats_total, 'les places retournent en vente');
+    assert.ok(driver.id);
+  });
+
   it('sauvegarde : export JSON complet réservé à l\'équipe', async () => {
     const { token } = await createTourist();
     const refus = await request(app).get('/api/stats/sauvegarde').set(authHeaders(token));

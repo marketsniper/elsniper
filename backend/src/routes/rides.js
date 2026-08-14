@@ -132,7 +132,7 @@ const PRICING_TZS = { mode: 'TZS' };
 // et les places déjà payées restent acquises au chauffeur. Balayage
 // paresseux (pas de tâche planifiée), idempotent.
 const CLOTURE_APRES_DEPART_MINUTES = 10;
-async function cloturerRidesPartis() {
+export async function cloturerRidesPartis() {
   await query(
     `UPDATE posted_rides
      SET status = 'closed'
@@ -148,16 +148,18 @@ async function cloturerRidesPartis() {
 // Balayage paresseux, idempotent — exporté pour la liste des paiements.
 const PAIEMENT_RESERVATION_MINUTES = 5;
 export async function annulerReservationsImpayees() {
-  await withTransaction(async (client) => {
+  return withTransaction(async (client) => {
     const { rows: expirees } = await client.query(
-      `UPDATE ride_bookings
+      `UPDATE ride_bookings b
        SET cancelled_at = now()
-       WHERE paid_at IS NULL AND cancelled_at IS NULL
-         AND created_at < now() - make_interval(mins => $1)
-       RETURNING id, ride_id, seats`,
+       FROM posted_rides r
+       WHERE r.id = b.ride_id
+         AND b.paid_at IS NULL AND b.cancelled_at IS NULL
+         AND b.created_at < now() - make_interval(mins => $1)
+       RETURNING b.id, b.ride_id, b.seats, r.origin, r.destination`,
       [PAIEMENT_RESERVATION_MINUTES]
     );
-    if (expirees.length === 0) return;
+    if (expirees.length === 0) return [];
 
     // Les places libérées s'additionnent sur l'annonce (plafond : total).
     const parRide = new Map();
@@ -177,6 +179,16 @@ export async function annulerReservationsImpayees() {
        WHERE status = 'pending' AND ride_booking_id = ANY($1)`,
       [expirees.map((b) => b.id)]
     );
+    // L'équipe est prévenue : une place remise en vente peut valoir un
+    // rappel au client (« votre place est partie faute de paiement »).
+    notifierEquipe(
+      '⌛ Place(s) libérée(s) — paiement non reçu',
+      [
+        `${expirees.length} réservation(s) annulée(s) automatiquement après ${PAIEMENT_RESERVATION_MINUTES} minutes sans paiement :`,
+        ...expirees.map((b) => `• ${b.origin} → ${b.destination} — ${b.seats} place(s) remise(s) en vente`),
+      ].join('\n')
+    );
+    return expirees;
   });
 }
 

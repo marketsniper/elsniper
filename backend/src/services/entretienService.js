@@ -1,0 +1,41 @@
+// Entretien automatique de la plateforme — indépendant de toute visite.
+//
+// Le ménage (places réservées non payées, annonces dont le départ est
+// passé) était jusqu'ici « paresseux » : il ne s'exécutait que lorsqu'un
+// client ou l'équipe ouvrait une page. Concrètement, une place réservée à
+// 10 h et jamais payée pouvait rester bloquée jusqu'à la prochaine
+// consultation — invendable pour les autres voyageurs, et affichée comme
+// active côté client. Ce balayage tourne maintenant tout seul.
+import { annulerReservationsImpayees, cloturerRidesPartis } from '../routes/rides.js';
+
+const INTERVALLE_MS = 60 * 1000;
+
+let minuteur = null;
+
+export async function passageEntretien() {
+  await cloturerRidesPartis();
+  const liberees = await annulerReservationsImpayees();
+  return liberees;
+}
+
+/** Démarre le balayage périodique (aucun effet en environnement de test). */
+export function demarrerEntretienAutomatique(ms = INTERVALLE_MS) {
+  if (process.env.NODE_ENV === 'test' || minuteur) return minuteur;
+  const passage = () => {
+    passageEntretien().catch((err) => {
+      console.error('[entretien] échec du passage automatique :', err.message);
+    });
+  };
+  passage(); // rattrapage immédiat au démarrage (et après une mise en veille)
+  minuteur = setInterval(passage, ms);
+  // Ne retarde pas l'arrêt du serveur.
+  if (typeof minuteur.unref === 'function') minuteur.unref();
+  return minuteur;
+}
+
+export function arreterEntretienAutomatique() {
+  if (minuteur) {
+    clearInterval(minuteur);
+    minuteur = null;
+  }
+}
