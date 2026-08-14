@@ -18,7 +18,9 @@ export default function LayoutAuth() {
       }}
     >
       <Stack.Screen name="accueil" options={{ headerShown: false }} />
-      <Stack.Screen name="telephone" options={{ title: '', headerTransparent: true }} />
+      {/* En-tête NON transparent : avec la transparence, le contenu passait
+          sous la barre du haut et le logo zanziGo se retrouvait coupé. */}
+      <Stack.Screen name="telephone" options={{ title: '' }} />
       <Stack.Screen name="otp" options={{ title: t('titre_otp') }} />
       <Stack.Screen name="choix" options={{ headerShown: false }} />
       <Stack.Screen name="client" options={{ title: t('titre_client') }} />

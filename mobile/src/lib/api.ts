@@ -522,7 +522,18 @@ export async function listerTrajetsHotel(hotelId: string, equipe = false): Promi
 
 /** GET /trips/:id — accessible au client, au chauffeur assigné ou à l'équipe. */
 export async function obtenirTrajet(id: string): Promise<Trajet> {
-  return requete<Trajet>(`/trips/${id}`);
+  try {
+    return await requete<Trajet>(`/trips/${id}`);
+  } catch (e) {
+    // L'équipe ouvre la fiche d'un trajet qui n'est pas le sien (depuis le
+    // tableau de bord) : le jeton client se voit refuser l'accès, on
+    // recommence avec la clé de l'équipe. On ne l'envoie QUE dans ce cas —
+    // jamais sur un écran client, pour ne pas mélanger les pouvoirs.
+    if (e instanceof ErreurApi && (e.status === 403 || e.status === 401)) {
+      return await requete<Trajet>(`/trips/${id}`, { admin: true });
+    }
+    throw e;
+  }
 }
 
 /**

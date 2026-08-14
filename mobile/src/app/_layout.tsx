@@ -6,6 +6,7 @@ import { StatusBar } from 'expo-status-bar';
 import React, { useEffect } from 'react';
 import { Pressable, Text } from 'react-native';
 
+import { reparerAlertesWeb } from '@/lib/alerteWeb';
 import { reveillerServeur } from '@/lib/api';
 import { AuthProvider } from '@/lib/auth';
 import { LangueProvider, useT } from '@/lib/i18n';
@@ -73,6 +74,11 @@ function PilesNavigation() {
     </Stack>
   );
 }
+
+// Sur le web, les boîtes de dialogue de React Native sont des fonctions
+// vides : on les rebranche AVANT le premier rendu, sinon des boutons comme
+// « Démarrer la course » resteraient sans effet.
+reparerAlertesWeb();
 
 export default function LayoutRacine() {
   // Le serveur gratuit s'endort après 15 min sans visite : on le réveille dès

@@ -22,9 +22,10 @@ import {
   TexteErreur,
   Titre,
 } from '@/components/ui';
-import { api, ErreurApi } from '@/lib/api';
+import { api, definirCleEquipe, ErreurApi } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useRafraichissementAuto } from '@/lib/rafraichissementAuto';
+import { lireStockage } from '@/lib/stockage';
 import { libelleStatutTrajet, libelleTypeTrajet, useT } from '@/lib/i18n';
 import { couleurs, espaces } from '@/lib/theme';
 import {
@@ -67,6 +68,11 @@ export default function EcranTrajet() {
 
   const charger = useCallback(async () => {
     if (!id) return;
+    // Fiche ouverte depuis le tableau de bord (ou par lien direct) : on
+    // remet en mémoire la clé de l'équipe, sinon un trajet qui n'est pas le
+    // sien reste inaccessible après un rechargement de page.
+    const cleEquipe = await lireStockage('zanzigo.cle_equipe');
+    if (cleEquipe) definirCleEquipe(cleEquipe);
     try {
       setTrajet(await api.obtenirTrajet(id));
       setErreur('');
