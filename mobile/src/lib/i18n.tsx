@@ -833,9 +833,24 @@ const CHAINES = {
     sw: 'Hakuna simu iliyojisajili kwa arifa bado.',
   },
   alertes_iphone: {
-    fr: "Sur iPhone, Apple n'autorise les alertes que depuis l'écran d'accueil — jamais depuis un onglet Safari. Rien à télécharger : 1) bouton Partager (le carré avec la flèche, en bas) ; 2) « Sur l'écran d'accueil » ; 3) rouvrez zanziGo par cette icône. L'iPhone garde cette icône à part de Safari : reconnectez-vous et ressaisissez la clé équipe une fois, puis le bouton d'activation apparaîtra ici.",
-    en: 'On iPhone, Apple only allows alerts from the home screen — never from a Safari tab. Nothing to download: 1) Share button (the square with the arrow, at the bottom); 2) "Add to Home Screen"; 3) reopen zanziGo from that icon. iPhone keeps that icon separate from Safari: log in and re-enter the team key once, then the activation button will appear here.',
-    sw: 'Kwenye iPhone, Apple huruhusu arifa tu kutoka skrini ya kwanza — kamwe si kutoka kichupo cha Safari. Hakuna cha kupakua: 1) kitufe cha Share (mraba wenye mshale, chini); 2) "Add to Home Screen"; 3) fungua zanziGo kwa aikoni hiyo. iPhone huhifadhi aikoni hiyo tofauti na Safari: ingia tena na uweke ufunguo wa timu mara moja, kisha kitufe cha kuwasha kitaonekana hapa.',
+    fr:
+      "Cet écran est ouvert dans Safari — voyez la barre d'adresse en bas. C'est elle qui bloque les alertes : Apple ne les autorise que depuis l'écran d'accueil de l'iPhone.\n\n" +
+      "1) Touchez Partager, le carré avec la flèche, en bas de Safari.\n" +
+      "2) Faites défiler la liste et choisissez « Sur l'écran d'accueil ». Attention : « Ajouter aux favoris » ou « Ajouter à la liste de lecture » ne servent à rien ici.\n" +
+      "3) Quittez Safari. Sur l'écran d'accueil de l'iPhone, touchez la nouvelle icône zanziGo.\n" +
+      "4) Vous saurez que c'est la bonne : il n'y a plus aucune barre d'adresse en bas. Reconnectez-vous, ressaisissez la clé équipe (cette icône a sa propre mémoire), et le bouton d'activation apparaîtra ici.",
+    en:
+      'This screen is open in Safari — see the address bar at the bottom. That is what blocks alerts: Apple only allows them from the iPhone home screen.\n\n' +
+      '1) Tap Share, the square with the arrow, at the bottom of Safari.\n' +
+      '2) Scroll the list and choose "Add to Home Screen". Careful: "Add to Favourites" or "Add to Reading List" do nothing here.\n' +
+      '3) Leave Safari. On the iPhone home screen, tap the new zanziGo icon.\n' +
+      '4) You will know it is the right one: there is no address bar at all. Log in, re-enter the team key (that icon has its own memory), and the activation button will appear here.',
+    sw:
+      'Skrini hii imefunguliwa katika Safari — angalia upau wa anwani chini. Ndio unaozuia arifa: Apple huruhusu tu kutoka skrini ya kwanza ya iPhone.\n\n' +
+      '1) Gusa Share, mraba wenye mshale, chini ya Safari.\n' +
+      '2) Sogeza orodha na uchague "Add to Home Screen". Tahadhari: "Add to Favourites" haisaidii hapa.\n' +
+      '3) Toka Safari. Kwenye skrini ya kwanza, gusa aikoni mpya ya zanziGo.\n' +
+      '4) Utajua ni sahihi: hakuna upau wa anwani kabisa. Ingia tena, weka ufunguo wa timu (aikoni hiyo ina kumbukumbu yake), kisha kitufe cha kuwasha kitaonekana hapa.',
   },
   alertes_indisponible: {
     fr: "Ce navigateur ne sait pas recevoir d'alertes. Les messages WhatsApp continuent d'arriver normalement.",
