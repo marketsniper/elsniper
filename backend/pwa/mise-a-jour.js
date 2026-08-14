@@ -99,12 +99,30 @@ window.zanzigoForcerMiseAJour = async function () {
     }
   }
 
-  async function controler() {
+  /**
+   * Le client est-il en train de faire quelque chose ?
+   *
+   * Se remettre à neuf recharge la page : au milieu d'une inscription, ça
+   * effacerait le formulaire et la pièce jointe qu'on vient de choisir. Or
+   * c'est EXACTEMENT le moment où l'application revient au premier plan —
+   * on sort du sélecteur de photos de l'iPhone. Dans le doute, on attend :
+   * la mise à jour se fera au prochain retour, écran vide.
+   */
+  function occupe() {
+    if (window.zanzigoEnvoiEnCours) return true;
+    var champs = document.getElementsByTagName('input');
+    for (var i = 0; i < champs.length; i++) {
+      if (champs[i].type !== 'file' && champs[i].value) return true;
+    }
+    return false;
+  }
+
+  async function controler(force) {
     if (enCours) return;
     // Au plus un contrôle par minute : le retour à l'écran peut se produire
     // plusieurs fois de suite.
     var maintenant = Date.now();
-    if (maintenant - dernierControle < 60 * 1000) return;
+    if (!force && maintenant - dernierControle < 60 * 1000) return;
     dernierControle = maintenant;
 
     var chargee = versionChargee();
@@ -117,6 +135,13 @@ window.zanzigoForcerMiseAJour = async function () {
       if (!reponse.ok) return;
       var enLigne = await reponse.json();
       if (!enLigne || !enLigne.entree || enLigne.entree === chargee) return;
+
+      // Formulaire commencé ou pièce jointe en cours d'envoi : on ne touche
+      // à rien. Le contrôle sera refait au prochain retour à l'écran.
+      if (occupe()) {
+        dernierControle = 0;
+        return;
+      }
 
       // GARDE-FOU : une seule remise à neuf par version en ligne. Si le
       // serveur restait en désaccord avec lui-même, la page se rechargerait
@@ -132,12 +157,19 @@ window.zanzigoForcerMiseAJour = async function () {
     }
   }
 
+  // Contrôle immédiat, sans attendre le prochain retour à l'écran.
+  window.zanzigoVerifierVersion = function () {
+    return controler(true);
+  };
+
   // À l'ouverture, puis à chaque fois que l'écran revient au premier plan.
   controler();
   document.addEventListener('visibilitychange', function () {
     if (!document.hidden) controler();
   });
-  window.addEventListener('focus', controler);
+  window.addEventListener('focus', function () {
+    controler();
+  });
   window.addEventListener('pageshow', function (evenement) {
     // `persisted` : la page revient telle quelle de la mémoire du navigateur.
     if (evenement.persisted) controler();

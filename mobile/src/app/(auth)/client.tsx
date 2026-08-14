@@ -84,12 +84,9 @@ export default function EcranClient() {
     }
     setCharge(true);
     try {
-      // Résident / local : téléverser d'abord le document pour obtenir son URL.
-      let idDocumentUrl: string | undefined;
-      if (documentRequis && documentUri) {
-        const televersement = await api.televerser(documentUri);
-        idDocumentUrl = televersement.url;
-      }
+      // Le document est déjà sur le serveur : il est parti dès que le client
+      // l'a choisi, et `documentUri` porte son adresse définitive.
+      const idDocumentUrl = documentRequis && documentUri ? documentUri : undefined;
       const utilisateur = await api.creerUtilisateur({
         fullName: nom.trim(),
         // Identité e-mail : WhatsApp optionnel (contact chauffeur) ;

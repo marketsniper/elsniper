@@ -109,17 +109,12 @@ export default function EcranScanner() {
 
     setCharge(true);
     try {
-      const televersement = await api.televerser(photoPreuve);
+      // La photo de preuve est déjà sur le serveur : elle part au moment où
+      // le chauffeur la prend, pas au moment de valider.
       const maj =
         action === 'pickup'
-          ? await api.recupererColis(colis.id, {
-              qrCode: qrColis,
-              photoUrl: televersement.url,
-            })
-          : await api.livrerColis(colis.id, {
-              qrCode: qrColis,
-              photoUrl: televersement.url,
-            });
+          ? await api.recupererColis(colis.id, { qrCode: qrColis, photoUrl: photoPreuve })
+          : await api.livrerColis(colis.id, { qrCode: qrColis, photoUrl: photoPreuve });
       setColis(maj);
       setPhotoPreuve(null);
       setMessage(action === 'pickup' ? t('scanner_colis_ramasse') : t('scanner_colis_livre'));

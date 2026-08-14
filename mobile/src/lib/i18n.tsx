@@ -872,6 +872,26 @@ const CHAINES = {
     en: '⟳ Tap again to install the latest version',
     sw: '⟳ Gusa tena kusakinisha toleo jipya',
   },
+  doc_envoi: {
+    fr: 'Envoi de votre document…',
+    en: 'Sending your document…',
+    sw: 'Inatuma nyaraka yako…',
+  },
+  doc_envoi_patience: {
+    fr: 'Quelques secondes selon votre réseau — restez sur cet écran.',
+    en: 'A few seconds depending on your network — stay on this screen.',
+    sw: 'Sekunde chache kulingana na mtandao wako — baki kwenye skrini hii.',
+  },
+  doc_erreur_envoi: {
+    fr: "L'envoi n'a pas abouti. Vérifiez votre connexion et réessayez.",
+    en: "The upload didn't go through. Check your connection and try again.",
+    sw: 'Kutuma hakukufanikiwa. Angalia mtandao wako kisha ujaribu tena.',
+  },
+  doc_reessayer: {
+    fr: 'Réessayer l\'envoi',
+    en: 'Try sending again',
+    sw: 'Jaribu kutuma tena',
+  },
   doc_secours: {
     fr: 'Le bouton ci-dessus ne réagit pas ? Utilisez celui-ci :',
     en: "Button above not responding? Use this one:",

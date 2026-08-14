@@ -18,11 +18,22 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import React, { useEffect, useRef, useState } from 'react';
-import { Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Bouton } from '@/components/ui';
+import { api, ErreurApi } from '@/lib/api';
 import { useT } from '@/lib/i18n';
 import { couleurs, espaces, rayons } from '@/lib/theme';
+
+/**
+ * Prévient la page qu'un envoi est en cours : la mise à jour automatique de
+ * la version web (backend/pwa/mise-a-jour.js) attend qu'il soit fini avant de
+ * recharger quoi que ce soit.
+ */
+function marquerEnvoi(actif: boolean): void {
+  if (Platform.OS !== 'web') return;
+  (globalThis as unknown as { zanzigoEnvoiEnCours?: boolean }).zanzigoEnvoiEnCours = actif;
+}
 
 /** Côté maximum d'une photo envoyée (px). Au-delà, on redimensionne. */
 const COTE_MAX_PX = 2000;
@@ -298,6 +309,15 @@ function SecoursNatif({
 /**
  * Bloc complet « joindre un document » : bouton tant que rien n'est joint,
  * puis aperçu du document avec la possibilité de le changer.
+ *
+ * LA PIÈCE PART TOUT DE SUITE, dès que le client l'a choisie — plus au moment
+ * d'envoyer le formulaire. Avant, trois photos partaient d'un coup à la fin :
+ * sur un réseau mobile faible, l'envoi était coupé, tout le formulaire
+ * échouait d'un bloc, et le client concluait qu'il « ne pouvait pas joindre
+ * ses pièces ». Maintenant chaque pièce s'envoie seule, son sort s'affiche à
+ * l'endroit exact où le doigt vient d'appuyer, et un envoi raté se refait
+ * d'une touche sans rien ressaisir. `onFichier` reçoit l'adresse DÉFINITIVE
+ * du document sur le serveur.
  */
 export function ChoixDocument({
   uri,
@@ -325,18 +345,77 @@ export function ChoixDocument({
   // formulaire, il tombait hors de l'écran : le client appuyait, ne voyait
   // rien, et croyait le bouton mort.
   const [erreurLocale, setErreurLocale] = useState('');
-  const recevoir = (adresse: string, mime: string) => {
-    setTypeMime(mime);
-    setErreurLocale('');
-    onFichier(adresse);
-  };
+  // Aperçu local (blob:) : il s'affiche pendant l'envoi, avant même que le
+  // serveur ait répondu — le client voit tout de suite SA photo.
+  const [apercu, setApercu] = useState<string | null>(null);
+  const [envoiEnCours, setEnvoiEnCours] = useState(false);
+  // Dernière pièce choisie, gardée pour le bouton « Réessayer » : le client
+  // ne doit pas avoir à retrouver sa photo une seconde fois.
+  const aRenvoyer = useRef<{ uri: string; mime: string } | null>(null);
+
   // Le message est affiché ICI. On efface seulement celui du formulaire,
   // pour ne pas le montrer deux fois.
   const signaler = (message: string) => {
     setErreurLocale(message);
     onErreur('');
   };
+
+  const envoyer = async (adresse: string, mime: string) => {
+    aRenvoyer.current = { uri: adresse, mime };
+    setTypeMime(mime);
+    setApercu(adresse);
+    setErreurLocale('');
+    onErreur('');
+    setEnvoiEnCours(true);
+    // La mise à jour automatique de la version web recharge la page : pendant
+    // un envoi, ce serait perdre la pièce. Ce drapeau la fait patienter.
+    marquerEnvoi(true);
+    try {
+      const { url } = await api.televerser(adresse);
+      onFichier(url);
+    } catch (e) {
+      signaler(e instanceof ErreurApi ? e.message : t('doc_erreur_envoi'));
+    } finally {
+      setEnvoiEnCours(false);
+      marquerEnvoi(false);
+    }
+  };
+
+  const reessayer = () => {
+    const precedent = aRenvoyer.current;
+    if (precedent) envoyer(precedent.uri, precedent.mime);
+  };
+
+  const recevoir = (adresse: string, mime: string) => {
+    envoyer(adresse, mime);
+  };
   const estPdf = typeMime === 'application/pdf';
+
+  // Envoi en cours : la photo choisie, et l'indication que ça travaille.
+  if (envoiEnCours) {
+    return (
+      <View style={styles.bloc}>
+        {!!label && <Text style={styles.label}>{label}</Text>}
+        <View style={styles.ligneJointe}>
+          {estPdf || !apercu ? (
+            <View style={styles.apercuPdf}>
+              <Ionicons name="document-text-outline" size={26} color={couleurs.primaireFonce} />
+            </View>
+          ) : (
+            <Image source={{ uri: apercu }} style={styles.apercu} resizeMode="cover" />
+          )}
+          <View style={styles.texteJointe}>
+            <View style={styles.ligneOk}>
+              <ActivityIndicator size="small" color={couleurs.primaire} />
+              <Text style={styles.documentOk}>{t('doc_envoi')}</Text>
+            </View>
+            <Text style={styles.secoursTexte}>{t('doc_envoi_patience')}</Text>
+          </View>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.bloc}>
       {!!label && <Text style={styles.label}>{label}</Text>}
@@ -348,7 +427,7 @@ export function ChoixDocument({
             </View>
           ) : (
             // L'aperçu rassure : le client VOIT que sa pièce est bien jointe.
-            <Image source={{ uri }} style={styles.apercu} resizeMode="cover" />
+            <Image source={{ uri: apercu ?? uri }} style={styles.apercu} resizeMode="cover" />
           )}
           <View style={styles.texteJointe}>
             <View style={styles.ligneOk}>
@@ -387,6 +466,15 @@ export function ChoixDocument({
           <Ionicons name="alert-circle" size={18} color={couleurs.danger} />
           <Text style={styles.texteErreur}>{erreurLocale}</Text>
         </View>
+      )}
+      {/* Envoi raté : on renvoie LA MÊME photo d'une seule touche. */}
+      {!!erreurLocale && !!aRenvoyer.current && !uri && (
+        <Bouton
+          titre={t('doc_reessayer')}
+          icone="refresh-outline"
+          variante="secondaire"
+          onPress={reessayer}
+        />
       )}
     </View>
   );

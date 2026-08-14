@@ -78,12 +78,11 @@ export default function EcranPro() {
     }
     setCharge(true);
     try {
-      // Téléverser les trois documents pour obtenir leurs URLs.
-      const [docPermis, docAssurance, photoVehicule] = await Promise.all([
-        api.televerser(permisUri),
-        api.televerser(assuranceUri),
-        api.televerser(vehiculeUri),
-      ]);
+      // Les trois documents sont DÉJÀ sur le serveur : chacun est parti au
+      // moment où le chauffeur l'a choisi. Envoyer trois photos d'un coup en
+      // fin de formulaire, sur un réseau faible, faisait échouer toute la
+      // candidature — et le chauffeur croyait ne pas pouvoir joindre ses
+      // pièces.
       const profil = await api.creerChauffeur({
         fullName: nom.trim(),
         phone: session.phone, // doit correspondre au téléphone du jeton
@@ -91,9 +90,9 @@ export default function EcranPro() {
         vehiclePlate: plaque.trim(),
         vehicleModel: modele.trim() || undefined,
         zone: zone.trim(),
-        licenseDocumentUrl: docPermis.url,
-        insuranceDocumentUrl: docAssurance.url,
-        vehiclePhotoUrl: photoVehicule.url,
+        licenseDocumentUrl: permisUri,
+        insuranceDocumentUrl: assuranceUri,
+        vehiclePhotoUrl: vehiculeUri,
       });
       // La session porte désormais le profil chauffeur (pending) : cet écran
       // bascule sur l'état « candidature envoyée ».

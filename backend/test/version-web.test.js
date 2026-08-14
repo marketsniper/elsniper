@@ -57,6 +57,12 @@ describe('Version web : le téléphone ne peut pas rester en arrière', () => {
     assert.ok(/version\.json/.test(script.text), 'la comparaison de version a disparu');
     assert.ok(/zanzigoForcerMiseAJour/.test(script.text), 'la remise à neuf a disparu');
     assert.ok(/visibilitychange/.test(script.text), 'le contrôle au retour à l’écran a disparu');
+    // Se recharger au retour du sélecteur de photos effacerait le formulaire
+    // et la pièce jointe que le client vient de choisir.
+    assert.ok(
+      /zanzigoEnvoiEnCours/.test(script.text),
+      'la mise à jour ne patiente plus pendant un envoi de pièce jointe'
+    );
   });
 
   it('les fichiers dont le nom change restent gardés longtemps', async () => {

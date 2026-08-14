@@ -69,15 +69,24 @@ interface OptionsRequete {
 // (POST/PATCH) ne sont jamais rejouées pour ne pas créer de doublons.
 const DELAIS_REVEIL_MS = [4000, 10000, 20000];
 const TIMEOUT_REQUETE_MS = 30000;
+// Envoi d'une pièce jointe : une photo sur un réseau mobile zanzibarite peut
+// mettre bien plus de 30 secondes à partir. Avec l'ancien délai, l'envoi était
+// coupé en route et le client croyait qu'il « ne pouvait pas joindre » sa
+// pièce — alors qu'il fallait seulement laisser le temps au téléversement.
+const TIMEOUT_ENVOI_MS = 180000;
 const MESSAGE_RESEAU =
   'Le serveur se réveille (il se met en veille quand personne ne l\'utilise). ' +
   'Réessayez dans quelques secondes.';
 
 const attendre = (ms: number) => new Promise((resoudre) => setTimeout(resoudre, ms));
 
-async function fetchAvecTimeout(url: string, init: RequestInit): Promise<Response> {
+async function fetchAvecTimeout(
+  url: string,
+  init: RequestInit,
+  delai = TIMEOUT_REQUETE_MS
+): Promise<Response> {
   const controleur = new AbortController();
-  const minuteur = setTimeout(() => controleur.abort(), TIMEOUT_REQUETE_MS);
+  const minuteur = setTimeout(() => controleur.abort(), delai);
   try {
     return await fetch(url, { ...init, signal: controleur.signal });
   } finally {
@@ -138,10 +147,13 @@ async function requete<T>(chemin: string, options: OptionsRequete = {}): Promise
   // réveil et le client croit que la touche ne marche pas.
   if (!relanceable) await reveillerServeur();
 
+  // Une pièce jointe a droit à beaucoup plus de temps qu'un simple appel.
+  const delai = options.formData ? TIMEOUT_ENVOI_MS : TIMEOUT_REQUETE_MS;
+
   let reponse: Response | null = null;
   for (let essai = 0; ; essai += 1) {
     try {
-      reponse = await fetchAvecTimeout(`${BASE_URL}${chemin}`, init);
+      reponse = await fetchAvecTimeout(`${BASE_URL}${chemin}`, init, delai);
       // 502/503/504 : c'est le proxy Render qui répond, pas notre serveur —
       // ça ne compte pas comme signe de vie.
       if (![502, 503, 504].includes(reponse.status)) dernierSigneDeVie = Date.now();
