@@ -200,6 +200,31 @@ describe('Uploads (documents, photos)', () => {
     assert.match(res.body.url, /^https?:\/\//);
     assert.equal(res.body.size, PNG_BUFFER.length);
     assert.equal(res.body.mimeType, 'image/png');
+    // L'URL suit l'ADRESSE DE LA REQUÊTE (donc publique en production) et
+    // sert le document depuis la base — plus jamais le « localhost:3000 »
+    // codé en dur qui empêchait l'équipe d'ouvrir les documents.
+    assert.ok(res.body.url.includes('/api/uploads/'), res.body.url);
+    assert.ok(!res.body.url.includes('localhost:3000'), res.body.url);
+  });
+
+  it('le document uploadé est OUVRABLE ensuite (permis, carte NIDA…)', async () => {
+    const { token } = await authenticate(nextPhone());
+    const envoi = await request(app)
+      .post('/api/uploads')
+      .set(authHeaders(token))
+      .attach('file', PNG_BUFFER, { filename: 'permis.png', contentType: 'image/png' });
+    assert.equal(envoi.status, 201);
+
+    // Le lien s'ouvre SANS jeton (le navigateur de l'équipe n'en envoie pas).
+    const chemin = new URL(envoi.body.url).pathname;
+    const lecture = await request(app).get(chemin);
+    assert.equal(lecture.status, 200, chemin);
+    assert.equal(lecture.headers['content-type'], 'image/png');
+    assert.deepEqual(lecture.body, PNG_BUFFER);
+
+    // Identifiant inconnu → 404 propre.
+    const absent = await request(app).get('/api/uploads/00000000-0000-4000-8000-000000000000');
+    assert.equal(absent.status, 404);
   });
 
   it('type de fichier non accepté → 400 unsupported_file_type', async () => {

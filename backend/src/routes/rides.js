@@ -564,6 +564,9 @@ router.get(
           driver_name: b.driver_name,
           vehicle_plate: b.vehicle_plate,
           vehicle_model: b.vehicle_model,
+          // Dates de la fiche de suivi (réservée → payée → départ → terminée).
+          created_at: b.created_at,
+          paid_at: b.paid_at,
           seats: b.seats,
           price_per_seat: prixPlace,
           amount: Math.round(prixPlace * b.seats * 100) / 100,

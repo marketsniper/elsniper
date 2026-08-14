@@ -164,7 +164,13 @@ export default function EcranTrajets() {
               <View style={styles.blocPlaces}>
                 <Text style={styles.titrePlaces}>🚌 {t('places_titre')}</Text>
                 {placesVisibles.map((place) => (
-                  <View key={place.id} style={styles.carte}>
+                  // Toucher la place ouvre sa FICHE DE SUIVI : étapes,
+                  // paiement, taxi assigné, annulation.
+                  <Pressable
+                    key={place.id}
+                    onPress={() => router.push(`/place/${place.id}`)}
+                    style={({ pressed }) => [styles.carte, pressed && { opacity: 0.7 }]}
+                  >
                     <Text style={styles.itineraire}>
                       {place.origin}{'  '}
                       <Text style={styles.fleche}>→</Text>{'  '}
@@ -199,6 +205,11 @@ export default function EcranTrajets() {
                         {place.paid ? `✔ ${t('places_payee')}` : `⏳ ${t('places_a_payer')}`}
                       </Text>
                     </View>
+                    {/* Place pas encore réglée : le chemin du paiement est
+                        dans la fiche (toucher la carte). */}
+                    {!place.paid && !place.cancelled && (
+                      <Text style={styles.lienFiche}>{t('place_voir_fiche')}</Text>
+                    )}
                     {place.cancellable ? (
                       <Bouton
                         titre={t('place_annuler')}
@@ -210,7 +221,7 @@ export default function EcranTrajets() {
                     ) : place.paid ? (
                       <Text style={styles.notePlace}>{t('place_trop_tard')}</Text>
                     ) : null}
-                  </View>
+                  </Pressable>
                 ))}
                 <Text style={styles.reglePlaces}>{t('resa_regle_annulation')}</Text>
                 {/* Contact WhatsApp : uniquement EN CAS DE PROBLÈME — les
@@ -401,6 +412,11 @@ const styles = StyleSheet.create({
     fontSize: 13.5,
     color: couleurs.encre,
     fontWeight: '700',
+  },
+  lienFiche: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: couleurs.primaireFonce,
   },
   badgePlace: {
     fontSize: 12.5,

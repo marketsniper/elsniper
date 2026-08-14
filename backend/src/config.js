@@ -20,6 +20,9 @@ export const config = {
   env: env.NODE_ENV || 'development',
   isProd,
   port: Number(env.PORT) || 3000,
+  // Origine publique du serveur (liens de documents). Vide = déduite de la
+  // requête entrante, ce qui suffit en production comme en développement.
+  publicBaseUrl: env.PUBLIC_BASE_URL || '',
   databaseUrl:
     env.DATABASE_URL || 'postgres://zanzigo:zanzigo@localhost:5432/zanzigo',
 

@@ -30,11 +30,13 @@ router.get(
               t.pickup_location  AS trip_pickup,
               t.dropoff_location AS trip_dropoff,
               t.client_name      AS trip_client_name,
+              t.scheduled_at     AS trip_scheduled_at,
               pk.pickup_location  AS package_pickup,
               pk.dropoff_location AS package_dropoff,
               pk.qr_code          AS package_qr,
               r.origin            AS ride_origin,
               r.destination       AS ride_destination,
+              r.departure_at      AS ride_departure_at,
               rb.seats            AS ride_seats,
               COALESCE(u.full_name, h.name) AS ride_client_name
        FROM payments p
@@ -66,11 +68,13 @@ router.get(
               t.pickup_location  AS trip_pickup,
               t.dropoff_location AS trip_dropoff,
               t.client_name      AS trip_client_name,
+              t.scheduled_at     AS trip_scheduled_at,
               pk.pickup_location  AS package_pickup,
               pk.dropoff_location AS package_dropoff,
               pk.qr_code          AS package_qr,
               r.origin            AS ride_origin,
               r.destination       AS ride_destination,
+              r.departure_at      AS ride_departure_at,
               rb.seats            AS ride_seats,
               COALESCE(u.full_name, h.name) AS ride_client_name
        FROM payments p

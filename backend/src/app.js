@@ -48,6 +48,9 @@ const publicPostLimiter = makeLimiter({ windowMs: 15 * 60 * 1000, max: 30 });
 
 export function createApp() {
   const app = express();
+  // Render place un proxy devant le serveur : sans ça, req.protocol vaut
+  // « http » et les liens de documents générés seraient en http.
+  app.set('trust proxy', 1);
   app.use(express.json({ limit: '1mb' }));
 
   // Fichiers uploadés en mode dev (fallback disque local)

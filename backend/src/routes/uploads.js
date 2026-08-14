@@ -59,9 +59,13 @@ uploadsRouter.post(
           `Type de fichier non accepté : ${req.file.mimetype} (acceptés : ${ALLOWED_MIME_TYPES.join(', ')})`
         );
       }
+      // Origine publique réelle (Render est derrière un proxy : on lit
+      // x-forwarded-* via app.set('trust proxy')) — l'URL doit s'ouvrir
+      // depuis n'importe quel téléphone, pas seulement le serveur.
       const { url } = await storageService.storeFile({
         buffer: req.file.buffer,
         mimeType: req.file.mimetype,
+        baseUrl: `${req.protocol}://${req.get('host')}`,
       });
       res.status(201).json({
         url,
@@ -73,3 +77,25 @@ uploadsRouter.post(
     }
   }
 );
+
+// GET /uploads/:id — sert un document stocké en base. Route PUBLIQUE mais
+// non devinable (identifiant aléatoire) : c'est ce qui permet à l'équipe
+// d'ouvrir un permis ou une carte NIDA d'un simple toucher, le lien
+// s'ouvrant dans le navigateur (qui n'envoie pas de jeton).
+uploadsRouter.get('/:id', async (req, res, next) => {
+  try {
+    if (!/^[0-9a-f-]{36}$/i.test(req.params.id)) {
+      throw new HttpError(404, 'not_found', 'Document introuvable');
+    }
+    const fichier = await storageService.readFile(req.params.id);
+    if (!fichier) {
+      throw new HttpError(404, 'not_found', 'Document introuvable');
+    }
+    res.setHeader('Content-Type', fichier.mime_type);
+    res.setHeader('Content-Length', String(fichier.size));
+    res.setHeader('Cache-Control', 'private, max-age=3600');
+    res.send(fichier.data);
+  } catch (err) {
+    next(err);
+  }
+});

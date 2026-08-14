@@ -11,6 +11,7 @@
 //     (lien Google Maps) et radiation avec confirmation.
 // La clé est persistée localement et vérifiée par un premier appel.
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { ecrireStockage, lireStockage, supprimerStockage } from '@/lib/stockage';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Alert, Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -34,6 +35,7 @@ import { useRafraichissementAuto } from '@/lib/rafraichissementAuto';
 import { couleurs, espaces, ombres, rayons } from '@/lib/theme';
 import {
   champ,
+  formaterDate,
   formaterMontant,
   formaterPrix,
   totalEnTzs,
@@ -71,6 +73,7 @@ function libelleChauffeur(chauffeur: Chauffeur): string {
 
 export default function EcranEquipe() {
   const { t, langue } = useT();
+  const router = useRouter();
   // null = lecture du stockage en cours ; '' = pas de clé enregistrée.
   const [cle, setCle] = useState<string | null>(null);
   const [saisie, setSaisie] = useState('');
@@ -829,6 +832,37 @@ export default function EcranEquipe() {
               {!estColis && !estPlace && !!paiement.trip_client_name && (
                 <Text style={styles.detail}>{paiement.trip_client_name}</Text>
               )}
+              {/* QUAND : demandé le… et départ prévu — indispensable pour
+                  savoir quoi encaisser en priorité. */}
+              <Text style={styles.detail}>
+                🕐 {t('equipe_paiement_demande')} {formaterDate(champ(paiement, 'created_at'))}
+              </Text>
+              {(() => {
+                const depart = estPlace
+                  ? champ(paiement, 'ride_departure_at')
+                  : champ(paiement, 'trip_scheduled_at');
+                return depart ? (
+                  <Text style={styles.detail}>
+                    🚗 {t('equipe_paiement_depart')} {formaterDate(depart)}
+                  </Text>
+                ) : null;
+              })()}
+              {/* La fiche complète s'ouvre pour une course ou un colis. */}
+              {(!!paiement.trip_id || !!paiement.package_id) && (
+                <Pressable
+                  onPress={() =>
+                    router.push(
+                      paiement.trip_id
+                        ? `/trip/${paiement.trip_id}`
+                        : `/package/${paiement.package_id}`
+                    )
+                  }
+                  accessibilityRole="button"
+                  style={({ pressed }) => pressed && { opacity: 0.7 }}
+                >
+                  <Text style={styles.lienFicheEquipe}>{t('equipe_ouvrir_fiche')}</Text>
+                </Pressable>
+              )}
             </>
           );
         };
@@ -954,19 +988,27 @@ export default function EcranEquipe() {
               {String(champ(candidat, 'phone') ?? '')}
             </Text>
             <View style={styles.rangeeDocs}>
-              {documents.map(
-                ([libelle, url]) =>
-                  typeof url === 'string' &&
-                  !!url && (
-                    <Bouton
-                      key={libelle}
-                      titre={libelle}
-                      icone="document-attach-outline"
-                      variante="secondaire"
-                      onPress={() => Linking.openURL(url)}
-                    />
-                  )
-              )}
+              {documents.map(([libelle, url]) => {
+                if (typeof url !== 'string' || !url) return null;
+                // Documents des toutes premières candidatures : ils
+                // pointaient sur le disque du serveur (« localhost »),
+                // effacé à chaque mise à jour — ils sont perdus, autant le
+                // dire clairement plutôt que d'ouvrir un lien mort.
+                const perdu = /localhost|127\.0\.0\.1/.test(url);
+                return (
+                  <Bouton
+                    key={libelle}
+                    titre={perdu ? `${libelle} — ${t('equipe_doc_indisponible')}` : libelle}
+                    icone={perdu ? 'alert-circle-outline' : 'document-attach-outline'}
+                    variante="secondaire"
+                    onPress={() =>
+                      perdu
+                        ? Alert.alert(t('equipe_doc_indisponible'), t('equipe_doc_perdu_texte'))
+                        : Linking.openURL(url)
+                    }
+                  />
+                );
+              })}
             </View>
             <View style={styles.rangeeActions}>
               <View style={styles.demiAction}>
@@ -1451,6 +1493,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     gap: espaces.m,
+  },
+  lienFicheEquipe: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: couleurs.primaireFonce,
+    paddingTop: espaces.xs,
   },
   // Historique des courses passées : en-têtes de jour + lignes compactes.
   enTeteJour: {

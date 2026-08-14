@@ -328,8 +328,20 @@ export default function EcranTrajet() {
       </Carte>
 
       {statut === 'requested' && (
-        <EncartInfo icone="time-outline" ton="attente">
-          {t('trip_demande_envoyee')}
+        <>
+          <EncartInfo icone="time-outline" ton="attente">
+            {t('trip_demande_envoyee')}
+          </EncartInfo>
+          {/* Le client doit savoir POURQUOI il ne peut pas encore payer. */}
+          <EncartInfo icone="card-outline">
+            {t('trip_paiement_apres_chauffeur', { montant: formaterPrix(trajet) })}
+          </EncartInfo>
+        </>
+      )}
+      {/* Chauffeur confirmé : la marche à suivre pour régler, noir sur blanc. */}
+      {peutPayer && (
+        <EncartInfo icone="cash-outline" ton="attente">
+          {t('trip_paiement_instructions', { montant: formaterPrix(trajet) })}
         </EncartInfo>
       )}
       {/* Hôtel avec crédit suffisant : paiement en un geste, sans circuit externe. */}
