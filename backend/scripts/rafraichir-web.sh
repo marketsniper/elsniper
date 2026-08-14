@@ -41,6 +41,19 @@ sed -i 's|  <link rel="icon" href="/web/favicon.ico" /></head>|  <link rel="icon
 # Enregistrement du service worker + bouton « Installer » en fin de <body>.
 sed -i 's|</body>|  <script>\n    if ("serviceWorker" in navigator) {\n      window.addEventListener("load", function () {\n        navigator.serviceWorker.register("/web/service-worker.js");\n      });\n    }\n  </script>\n  <script src="/web/installation.js" defer></script>\n</body>|' "$INDEX"
 
+# ===== CARTE D'IDENTITÉ DE LA VERSION EN LIGNE =====
+# Un fichier minuscule, jamais mis en cache, qui dit quelle version le serveur
+# sert vraiment. L'application le lit à chaque ouverture et à chaque retour à
+# l'écran : si le téléphone affiche autre chose (l'iPhone ravive volontiers une
+# vieille photographie de l'app), il se remet à neuf tout seul.
+ENTREE="$(basename "$(ls "$RACINE/backend/public/web/_expo/static/js/web/"entry-*.js | head -n 1)")"
+cat > "$RACINE/backend/public/web/version.json" <<JSON
+{
+  "version": "$VERSION",
+  "entree": "$ENTREE"
+}
+JSON
+
 # GARDE-FOU : le bundle doit interroger l'API demandée, et JAMAIS une
 # adresse locale (sinon la version en ligne ne parlerait à aucun serveur).
 if grep -rqE 'https?://(127\.0\.0\.1|localhost):[0-9]+/api' "$RACINE/backend/public/web/_expo/"; then
@@ -56,6 +69,9 @@ grep -q 'zanzigo-web' "$INDEX" || { echo "ERREUR : retouche CSS non appliquée" 
 grep -q 'manifest.webmanifest' "$INDEX" || { echo "ERREUR : balises PWA non appliquées" >&2; exit 1; }
 grep -rq "$VERSION" "$RACINE/backend/public/web/_expo/" || {
   echo "ERREUR : l'estampille de version ($VERSION) est absente du bundle" >&2; exit 1;
+}
+grep -q "$ENTREE" "$INDEX" || {
+  echo "ERREUR : version.json annonce $ENTREE, absent de la page" >&2; exit 1;
 }
 grep -q 'service-worker.js' "$INDEX" || { echo "ERREUR : enregistrement SW non appliqué" >&2; exit 1; }
 grep -q 'installation.js' "$INDEX" || { echo "ERREUR : bouton installer non appliqué" >&2; exit 1; }

@@ -66,19 +66,23 @@ export function createApp() {
     'public',
     'web'
   );
-  // Cache : les assets HACHÉS (leur nom change à chaque version) peuvent
-  // être gardés longtemps ; la page HTML, le service worker et le manifest
-  // JAMAIS — sinon les tablettes/téléphones restent sur une vieille version
-  // pendant une heure après chaque correctif.
+  // Cache : SEULS les fichiers dont le nom change à chaque version (_expo/,
+  // assets/) sont gardés longtemps. Tout le reste — page HTML, service
+  // worker, scripts d'installation, manifeste, version.json — est revalidé à
+  // chaque ouverture. La règle était inverse (tout gardé 7 jours sauf trois
+  // exceptions), et un iPhone est resté coincé des heures sur une version
+  // périmée parce que le script chargé de le dépanner était, lui aussi, en
+  // cache pour une semaine.
   const sansCache = (res) => res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+  const nomHache = (fichier) =>
+    fichier.startsWith(path.join(webAppDir, '_expo') + path.sep) ||
+    fichier.startsWith(path.join(webAppDir, 'assets') + path.sep);
   app.use(
     '/web',
     express.static(webAppDir, {
       maxAge: '7d',
       setHeaders: (res, fichier) => {
-        if (/\.(html|webmanifest)$/.test(fichier) || fichier.endsWith('service-worker.js')) {
-          sansCache(res);
-        }
+        if (!nomHache(fichier)) sansCache(res);
       },
     })
   );

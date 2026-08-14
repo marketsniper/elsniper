@@ -5,20 +5,47 @@
 //    noms changent à chaque build, donc jamais de contenu périmé ;
 //  - les pages (/web/…) sont servies réseau d'abord, avec repli sur la
 //    dernière version en cache quand le réseau est coupé.
-const CACHE = 'zanzigo-web-v1';
+const CACHE = 'zanzigo-web-v2';
+
+// Y avait-il déjà une version installée ? Si oui, les fenêtres ouvertes
+// affichent l'ANCIENNE application : il faudra les recharger.
+let remplaceUneVersion = false;
 
 self.addEventListener('install', () => {
+  remplaceUneVersion = !!self.registration.active;
   self.skipWaiting();
 });
 
 self.addEventListener('activate', (evenement) => {
   evenement.waitUntil(
-    caches
-      .keys()
-      .then((noms) => Promise.all(noms.filter((n) => n !== CACHE).map((n) => caches.delete(n))))
-      .then(() => self.clients.claim())
+    (async () => {
+      // Le nom du cache change à chaque version : tout l'ancien contenu part,
+      // y compris la coquille de page gardée pour le mode hors-ligne. C'est
+      // elle qui pouvait faire revivre une version périmée pendant des jours.
+      const noms = await caches.keys();
+      await Promise.all(noms.filter((n) => n !== CACHE).map((n) => caches.delete(n)));
+      await self.clients.claim();
+      // Rechargement des fenêtres ouvertes : lancé, mais surtout PAS attendu.
+      // Cette navigation repasse par ce service worker, qui doit d'abord avoir
+      // fini de s'activer — l'attendre ici bloquait le chargement de la page.
+      if (remplaceUneVersion) rechargerLesFenetres();
+    })()
   );
 });
+
+/**
+ * Recharge les fenêtres ouvertes après l'arrivée d'une nouvelle version.
+ * Sans ça, un téléphone qui ne ferme jamais vraiment l'application (l'iPhone
+ * garde l'écran en mémoire) reste sur l'ancienne indéfiniment.
+ */
+async function rechargerLesFenetres() {
+  const fenetres = await self.clients.matchAll({ type: 'window' });
+  await Promise.all(
+    fenetres.map((fenetre) =>
+      fenetre.navigate ? fenetre.navigate(fenetre.url).catch(() => {}) : Promise.resolve()
+    )
+  );
+}
 
 // ----- ALERTES INSTANTANÉES ------------------------------------------------
 // Le serveur pousse l'alerte ; c'est ce service worker qui l'affiche, même
@@ -76,6 +103,9 @@ self.addEventListener('fetch', (evenement) => {
   const url = new URL(requete.url);
   if (url.origin !== self.location.origin) return;
   if (url.pathname.startsWith('/api/')) return; // jamais l'API
+  // Carte d'identité de la version en ligne : toujours demandée au serveur,
+  // jamais servie de mémoire — c'est elle qui détecte les versions périmées.
+  if (url.pathname === '/web/version.json') return;
 
   // Assets hachés : cache d'abord.
   if (url.pathname.startsWith('/web/_expo/') || url.pathname.startsWith('/web/assets/')) {
