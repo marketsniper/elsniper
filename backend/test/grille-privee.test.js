@@ -21,8 +21,6 @@ describe('Grille privée au kilomètre', () => {
     assert.equal(privateUsdForRoute('Paje', 'Nungwi'), 65);
     assert.equal(privateUsdForRoute('Nungwi', 'Kizimkazi'), 70);
     assert.equal(privateUsdForRoute('Kizimkazi', 'Nungwi'), 70);
-    // Sauter un village (par-dessus Bwejuu) reste à 20 USD.
-    assert.equal(privateUsdForRoute('Michamvi', 'Paje'), 20);
   });
 
   it('la chaîne de la côte est : d’un village au suivant, 12 USD', () => {
@@ -40,14 +38,21 @@ describe('Grille privée au kilomètre', () => {
     }
   });
 
-  it('sauter un village : Bwejuu ↔ Jambiani à 16 USD, par-dessus Paje', () => {
-    assert.equal(privateUsdForRoute('Bwejuu', 'Jambiani'), 16);
-    assert.equal(privateUsdForRoute('Jambiani', 'Bwejuu'), 16);
-    const saut = priceTrip('private', 'tourist', { pickup: 'Bwejuu', dropoff: 'Jambiani' });
-    assert.equal(saut.commission, 3.2, 'commission 20 % comme les autres petits trajets');
-    assert.equal(saut.price - saut.commission, 12.8, 'le gain chauffeur a changé');
-    // Michamvi ↔ Paje, l'autre trajet à un village d'écart, garde ses 20 USD.
-    assert.equal(privateUsdForRoute('Michamvi', 'Paje'), 20);
+  it('un village d’écart : 16 USD, sur les trois paires concernées', () => {
+    const ecarts = [
+      ['Michamvi', 'Paje'], // par-dessus Bwejuu
+      ['Bwejuu', 'Jambiani'], // par-dessus Paje
+      ['Paje', 'Makunduchi'], // par-dessus Jambiani
+    ];
+    for (const [a, b] of ecarts) {
+      assert.equal(privateUsdForRoute(a, b), 16, `${a} → ${b}`);
+      assert.equal(privateUsdForRoute(b, a), 16, `${b} → ${a}`);
+      const saut = priceTrip('private', 'tourist', { pickup: a, dropoff: b });
+      assert.equal(saut.commission, 3.2, `${a} → ${b} : commission 20 %`);
+      assert.equal(saut.price - saut.commission, 12.8, `${a} → ${b} : gain chauffeur`);
+    }
+    // Au-delà de deux villages, la grille au kilomètre reprend.
+    assert.equal(privateUsdForRoute('Michamvi', 'Jambiani'), 30);
   });
 
   it('sauts de village : 12 USD à 20 % — le chauffeur garde 9,60', () => {
@@ -59,10 +64,6 @@ describe('Grille privée au kilomètre', () => {
     const local = priceTrip('private', 'local', { pickup: 'Paje', dropoff: 'Jambiani' });
     assert.equal(local.price, 12 * 2600);
     assert.equal(local.commission, 12 * 2600 * 0.2);
-    // Sauter un village garde sa commission dédiée : 20 USD → 15 % = 3 USD.
-    const vingt = priceTrip('private', 'tourist', { pickup: 'Michamvi', dropoff: 'Paje' });
-    assert.equal(vingt.price, 20);
-    assert.equal(vingt.commission, 3);
     // Les autres privés gardent 10 % (Matemwe → Paje 55 → 5,50).
     const normal = priceTrip('private', 'tourist', { pickup: 'Matemwe', dropoff: 'Paje' });
     assert.equal(normal.commission, 5.5);

@@ -58,23 +58,24 @@ const CITY_ZONES = {
 // spécial est prioritaire sur la formule au kilomètre ET sur le minimum.
 //
 // LA CHAÎNE DE LA CÔTE EST — Michamvi, Bwejuu, Paje, Jambiani, Makunduchi
-// se suivent le long de la même route. D'un village au suivant, c'est un
-// saut de puce : 12 USD, commission 20 % (2,40 USD) — le chauffeur garde
-// 9,60 USD sur un trajet de quinze minutes. Ces courses tournent vite, la
-// plateforme s'y rattrape au volume plutôt qu'au montant.
-//
-// En sauter un coûte plus cher, sans revenir au tarif plein : Bwejuu ↔
-// Jambiani (par-dessus Paje) vaut 16 USD, même commission de 20 %.
-// Michamvi ↔ Paje (par-dessus Bwejuu) garde ses 20 USD à 15 %.
+// se suivent le long de la même route. Une règle, deux prix :
+//   village voisin        → 12 USD (chauffeur 9,60)
+//   un village d'écart    → 16 USD (chauffeur 12,80)
+// Commission 20 % dans les deux cas : ces courses tournent vite et se
+// répètent dans la journée, la plateforme s'y rattrape au volume plutôt
+// qu'au montant. Au-delà de deux villages, la grille au kilomètre reprend.
 const SPECIAL_PRIVATE_ROUTES_USD = [
   { a: 'Nungwi', b: 'Paje', usd: 65 },
   { a: 'Nungwi', b: 'Kizimkazi', usd: 70 },
-  { a: 'Michamvi', b: 'Paje', usd: 20, commission: 0.15 },
+  // Voisins immédiats.
   { a: 'Michamvi', b: 'Bwejuu', usd: 12, commission: 0.2 },
   { a: 'Bwejuu', b: 'Paje', usd: 12, commission: 0.2 },
   { a: 'Paje', b: 'Jambiani', usd: 12, commission: 0.2 },
   { a: 'Jambiani', b: 'Makunduchi', usd: 12, commission: 0.2 },
+  // Un village sauté.
+  { a: 'Michamvi', b: 'Paje', usd: 16, commission: 0.2 },
   { a: 'Bwejuu', b: 'Jambiani', usd: 16, commission: 0.2 },
+  { a: 'Paje', b: 'Makunduchi', usd: 16, commission: 0.2 },
 ];
 
 // Trajets spéciaux à prix fixe (TZS, place locale en taxi partagé), deux

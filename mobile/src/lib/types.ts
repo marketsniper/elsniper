@@ -398,22 +398,22 @@ export const TARIFS_TRAJET_USD: Partial<Record<TypeTrajet, number>> = {
  * pickupLocation/dropoffLocation valent EXACTEMENT ces villes (sans précision
  * ajoutée) — d'où l'envoi des villes seules sur ces trajets.
  */
-// Commissions dédiées côté serveur : 15 % sur Michamvi ↔ Paje (qui saute
-// Bwejuu), 20 % sur les sauts de village à 12 USD — le serveur fige prix ET
-// commission sur chaque course, l'app n'affiche que ses valeurs.
+// Commission dédiée côté serveur : 20 % sur toute la chaîne de la côte est
+// — le serveur fige prix ET commission sur chaque course, l'app n'affiche
+// que ses valeurs.
 //
 // LA CHAÎNE DE LA CÔTE EST : Michamvi → Bwejuu → Paje → Jambiani →
-// Makunduchi. D'un village au SUIVANT, c'est 12 USD ; Bwejuu ↔ Jambiani,
-// qui saute Paje, vaut 16 USD.
+// Makunduchi. Village voisin 12 USD, un village d'écart 16 USD.
 export const TRAJETS_SPECIAUX_PRIVE_USD: { villes: [string, string]; prix: number }[] = [
   { villes: ['Nungwi', 'Paje'], prix: 65 },
   { villes: ['Nungwi', 'Kizimkazi'], prix: 70 },
-  { villes: ['Michamvi', 'Paje'], prix: 20 },
   { villes: ['Michamvi', 'Bwejuu'], prix: 12 },
   { villes: ['Bwejuu', 'Paje'], prix: 12 },
   { villes: ['Paje', 'Jambiani'], prix: 12 },
   { villes: ['Jambiani', 'Makunduchi'], prix: 12 },
+  { villes: ['Michamvi', 'Paje'], prix: 16 },
   { villes: ['Bwejuu', 'Jambiani'], prix: 16 },
+  { villes: ['Paje', 'Makunduchi'], prix: 16 },
 ];
 
 /** Trajets spéciaux TZS : place locale en taxi partagé (deux sens). */
