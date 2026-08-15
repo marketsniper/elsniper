@@ -323,13 +323,13 @@ ${PIED_PARTENAIRE}
   app.get('/restaurant', (_req, res) => {
     res.type('html').send(`<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>zanziGo for restaurants — a taxi home, and deliveries</title>
+<title>zanziGo for restaurants — a taxi home, and parcels</title>
 <style>${STYLE_PARTENAIRE}</style></head><body><main>
 
 <h1>Your last service of the night is <span>getting them home</span>.</h1>
-<p class="accroche">zanziGo is a Zanzibar taxi &amp; delivery service. Verified
-drivers, published prices, one booking from your counter — and a driver for your
-deliveries when you need one.</p>
+<p class="accroche">zanziGo is a Zanzibar taxi &amp; parcel service. Verified
+drivers, published prices, one booking from your counter — the same service your
+neighbouring hotels already use.</p>
 
 <div class="gratuit">
   <b>It costs your restaurant nothing.</b> No fee, no subscription, no software to
@@ -345,9 +345,10 @@ deliveries when you need one.</p>
   One booking, a verified driver, the fare fixed before he arrives.</p>
 </div>
 <div class="carte">
-  <h3>🍲 Send a delivery without leaving your kitchen</h3>
-  <p>An order to carry to a hotel, a villa, an office. You book it like a ride; the
-  driver picks it up and the recipient signs for it with a photo.</p>
+  <h3>📦 A parcel to send between towns</h3>
+  <p>Papers to a supplier, a jacket a customer left behind, something to collect in
+  Stone Town. You book it like a ride; the driver picks it up and the recipient signs
+  for it with a photo. Parcels between towns — not meals to a doorstep.</p>
 </div>
 <div class="carte">
   <h3>💵 The price is fixed before departure</h3>
@@ -371,15 +372,15 @@ deliveries when you need one.</p>
   <tr><td>Shared taxi seat, per person (from)</td><td>14.00</td><td class="egal">14.00</td></tr>
 </table>
 
-<h2>Deliveries — one price, by size</h2>
+<h2>Parcels between towns — one price, by size</h2>
 <table>
   <tr><th>Parcel</th><th>Price</th></tr>
   <tr><td>Small — documents, keys, an envelope</td><td>5.00</td></tr>
-  <tr><td>Medium — a meal order, a bag, a small box</td><td>10.00</td></tr>
+  <tr><td>Medium — a bag, a small box, a forgotten item</td><td>10.00</td></tr>
   <tr><td>Large — a crate, a full restocking run</td><td>18.00</td></tr>
 </table>
 <p class="accroche" style="margin-top:10px;font-size:15.5px">Prices in USD. The
-partner rate applies to private cars only; shared seats and deliveries are already at
+partner rate applies to private cars only; shared seats and parcels are already at
 the lowest published price. Payment by <b>card or mobile wallet</b> — your driver
 never handles money.</p>
 
@@ -401,7 +402,7 @@ never handles money.</p>
 </div>
 
 <div class="bonus">
-  <b>🎁 20 completed rides = a 10 USD voucher.</b> Use it for a free delivery or turn
+  <b>🎁 20 completed rides = a 10 USD voucher.</b> Use it for a free parcel or turn
   it into credit on your account. And with a <b>prepaid credit account</b>, your
   counter settles everything in one tap — no cash to handle.
 </div>

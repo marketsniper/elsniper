@@ -624,9 +624,9 @@ const CHAINES = {
     sw: 'Hoteli au mgahawa',
   },
   accueil_hotel_soustitre: {
-    fr: 'Taxis pour vos clients, livraison de vos colis',
-    en: 'Taxis for your customers, deliveries for your parcels',
-    sw: 'Teksi kwa wateja wako, usafirishaji wa mizigo yako',
+    fr: 'Taxis pour vos clients, colis entre les villes',
+    en: 'Taxis for your customers, parcels between towns',
+    sw: 'Teksi kwa wateja wako, mizigo kati ya miji',
   },
   accueil_chauffeur_titre: {
     fr: 'Chauffeur — Taxi Partner',
@@ -1076,9 +1076,9 @@ const CHAINES = {
     sw: 'Imeshindikana kuingia. Jaribu tena.',
   },
   hotelins_intro: {
-    fr: 'Créez le compte de votre établissement pour réserver des taxis pour vos clients et faire livrer vos colis — tarif touriste avec −5 % partenaire sur les courses privées.',
-    en: 'Create your business account to book taxis for your customers and have parcels delivered — tourist rates with a 5% partner discount on private rides.',
-    sw: 'Fungua akaunti ya biashara yako kuweka teksi kwa wateja wako na kutuma mizigo — bei ya watalii ukiwa na punguzo la 5% kwa safari binafsi.',
+    fr: 'Créez le compte de votre établissement pour réserver des taxis pour vos clients et envoyer vos colis entre les villes — tarif touriste avec −5 % partenaire sur les courses privées.',
+    en: 'Create your business account to book taxis for your customers and send parcels between towns — tourist rates with a 5% partner discount on private rides.',
+    sw: 'Fungua akaunti ya biashara yako kuweka teksi kwa wateja wako na kutuma mizigo kati ya miji — bei ya watalii ukiwa na punguzo la 5% kwa safari binafsi.',
   },
   // Nature de l'établissement : le compte, le crédit et la fidélité sont les
   // mêmes ; c'est le nom à l'écran qui change.

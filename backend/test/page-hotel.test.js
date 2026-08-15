@@ -56,8 +56,12 @@ describe('Page restaurants partenaires', () => {
     // Son problème à lui : le dernier service, les clients qui repartent.
     assert.match(page, /costs your restaurant nothing/i, 'la gratuité n’est pas dite');
     assert.match(page, /getting them home/i, 'le sujet du soir n’est pas posé');
-    // …et les commandes à faire porter.
-    assert.match(page, /delivery|deliveries/i, 'la livraison manque');
+    // …et le service colis, le MÊME que celui des hôtels.
+    assert.match(page, /parcel/i, 'le service colis manque');
+    // zanziGo n'est pas un service de livraison de repas : la page ne doit
+    // jamais le laisser croire, et le dit noir sur blanc.
+    assert.ok(!/meal order|food delivery|from your kitchen/i.test(page), 'la page vend de la livraison de repas');
+    assert.match(page, /not meals to a doorstep/i, 'la page ne dit pas ce qu’on ne fait PAS');
     assert.match(page, /5% partner rate/i, 'le tarif partenaire manque');
     assert.match(page, /47\.50/, 'le prix partenaire remisé manque');
     assert.match(page, /straight away/i, 'la disponibilité immédiate n’est pas dite');
@@ -69,7 +73,7 @@ describe('Page restaurants partenaires', () => {
     assert.ok(!/reception desk/i.test(page), 'texte d’hôtel recyclé');
   });
 
-  it('affiche la grille des livraisons au vrai prix, sans remise', async () => {
+  it('affiche la grille des colis au vrai prix, sans remise', async () => {
     const page = (await request(app).get('/restaurant')).text;
     assert.match(page, /5\.00/, 'le petit colis manque');
     assert.match(page, /10\.00/, 'le colis moyen manque');
@@ -77,6 +81,7 @@ describe('Page restaurants partenaires', () => {
     // La remise ne vaut que sur les courses privées : jamais 9,50 sur un colis.
     assert.ok(!/9\.50/.test(page), 'un colis ne doit pas apparaître remisé');
     assert.match(page, /applies to private cars only/i, 'la limite de la remise n’est pas dite');
+    assert.match(page, /Parcels between towns/i, 'le colis n’est pas cadré « entre les villes »');
   });
 
   it('la page hôtels ne promet plus de remise sur les colis', async () => {
