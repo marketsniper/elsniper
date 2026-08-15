@@ -204,6 +204,7 @@ th,td{padding:12px 14px;text-align:left;font-size:15.5px;border-bottom:1px solid
 th{background:#FFF1EC;color:#B93C1B;font-size:14px;text-transform:uppercase;letter-spacing:.4px}
 th:nth-child(n+2),td:nth-child(n+2){text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
 .remise{color:#B93C1B;font-weight:800}
+.egal{color:#8A7168;font-weight:600}
 .gps{background:#E8F1FB;border-left:8px solid #2B6CB0;border-radius:14px;padding:16px 20px;margin-top:14px;font-size:16.5px;line-height:1.5}
 .gps b{color:#1F4E80}
 tr:last-child td{border-bottom:none}
@@ -258,12 +259,13 @@ Verified drivers, published prices, one booking from your reception desk.</p>
   <tr><td>Airport / Stone Town ↔ Paje, Jambiani, Bwejuu</td><td>50.00</td><td class="remise">47.50</td></tr>
   <tr><td>Airport / Stone Town ↔ Kizimkazi, Makunduchi</td><td>45.00</td><td class="remise">42.75</td></tr>
   <tr><td>Nungwi ↔ Paje — coast to coast</td><td>65.00</td><td class="remise">61.75</td></tr>
-  <tr><td>Shared taxi seat, per person (from)</td><td>14.00</td><td class="remise">13.30</td></tr>
+  <tr><td>Shared taxi seat, per person (from)</td><td>14.00</td><td class="egal">14.00</td></tr>
   <tr><td>Parcel between towns (medium size)</td><td>10.00</td><td class="remise">9.50</td></tr>
 </table>
-<p class="accroche" style="margin-top:10px;font-size:15.5px">Prices in USD.
-Return trips with waiting time, baby seat, large luggage and night flights are all
-handled — just say so when booking.</p>
+<p class="accroche" style="margin-top:10px;font-size:15.5px">Prices in USD. The
+partner rate applies to private cars; shared seats are already at the lowest
+published price. Return trips with waiting time, baby seat, large luggage and night
+flights are all handled — just say so when booking.</p>
 
 <div class="gps">
   <b>⚡ A taxi straight away, even without booking ahead.</b>

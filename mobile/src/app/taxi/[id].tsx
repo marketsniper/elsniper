@@ -23,6 +23,7 @@ import {
   TexteErreur,
   Titre,
 } from '@/components/ui';
+import { CartePosition } from '@/components/CartePosition';
 import { api, definirCleEquipe, ErreurApi, type StatsChauffeur } from '@/lib/api';
 import { useT } from '@/lib/i18n';
 import { lireStockage } from '@/lib/stockage';
@@ -257,12 +258,7 @@ export default function EcranTaxiEquipe() {
           valeur={String(champ(chauffeur, 'vehicle_qr_code', 'vehicleQrCode') ?? '—')}
         />
         {positionConnue ? (
-          <Bouton
-            titre={t('equipe_position')}
-            icone="location-outline"
-            variante="secondaire"
-            onPress={() => Linking.openURL(`https://www.google.com/maps?q=${lat},${lng}`)}
-          />
+          <CartePosition lat={lat} lng={lng} titre={t('equipe_position')} />
         ) : (
           <Text style={styles.detail}>{t('equipe_position_inconnue')}</Text>
         )}

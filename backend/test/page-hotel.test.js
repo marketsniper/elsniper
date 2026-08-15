@@ -23,6 +23,10 @@ describe('Page hôtels partenaires', () => {
     assert.match(page, /fixed/i, 'le prix fixe manque');
     // 3. Combien ça leur coûte ?
     assert.match(page, /47\.50/, 'le prix partenaire remisé manque');
+    // La remise ne vaut PAS sur les places partagées : la page le dit, et ne
+    // les affiche pas remisées.
+    assert.match(page, /partner rate applies to private cars/i, 'la limite de la remise n’est pas dite');
+    assert.ok(!/13\.30/.test(page), 'une place partagée ne doit pas apparaître remisée');
     // Ce qu'une réception veut vraiment savoir : combien de temps son client
     // va attendre. Les chauffeurs partagent leur position, on envoie le plus
     // proche — c'est l'argument, pas la marge.

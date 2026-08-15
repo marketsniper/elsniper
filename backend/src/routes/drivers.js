@@ -343,7 +343,15 @@ router.get(
     if (!isAdmin(req) && req.auth.driverId !== req.params.id) {
       throw new HttpError(403, 'forbidden', 'Accès réservé au chauffeur concerné');
     }
-    const { rows } = await query('SELECT * FROM drivers WHERE id = $1', [req.params.id]);
+    // La dernière position connue voyage avec la fiche : c'est elle qui
+    // permet d'afficher le chauffeur sur la carte, sans second appel.
+    const { rows } = await query(
+      `SELECT d.*, p.lat AS last_lat, p.lng AS last_lng, p.updated_at AS position_updated_at
+       FROM drivers d
+       LEFT JOIN driver_positions p ON p.driver_id = d.id
+       WHERE d.id = $1`,
+      [req.params.id]
+    );
     if (!rows[0]) throw notFound('Chauffeur');
     res.json(sanitizeDriver(rows[0]));
   })

@@ -288,10 +288,16 @@ export function priceTrip(tripType, audience, route = {}) {
     return null; // shared_local n'existe pas en USD
   }
   // Grille touriste remisée : résident vérifié −10 %, hôtel partenaire −5 %.
+  //
+  // La remise partenaire ne vaut QUE sur les courses privées. Une place de
+  // taxi partagé se vend déjà au prix le plus bas de la grille (14 à 18 USD) :
+  // la remiser rognerait la part du chauffeur, qui remplit sa voiture place
+  // par place. L'hôtel garde son avantage là où il y a de la marge.
+  const remiseHotelApplicable = audience === 'hotel' && tripType === 'private';
   const tauxRemise =
     audience === 'resident'
       ? config.residentDiscountRate
-      : audience === 'hotel'
+      : remiseHotelApplicable
         ? config.hotelDiscountRate
         : 0;
   const price = tauxRemise ? round2(usd * (1 - tauxRemise)) : usd;

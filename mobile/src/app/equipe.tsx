@@ -38,6 +38,7 @@ import {
   TexteErreur,
   Titre,
 } from '@/components/ui';
+import { CartePosition } from '@/components/CartePosition';
 import { api, definirCleEquipe, ErreurApi, type AttentePartage, type StatsAbonnes } from '@/lib/api';
 import { formaterDateRelativeI18n, libelleTypeTrajet, useT } from '@/lib/i18n';
 import { useRafraichissementAuto } from '@/lib/rafraichissementAuto';
@@ -711,11 +712,10 @@ export default function EcranEquipe() {
                   const positionConnue = Number.isFinite(lat) && Number.isFinite(lng);
                   const majPosition = champ(choisi, 'position_updated_at');
                   return positionConnue ? (
-                    <Bouton
-                      titre={`📍 ${String(champ(choisi, 'zone') ?? '—')} · ${t('equipe_position')} · ${formaterDateRelativeI18n(majPosition, t)}`}
-                      icone="location-outline"
-                      variante="secondaire"
-                      onPress={() => Linking.openURL(`https://www.google.com/maps?q=${lat},${lng}`)}
+                    <CartePosition
+                      lat={lat}
+                      lng={lng}
+                      titre={`${String(champ(choisi, 'zone') ?? '—')} · ${formaterDateRelativeI18n(majPosition, t)}`}
                     />
                   ) : (
                     <View style={styles.ligneDetail}>
