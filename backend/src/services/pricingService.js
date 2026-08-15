@@ -14,26 +14,52 @@ import { config } from '../config.js';
 // Tarif local UNIFIÉ : 15 000 TZS la place partout (sauf trajets spéciaux
 // ci-dessous) — plus simple à retenir pour les clients et les chauffeurs.
 const ZONE_TIERS = {
-  nord: { privateUsd: 45, sharedUsd: 18, localTzs: 15000 }, // Nungwi / Kendwa
-  nordEst: { privateUsd: 40, sharedUsd: 16, localTzs: 15000 }, // Matemwe / Kiwengwa
-  est: { privateUsd: 45, sharedUsd: 15, localTzs: 15000 }, // Paje / Bwejuu
-  estSud: { privateUsd: 50, sharedUsd: 15, localTzs: 15000 }, // Jambiani
-  estPointe: { privateUsd: 50, sharedUsd: 18, localTzs: 15000 }, // Michamvi (route directe)
-  sud: { privateUsd: 45, sharedUsd: 14, localTzs: 15000 }, // Kizimkazi / Makunduchi
+  nord: { privateUsd: 45, localTzs: 15000 }, // Nungwi / Kendwa
+  nordEst: { privateUsd: 40, localTzs: 15000 }, // Matemwe / Kiwengwa
+  est: { privateUsd: 45, localTzs: 15000 }, // Paje / Bwejuu
+  estSud: { privateUsd: 50, localTzs: 15000 }, // Jambiani
+  estPointe: { privateUsd: 50, localTzs: 15000 }, // Michamvi (route directe)
+  sud: { privateUsd: 45, localTzs: 15000 }, // Kizimkazi / Makunduchi
 };
 
+// PRIX D'UNE PLACE EN TAXI PARTAGÉ — déduit du prix de la course PRIVÉE du
+// même trajet, jamais fixé à part. Une seule grille à tenir : quand un
+// transfert bouge, sa place suit toute seule.
+//
+//   privé 40 USD        → place 12
+//   privé 45 USD        → place 15
+//   privé 50 USD        → place 16
+//   privé 60 USD et +   → place 18
+//
+// En dessous de 40 USD la question ne se pose pas : le taxi partagé n'existe
+// pas sur les trajets courts (voir PARTAGE_PRIVE_MIN_USD).
+function sharedSeatUsd(priveUsd) {
+  if (priveUsd >= 60) return 18;
+  if (priveUsd >= 50) return 16;
+  if (priveUsd >= 45) return 15;
+  return 12;
+}
+
 // Commissions zanziGo par service (grille « Chauffeur reçoit ») :
-//  - privé 10 % (50 → 45,00 chez le chauffeur) ;
-//  - partagé touriste 20 % (18 → 14,40) ;
-//  - partagé local 15 % (15 000 → 12 750) ;
+//  - privé LONG 10 % (45 → 40,50 chez le chauffeur) ;
+//  - privé COURT 20 % — voir COURSE_COURTE_MAX_USD ci-dessous ;
+//  - partagé, touriste comme local, 20 % ;
 //  - colis 20 % (5 → 4,00).
 // Les réservations d'hôtel restent sur le taux général config.commissionRate.
 const COMMISSION_RATES = {
   private: 0.1,
+  privateCourt: 0.2,
   shared: 0.2,
-  local: 0.15,
+  local: 0.2,
   package: 0.2,
 };
+
+// Une course privée sous ce prix est une COURSE COURTE : saut de village,
+// transfert aéroport, liaison entre plages voisines. Elle porte 20 % au lieu
+// de 10 %. Ces courses tournent vite et se répètent dans la journée — la
+// plateforme s'y rattrape au volume plutôt qu'au montant, et le chauffeur
+// enchaîne. Le seuil est calé juste sous le premier vrai transfert (40 USD).
+const COURSE_COURTE_MAX_USD = 40;
 
 // Rattachement des villes aux zones. Les villes de la côte centre-est et
 // Fumba sont assimilées aux zones voisines (ajustable sur demande).
@@ -138,9 +164,14 @@ function specialPrivateRouteUsd(pickup, dropoff) {
 }
 
 // Taux de commission d'une course privée sur cet itinéraire : celui du
-// trajet spécial s'il en définit un, sinon le taux privé général (10 %).
+// trajet spécial s'il en définit un, sinon 20 % pour une course courte et
+// 10 % pour un transfert.
 function privateCommissionRate(pickup, dropoff) {
-  return specialPrivateRoute(pickup, dropoff)?.commission ?? COMMISSION_RATES.private;
+  const dedie = specialPrivateRoute(pickup, dropoff)?.commission;
+  if (dedie !== undefined) return dedie;
+  return privateUsdForRoute(pickup, dropoff) < COURSE_COURTE_MAX_USD
+    ? COMMISSION_RATES.privateCourt
+    : COMMISSION_RATES.private;
 }
 
 function specialLocalRouteTzs(pickup, dropoff) {
@@ -255,7 +286,7 @@ export function privateUsdForRoute(pickup, dropoff) {
 // Prix touriste (USD) d'une place en trajet partagé selon l'itinéraire —
 // utilisé aussi pour l'affichage des trajets postés par les chauffeurs.
 export function sharedSeatUsdForRoute(pickup, dropoff) {
-  return tierForRoute(pickup, dropoff).sharedUsd;
+  return sharedSeatUsd(privateUsdForRoute(pickup, dropoff));
 }
 
 // Le TARIF LOCAL (place à 15 000 TZS, spéciaux inclus, ex. Nungwi ↔ Paje
@@ -295,7 +326,7 @@ export function hubToHubRoute(pickup, dropoff) {
 export function localSeatTzsForRoute(pickup, dropoff) {
   const tier = tierForRoute(pickup, dropoff);
   if (!estGrandAxe(pickup, dropoff)) {
-    return Math.round(tier.sharedUsd * config.usdToTzsRate);
+    return Math.round(sharedSeatUsdForRoute(pickup, dropoff) * config.usdToTzsRate);
   }
   return specialLocalRouteTzs(pickup, dropoff) ?? tier.localTzs;
 }
@@ -317,7 +348,7 @@ export function priceTrip(tripType, audience, route = {}) {
     }
     // Taxi partagé local : tarif unifié (trajets spéciaux inclus) SUR LES
     // GRANDS AXES uniquement ; ailleurs, prix touriste converti en TZS —
-    // commission 15 % dans les deux cas.
+    // commission 20 % dans les deux cas, comme tout trajet partagé.
     const price = localSeatTzsForRoute(route.pickup, route.dropoff);
     return { price, commission: round2(price * COMMISSION_RATES.local), currency: 'TZS' };
   }
@@ -329,7 +360,7 @@ export function priceTrip(tripType, audience, route = {}) {
     // 10 % (le chauffeur reçoit 90 %), sauf taux dédié du trajet spécial.
     taux = privateCommissionRate(route.pickup, route.dropoff);
   } else if (tripType === 'shared_tourist' || tripType === 'posted_return') {
-    usd = tier.sharedUsd;
+    usd = sharedSeatUsdForRoute(route.pickup, route.dropoff);
     taux = COMMISSION_RATES.shared; // 20 % — le chauffeur reçoit 80 %
   } else {
     return null; // shared_local n'existe pas en USD
@@ -337,7 +368,7 @@ export function priceTrip(tripType, audience, route = {}) {
   // Grille touriste remisée : résident vérifié −10 %, hôtel partenaire −5 %.
   //
   // La remise partenaire ne vaut QUE sur les courses privées. Une place de
-  // taxi partagé se vend déjà au prix le plus bas de la grille (14 à 18 USD) :
+  // taxi partagé se vend déjà au prix le plus bas de la grille (12 à 18 USD) :
   // la remiser rognerait la part du chauffeur, qui remplit sa voiture place
   // par place. L'hôtel garde son avantage là où il y a de la marge.
   const remiseHotelApplicable = audience === 'hotel' && tripType === 'private';

@@ -272,7 +272,7 @@ Verified drivers, published prices, one booking from your reception desk.</p>
   <tr><td>Airport / Stone Town ↔ Kizimkazi, Makunduchi</td><td>45.00</td><td class="remise">42.75</td></tr>
   <tr><td>Nungwi ↔ Paje — coast to coast</td><td>60.00</td><td class="remise">57.00</td></tr>
   <tr><td>Nungwi ↔ Kizimkazi, Makunduchi — north to south</td><td>65.00</td><td class="remise">61.75</td></tr>
-  <tr><td>Shared taxi seat, per person (from)</td><td>14.00</td><td class="egal">14.00</td></tr>
+  <tr><td>Shared taxi seat, per person (from)</td><td>12.00</td><td class="egal">12.00</td></tr>
   <tr><td>Parcel between towns (medium size)</td><td>10.00</td><td class="egal">10.00</td></tr>
 </table>
 <p class="accroche" style="margin-top:10px;font-size:15.5px">Prices in USD. The
@@ -375,7 +375,7 @@ neighbouring hotels already use.</p>
   <tr><td>Stone Town ↔ Kizimkazi, Makunduchi</td><td>45.00</td><td class="remise">42.75</td></tr>
   <tr><td>Nungwi ↔ Paje — coast to coast</td><td>60.00</td><td class="remise">57.00</td></tr>
   <tr><td>Nungwi ↔ Kizimkazi, Makunduchi — north to south</td><td>65.00</td><td class="remise">61.75</td></tr>
-  <tr><td>Shared taxi seat, per person (from)</td><td>14.00</td><td class="egal">14.00</td></tr>
+  <tr><td>Shared taxi seat, per person (from)</td><td>12.00</td><td class="egal">12.00</td></tr>
 </table>
 
 <h2>Parcels between towns — one price, by size</h2>

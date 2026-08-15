@@ -469,25 +469,35 @@ export type ZoneTarifaire = 'nord' | 'nord_est' | 'est' | 'est_sud' | 'est_point
 
 export interface TarifsZone {
   priveUsd: number;
-  partageUsd: number;
   localTzs: number;
+}
+
+/**
+ * Prix d'une place en taxi partagé — déduit du prix de la course PRIVÉE du
+ * même trajet, jamais fixé à part (miroir exact de la grille serveur) :
+ * privé 40 → 12 · 45 → 15 · 50 → 16 · 60 et plus → 18.
+ */
+export function tarifPlacePartagee(priveUsd: number): number {
+  if (priveUsd >= 60) return 18;
+  if (priveUsd >= 50) return 16;
+  if (priveUsd >= 45) return 15;
+  return 12;
 }
 
 // Tarif local UNIFIÉ : 15 000 TZS la place partout (sauf trajets spéciaux,
 // ex. Nungwi ↔ Paje 20 000) — miroir de la grille serveur.
 export const TARIFS_ZONE: Record<ZoneTarifaire, TarifsZone> = {
-  nord: { priveUsd: 45, partageUsd: 18, localTzs: 15000 }, // Nungwi, Kendwa
-  nord_est: { priveUsd: 40, partageUsd: 16, localTzs: 15000 }, // Matemwe → Chwaka
-  est: { priveUsd: 45, partageUsd: 15, localTzs: 15000 }, // Paje, Bwejuu
-  est_sud: { priveUsd: 50, partageUsd: 15, localTzs: 15000 }, // Jambiani
-  est_pointe: { priveUsd: 50, partageUsd: 18, localTzs: 15000 }, // Michamvi
-  sud: { priveUsd: 45, partageUsd: 14, localTzs: 15000 }, // Kizimkazi, Makunduchi, Fumba
+  nord: { priveUsd: 45, localTzs: 15000 }, // Nungwi, Kendwa
+  nord_est: { priveUsd: 40, localTzs: 15000 }, // Matemwe → Chwaka
+  est: { priveUsd: 45, localTzs: 15000 }, // Paje, Bwejuu
+  est_sud: { priveUsd: 50, localTzs: 15000 }, // Jambiani
+  est_pointe: { priveUsd: 50, localTzs: 15000 }, // Michamvi
+  sud: { priveUsd: 45, localTzs: 15000 }, // Kizimkazi, Makunduchi, Fumba
 };
 
 /** Tarifs appliqués quand aucune ville zonée n'apparaît dans l'itinéraire. */
 export const TARIFS_ZONE_DEFAUT: TarifsZone = {
   priveUsd: 50,
-  partageUsd: 18,
   localTzs: TARIF_LOCAL_TZS,
 };
 
@@ -659,10 +669,11 @@ export function tarifTrajetProfil(
       return { montant: Math.round(usd * TAUX_USD_TZS), devise: 'TZS' };
     }
     // Place en taxi partagé : le tarif local (15 000, spéciaux inclus) ne
-    // vaut que sur les GRANDS AXES — privé du même trajet à 45 USD minimum.
+    // vaut que sur les GRANDS AXES — privé du même trajet à 40 USD minimum.
     // Ailleurs, la place se paie au prix touriste converti en shillings.
-    if (itineraire && tarifPriveItineraire(itineraire.depart, itineraire.arrivee) < 45) {
-      return { montant: Math.round(zone.partageUsd * TAUX_USD_TZS), devise: 'TZS' };
+    if (itineraire && tarifPriveItineraire(itineraire.depart, itineraire.arrivee) < 40) {
+      const prive = tarifPriveItineraire(itineraire.depart, itineraire.arrivee);
+      return { montant: Math.round(tarifPlacePartagee(prive) * TAUX_USD_TZS), devise: 'TZS' };
     }
     const specialLocal = itineraire
       ? tarifSpecialLocal(itineraire.depart, itineraire.arrivee)
@@ -675,7 +686,9 @@ export function tarifTrajetProfil(
       ? tarifPriveItineraire(itineraire.depart, itineraire.arrivee)
       : zone.priveUsd;
   } else if (type === 'shared_tourist' || type === 'shared_local') {
-    plein = zone.partageUsd;
+    plein = tarifPlacePartagee(
+      itineraire ? tarifPriveItineraire(itineraire.depart, itineraire.arrivee) : zone.priveUsd
+    );
   } else {
     plein = TARIFS_TRAJET_USD[type];
   }
