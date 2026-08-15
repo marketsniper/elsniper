@@ -12,7 +12,7 @@ import { generatePackageQr } from '../services/qrService.js';
 import { buildTeamNotificationLink, packageRequestMessage } from '../services/whatsappService.js';
 import { notifierEquipe } from '../services/emailService.js';
 import { alertePaiementColis, aValiderALaMain } from '../services/paiementManuel.js';
-import { assertHotelVerified } from './hotels.js';
+import { assertHotelVerified, libellePartenaire } from './hotels.js';
 
 const router = Router();
 
@@ -80,7 +80,7 @@ router.post(
         throw new HttpError(403, 'forbidden', 'Un client ne peut créer un colis que pour lui-même');
       }
       if (data.senderType === 'hotel' && data.senderHotelId !== req.auth.hotelId) {
-        throw new HttpError(403, 'forbidden', 'Un hôtel ne peut créer un colis que pour lui-même');
+        throw new HttpError(403, 'forbidden', 'Un établissement partenaire ne peut créer un colis que pour lui-même');
       }
     }
 
@@ -108,12 +108,12 @@ router.post(
       // L'hôtel garde sa fidélité (20 courses = 1 colis offert), qui elle
       // ne coûte rien au chauffeur.
       senderPhone = senderPhone ?? rows[0].phone;
-      senderLabel = `${rows[0].name} (hôtel, ${senderPhone})`;
+      senderLabel = `${rows[0].name} (${libellePartenaire(rows[0])}, ${senderPhone})`;
     }
 
     // Bon fidélité : réservé aux hôtels — vérifié AVANT toute création.
     if (data.useVoucher && data.senderType !== 'hotel') {
-      throw new HttpError(403, 'forbidden', 'Les bons fidélité sont réservés aux hôtels partenaires');
+      throw new HttpError(403, 'forbidden', 'Les bons fidélité sont réservés aux établissements partenaires');
     }
 
     const pricing = pricePackage(currency, data.size);

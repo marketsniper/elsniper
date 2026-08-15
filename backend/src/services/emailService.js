@@ -226,10 +226,12 @@ export function emailBienvenueClient(user) {
   };
 }
 
-// Récapitulatif d'inscription HÔTEL PARTENAIRE + identifiants de connexion.
-// Sécurité : le mot de passe n'est JAMAIS renvoyé par e-mail — on rappelle
-// l'e-mail de connexion et où se connecter, c'est tout.
+// Récapitulatif d'inscription ÉTABLISSEMENT PARTENAIRE (hôtel ou restaurant)
+// + identifiants de connexion. Sécurité : le mot de passe n'est JAMAIS
+// renvoyé par e-mail — on rappelle l'e-mail de connexion et où se connecter.
 export function emailBienvenueHotel(hotel) {
+  const restaurant = hotel.partner_type === 'restaurant';
+  const profil = restaurant ? 'Restaurant partenaire' : 'Hôtel partenaire';
   const corps = `
     <p style="margin:0 0 16px;font-size:15px;line-height:22px;">
       Bonjour <strong>${hotel.contact_name}</strong>, le compte partenaire de
@@ -251,7 +253,7 @@ export function emailBienvenueHotel(hotel) {
     <p style="margin:12px 0 0;font-size:13px;color:#8A7168;">
       Par sécurité, votre mot de passe n'est jamais envoyé par e-mail.
       La connexion marche depuis un ordinateur comme depuis un téléphone :
-      choisissez « Hôtel partenaire » puis entrez votre e-mail et votre mot de passe.
+      choisissez « ${profil} » puis entrez votre e-mail et votre mot de passe.
     </p>
     ${bouton(URL_WEB, 'Ouvrir zanziGo sur mon ordinateur')}
     <p style="margin:8px 0 0;font-size:14px;line-height:21px;">
@@ -262,7 +264,7 @@ export function emailBienvenueHotel(hotel) {
       un bon à dépenser (10 $ de crédit ou un envoi de colis offert).
     </p>`;
   return {
-    subject: 'Votre compte partenaire zanziGo 🏨 — récapitulatif et connexion',
+    subject: `Votre compte partenaire zanziGo ${restaurant ? '🍽️' : '🏨'} — récapitulatif et connexion`,
     html: gabarit(`Bienvenue, ${hotel.name} !`, corps),
   };
 }

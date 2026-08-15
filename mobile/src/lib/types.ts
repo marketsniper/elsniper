@@ -32,8 +32,15 @@ export interface Chauffeur {
   [cle: string]: unknown;
 }
 
+/**
+ * Nature d'un établissement partenaire. Le compte, le crédit prépayé, la
+ * fidélité et la vérification sont identiques — seul le vocabulaire change.
+ */
+export type TypePartenaire = 'hotel' | 'restaurant';
+
 export interface Hotel {
   id: string;
+  partner_type?: TypePartenaire;
   [cle: string]: unknown;
 }
 

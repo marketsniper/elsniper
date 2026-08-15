@@ -13,7 +13,7 @@ import {
   messageGroupeChauffeurs,
   tripRequestMessage,
 } from '../services/whatsappService.js';
-import { assertHotelVerified } from './hotels.js';
+import { assertHotelVerified, libellePartenaire } from './hotels.js';
 import { randomUUID } from 'node:crypto';
 import { tauxRemboursement } from '../services/annulationService.js';
 import { alertePaiementCourse, aValiderALaMain } from '../services/paiementManuel.js';
@@ -169,7 +169,7 @@ router.post(
     } else {
       // ----- Réservation par un hôtel partenaire, pour son client -----
       if (!isAdmin(req) && data.hotelId !== req.auth.hotelId) {
-        throw new HttpError(403, 'forbidden', 'Un hôtel ne peut réserver que pour ses propres clients');
+        throw new HttpError(403, 'forbidden', 'Un établissement partenaire ne peut réserver que pour ses propres clients');
       }
       const { rows: hotelRows } = await query('SELECT * FROM hotels WHERE id = $1', [data.hotelId]);
       const hotel = hotelRows[0];
@@ -184,7 +184,7 @@ router.post(
         );
       }
       audience = 'hotel';
-      bookerLabel = `${hotel.name} (hôtel) pour ${data.clientName} (${data.clientPhone})`;
+      bookerLabel = `${hotel.name} (${libellePartenaire(hotel)}) pour ${data.clientName} (${data.clientPhone})`;
     }
 
     const pricing = priceTrip(data.tripType, audience, {

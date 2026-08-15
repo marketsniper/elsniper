@@ -141,7 +141,7 @@ const CHAINES = {
   onglet_scanner: { fr: 'Scanner', en: 'Scan', sw: 'Skani' },
   titre_otp: { fr: 'Code de vérification', en: 'Verification code', sw: 'Msimbo wa uthibitisho' },
   titre_client: { fr: 'Profil client', en: 'Customer profile', sw: 'Wasifu wa mteja' },
-  titre_hotel: { fr: 'Hôtel partenaire', en: 'Partner hotel', sw: 'Hoteli mshirika' },
+  titre_hotel: { fr: 'Espace partenaire', en: 'Partner area', sw: 'Eneo la mshirika' },
   titre_hotel_inscription: {
     fr: 'Compte partenaire',
     en: 'Partner account',
@@ -170,7 +170,7 @@ const CHAINES = {
     sw: 'Leo, halisi — kwa shilingi',
   },
   gains_note_conversion: {
-    fr: 'Les gains en dollars (clients touristes et hôtels) sont convertis en shillings au taux zanziGo : 1 USD = 2 600 TZS.',
+    fr: 'Les gains en dollars (touristes et établissements partenaires) sont convertis en shillings au taux zanziGo : 1 USD = 2 600 TZS.',
     en: 'Dollar earnings (tourist and hotel clients) are converted to shillings at the zanziGo rate: 1 USD = 2,600 TZS.',
     sw: 'Mapato ya dola (watalii na hoteli) yanabadilishwa kuwa shilingi kwa kiwango cha zanziGo: 1 USD = TZS 2,600.',
   },
@@ -180,7 +180,7 @@ const CHAINES = {
     sw: 'Mizigo ya kuchukua',
   },
   courses_colis_vide: {
-    fr: 'Aucun colis en attente de ramassage pour le moment — les envois payés des hôtels et des clients apparaîtront ici.',
+    fr: 'Aucun colis en attente de ramassage pour le moment — les envois payés des partenaires et des clients apparaîtront ici.',
     en: 'No parcels awaiting pickup right now — paid deliveries from hotels and customers will appear here.',
     sw: 'Hakuna mizigo inayosubiri kuchukuliwa kwa sasa — mizigo iliyolipiwa ya hoteli na wateja itaonekana hapa.',
   },
@@ -270,7 +270,7 @@ const CHAINES = {
   equipe_refuser: { fr: 'Refuser', en: 'Reject', sw: 'Kataa' },
   equipe_hotels: { fr: 'Hôtels à vérifier', en: 'Hotels to verify', sw: 'Hoteli za kuthibitisha' },
   equipe_hotels_vide: {
-    fr: 'Aucun compte hôtel en attente de vérification.',
+    fr: 'Aucun compte partenaire en attente de vérification.',
     en: 'No hotel accounts awaiting verification.',
     sw: 'Hakuna akaunti za hoteli zinazosubiri uthibitisho.',
   },
@@ -339,7 +339,7 @@ const CHAINES = {
     sw: 'Malipo ya hivi karibuni',
   },
   equipe_paiement_credit: {
-    fr: 'Payé par crédit hôtel',
+    fr: 'Payé par crédit partenaire',
     en: 'Paid with hotel credit',
     sw: 'Imelipwa kwa salio la hoteli',
   },
@@ -576,7 +576,7 @@ const CHAINES = {
     sw: 'Gusa hoteli kufungua faili lake: mawasiliano, salio, historia na kuongeza salio.',
   },
   equipe_credit_conseil: {
-    fr: 'Créditez un hôtel APRÈS avoir reçu son argent (carte bancaire, portefeuille mobile, virement). Un montant négatif corrige une erreur.',
+    fr: 'Créditez un partenaire APRÈS avoir reçu son argent (carte bancaire, portefeuille mobile, virement). Un montant négatif corrige une erreur.',
     en: 'Credit a hotel AFTER receiving its money (credit card, mobile wallet, transfer). A negative amount fixes a mistake.',
     sw: 'Ongeza salio la hoteli BAADA ya kupokea pesa yake (kadi ya benki, pochi ya simu, uhamisho). Kiasi hasi hurekebisha kosa.',
   },
@@ -618,11 +618,15 @@ const CHAINES = {
     en: 'ID checked by the team before your first booking',
     sw: 'Kitambulisho kitahakikiwa kabla ya safari ya kwanza',
   },
-  accueil_hotel_titre: { fr: 'Hôtel partenaire', en: 'Partner hotel', sw: 'Hoteli mshirika' },
+  accueil_hotel_titre: {
+    fr: 'Hôtel ou restaurant',
+    en: 'Hotel or restaurant',
+    sw: 'Hoteli au mgahawa',
+  },
   accueil_hotel_soustitre: {
-    fr: 'Réservez des taxis pour vos clients',
-    en: 'Book taxis for your guests',
-    sw: 'Weka teksi kwa ajili ya wageni wako',
+    fr: 'Taxis pour vos clients, livraison de vos colis',
+    en: 'Taxis for your customers, deliveries for your parcels',
+    sw: 'Teksi kwa wateja wako, usafirishaji wa mizigo yako',
   },
   accueil_chauffeur_titre: {
     fr: 'Chauffeur — Taxi Partner',
@@ -1044,12 +1048,16 @@ const CHAINES = {
   },
 
   // --- Hôtel : connexion et inscription --------------------------------------
-  hotelcx_espace: { fr: 'Espace hôtels partenaires', en: 'Partner hotels area', sw: 'Eneo la hoteli washirika' },
-  hotelcx_titre: { fr: 'Connexion hôtel', en: 'Hotel sign-in', sw: 'Kuingia kwa hoteli' },
+  hotelcx_espace: {
+    fr: 'Espace hôtels et restaurants partenaires',
+    en: 'Partner hotels & restaurants area',
+    sw: 'Eneo la hoteli na migahawa washirika',
+  },
+  hotelcx_titre: { fr: 'Connexion partenaire', en: 'Partner sign-in', sw: 'Kuingia kwa mshirika' },
   hotelcx_intro: {
-    fr: 'Réservez des taxis pour vos clients et suivez vos envois de colis.',
-    en: 'Book taxis for your guests and track your parcel deliveries.',
-    sw: 'Weka teksi kwa wageni wako na fuatilia mizigo yako.',
+    fr: 'Réservez des taxis pour vos clients et suivez vos livraisons.',
+    en: 'Book taxis for your customers and track your deliveries.',
+    sw: 'Weka teksi kwa wateja wako na fuatilia usafirishaji wako.',
   },
   hotelcx_mdp: { fr: 'Mot de passe', en: 'Password', sw: 'Nenosiri' },
   hotelcx_mdp_placeholder: { fr: 'Votre mot de passe', en: 'Your password', sw: 'Nenosiri lako' },
@@ -1068,11 +1076,20 @@ const CHAINES = {
     sw: 'Imeshindikana kuingia. Jaribu tena.',
   },
   hotelins_intro: {
-    fr: 'Créez le compte de votre établissement pour réserver des taxis pour vos clients et envoyer leurs colis — tarif touriste avec −5 % partenaire.',
-    en: 'Create your property account to book taxis for your guests and send their parcels — tourist rates with a 5% partner discount.',
-    sw: 'Fungua akaunti ya hoteli yako kuweka teksi kwa wageni wako na kutuma mizigo yao — bei ya watalii ukiwa na punguzo la 5%.',
+    fr: 'Créez le compte de votre établissement pour réserver des taxis pour vos clients et faire livrer vos colis — tarif touriste avec −5 % partenaire sur les courses privées.',
+    en: 'Create your business account to book taxis for your customers and have parcels delivered — tourist rates with a 5% partner discount on private rides.',
+    sw: 'Fungua akaunti ya biashara yako kuweka teksi kwa wateja wako na kutuma mizigo — bei ya watalii ukiwa na punguzo la 5% kwa safari binafsi.',
   },
-  hotelins_nom: { fr: "Nom de l'hôtel", en: 'Hotel name', sw: 'Jina la hoteli' },
+  // Nature de l'établissement : le compte, le crédit et la fidélité sont les
+  // mêmes ; c'est le nom à l'écran qui change.
+  hotelins_type: {
+    fr: 'Votre établissement',
+    en: 'Your business',
+    sw: 'Biashara yako',
+  },
+  hotelins_type_hotel: { fr: '🏨 Hôtel', en: '🏨 Hotel', sw: '🏨 Hoteli' },
+  hotelins_type_restaurant: { fr: '🍽️ Restaurant', en: '🍽️ Restaurant', sw: '🍽️ Mgahawa' },
+  hotelins_nom: { fr: "Nom de l'établissement", en: 'Business name', sw: 'Jina la biashara' },
   hotelins_contact: { fr: 'Personne de contact', en: 'Contact person', sw: 'Mtu wa mawasiliano' },
   hotelins_mdp: {
     fr: 'Mot de passe (8 caractères minimum)',
@@ -1092,7 +1109,11 @@ const CHAINES = {
     sw: 'Namba ya WhatsApp inaisaidia timu ya zanziGo kuratibu safari na mizigo yako.',
   },
   hotelins_bouton: { fr: 'Créer le compte partenaire', en: 'Create partner account', sw: 'Fungua akaunti ya ushirika' },
-  hotelins_erreur_nom: { fr: "Indiquez le nom de l'hôtel.", en: 'Enter the hotel name.', sw: 'Weka jina la hoteli.' },
+  hotelins_erreur_nom: {
+    fr: "Indiquez le nom de l'établissement.",
+    en: 'Enter the business name.',
+    sw: 'Weka jina la biashara.',
+  },
   hotelins_erreur_contact: {
     fr: 'Indiquez le nom de la personne de contact.',
     en: 'Enter the contact person’s name.',
@@ -1109,7 +1130,7 @@ const CHAINES = {
     sw: 'Namba ya WhatsApp si sahihi (muundo +255…).',
   },
   hotelins_erreur_zone: {
-    fr: "Indiquez la zone de l'hôtel (ex. : Nungwi, Paje, Stone Town).",
+    fr: "Indiquez la zone de l'établissement (ex. : Nungwi, Paje, Stone Town).",
     en: 'Enter the hotel area (e.g. Nungwi, Paje, Stone Town).',
     sw: 'Weka eneo la hoteli (mf. Nungwi, Paje, Stone Town).',
   },
@@ -1119,7 +1140,7 @@ const CHAINES = {
     sw: 'Akaunti ya ushirika tayari ipo kwa barua pepe au namba hii.',
   },
   hotelins_erreur_creation: {
-    fr: 'La création du compte hôtel a échoué. Réessayez.',
+    fr: 'La création du compte partenaire a échoué. Réessayez.',
     en: "Couldn't create the hotel account. Try again.",
     sw: 'Imeshindikana kufungua akaunti ya hoteli. Jaribu tena.',
   },
@@ -1210,9 +1231,9 @@ const CHAINES = {
 
   // --- Réserver ---------------------------------------------------------------
   reserver_mode_hotel_info: {
-    fr: 'Mode hôtel — réservez un taxi pour votre client : tarif touriste avec −5 % partenaire.',
-    en: 'Hotel mode — book a taxi for your guest: tourist rate with a 5% partner discount.',
-    sw: 'Hali ya hoteli — weka teksi kwa mteja wako: bei ya watalii ukiwa na punguzo la 5%.',
+    fr: 'Mode partenaire — réservez un taxi pour votre client : tarif touriste avec −5 % partenaire sur les courses privées.',
+    en: 'Partner mode — book a taxi for your customer: tourist rate with a 5% partner discount on private rides.',
+    sw: 'Hali ya ushirika — weka teksi kwa mteja wako: bei ya watalii ukiwa na punguzo la 5% kwa safari binafsi.',
   },
   reserver_itineraire: { fr: 'Itinéraire', en: 'Route', sw: 'Njia' },
   reserver_depart_placeholder: {
@@ -1221,9 +1242,9 @@ const CHAINES = {
     sw: 'Mf. Uwanja wa ndege wa Zanzibar (ZNZ)',
   },
   reserver_arrivee_placeholder: {
-    fr: 'Ex. : Nungwi, hôtel Ocean View',
-    en: 'E.g. Nungwi, Ocean View hotel',
-    sw: 'Mf. Nungwi, hoteli Ocean View',
+    fr: 'Ex. : Nungwi, Ocean View',
+    en: 'E.g. Nungwi, Ocean View',
+    sw: 'Mf. Nungwi, Ocean View',
   },
   reserver_mode_titre: { fr: 'Privé ou partagé ?', en: 'Private or shared?', sw: 'Binafsi au pamoja?' },
   reserver_prive: { fr: 'Privé', en: 'Private', sw: 'Binafsi' },
@@ -1239,14 +1260,14 @@ const CHAINES = {
     sw: 'Kiti kwenye teksi ya pamoja.',
   },
   reserver_precision: {
-    fr: 'Précision (hôtel, adresse…) — optionnel',
-    en: 'Details (hotel, address…) — optional',
-    sw: 'Maelezo (hoteli, anwani…) — hiari',
+    fr: 'Précision (adresse, repère…) — optionnel',
+    en: 'Details (address, landmark…) — optional',
+    sw: 'Maelezo (anwani, alama…) — hiari',
   },
   reserver_precision_placeholder: {
-    fr: 'Ex. : hôtel Ocean View, chambre 12',
-    en: 'E.g. Ocean View hotel, room 12',
-    sw: 'Mf. hoteli Ocean View, chumba 12',
+    fr: 'Ex. : Ocean View, chambre 12 — ou Lukmaan, terrasse',
+    en: 'E.g. Ocean View, room 12 — or Lukmaan, terrace',
+    sw: 'Mf. Ocean View, chumba 12 — au Lukmaan, baraza',
   },
   reserver_special_info: {
     fr: 'Tarif spécial {depart} ↔ {arrivee} appliqué. Indiquez le lieu exact au chauffeur via WhatsApp.',
@@ -1266,9 +1287,9 @@ const CHAINES = {
   reserver_votre_client: { fr: 'Votre client', en: 'Your guest', sw: 'Mteja wako' },
   reserver_nom_client: { fr: 'Nom du client', en: 'Guest name', sw: 'Jina la mteja' },
   reserver_nom_client_placeholder: {
-    fr: 'Ex. : M. et Mme Dupont, chambre 12',
-    en: 'E.g. Mr & Mrs Smith, room 12',
-    sw: 'Mf. Bw. na Bi. Juma, chumba 12',
+    fr: 'Ex. : M. et Mme Dupont — table 6 ou chambre 12',
+    en: 'E.g. Mr & Mrs Smith — table 6 or room 12',
+    sw: 'Mf. Bw. na Bi. Juma — meza 6 au chumba 12',
   },
   reserver_tel_client: { fr: 'Téléphone du client', en: 'Guest phone', sw: 'Simu ya mteja' },
   reserver_programmer: {
@@ -1467,11 +1488,11 @@ const CHAINES = {
   },
 
   // --- Fiche complète d'un hôtel partenaire (équipe) ---
-  hotel_fiche_titre: { fr: 'Fiche hôtel', en: 'Hotel file', sw: 'Faili la hoteli' },
+  hotel_fiche_titre: { fr: 'Fiche partenaire', en: 'Partner file', sw: 'Faili la mshirika' },
   hotel_fiche_introuvable: {
-    fr: 'Hôtel introuvable.',
-    en: 'Hotel not found.',
-    sw: 'Hoteli haijapatikana.',
+    fr: 'Partenaire introuvable.',
+    en: 'Partner not found.',
+    sw: 'Mshirika hajapatikana.',
   },
   hotel_fiche_ouvrir: {
     fr: 'Ouvrir la fiche complète',
@@ -1544,7 +1565,7 @@ const CHAINES = {
   },
   hotel_fiche_courses: { fr: 'Réservations', en: 'Bookings', sw: 'Nafasi zilizohifadhiwa' },
   hotel_fiche_aucune_course: {
-    fr: "Cet hôtel n'a encore rien réservé.",
+    fr: "Ce partenaire n'a encore rien réservé.",
     en: "This hotel hasn't booked anything yet.",
     sw: 'Hoteli hii bado haijahifadhi chochote.',
   },
@@ -2287,6 +2308,11 @@ const CHAINES = {
   profil_badge_local_attente: { fr: 'Validation en cours', en: 'Validation in progress', sw: 'Uhakiki unaendelea' },
   profil_badge_refuse: { fr: 'Vérification refusée', en: 'Verification declined', sw: 'Uthibitisho umekataliwa' },
   profil_badge_hotel: { fr: 'Hôtel partenaire', en: 'Partner hotel', sw: 'Hoteli mshirika' },
+  profil_badge_restaurant: {
+    fr: 'Restaurant partenaire',
+    en: 'Partner restaurant',
+    sw: 'Mgahawa mshirika',
+  },
   profil_info_resident_attente: {
     fr: "Compte résident en attente : l'équipe zanziGo vérifie vos documents de résidence. La remise de 10 % sera activée une fois le compte vérifié.",
     en: 'Resident account pending: the zanziGo team is checking your residence documents. The 10% discount will be activated once verified.',
@@ -2307,20 +2333,23 @@ const CHAINES = {
   profil_contact: { fr: 'Contact', en: 'Contact', sw: 'Mawasiliano' },
   profil_actualiser: { fr: 'Actualiser mon profil', en: 'Refresh my profile', sw: 'Onyesha upya wasifu wangu' },
   hotel_attente_verif: {
-    fr: "Compte hôtel en attente de vérification : l'équipe zanziGo va contacter votre établissement (téléphone ou WhatsApp) pour confirmer l'inscription. Les réservations seront débloquées juste après.",
-    en: 'Hotel account awaiting verification: the zanziGo team will contact your property (phone or WhatsApp) to confirm the signup. Bookings unlock right after.',
-    sw: 'Akaunti ya hoteli inasubiri uthibitisho: timu ya zanziGo itawasiliana na hoteli yako (simu au WhatsApp) kuthibitisha usajili. Uhifadhi utafunguliwa mara baada ya hapo.',
+    fr: "Compte partenaire en attente de vérification : l'équipe zanziGo va contacter votre établissement (téléphone ou WhatsApp) pour confirmer l'inscription. Les réservations seront débloquées juste après.",
+    en: 'Partner account awaiting verification: the zanziGo team will contact your business (phone or WhatsApp) to confirm the signup. Bookings unlock right after.',
+    sw: 'Akaunti ya ushirika inasubiri uthibitisho: timu ya zanziGo itawasiliana na biashara yako (simu au WhatsApp) kuthibitisha usajili. Uhifadhi utafunguliwa mara baada ya hapo.',
   },
   hotel_refuse_verif: {
-    fr: "Ce compte hôtel a été bloqué par l'équipe zanziGo. Contactez-nous sur WhatsApp si c'est une erreur.",
-    en: 'This hotel account was blocked by the zanziGo team. Contact us on WhatsApp if this is a mistake.',
-    sw: 'Akaunti hii ya hoteli imezuiwa na timu ya zanziGo. Wasiliana nasi kwa WhatsApp ikiwa ni kosa.',
+    fr: "Ce compte partenaire a été bloqué par l'équipe zanziGo. Contactez-nous sur WhatsApp si c'est une erreur.",
+    en: 'This partner account was blocked by the zanziGo team. Contact us on WhatsApp if this is a mistake.',
+    sw: 'Akaunti hii ya ushirika imezuiwa na timu ya zanziGo. Wasiliana nasi kwa WhatsApp ikiwa ni kosa.',
   },
   hotel_ajouter_bouton: {
-    fr: 'Inscrire un autre hôtel',
-    en: 'Register another hotel',
-    sw: 'Sajili hoteli nyingine',
+    fr: 'Inscrire un autre établissement',
+    en: 'Register another business',
+    sw: 'Sajili biashara nyingine',
   },
+  // Nature du partenaire, affichée sur sa fiche et dans le tableau équipe.
+  partenaire_type_hotel: { fr: 'Hôtel', en: 'Hotel', sw: 'Hoteli' },
+  partenaire_type_restaurant: { fr: 'Restaurant', en: 'Restaurant', sw: 'Mgahawa' },
 
   // --- Mode chauffeur : courses ---------------------------------------------------
   courses_info: {

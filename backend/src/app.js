@@ -177,17 +177,9 @@ deux fois. <a href="/confidentialite">Politique de confidentialité</a></small>
       );
   });
 
-  // Espace HÔTELS PARTENAIRES : la page qu'on montre — ou qu'on envoie — à
-  // une réception. En anglais, la langue de travail des hôtels de Zanzibar.
-  // Elle répond dans l'ordre aux questions d'un directeur : qu'est-ce que ça
-  // me coûte, qu'est-ce que ça change pour mes clients, combien ça coûte à
-  // eux, et qu'est-ce que j'y gagne.
-  app.get('/hotel', (_req, res) => {
-    res.type('html').send(`<!doctype html><html lang="en"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>zanziGo for hotels — verified taxis, fixed prices</title>
-<style>
-*{box-sizing:border-box;margin:0;padding:0}
+  // Feuille de style commune aux pages de démarchage (hôtels, restaurants) :
+  // une seule identité visuelle, une seule chose à retoucher.
+  const STYLE_PARTENAIRE = `*{box-sizing:border-box;margin:0;padding:0}
 body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:#FBF0E4;color:#33222B;line-height:1.5}
 main{max-width:660px;margin:0 auto;padding:26px 20px 50px}
 h1{font-size:32px;line-height:1.15;letter-spacing:-.4px;margin-bottom:8px}
@@ -216,7 +208,25 @@ tr:last-child td{border-bottom:none}
 .secondaire{background:#FFFDFA;color:#B93C1B;border:2px solid #E4572E}
 footer{margin-top:26px;text-align:center;color:#8A7168;font-size:14px}
 footer a{color:#B93C1B}
-</style></head><body><main>
+`;
+
+  // Pied de page commun : contact et mentions.
+  const PIED_PARTENAIRE = `<footer>
+  zanziGo — Zanzibar · Taxi &amp; parcels · Verified drivers, fixed prices<br>
+  WhatsApp <a href="https://wa.me/255666241749">+255 666 241 749</a> ·
+  <a href="/confidentialite">Privacy</a>
+</footer>`;
+
+  // Espace HÔTELS PARTENAIRES : la page qu'on montre — ou qu'on envoie — à
+  // une réception. En anglais, la langue de travail des hôtels de Zanzibar.
+  // Elle répond dans l'ordre aux questions d'un directeur : qu'est-ce que ça
+  // me coûte, qu'est-ce que ça change pour mes clients, combien ça coûte à
+  // eux, et qu'est-ce que j'y gagne.
+  app.get('/hotel', (_req, res) => {
+    res.type('html').send(`<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>zanziGo for hotels — verified taxis, fixed prices</title>
+<style>${STYLE_PARTENAIRE}</style></head><body><main>
 
 <h1>Your guests deserve a taxi you can <span>vouch for</span>.</h1>
 <p class="accroche">zanziGo is a Zanzibar taxi &amp; parcel service built for hotels.
@@ -260,11 +270,11 @@ Verified drivers, published prices, one booking from your reception desk.</p>
   <tr><td>Airport / Stone Town ↔ Kizimkazi, Makunduchi</td><td>45.00</td><td class="remise">42.75</td></tr>
   <tr><td>Nungwi ↔ Paje — coast to coast</td><td>65.00</td><td class="remise">61.75</td></tr>
   <tr><td>Shared taxi seat, per person (from)</td><td>14.00</td><td class="egal">14.00</td></tr>
-  <tr><td>Parcel between towns (medium size)</td><td>10.00</td><td class="remise">9.50</td></tr>
+  <tr><td>Parcel between towns (medium size)</td><td>10.00</td><td class="egal">10.00</td></tr>
 </table>
 <p class="accroche" style="margin-top:10px;font-size:15.5px">Prices in USD. The
-partner rate applies to private cars; shared seats are already at the lowest
-published price. Return trips with waiting time, baby seat, large luggage and night
+partner rate applies to private cars only; shared seats and parcels are already at
+the lowest published price. Return trips with waiting time, baby seat, large luggage and night
 flights are all handled — just say so when booking.</p>
 
 <div class="gps">
@@ -301,11 +311,111 @@ when booking. Payment by <b>card or mobile wallet</b>.</p>
 <a class="bouton" href="https://wa.me/255666241749?text=Hello%20zanziGo%2C%20we%20would%20like%20to%20open%20a%20hotel%20partner%20account.">💬 Open our partner account on WhatsApp</a>
 <a class="bouton secondaire" href="/web">🌐 See zanziGo now</a>
 
-<footer>
-  zanziGo — Zanzibar · Taxi &amp; parcels · Verified drivers, fixed prices<br>
-  WhatsApp <a href="https://wa.me/255666241749">+255 666 241 749</a> ·
-  <a href="/confidentialite">Privacy</a>
-</footer>
+${PIED_PARTENAIRE}
+</main></body></html>`);
+  });
+
+  // Espace RESTAURANTS PARTENAIRES. Un restaurateur n'a pas les mêmes soucis
+  // qu'une réception d'hôtel : ses clients repartent le soir, souvent sans
+  // voiture, et il a des commandes à faire porter. La page part de là — le
+  // dernier service de la soirée, puis la livraison — au lieu de recycler
+  // l'argumentaire des transferts aéroport.
+  app.get('/restaurant', (_req, res) => {
+    res.type('html').send(`<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>zanziGo for restaurants — a taxi home, and deliveries</title>
+<style>${STYLE_PARTENAIRE}</style></head><body><main>
+
+<h1>Your last service of the night is <span>getting them home</span>.</h1>
+<p class="accroche">zanziGo is a Zanzibar taxi &amp; delivery service. Verified
+drivers, published prices, one booking from your counter — and a driver for your
+deliveries when you need one.</p>
+
+<div class="gratuit">
+  <b>It costs your restaurant nothing.</b> No fee, no subscription, no software to
+  install, no commitment. Your customer pays the published price — and you book at a
+  <b>5% partner rate</b> on private rides.
+</div>
+
+<h2>What changes at your counter</h2>
+
+<div class="carte">
+  <h3>🌙 A table leaves — a taxi is already there</h3>
+  <p>No walking your guests to the road at 10pm to argue over a price in the dark.
+  One booking, a verified driver, the fare fixed before he arrives.</p>
+</div>
+<div class="carte">
+  <h3>🍲 Send a delivery without leaving your kitchen</h3>
+  <p>An order to carry to a hotel, a villa, an office. You book it like a ride; the
+  driver picks it up and the recipient signs for it with a photo.</p>
+</div>
+<div class="carte">
+  <h3>💵 The price is fixed before departure</h3>
+  <p>No haggling at your door, no argument in front of your other tables. Your
+  customer knows the price when he books; the driver knows it too.</p>
+</div>
+<div class="carte">
+  <h3>🛡️ Every driver is checked by us</h3>
+  <p>Driving licence, insurance and vehicle photo verified before a driver can take a
+  single booking. You are recommending him — we make sure he is worth it.</p>
+</div>
+
+<h2>Your partner prices — private car</h2>
+<table>
+  <tr><th>Route</th><th>Customer price</th><th>Your price −5%</th></tr>
+  <tr><td>Stone Town ↔ Nungwi, Kendwa</td><td>50.00</td><td class="remise">47.50</td></tr>
+  <tr><td>Stone Town ↔ Matemwe, Kiwengwa</td><td>45.00</td><td class="remise">42.75</td></tr>
+  <tr><td>Stone Town ↔ Paje, Jambiani, Bwejuu</td><td>50.00</td><td class="remise">47.50</td></tr>
+  <tr><td>Stone Town ↔ Kizimkazi, Makunduchi</td><td>45.00</td><td class="remise">42.75</td></tr>
+  <tr><td>Nungwi ↔ Paje — coast to coast</td><td>65.00</td><td class="remise">61.75</td></tr>
+  <tr><td>Shared taxi seat, per person (from)</td><td>14.00</td><td class="egal">14.00</td></tr>
+</table>
+
+<h2>Deliveries — one price, by size</h2>
+<table>
+  <tr><th>Parcel</th><th>Price</th></tr>
+  <tr><td>Small — documents, keys, an envelope</td><td>5.00</td></tr>
+  <tr><td>Medium — a meal order, a bag, a small box</td><td>10.00</td></tr>
+  <tr><td>Large — a crate, a full restocking run</td><td>18.00</td></tr>
+</table>
+<p class="accroche" style="margin-top:10px;font-size:15.5px">Prices in USD. The
+partner rate applies to private cars only; shared seats and deliveries are already at
+the lowest published price. Payment by <b>card or mobile wallet</b> — your driver
+never handles money.</p>
+
+<div class="gps">
+  <b>⚡ A taxi straight away, even without booking ahead.</b>
+  Our drivers share their position continuously. We see who is near your restaurant
+  and send the closest one — for a table that has just asked for the bill, that is
+  the difference between waiting and leaving.
+</div>
+
+<h2>How it works</h2>
+<div class="etapes">
+  <div class="etape"><div class="puce">1</div><div><b>We open your partner account</b> —
+  five minutes, on your phone. Nothing to install.</div></div>
+  <div class="etape"><div class="puce">2</div><div><b>You book for your customer</b> —
+  pick-up, drop-off, time. We confirm a verified driver.</div></div>
+  <div class="etape"><div class="puce">3</div><div><b>You follow it on screen</b> —
+  requested, driver confirmed, on the way, completed.</div></div>
+</div>
+
+<div class="bonus">
+  <b>🎁 20 completed rides = a 10 USD voucher.</b> Use it for a free delivery or turn
+  it into credit on your account. And with a <b>prepaid credit account</b>, your
+  counter settles everything in one tap — no cash to handle.
+</div>
+<div class="bonus">
+  <b>📱 A QR card for your tables.</b> Your customers book their own ride, in their own
+  language, while they finish their coffee — and your restaurant still earns the
+  loyalty rides.
+</div>
+
+<h2>Start today</h2>
+<a class="bouton" href="https://wa.me/255666241749?text=Hello%20zanziGo%2C%20we%20would%20like%20to%20open%20a%20restaurant%20partner%20account.">💬 Open our partner account on WhatsApp</a>
+<a class="bouton secondaire" href="/web">🌐 See zanziGo now</a>
+
+${PIED_PARTENAIRE}
 </main></body></html>`);
   });
 

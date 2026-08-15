@@ -69,7 +69,7 @@ export default function EcranProfil() {
   const demanderRecharge = () => {
     Linking.openURL(
       `${WHATSAPP_EQUIPE}?text=${encodeURIComponent(
-        `💰 Recharge crédit zanziGo\nHôtel: ${String(champ(hotel, 'name') ?? '')}\nJe souhaite recharger mon compte crédit. Montant souhaité (USD):`
+        `💰 Recharge crédit zanziGo\nÉtablissement: ${String(champ(hotel, 'name') ?? '')}\nJe souhaite recharger mon compte crédit. Montant souhaité (USD):`
       )}`
     );
   };
@@ -116,6 +116,12 @@ export default function EcranProfil() {
   const statutVerif =
     champ<StatutVerification>(utilisateur, 'verification_status', 'verificationStatus') ??
     'pending';
+  // Hôtel ou restaurant : le badge dit lequel — un restaurateur ne doit pas
+  // lire « Hôtel partenaire » sur sa propre fiche.
+  const cleBadgePartenaire =
+    champ(hotel, 'partner_type', 'partnerType') === 'restaurant'
+      ? 'profil_badge_restaurant'
+      : 'profil_badge_hotel';
   const devise = champ<string>(utilisateur, 'currency');
   const nomAffiche = String(
     champ(utilisateur ?? hotel, 'full_name', 'fullName', 'name') ?? t('profil_compte_defaut')
@@ -174,7 +180,7 @@ export default function EcranProfil() {
         <Text style={styles.nom}>{nomAffiche}</Text>
         <SousTitre>{session?.phone || session?.email || ''}</SousTitre>
         {utilisateur && <Badge texte={texteBadge} ton={tonBadge} />}
-        {hotel && <Badge texte={t('profil_badge_hotel')} ton="primaire" />}
+        {hotel && <Badge texte={t(cleBadgePartenaire)} ton="primaire" />}
       </Carte>
 
       {estResident && statutVerif === 'pending' && (
@@ -312,7 +318,7 @@ export default function EcranProfil() {
           label={t('profil_type_compte')}
           valeur={
             hotel
-              ? t('profil_badge_hotel')
+              ? t(cleBadgePartenaire)
               : estResident
                 ? t('client_type_resident')
                 : estLocal

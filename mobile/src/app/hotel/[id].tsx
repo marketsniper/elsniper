@@ -153,6 +153,16 @@ export default function EcranHotelEquipe() {
           <Text style={styles.nom}>{nom}</Text>
           <Badge texte={libelleStatut} ton={tonStatut} />
         </View>
+        {/* Hôtel ou restaurant : l'équipe doit le voir d'un coup d'œil —
+            on n'appelle pas un restaurateur en lui parlant de sa réception. */}
+        <Badge
+          texte={
+            champ(hotel, 'partner_type') === 'restaurant'
+              ? `🍽️ ${t('partenaire_type_restaurant')}`
+              : `🏨 ${t('partenaire_type_hotel')}`
+          }
+          ton="neutre"
+        />
         <LigneInfo
           label={t('hotel_fiche_contact')}
           valeur={String(champ(hotel, 'contact_name', 'contactName') ?? '—')}

@@ -1,10 +1,13 @@
-// Création d'un compte hôtel partenaire (public, sans OTP).
+// Création d'un compte ÉTABLISSEMENT partenaire — hôtel ou restaurant
+// (public, sans OTP).
 // POST /hotels {name, contactName, email, password (min 8), phone (WhatsApp
 // de l'établissement, +255…), zone, address?} → 201 {hotel}, puis
 // hotel-login automatique pour obtenir le jeton de session.
 // 409 duplicate si l'e-mail ou le téléphone est déjà utilisé.
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import {
   Bouton,
@@ -19,13 +22,16 @@ import {
 import { api, ErreurApi } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useT } from '@/lib/i18n';
-import { champ, type Hotel } from '@/lib/types';
+import { couleurs, espaces, rayons } from '@/lib/theme';
+import { champ, type Hotel, type TypePartenaire } from '@/lib/types';
 
 export default function EcranHotelInscription() {
   const router = useRouter();
   const { connexion } = useAuth();
   const { t } = useT();
 
+  // Hôtel ou restaurant : même compte, mêmes avantages, autre vocabulaire.
+  const [typePartenaire, setTypePartenaire] = useState<TypePartenaire>('hotel');
   const [nomHotel, setNomHotel] = useState('');
   const [contact, setContact] = useState('');
   const [email, setEmail] = useState('');
@@ -67,6 +73,7 @@ export default function EcranHotelInscription() {
     setCharge(true);
     try {
       await api.creerHotel({
+        partnerType: typePartenaire,
         name: nomHotel.trim(),
         contactName: contact.trim(),
         email: emailNormalise,
@@ -102,11 +109,32 @@ export default function EcranHotelInscription() {
       <Carte>
         <Titre>{t('titre_hotel_inscription')}</Titre>
         <SousTitre>{t('hotelins_intro')}</SousTitre>
+
+        <Text style={styles.labelType}>{t('hotelins_type')}</Text>
+        <View style={styles.rangeeTypes}>
+          {(['hotel', 'restaurant'] as const).map((cle) => {
+            const actif = typePartenaire === cle;
+            return (
+              <Pressable
+                key={cle}
+                onPress={() => setTypePartenaire(cle)}
+                accessibilityRole="button"
+                style={[styles.optionType, actif && styles.optionActive]}
+              >
+                <Text style={[styles.titreOption, actif && styles.titreActif]}>
+                  {t(cle === 'hotel' ? 'hotelins_type_hotel' : 'hotelins_type_restaurant')}
+                </Text>
+                {actif && <Ionicons name="checkmark-circle" size={18} color={couleurs.primaire} />}
+              </Pressable>
+            );
+          })}
+        </View>
+
         <Champ
           label={t('hotelins_nom')}
           value={nomHotel}
           onChangeText={setNomHotel}
-          placeholder="Ocean View Hotel"
+          placeholder={typePartenaire === 'restaurant' ? 'Lukmaan Restaurant' : 'Ocean View Hotel'}
         />
         <Champ
           label={t('hotelins_contact')}
@@ -162,3 +190,40 @@ export default function EcranHotelInscription() {
     </Ecran>
   );
 }
+
+const styles = StyleSheet.create({
+  labelType: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: couleurs.texteSecondaire,
+  },
+  rangeeTypes: {
+    flexDirection: 'row',
+    gap: espaces.s,
+  },
+  optionType: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    borderWidth: 2,
+    borderColor: couleurs.bordure,
+    borderRadius: rayons.bouton,
+    paddingVertical: espaces.m,
+    paddingHorizontal: espaces.s,
+    backgroundColor: couleurs.surface,
+  },
+  optionActive: {
+    borderColor: couleurs.primaire,
+    backgroundColor: couleurs.primaireClair,
+  },
+  titreOption: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: couleurs.encre,
+  },
+  titreActif: {
+    color: couleurs.primaireFonce,
+  },
+});

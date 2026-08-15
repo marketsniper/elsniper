@@ -46,3 +46,41 @@ describe('Page hôtels partenaires', () => {
     assert.match(page, /href="\/web"/);
   });
 });
+
+describe('Page restaurants partenaires', () => {
+  it('parle au restaurateur, pas à une réception d’hôtel', async () => {
+    const res = await request(app).get('/restaurant');
+    assert.equal(res.status, 200);
+    const page = res.text;
+
+    // Son problème à lui : le dernier service, les clients qui repartent.
+    assert.match(page, /costs your restaurant nothing/i, 'la gratuité n’est pas dite');
+    assert.match(page, /getting them home/i, 'le sujet du soir n’est pas posé');
+    // …et les commandes à faire porter.
+    assert.match(page, /delivery|deliveries/i, 'la livraison manque');
+    assert.match(page, /5% partner rate/i, 'le tarif partenaire manque');
+    assert.match(page, /47\.50/, 'le prix partenaire remisé manque');
+    assert.match(page, /straight away/i, 'la disponibilité immédiate n’est pas dite');
+    assert.match(page, /wa\.me\/255666241749/, 'le contact WhatsApp manque');
+    assert.match(page, /20 completed rides/i, 'la fidélité manque');
+    assert.match(page, /href="\/web"/, 'le lien vers l’application manque');
+    // Aucune trace du vocabulaire hôtelier : on ne recycle pas la page.
+    assert.ok(!/your guests? deserve/i.test(page), 'texte d’hôtel recyclé');
+    assert.ok(!/reception desk/i.test(page), 'texte d’hôtel recyclé');
+  });
+
+  it('affiche la grille des livraisons au vrai prix, sans remise', async () => {
+    const page = (await request(app).get('/restaurant')).text;
+    assert.match(page, /5\.00/, 'le petit colis manque');
+    assert.match(page, /10\.00/, 'le colis moyen manque');
+    assert.match(page, /18\.00/, 'le gros colis manque');
+    // La remise ne vaut que sur les courses privées : jamais 9,50 sur un colis.
+    assert.ok(!/9\.50/.test(page), 'un colis ne doit pas apparaître remisé');
+    assert.match(page, /applies to private cars only/i, 'la limite de la remise n’est pas dite');
+  });
+
+  it('la page hôtels ne promet plus de remise sur les colis', async () => {
+    const page = (await request(app).get('/hotel')).text;
+    assert.ok(!/9\.50/.test(page), 'la page hôtels affiche encore un colis remisé');
+  });
+});

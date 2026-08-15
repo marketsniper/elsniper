@@ -17,21 +17,35 @@ export const VOUCHER_CREDIT_USD = 10;
 
 const router = Router();
 
-// Garde partagée (trips, packages, rides) : un hôtel ne peut réserver que si
-// l'équipe a vérifié son compte — parade aux fausses inscriptions au nom
-// d'un établissement réel.
+/**
+ * Comment nommer ce partenaire à l'écran et dans les messages. Un restaurant
+ * qui reçoit « votre hôtel » se demande à qui on parle.
+ */
+export function libellePartenaire(hotel) {
+  return hotel?.partner_type === 'restaurant' ? 'restaurant' : 'hôtel';
+}
+
+// Garde partagée (trips, packages, rides) : un partenaire ne peut réserver
+// que si l'équipe a vérifié son compte — parade aux fausses inscriptions au
+// nom d'un établissement réel.
 export function assertHotelVerified(hotel) {
   if (hotel.verification_status !== 'verified') {
     throw new HttpError(
       403,
       'hotel_not_verified',
-      "Compte hôtel en attente de vérification par l'équipe zanziGo — vous serez contacté rapidement"
+      `Compte ${libellePartenaire(hotel)} en attente de vérification par l'équipe zanziGo — vous serez contacté rapidement`
     );
   }
 }
 
 const createHotelSchema = z.object({
   name: z.string().min(2),
+  /**
+   * Nature de l'établissement. Un restaurant a les mêmes besoins qu'un
+   * hôtel — faire livrer, commander un taxi pour ses clients — et le même
+   * compte les sert tous les deux. Absent = hôtel (comptes existants).
+   */
+  partnerType: z.enum(['hotel', 'restaurant']).optional(),
   contactName: z.string().min(2),
   email: z.string().email(),
   password: z.string().min(8, 'Mot de passe : 8 caractères minimum'),
@@ -56,8 +70,8 @@ router.post(
     const data = createHotelSchema.parse(req.body);
     const passwordHash = await hashPassword(data.password);
     const { rows } = await query(
-      `INSERT INTO hotels (name, contact_name, email, password_hash, phone, zone, address)
-       VALUES ($1, $2, lower($3), $4, $5, $6, $7)
+      `INSERT INTO hotels (name, contact_name, email, password_hash, phone, zone, address, partner_type)
+       VALUES ($1, $2, lower($3), $4, $5, $6, $7, $8)
        RETURNING *`,
       [
         data.name,
@@ -67,6 +81,7 @@ router.post(
         data.phone,
         data.zone,
         data.address ?? null,
+        data.partnerType ?? 'hotel',
       ]
     );
     // Récapitulatif + informations de connexion par e-mail — au mieux,
@@ -75,10 +90,11 @@ router.post(
     envoyerEmail({ to: rows[0].email, subject, html }).catch(() => {});
     // …et l'équipe est prévenue automatiquement qu'un hôtel attend sa
     // vérification.
+    const estResto = rows[0].partner_type === 'restaurant';
     notifierEquipe(
-      '🏨 Nouvel hôtel inscrit — à vérifier',
+      estResto ? '🍽️ Nouveau restaurant inscrit — à vérifier' : '🏨 Nouvel hôtel inscrit — à vérifier',
       [
-        `Établissement: ${rows[0].name}`,
+        `${estResto ? 'Restaurant' : 'Hôtel'}: ${rows[0].name}`,
         `Contact: ${rows[0].contact_name}`,
         `Zone: ${rows[0].zone}`,
         `WhatsApp: ${rows[0].phone}`,
@@ -96,12 +112,20 @@ router.get(
   '/',
   requireAdmin,
   asyncHandler(async (req, res) => {
-    const { verificationStatus } = z
-      .object({ verificationStatus: z.enum(['pending', 'verified', 'rejected']).optional() })
+    const { verificationStatus, partnerType } = z
+      .object({
+        verificationStatus: z.enum(['pending', 'verified', 'rejected']).optional(),
+        partnerType: z.enum(['hotel', 'restaurant']).optional(),
+      })
       .parse(req.query);
+    // partnerType absent = tous les partenaires, hôtels et restaurants mêlés :
+    // l'équipe vérifie une file d'attente unique.
     const { rows } = await query(
-      'SELECT * FROM hotels WHERE verification_status = $1 ORDER BY created_at DESC',
-      [verificationStatus ?? 'pending']
+      `SELECT * FROM hotels
+       WHERE verification_status = $1
+         AND ($2::text IS NULL OR partner_type = $2)
+       ORDER BY created_at DESC`,
+      [verificationStatus ?? 'pending', partnerType ?? null]
     );
     res.json(rows.map(sanitizeHotel));
   })

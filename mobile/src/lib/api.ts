@@ -16,6 +16,7 @@ import type {
   TailleColis,
   Trajet,
   TypeCompte,
+  TypePartenaire,
   TypeTrajet,
   Utilisateur,
 } from './types';
@@ -410,6 +411,8 @@ export async function obtenirUtilisateur(id: string): Promise<Utilisateur> {
 // ---------------------------------------------------------------------------
 
 export interface CreationHotel {
+  /** 'hotel' (défaut) ou 'restaurant' — même compte, autre vocabulaire. */
+  partnerType?: TypePartenaire;
   name: string;
   contactName: string;
   email: string;
@@ -420,8 +423,10 @@ export interface CreationHotel {
 }
 
 /**
- * POST /hotels (public, sans OTP) — création d'un compte hôtel partenaire :
- * {name, contactName, email, password, phone, zone, address?} → 201 {hotel}.
+ * POST /hotels (public, sans OTP) — création d'un compte établissement
+ * partenaire, hôtel ou restaurant :
+ * {partnerType?, name, contactName, email, password, phone, zone, address?}
+ * → 201 {hotel}.
  * 409 duplicate si e-mail ou téléphone déjà utilisés. Enchaîner ensuite
  * connexionHotel(email, password) pour obtenir le jeton.
  */
