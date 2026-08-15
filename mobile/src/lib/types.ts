@@ -405,6 +405,9 @@ export const TRAJETS_SPECIAUX_PRIVE_USD: { villes: [string, string]; prix: numbe
   // Transfert aéroport : sept kilomètres, commission 20 % côté serveur.
   { villes: ['Aéroport international Abeid Amani Karume', 'Stone Town'], prix: 17 },
   { villes: ['Aéroport international Abeid Amani Karume', 'Stone Town Ferry'], prix: 17 },
+  // Michamvi depuis le nord : la route contourne la baie de Chwaka.
+  { villes: ['Nungwi', 'Michamvi'], prix: 65 },
+  { villes: ['Kendwa', 'Michamvi'], prix: 65 },
   { villes: ['Michamvi', 'Bwejuu'], prix: 12 },
   { villes: ['Bwejuu', 'Paje'], prix: 12 },
   { villes: ['Paje', 'Jambiani'], prix: 12 },

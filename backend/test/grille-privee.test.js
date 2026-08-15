@@ -82,7 +82,7 @@ describe('Grille privée au kilomètre', () => {
     assert.equal(privateUsdForRoute('Nungwi', 'Kendwa'), 12); // ≈ 5 km, voisins
     assert.equal(privateUsdForRoute('Nungwi', 'Matemwe'), 16); // ≈ 23 km
     assert.equal(privateUsdForRoute('Nungwi', 'Kiwengwa'), 25); // ≈ 41 km
-    assert.equal(privateUsdForRoute('Nungwi', 'Michamvi'), 40); // ≈ 64 km
+    assert.equal(privateUsdForRoute('Nungwi', 'Chwaka'), 40); // ≈ 68 km
     assert.equal(privateUsdForRoute('Matemwe', 'Paje'), 40); // ≈ 65 km
     assert.equal(privateUsdForRoute('Nungwi', 'Paje'), 60); // ≈ 88 km, côte à côte
     assert.equal(privateUsdForRoute('Kendwa', 'Kizimkazi'), 65); // ≈ 102 km, nord → sud
@@ -92,6 +92,21 @@ describe('Grille privée au kilomètre', () => {
       privateUsdForRoute('Kiwengwa', 'Jambiani'),
       privateUsdForRoute('Jambiani', 'Kiwengwa')
     );
+  });
+
+  it('Michamvi depuis le nord : 65 USD, la route contourne la baie', () => {
+    // Les paliers se calculent à vol d'oiseau (64 km → 40 USD). La route,
+    // elle, fait tout le tour de la baie de Chwaka : le prix de terrain
+    // prime, dans les deux sens et depuis Kendwa comme depuis Nungwi.
+    for (const nord of ['Nungwi', 'Kendwa']) {
+      assert.equal(privateUsdForRoute(nord, 'Michamvi'), 65, `${nord} → Michamvi`);
+      assert.equal(privateUsdForRoute('Michamvi', nord), 65, `Michamvi → ${nord}`);
+    }
+    const traversee = priceTrip('private', 'tourist', { pickup: 'Nungwi', dropoff: 'Michamvi' });
+    assert.equal(traversee.commission, 6.5, 'commission privée 10 %');
+    assert.equal(traversee.price - traversee.commission, 58.5, 'gain chauffeur');
+    // Depuis Stone Town, Michamvi garde sa grille de zone : 50 USD.
+    assert.equal(privateUsdForRoute('Stone Town', 'Michamvi'), 50);
   });
 
   it('ville inconnue : retombe sur la grille par zone (jamais d\'erreur)', () => {

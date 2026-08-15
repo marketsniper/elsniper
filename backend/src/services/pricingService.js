@@ -79,6 +79,11 @@ const SPECIAL_PRIVATE_ROUTES_USD = [
   { a: 'Bwejuu', b: 'Paje', usd: 12, commission: 0.2 },
   { a: 'Paje', b: 'Jambiani', usd: 12, commission: 0.2 },
   { a: 'Jambiani', b: 'Makunduchi', usd: 12, commission: 0.2 },
+  // MICHAMVI DEPUIS LE NORD — la pointe se gagne en contournant toute la
+  // baie de Chwaka : la route est bien plus longue que la distance à vol
+  // d'oiseau, sur laquelle les paliers se calculent. Prix de terrain.
+  { a: 'Nungwi', b: 'Michamvi', usd: 65 },
+  { a: 'Kendwa', b: 'Michamvi', usd: 65 },
   // Un village sauté.
   { a: 'Michamvi', b: 'Paje', usd: 16, commission: 0.2 },
   { a: 'Bwejuu', b: 'Jambiani', usd: 16, commission: 0.2 },
