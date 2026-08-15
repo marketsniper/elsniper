@@ -408,6 +408,8 @@ export const TRAJETS_SPECIAUX_PRIVE_USD: { villes: [string, string]; prix: numbe
   // Michamvi depuis le nord : la route contourne la baie de Chwaka.
   { villes: ['Nungwi', 'Michamvi'], prix: 65 },
   { villes: ['Kendwa', 'Michamvi'], prix: 65 },
+  // La pointe sud : la route descend par l'intérieur.
+  { villes: ['Kizimkazi', 'Jambiani'], prix: 17 },
   { villes: ['Michamvi', 'Bwejuu'], prix: 12 },
   { villes: ['Bwejuu', 'Paje'], prix: 12 },
   { villes: ['Paje', 'Jambiani'], prix: 12 },

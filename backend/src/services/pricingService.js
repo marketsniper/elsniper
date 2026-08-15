@@ -110,6 +110,9 @@ const SPECIAL_PRIVATE_ROUTES_USD = [
   // d'oiseau, sur laquelle les paliers se calculent. Prix de terrain.
   { a: 'Nungwi', b: 'Michamvi', usd: 65 },
   { a: 'Kendwa', b: 'Michamvi', usd: 65 },
+  // La pointe sud : Kizimkazi est sur l'autre versant, la route y descend
+  // par l'intérieur au lieu de longer la côte. Prix de terrain.
+  { a: 'Kizimkazi', b: 'Jambiani', usd: 17 },
   // Un village sauté.
   { a: 'Michamvi', b: 'Paje', usd: 16, commission: 0.2 },
   { a: 'Bwejuu', b: 'Jambiani', usd: 16, commission: 0.2 },

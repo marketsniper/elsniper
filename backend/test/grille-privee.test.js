@@ -94,6 +94,16 @@ describe('Grille privée au kilomètre', () => {
     );
   });
 
+  it('Kizimkazi ↔ Jambiani : 17 USD, la route passe par l’intérieur', () => {
+    // 35 km à vol d'oiseau (palier 25 USD), mais Kizimkazi est sur l'autre
+    // versant : on ne longe pas la côte, on redescend par l'intérieur.
+    assert.equal(privateUsdForRoute('Kizimkazi', 'Jambiani'), 17);
+    assert.equal(privateUsdForRoute('Jambiani', 'Kizimkazi'), 17);
+    const t = priceTrip('private', 'tourist', { pickup: 'Kizimkazi', dropoff: 'Jambiani' });
+    assert.equal(t.commission, 3.4, 'course courte : 20 %');
+    assert.equal(t.price - t.commission, 13.6, 'gain chauffeur');
+  });
+
   it('Michamvi depuis le nord : 65 USD, la route contourne la baie', () => {
     // Les paliers se calculent à vol d'oiseau (64 km → 40 USD). La route,
     // elle, fait tout le tour de la baie de Chwaka : le prix de terrain
