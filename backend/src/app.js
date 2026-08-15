@@ -177,6 +177,123 @@ deux fois. <a href="/confidentialite">Politique de confidentialité</a></small>
       );
   });
 
+  // Espace HÔTELS PARTENAIRES : la page qu'on montre — ou qu'on envoie — à
+  // une réception. En anglais, la langue de travail des hôtels de Zanzibar.
+  // Elle répond dans l'ordre aux questions d'un directeur : qu'est-ce que ça
+  // me coûte, qu'est-ce que ça change pour mes clients, combien ça coûte à
+  // eux, et qu'est-ce que j'y gagne.
+  app.get('/hotel', (_req, res) => {
+    res.type('html').send(`<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>zanziGo for hotels — verified taxis, fixed prices</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:#FBF0E4;color:#33222B;line-height:1.5}
+main{max-width:660px;margin:0 auto;padding:26px 20px 50px}
+h1{font-size:32px;line-height:1.15;letter-spacing:-.4px;margin-bottom:8px}
+h1 span{color:#E4572E}
+.accroche{font-size:18px;color:#6B5760;margin-bottom:22px}
+h2{font-size:21px;margin:30px 0 12px}
+.carte{background:#fff;border-radius:18px;padding:20px 22px;margin-bottom:14px;box-shadow:0 6px 18px rgba(51,34,43,.07)}
+.carte h3{font-size:18px;margin-bottom:6px}
+.carte p{color:#55444C;font-size:16px}
+.gratuit{background:#33222B;color:#FFE9DC;border-radius:18px;padding:20px 22px;margin:22px 0;font-size:17px}
+.gratuit b{color:#FFB08C}
+table{width:100%;border-collapse:collapse;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 6px 18px rgba(51,34,43,.07)}
+th,td{padding:12px 14px;text-align:left;font-size:15.5px;border-bottom:1px solid #F1E7E3}
+th{background:#FFF1EC;color:#B93C1B;font-size:14px;text-transform:uppercase;letter-spacing:.4px}
+td:last-child,th:last-child{text-align:right;white-space:nowrap}
+tr:last-child td{border-bottom:none}
+.etapes{counter-reset:e}
+.etape{display:flex;gap:14px;align-items:flex-start;margin-bottom:14px}
+.puce{flex:none;width:34px;height:34px;border-radius:17px;background:#E4572E;color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center}
+.bonus{background:#FFF7E6;border-left:8px solid #E9A13B;border-radius:14px;padding:18px 20px;margin:14px 0;font-size:16.5px}
+.bouton{display:block;text-align:center;background:#E4572E;color:#FFF8F2;text-decoration:none;font-weight:700;font-size:18px;padding:16px;border-radius:14px;margin:12px 0}
+.secondaire{background:#FFFDFA;color:#B93C1B;border:2px solid #E4572E}
+footer{margin-top:26px;text-align:center;color:#8A7168;font-size:14px}
+footer a{color:#B93C1B}
+</style></head><body><main>
+
+<h1>Your guests deserve a taxi you can <span>vouch for</span>.</h1>
+<p class="accroche">zanziGo is a Zanzibar taxi &amp; parcel service built for hotels.
+Verified drivers, published prices, one booking from your reception desk.</p>
+
+<div class="gratuit">
+  <b>It costs your hotel nothing.</b> No fee, no subscription, no software to install,
+  no commitment. Your guest pays the published price — and you book at a
+  <b>5% partner rate</b>.
+</div>
+
+<h2>What changes at your desk</h2>
+
+<div class="carte">
+  <h3>🚕 No more calling round for a car</h3>
+  <p>One booking on any phone or computer. Our team confirms a driver and you see
+  his name, his plate and his car — before your guest walks out.</p>
+</div>
+<div class="carte">
+  <h3>💵 The price is fixed before departure</h3>
+  <p>No haggling at your door, no argument at check-out. The guest knows the
+  price when he books; the driver knows it too.</p>
+</div>
+<div class="carte">
+  <h3>🛡️ Every driver is checked by us</h3>
+  <p>Driving licence, insurance and vehicle photo verified before a driver can
+  take a single booking. Your reputation travels in that car.</p>
+</div>
+<div class="carte">
+  <h3>📍 You can follow the ride</h3>
+  <p>Requested → driver confirmed → paid → on the way → completed. If a guest asks
+  at the desk, you have the answer on screen.</p>
+</div>
+
+<h2>Published prices (per car, private)</h2>
+<table>
+  <tr><th>Route</th><th>Guest price</th></tr>
+  <tr><td>Airport / Stone Town ↔ Nungwi, Kendwa</td><td>50 USD</td></tr>
+  <tr><td>Airport / Stone Town ↔ Matemwe, Kiwengwa</td><td>45 USD</td></tr>
+  <tr><td>Airport / Stone Town ↔ Paje, Jambiani, Bwejuu</td><td>50 USD</td></tr>
+  <tr><td>Airport / Stone Town ↔ Kizimkazi, Makunduchi</td><td>45 USD</td></tr>
+  <tr><td>Nungwi ↔ Paje (coast to coast)</td><td>65 USD</td></tr>
+  <tr><td>Shared seat (per person)</td><td>14–18 USD</td></tr>
+  <tr><td>Parcel between towns (small / medium / large)</td><td>5 / 10 / 18 USD</td></tr>
+</table>
+<p class="accroche" style="margin-top:10px;font-size:15.5px">Airport transfers, return
+trips with waiting time, baby seats and large luggage are all handled — just say so
+when booking. Payment by <b>card or mobile wallet</b>.</p>
+
+<h2>How it works</h2>
+<div class="etapes">
+  <div class="etape"><div class="puce">1</div><div><b>We open your partner account</b> —
+  five minutes, on your phone. Nothing to install.</div></div>
+  <div class="etape"><div class="puce">2</div><div><b>You book for your guest</b> —
+  pick-up, drop-off, time. We confirm a verified driver.</div></div>
+  <div class="etape"><div class="puce">3</div><div><b>The guest travels, you follow it</b> —
+  and your reception never chases a taxi again.</div></div>
+</div>
+
+<div class="bonus">
+  <b>🎁 20 completed rides = a 10 USD voucher.</b> Use it for a free parcel or turn it
+  into credit on your account. And with a <b>prepaid credit account</b>, your desk
+  settles every ride in one tap — no cash to handle.
+</div>
+<div class="bonus">
+  <b>📱 A QR poster for your reception.</b> Guests book by themselves, in their own
+  language — your hotel still earns the loyalty rides.
+</div>
+
+<h2>Start today</h2>
+<a class="bouton" href="https://wa.me/255666241749?text=Hello%20zanziGo%2C%20we%20would%20like%20to%20open%20a%20hotel%20partner%20account.">💬 Open our partner account on WhatsApp</a>
+<a class="bouton secondaire" href="/web">🌐 See zanziGo now</a>
+
+<footer>
+  zanziGo — Zanzibar · Taxi &amp; parcels · Verified drivers, fixed prices<br>
+  WhatsApp <a href="https://wa.me/255666241749">+255 666 241 749</a> ·
+  <a href="/confidentialite">Privacy</a>
+</footer>
+</main></body></html>`);
+  });
+
   // Espace chauffeurs : cible du QR « chauffeurs » (affiches, cartes) —
   // le taxi scanne et tombe DIRECTEMENT sur l'installation de l'app,
   // sans passer par la page générale. Bilingue swahili/français : les
