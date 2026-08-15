@@ -22,7 +22,8 @@ describe('Page hôtels partenaires', () => {
     assert.match(page, /verified/i, 'la vérification des chauffeurs manque');
     assert.match(page, /fixed/i, 'le prix fixe manque');
     // 3. Combien ça leur coûte ?
-    assert.match(page, /50 USD/, 'la grille de prix manque');
+    assert.match(page, /47\.50/, 'le prix partenaire remisé manque');
+    assert.match(page, /You keep/i, 'ce que l’hôtel garde n’est pas montré');
     assert.match(page, /Nungwi/, 'les destinations manquent');
     // 4. Comment je démarre ?
     assert.match(page, /wa\.me\/255666241749/, 'le contact WhatsApp manque');

@@ -202,7 +202,9 @@ h2{font-size:21px;margin:30px 0 12px}
 table{width:100%;border-collapse:collapse;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 6px 18px rgba(51,34,43,.07)}
 th,td{padding:12px 14px;text-align:left;font-size:15.5px;border-bottom:1px solid #F1E7E3}
 th{background:#FFF1EC;color:#B93C1B;font-size:14px;text-transform:uppercase;letter-spacing:.4px}
-td:last-child,th:last-child{text-align:right;white-space:nowrap}
+th:nth-child(n+2),td:nth-child(n+2){text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.remise{color:#B93C1B;font-weight:800}
+.garde{color:#14713F;font-weight:800}
 tr:last-child td{border-bottom:none}
 .etapes{counter-reset:e}
 .etape{display:flex;gap:14px;align-items:flex-start;margin-bottom:14px}
@@ -247,17 +249,21 @@ Verified drivers, published prices, one booking from your reception desk.</p>
   at the desk, you have the answer on screen.</p>
 </div>
 
-<h2>Published prices (per car, private)</h2>
+<h2>Your partner prices — private car</h2>
 <table>
-  <tr><th>Route</th><th>Guest price</th></tr>
-  <tr><td>Airport / Stone Town ↔ Nungwi, Kendwa</td><td>50 USD</td></tr>
-  <tr><td>Airport / Stone Town ↔ Matemwe, Kiwengwa</td><td>45 USD</td></tr>
-  <tr><td>Airport / Stone Town ↔ Paje, Jambiani, Bwejuu</td><td>50 USD</td></tr>
-  <tr><td>Airport / Stone Town ↔ Kizimkazi, Makunduchi</td><td>45 USD</td></tr>
-  <tr><td>Nungwi ↔ Paje (coast to coast)</td><td>65 USD</td></tr>
-  <tr><td>Shared seat (per person)</td><td>14–18 USD</td></tr>
-  <tr><td>Parcel between towns (small / medium / large)</td><td>5 / 10 / 18 USD</td></tr>
+  <tr><th>Route</th><th>Guest price</th><th>Your price −5%</th><th>You keep</th></tr>
+  <tr><td>Airport / Stone Town ↔ Nungwi, Kendwa</td><td>50.00</td><td class="remise">47.50</td><td class="garde">+2.50</td></tr>
+  <tr><td>Airport / Stone Town ↔ Matemwe, Kiwengwa</td><td>45.00</td><td class="remise">42.75</td><td class="garde">+2.25</td></tr>
+  <tr><td>Airport / Stone Town ↔ Paje, Jambiani, Bwejuu</td><td>50.00</td><td class="remise">47.50</td><td class="garde">+2.50</td></tr>
+  <tr><td>Airport / Stone Town ↔ Kizimkazi, Makunduchi</td><td>45.00</td><td class="remise">42.75</td><td class="garde">+2.25</td></tr>
+  <tr><td>Nungwi ↔ Paje — coast to coast</td><td>65.00</td><td class="remise">61.75</td><td class="garde">+3.25</td></tr>
+  <tr><td>Shared taxi seat, per person (from)</td><td>14.00</td><td class="remise">13.30</td><td class="garde">+0.70</td></tr>
+  <tr><td>Parcel between towns (medium size)</td><td>10.00</td><td class="remise">9.50</td><td class="garde">+0.50</td></tr>
 </table>
+<p class="accroche" style="margin-top:10px;font-size:15.5px">Prices in USD. The
+<b>“you keep”</b> column is yours as soon as you charge your guest the published
+price — ten airport transfers a week is about <b>100 USD a month</b>, on top of the
+loyalty vouchers.</p>
 <p class="accroche" style="margin-top:10px;font-size:15.5px">Airport transfers, return
 trips with waiting time, baby seats and large luggage are all handled — just say so
 when booking. Payment by <b>card or mobile wallet</b>.</p>
