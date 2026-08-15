@@ -132,7 +132,7 @@ describe('Devises taxi partagé (parcours local complet)', () => {
   it('trajet court (privé < 35 USD) : pas de taxi partagé du tout', async () => {
     const { token: tokenChauffeur } = await createVerifiedDriver();
     const depart = new Date(Date.now() + 6 * 3600 * 1000).toISOString();
-    // Paje → Jambiani : privé 15 USD → l'annonce partagée est refusée.
+    // Paje → Jambiani : privé 12 USD → l'annonce partagée est refusée.
     const refus = await request(app)
       .post('/api/rides')
       .set(authHeaders(tokenChauffeur))
