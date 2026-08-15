@@ -266,16 +266,17 @@ describe('Crédit prépayé hôtels', () => {
     assert.equal(paiement.body.payment_method, 'credit');
     // L'équipe est alertée aussi pour les colis payés par crédit.
     assert.ok(paiement.body.whatsapp_link.includes('wa.me'));
-    assert.ok(decodeURIComponent(paiement.body.whatsapp_link).includes('Solde crédit restant: 40.5 USD'));
+    assert.ok(decodeURIComponent(paiement.body.whatsapp_link).includes('Solde crédit restant: 40 USD'));
 
     const apres = await request(app)
       .get(`/api/packages/${colis.body.id}`)
       .set(authHeaders(token));
     assert.equal(apres.body.status, 'paid');
 
-    // Colis medium hôtel : 10 USD − 5 % = 9,50 → 50 − 9,50 = 40,50.
+    // Colis medium hôtel : 10 USD plein tarif (pas de remise sur un colis)
+    // → 50 − 10 = 40.
     const etat = await request(app).get(`/api/hotels/${hotel.id}/credit`).set(authHeaders(token));
-    assert.equal(etat.body.balance, 40.5);
+    assert.equal(etat.body.balance, 40);
   });
 });
 

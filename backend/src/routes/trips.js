@@ -572,6 +572,54 @@ router.patch(
   })
 );
 
+// GET /trips/:id/driver-position — « où en est mon taxi ? »
+//
+// Le réservateur suit l'approche de son chauffeur sur une carte. On ne rend
+// QUE la dernière position connue et son heure : ni téléphone, ni trajet, ni
+// historique. Le suivi s'arrête avec la course — une fois terminée ou
+// annulée, plus personne ne sait où est le chauffeur.
+router.get(
+  '/:id/driver-position',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const trip = await getTrip(req.params.id);
+    const isBooker =
+      (trip.user_id !== null && trip.user_id === req.auth.userId) ||
+      (trip.hotel_id !== null && trip.hotel_id === req.auth.hotelId);
+    if (!isAdmin(req) && !isBooker) {
+      throw new HttpError(403, 'forbidden', 'Seul le réservateur de la course peut suivre son chauffeur');
+    }
+    if (['completed', 'cancelled'].includes(trip.status)) {
+      throw new HttpError(
+        409,
+        'invalid_status',
+        `Cette course est ${trip.status === 'completed' ? 'terminée' : 'annulée'} — le suivi du chauffeur est clos`
+      );
+    }
+    if (!trip.driver_id) {
+      throw new HttpError(409, 'no_driver', "Aucun chauffeur n'est encore confirmé sur cette course");
+    }
+
+    const { rows } = await query(
+      `SELECT d.full_name, d.vehicle_plate, p.lat, p.lng, p.updated_at
+       FROM drivers d
+       LEFT JOIN driver_positions p ON p.driver_id = d.id
+       WHERE d.id = $1`,
+      [trip.driver_id]
+    );
+    const ligne = rows[0];
+    // Chauffeur confirmé mais pas encore repéré : on le dit franchement
+    // plutôt que d'afficher un point inventé.
+    res.json({
+      driver_name: ligne?.full_name ?? null,
+      vehicle_plate: ligne?.vehicle_plate ?? null,
+      lat: ligne?.lat ?? null,
+      lng: ligne?.lng ?? null,
+      updated_at: ligne?.updated_at ?? null,
+    });
+  })
+);
+
 // PATCH /trips/:id/start — le chauffeur assigné (ou l'équipe) démarre la
 // course d'une simple touche. Pas de QR à scanner : la position GPS déjà
 // partagée en continu (PATCH /drivers/:id/location) reste la preuve de

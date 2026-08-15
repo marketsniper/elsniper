@@ -897,6 +897,31 @@ const CHAINES = {
     en: '📍 I moved — send my position again',
     sw: '📍 Nimehama — tuma eneo langu tena',
   },
+  trip_suivre_taxi: {
+    fr: '🚕 Voir où est mon taxi',
+    en: '🚕 See where my taxi is',
+    sw: '🚕 Ona teksi yangu ilipo',
+  },
+  trip_masquer_taxi: {
+    fr: 'Masquer la carte',
+    en: 'Hide the map',
+    sw: 'Ficha ramani',
+  },
+  trip_taxi_en_route: {
+    fr: 'Votre taxi vient vers vous',
+    en: 'Your taxi is on its way',
+    sw: 'Teksi yako inakuja',
+  },
+  trip_taxi_position_datee: {
+    fr: 'Position relevée {quand}',
+    en: 'Position taken {quand}',
+    sw: 'Eneo lilipochukuliwa {quand}',
+  },
+  trip_taxi_pas_repere: {
+    fr: "Votre chauffeur n'a pas encore allumé son repérage. Rappuyez dans un instant, ou appelez l'équipe si vous l'attendez depuis longtemps.",
+    en: "Your driver hasn't switched on location sharing yet. Try again in a moment, or call the team if you have been waiting a while.",
+    sw: 'Dereva wako bado hajawasha utumaji wa eneo. Jaribu tena baadaye kidogo, au piga simu kwa timu ikiwa umesubiri muda mrefu.',
+  },
   carte_itineraire: {
     fr: 'Ouvrir dans Google Maps (itinéraire)',
     en: 'Open in Google Maps (directions)',

@@ -88,7 +88,8 @@ describe('Colis (packages)', () => {
     const { token, hotel } = await createHotel();
     const pkg = await createHotelPackage(token, hotel.id);
     assert.equal(pkg.currency, 'USD');
-    assert.equal(Number(pkg.price), 9.5); // medium 10 USD → −5 % hôtel
+    // Plein tarif : la remise partenaire ne vaut que sur les courses privées.
+    assert.equal(Number(pkg.price), 10);
     assert.equal(pkg.sender_hotel_id, hotel.id);
     assert.equal(pkg.sender_user_id, null);
   });

@@ -4,7 +4,7 @@
 // (POST /trips/:id/rating {rating, comment?}).
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Alert, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { CartePosition } from '@/components/CartePosition';
@@ -24,11 +24,11 @@ import {
   Titre,
 } from '@/components/ui';
 import { positionActuelle } from '@/lib/position';
-import { api, definirCleEquipe, ErreurApi } from '@/lib/api';
+import { api, definirCleEquipe, ErreurApi, type SuiviChauffeur } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useRafraichissementAuto } from '@/lib/rafraichissementAuto';
 import { lireStockage } from '@/lib/stockage';
-import { libelleStatutTrajet, libelleTypeTrajet, useT } from '@/lib/i18n';
+import { formaterDateRelativeI18n, libelleStatutTrajet, libelleTypeTrajet, useT } from '@/lib/i18n';
 import { couleurs, espaces } from '@/lib/theme';
 import {
   champ,
@@ -70,6 +70,11 @@ export default function EcranTrajet() {
   // Point de rendez-vous exact envoyé au chauffeur (course privée).
   const [chargePosition, setChargePosition] = useState(false);
   const [erreurPosition, setErreurPosition] = useState('');
+  // Suivi du taxi qui approche : ouvert seulement si le client le demande.
+  const [suiviOuvert, setSuiviOuvert] = useState(false);
+  const [positionTaxi, setPositionTaxi] = useState<SuiviChauffeur | null>(null);
+  const [chargeSuivi, setChargeSuivi] = useState(false);
+  const [erreurSuivi, setErreurSuivi] = useState('');
 
   const charger = useCallback(async () => {
     if (!id) return;
@@ -89,6 +94,38 @@ export default function EcranTrajet() {
   // La fiche se met à jour toute seule : chauffeur confirmé par l'équipe,
   // paiement validé… le client voit l'avancement sans rien toucher.
   useRafraichissementAuto(charger);
+
+  const releverTaxi = useCallback(async () => {
+    if (!id) return;
+    setChargeSuivi(true);
+    try {
+      setPositionTaxi(await api.positionDeMonChauffeur(id));
+      setErreurSuivi('');
+    } catch (e) {
+      setErreurSuivi(e instanceof ErreurApi ? e.message : t('trip_introuvable'));
+    } finally {
+      setChargeSuivi(false);
+    }
+  }, [id, t]);
+
+  const basculerSuivi = useCallback(() => {
+    setErreurSuivi('');
+    if (suiviOuvert) {
+      setSuiviOuvert(false);
+      return;
+    }
+    setSuiviOuvert(true);
+    releverTaxi();
+  }, [suiviOuvert, releverTaxi]);
+
+  // Carte ouverte : le point du taxi se rafraîchit tout seul, sinon le client
+  // regarderait une position figée en croyant que son chauffeur n'avance pas.
+  // Fermée, on n'interroge plus rien.
+  useEffect(() => {
+    if (!suiviOuvert) return;
+    const minuteur = setInterval(releverTaxi, 20000);
+    return () => clearInterval(minuteur);
+  }, [suiviOuvert, releverTaxi]);
 
   useFocusEffect(
     useCallback(() => {
@@ -350,6 +387,51 @@ export default function EcranTrajet() {
             <Text style={styles.labelPlaque}>{t('trip_taxi_plaque')}</Text>
             <Text style={styles.plaque}>{String(plaqueTaxi ?? '—')}</Text>
           </View>
+
+          {/* SUIVI DU TAXI — s'il le souhaite : la carte ne s'ouvre qu'à la
+              demande, et se referme d'un appui. Le client REGARDE son
+              chauffeur approcher ; il n'a aucun itinéraire à suivre, c'est le
+              taxi qui vient à lui. */}
+          {courseVivante && (
+            <>
+              <Bouton
+                titre={suiviOuvert ? t('trip_masquer_taxi') : t('trip_suivre_taxi')}
+                icone={suiviOuvert ? 'chevron-up' : 'car-outline'}
+                variante="secondaire"
+                onPress={basculerSuivi}
+                charge={chargeSuivi}
+              />
+              {suiviOuvert && positionTaxi && positionTaxi.lat !== null && positionTaxi.lng !== null && (
+                <CartePosition
+                  lat={Number(positionTaxi.lat)}
+                  lng={Number(positionTaxi.lng)}
+                  titre={`${t('trip_taxi_en_route')}${
+                    positionTaxi.updated_at
+                      ? ` — ${t('trip_taxi_position_datee', {
+                          quand: formaterDateRelativeI18n(positionTaxi.updated_at, t),
+                        })}`
+                      : ''
+                  }`}
+                  hauteur={200}
+                  lien={false}
+                  cadrer={
+                    positionPartagee
+                      ? {
+                          lat: Number(champ(trajet, 'pickup_lat')),
+                          lng: Number(champ(trajet, 'pickup_lng')),
+                        }
+                      : undefined
+                  }
+                />
+              )}
+              {suiviOuvert && positionTaxi && positionTaxi.lat === null && (
+                <EncartInfo icone="time-outline" ton="attente">
+                  {t('trip_taxi_pas_repere')}
+                </EncartInfo>
+              )}
+              <TexteErreur>{erreurSuivi}</TexteErreur>
+            </>
+          )}
         </Carte>
       )}
 

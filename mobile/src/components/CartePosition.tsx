@@ -21,8 +21,23 @@ import { couleurs, espaces, rayons } from '@/lib/theme';
 /** Fenêtre affichée autour du point : ~1,1 km de côté, l'échelle du village. */
 const MARGE_DEGRES = 0.01;
 
-function lienOpenStreetMap(lat: number, lng: number): string {
-  const bbox = [lng - MARGE_DEGRES, lat - MARGE_DEGRES, lng + MARGE_DEGRES, lat + MARGE_DEGRES];
+/**
+ * @param cadrer Second point à garder dans le cadre — le client qui suit
+ *   l'approche de son taxi veut les voir tous les deux, pas seulement le
+ *   taxi tout seul au milieu de nulle part. Le marqueur, lui, reste sur le
+ *   point principal.
+ */
+function lienOpenStreetMap(lat: number, lng: number, cadrer?: { lat: number; lng: number }): string {
+  // Marge élargie d'un quart : sans ça, les deux points collent aux bords.
+  const marge = MARGE_DEGRES * 1.25;
+  const lats = cadrer ? [lat, cadrer.lat] : [lat];
+  const lngs = cadrer ? [lng, cadrer.lng] : [lng];
+  const bbox = [
+    Math.min(...lngs) - marge,
+    Math.min(...lats) - marge,
+    Math.max(...lngs) + marge,
+    Math.max(...lats) + marge,
+  ];
   return (
     'https://www.openstreetmap.org/export/embed.html' +
     `?bbox=${bbox.join('%2C')}&layer=mapnik&marker=${lat}%2C${lng}`
@@ -36,6 +51,7 @@ export function CartePosition({
   hauteur = 190,
   navigation = false,
   lien = true,
+  cadrer,
 }: {
   lat: number;
   lng: number;
@@ -52,6 +68,8 @@ export function CartePosition({
    * proposer un itinéraire jusqu'à lui-même n'aurait aucun sens.
    */
   lien?: boolean;
+  /** Second point à garder dans le cadre (sans marqueur). */
+  cadrer?: { lat: number; lng: number };
 }) {
   const { t } = useT();
   const ouvrirItineraire = () =>
@@ -84,7 +102,7 @@ export function CartePosition({
       )}
       <View style={[styles.cadre, { height: hauteur }]}>
         {React.createElement('iframe', {
-          src: lienOpenStreetMap(lat, lng),
+          src: lienOpenStreetMap(lat, lng, cadrer),
           title: titre ?? t('equipe_position'),
           loading: 'lazy',
           style: { border: 0, width: '100%', height: '100%', display: 'block' },

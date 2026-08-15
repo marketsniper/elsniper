@@ -1160,6 +1160,20 @@ export async function partagerPointRendezVous(
   });
 }
 
+/** Où en est mon taxi : dernière position connue du chauffeur assigné. */
+export interface SuiviChauffeur {
+  driver_name: string | null;
+  vehicle_plate: string | null;
+  /** null : chauffeur confirmé mais pas encore repéré par son téléphone. */
+  lat: number | null;
+  lng: number | null;
+  updated_at: string | null;
+}
+
+export async function positionDeMonChauffeur(trajetId: string): Promise<SuiviChauffeur> {
+  return requete<SuiviChauffeur>(`/trips/${trajetId}/driver-position`);
+}
+
 /** POST /notifications/test — alerte d'essai, pour vérifier et chronométrer. */
 export async function testerAlertes(): Promise<{ envoyes: number }> {
   return requete<{ envoyes: number }>('/notifications/test', { methode: 'POST', admin: true });
@@ -1352,6 +1366,7 @@ export const api = {
   listerAttentesPartage,
   annulerAttentePartage,
   partagerPointRendezVous,
+  positionDeMonChauffeur,
   clePush,
   abonnerAlertes,
   desabonnerAlertes,

@@ -1,7 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { Router } from 'express';
 import { z } from 'zod';
-import { config } from '../config.js';
 import { query, withTransaction } from '../db.js';
 import { HttpError, notFound } from '../errors.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
@@ -68,8 +67,9 @@ function isSender(pkg, auth) {
 // POST /packages — création de la demande (utilisateur ou hôtel).
 // L'expéditeur ne peut créer que pour lui-même (id du jeton).
 // Génère le QR colis unique et fige le prix. La devise suit l'expéditeur :
-// celle du compte pour un user ; USD avec −5 % pour un hôtel partenaire
-// (même grille que les touristes).
+// celle du compte pour un user ; USD pour un hôtel partenaire (même grille
+// que les touristes — la remise partenaire ne vaut que sur les courses
+// privées, jamais sur un colis).
 router.post(
   '/',
   requireAuth,
@@ -85,7 +85,6 @@ router.post(
     }
 
     let currency = 'USD';
-    let remise = 0;
     let senderLabel;
     // Téléphone de ramasse : celui saisi, sinon celui du compte expéditeur.
     let senderPhone = data.senderPhone ?? null;
@@ -103,7 +102,11 @@ router.post(
       const { rows } = await query('SELECT * FROM hotels WHERE id = $1', [data.senderHotelId]);
       if (!rows[0]) throw notFound('Hôtel expéditeur');
       assertHotelVerified(rows[0]);
-      remise = config.hotelDiscountRate; // hôtel : grille touriste −5 %
+      // Pas de remise partenaire sur un colis : elle ne vaut QUE sur les
+      // courses privées. Sur un colis, le chauffeur touche une part fixe —
+      // remiser ne ferait que rogner ce qui le fait accepter la livraison.
+      // L'hôtel garde sa fidélité (20 courses = 1 colis offert), qui elle
+      // ne coûte rien au chauffeur.
       senderPhone = senderPhone ?? rows[0].phone;
       senderLabel = `${rows[0].name} (hôtel, ${senderPhone})`;
     }
@@ -113,7 +116,7 @@ router.post(
       throw new HttpError(403, 'forbidden', 'Les bons fidélité sont réservés aux hôtels partenaires');
     }
 
-    const pricing = pricePackage(currency, data.size, remise);
+    const pricing = pricePackage(currency, data.size);
     const qrCode = generatePackageQr();
 
     const pkg = await withTransaction(async (client) => {

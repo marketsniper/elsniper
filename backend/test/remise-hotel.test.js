@@ -5,7 +5,11 @@
 // sa part. L'hôtel garde son avantage là où il y a de la marge.
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { priceTrip, pricePackage } from '../src/services/pricingService.js';
+import request from 'supertest';
+import { priceTrip } from '../src/services/pricingService.js';
+import { app, authHeaders, createHotel, nextPhone, useTestDb } from './setup.js';
+
+useTestDb();
 
 const route = { pickup: 'Stone Town', dropoff: 'Nungwi' };
 
@@ -43,9 +47,24 @@ describe('Remise partenaire hôtel', () => {
     );
   });
 
-  it('les colis gardent la remise partenaire', () => {
-    assert.equal(pricePackage('USD', 'medium', 0).price, 10);
-    assert.equal(pricePackage('USD', 'medium', 0.05).price, 9.5);
+  it('un colis d’hôtel se paie plein tarif', async () => {
+    // Sur un colis, le chauffeur touche une part fixe : remiser rognerait ce
+    // qui le décide à faire le détour. L'hôtel garde sa fidélité à la place.
+    const { token, hotel } = await createHotel();
+    const res = await request(app)
+      .post('/api/packages')
+      .set(authHeaders(token))
+      .send({
+        senderType: 'hotel',
+        size: 'medium',
+        senderHotelId: hotel.id,
+        pickupLocation: 'Hotel Baraka, Nungwi',
+        dropoffLocation: 'Stone Town',
+        recipientName: 'Omar Destinataire',
+        recipientPhone: nextPhone(),
+      });
+    assert.equal(res.status, 201, JSON.stringify(res.body));
+    assert.equal(Number(res.body.price), 10, 'le tarif colis medium est 10 USD, sans remise');
   });
 
   it('la part du chauffeur sur une place partagée reste entière', () => {
