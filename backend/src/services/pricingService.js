@@ -14,7 +14,7 @@ import { config } from '../config.js';
 // Tarif local UNIFIÉ : 15 000 TZS la place partout (sauf trajets spéciaux
 // ci-dessous) — plus simple à retenir pour les clients et les chauffeurs.
 const ZONE_TIERS = {
-  nord: { privateUsd: 40, sharedUsd: 18, localTzs: 15000 }, // Nungwi / Kendwa
+  nord: { privateUsd: 45, sharedUsd: 18, localTzs: 15000 }, // Nungwi / Kendwa
   nordEst: { privateUsd: 40, sharedUsd: 16, localTzs: 15000 }, // Matemwe / Kiwengwa
   est: { privateUsd: 45, sharedUsd: 15, localTzs: 15000 }, // Paje / Bwejuu
   estSud: { privateUsd: 50, sharedUsd: 15, localTzs: 15000 }, // Jambiani
@@ -74,8 +74,6 @@ const SPECIAL_PRIVATE_ROUTES_USD = [
   { a: 'Aéroport (AAKIA)', b: 'Stone Town Ferry', usd: 17, commission: 0.2 },
   { a: 'Aéroport', b: 'Stone Town', usd: 17, commission: 0.2 },
   { a: 'Aéroport', b: 'Stone Town Ferry', usd: 17, commission: 0.2 },
-  { a: 'Nungwi', b: 'Paje', usd: 60 },
-  { a: 'Nungwi', b: 'Kizimkazi', usd: 65 },
   // Voisins immédiats.
   { a: 'Michamvi', b: 'Bwejuu', usd: 12, commission: 0.2 },
   { a: 'Bwejuu', b: 'Paje', usd: 12, commission: 0.2 },
@@ -155,10 +153,30 @@ function specialLocalRouteTzs(pickup, dropoff) {
 // GRILLE PRIVÉE VILLE ↔ VILLE, AU KILOMÈTRE
 // ---------------------------------------------------------------------------
 // Le prix privé entre deux villes (hors hubs Stone Town / aéroport, qui
-// gardent la grille par zone historique) est SIMPLEMENT au kilomètre :
-// 0,85 USD par km de route (vol d'oiseau × détour routier moyen), arrondi
-// aux 5 USD, minimum 20 USD. Exemples : Kiwengwa → Paje (≈ 48 km) → 40 USD ;
-// Matemwe → Jambiani (≈ 73 km) → 60 USD ; villages voisins → 20 USD.
+// gardent la grille par zone) suit des PALIERS DE DISTANCE — pas une
+// multiplication au kilomètre. Un client comprend « c'est le village d'à
+// côté » ou « c'est la traversée de l'île » ; il ne compte pas les
+// kilomètres, et un chauffeur non plus.
+//
+// Les paliers sont calés sur les prix de la côte est déjà en place :
+// village voisin 12 USD, un village d'écart 16 USD. Ils prolongent la même
+// logique jusqu'à la grande traversée du nord au sud, à 65 USD.
+//
+// Le prix au kilomètre baisse à mesure que le trajet s'allonge (0,90 USD/km
+// sur un saut de village, 0,61 sur la traversée) : c'est le carburant qui
+// domine sur les longues distances, pas le temps du chauffeur.
+const PALIERS_KM_USD = [
+  { maxKm: 12, usd: 12 }, // village voisin — Nungwi ↔ Kendwa, Paje ↔ Jambiani
+  { maxKm: 30, usd: 16 }, // un village d'écart — Nungwi ↔ Matemwe
+  { maxKm: 50, usd: 25 }, // Nungwi ↔ Kiwengwa
+  { maxKm: 75, usd: 40 }, // Nungwi ↔ Michamvi, ↔ Chwaka
+  { maxKm: 100, usd: 60 }, // Nungwi ↔ Paje, ↔ Jambiani — d'une côte à l'autre
+  { maxKm: Infinity, usd: 65 }, // du nord au sud — Nungwi ↔ Makunduchi
+];
+
+function palierUsd(km) {
+  return PALIERS_KM_USD.find((p) => km <= p.maxKm).usd;
+}
 const CITY_COORDS = {
   'aéroport (aakia)': [-6.221, 39.223],
   'aéroport abeid amani karume': [-6.221, 39.223],
@@ -184,8 +202,6 @@ const CITY_COORDS = {
   fumba: [-6.322, 39.183],
 };
 const DETOUR_ROUTIER = 1.35; // les routes de l'île ne sont jamais directes
-const PRIX_PAR_KM_USD = 0.85;
-const PRIVE_MINIMUM_USD = 20;
 const HUBS = new Set([
   'stone town',
   'stone town ferry',
@@ -226,10 +242,7 @@ export function privateUsdForRoute(pickup, dropoff) {
   const d = normCity(dropoff);
   if (!HUBS.has(p) && !HUBS.has(d)) {
     const km = kmEntreVilles(pickup, dropoff);
-    if (km !== null) {
-      const brut = PRIX_PAR_KM_USD * km;
-      return Math.max(PRIVE_MINIMUM_USD, Math.round(brut / 5) * 5);
-    }
+    if (km !== null) return palierUsd(km);
   }
   return tierForRoute(pickup, dropoff).privateUsd;
 }

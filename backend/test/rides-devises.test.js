@@ -144,16 +144,22 @@ describe('Devises taxi partagé (parcours local complet)', () => {
   it('tarif local UNIQUEMENT sur les grands axes (privé ≥ 40 USD) — ailleurs, prix touriste en TZS', async () => {
     const { token: tokenChauffeur } = await createVerifiedDriver();
     const depart = new Date(Date.now() + 6 * 3600 * 1000).toISOString();
-    // Pongwe → Paje : privé 35 USD — partagé autorisé (≥ 35) mais PAS de
-    // place locale à 15 000 (< 40) : prix touriste de la zone est (15 USD)
-    // converti en shillings.
+    // Kiwengwa → Jambiani : privé 40 USD — juste au seuil, donc partagé
+    // autorisé ET place locale à 15 000.
     const moyen = await request(app)
       .post('/api/rides')
       .set(authHeaders(tokenChauffeur))
-      .send({ origin: 'Pongwe', destination: 'Paje', departureAt: depart, seatsTotal: 4 });
+      .send({ origin: 'Kiwengwa', destination: 'Jambiani', departureAt: depart, seatsTotal: 4 });
     assert.equal(moyen.status, 201, JSON.stringify(moyen.body));
-    assert.equal(Number(moyen.body.price_per_seat), 39000);
-    // Grande traversée au kilomètre (Matemwe → Paje, privé 55 USD ≥ 40) :
+    assert.equal(Number(moyen.body.price_per_seat), 15000);
+    // Sous le seuil (Pongwe → Paje, privé 25 USD) : pas de taxi partagé du
+    // tout — la course privée est la seule option.
+    const court = await request(app)
+      .post('/api/rides')
+      .set(authHeaders(tokenChauffeur))
+      .send({ origin: 'Pongwe', destination: 'Paje', departureAt: depart, seatsTotal: 4 });
+    assert.equal(court.status, 422, JSON.stringify(court.body));
+    // Grande traversée (Matemwe → Paje, privé 40 USD ≥ 40) :
     // le tarif local unifié reste valable.
     const grand = await request(app)
       .post('/api/rides')

@@ -405,8 +405,6 @@ export const TRAJETS_SPECIAUX_PRIVE_USD: { villes: [string, string]; prix: numbe
   // Transfert aéroport : sept kilomètres, commission 20 % côté serveur.
   { villes: ['Aéroport international Abeid Amani Karume', 'Stone Town'], prix: 17 },
   { villes: ['Aéroport international Abeid Amani Karume', 'Stone Town Ferry'], prix: 17 },
-  { villes: ['Nungwi', 'Paje'], prix: 60 },
-  { villes: ['Nungwi', 'Kizimkazi'], prix: 65 },
   { villes: ['Michamvi', 'Bwejuu'], prix: 12 },
   { villes: ['Bwejuu', 'Paje'], prix: 12 },
   { villes: ['Paje', 'Jambiani'], prix: 12 },
@@ -475,7 +473,7 @@ export interface TarifsZone {
 // Tarif local UNIFIÉ : 15 000 TZS la place partout (sauf trajets spéciaux,
 // ex. Nungwi ↔ Paje 20 000) — miroir de la grille serveur.
 export const TARIFS_ZONE: Record<ZoneTarifaire, TarifsZone> = {
-  nord: { priveUsd: 40, partageUsd: 18, localTzs: 15000 }, // Nungwi, Kendwa
+  nord: { priveUsd: 45, partageUsd: 18, localTzs: 15000 }, // Nungwi, Kendwa
   nord_est: { priveUsd: 40, partageUsd: 16, localTzs: 15000 }, // Matemwe → Chwaka
   est: { priveUsd: 45, partageUsd: 15, localTzs: 15000 }, // Paje, Bwejuu
   est_sud: { priveUsd: 50, partageUsd: 15, localTzs: 15000 }, // Jambiani
@@ -569,8 +567,20 @@ const COORDONNEES_VILLES: Record<string, [number, number]> = {
   fumba: [-6.322, 39.183],
 };
 const DETOUR_ROUTIER = 1.35;
-const PRIX_PAR_KM_USD = 0.85;
-const PRIVE_MINIMUM_USD = 20;
+
+/**
+ * PALIERS DE DISTANCE entre deux villages (hors hubs) — miroir exact de la
+ * grille serveur. Un client comprend « c'est le village d'à côté » ou « c'est
+ * la traversée de l'île » ; il ne compte pas les kilomètres.
+ */
+const PALIERS_KM_USD: { maxKm: number; usd: number }[] = [
+  { maxKm: 12, usd: 12 }, // village voisin
+  { maxKm: 30, usd: 16 }, // un village d'écart
+  { maxKm: 50, usd: 25 },
+  { maxKm: 75, usd: 40 },
+  { maxKm: 100, usd: 60 }, // d'une côte à l'autre
+  { maxKm: Infinity, usd: 65 }, // du nord au sud
+];
 const HUBS_TARIFAIRES = new Set([
   'stone town',
   'stone town ferry',
@@ -604,8 +614,7 @@ export function tarifPriveItineraire(depart: string, arrivee: string): number {
   if (!HUBS_TARIFAIRES.has(d) && !HUBS_TARIFAIRES.has(a)) {
     const km = kmEntreVilles(depart, arrivee);
     if (km !== null) {
-      const brut = PRIX_PAR_KM_USD * km;
-      return Math.max(PRIVE_MINIMUM_USD, Math.round(brut / 5) * 5);
+      return (PALIERS_KM_USD.find((palier) => km <= palier.maxKm) as { usd: number }).usd;
     }
   }
   return tarifsZoneItineraire(depart, arrivee).priveUsd;
