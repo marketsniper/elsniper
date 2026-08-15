@@ -40,15 +40,15 @@ describe('Grille privée au kilomètre', () => {
     }
   });
 
-  it('sauts de village : 12 USD à 10 % — le chauffeur garde 10,80', () => {
+  it('sauts de village : 12 USD à 20 % — le chauffeur garde 9,60', () => {
     const saut = priceTrip('private', 'tourist', { pickup: 'Paje', dropoff: 'Jambiani' });
     assert.equal(saut.price, 12);
-    assert.equal(saut.commission, 1.2);
-    assert.equal(saut.price - saut.commission, 10.8, 'le gain chauffeur a changé');
-    // Local sur le même trajet : prix ET commission convertis (×2600, 10 %).
+    assert.equal(saut.commission, 2.4);
+    assert.equal(saut.price - saut.commission, 9.6, 'le gain chauffeur a changé');
+    // Local sur le même trajet : prix ET commission convertis (×2600, 20 %).
     const local = priceTrip('private', 'local', { pickup: 'Paje', dropoff: 'Jambiani' });
     assert.equal(local.price, 12 * 2600);
-    assert.equal(local.commission, 12 * 2600 * 0.1);
+    assert.equal(local.commission, 12 * 2600 * 0.2);
     // Sauter un village garde sa commission dédiée : 20 USD → 15 % = 3 USD.
     const vingt = priceTrip('private', 'tourist', { pickup: 'Michamvi', dropoff: 'Paje' });
     assert.equal(vingt.price, 20);

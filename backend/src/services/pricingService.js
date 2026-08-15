@@ -59,17 +59,18 @@ const CITY_ZONES = {
 //
 // LA CHAÎNE DE LA CÔTE EST — Michamvi, Bwejuu, Paje, Jambiani, Makunduchi
 // se suivent le long de la même route. D'un village au suivant, c'est un
-// saut de puce : 12 USD, commission 10 % comme toute course privée. Le
-// chauffeur garde 10,80 USD sur un trajet qu'il fait en quinze minutes.
+// saut de puce : 12 USD, commission 20 % (2,40 USD) — le chauffeur garde
+// 9,60 USD sur un trajet de quinze minutes. Ces courses tournent vite, la
+// plateforme s'y rattrape au volume plutôt qu'au montant.
 // Sauter un village (Michamvi ↔ Paje, par-dessus Bwejuu) reste à 20 USD.
 const SPECIAL_PRIVATE_ROUTES_USD = [
   { a: 'Nungwi', b: 'Paje', usd: 65 },
   { a: 'Nungwi', b: 'Kizimkazi', usd: 70 },
   { a: 'Michamvi', b: 'Paje', usd: 20, commission: 0.15 },
-  { a: 'Michamvi', b: 'Bwejuu', usd: 12, commission: 0.1 },
-  { a: 'Bwejuu', b: 'Paje', usd: 12, commission: 0.1 },
-  { a: 'Paje', b: 'Jambiani', usd: 12, commission: 0.1 },
-  { a: 'Jambiani', b: 'Makunduchi', usd: 12, commission: 0.1 },
+  { a: 'Michamvi', b: 'Bwejuu', usd: 12, commission: 0.2 },
+  { a: 'Bwejuu', b: 'Paje', usd: 12, commission: 0.2 },
+  { a: 'Paje', b: 'Jambiani', usd: 12, commission: 0.2 },
+  { a: 'Jambiani', b: 'Makunduchi', usd: 12, commission: 0.2 },
 ];
 
 // Trajets spéciaux à prix fixe (TZS, place locale en taxi partagé), deux

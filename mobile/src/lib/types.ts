@@ -399,7 +399,7 @@ export const TARIFS_TRAJET_USD: Partial<Record<TypeTrajet, number>> = {
  * ajoutée) — d'où l'envoi des villes seules sur ces trajets.
  */
 // Commissions dédiées côté serveur : 15 % sur Michamvi ↔ Paje (qui saute
-// Bwejuu), 10 % sur les sauts de village à 12 USD — le serveur fige prix ET
+// Bwejuu), 20 % sur les sauts de village à 12 USD — le serveur fige prix ET
 // commission sur chaque course, l'app n'affiche que ses valeurs.
 //
 // LA CHAÎNE DE LA CÔTE EST : Michamvi → Bwejuu → Paje → Jambiani →
