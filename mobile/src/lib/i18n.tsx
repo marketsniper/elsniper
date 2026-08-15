@@ -857,6 +857,46 @@ const CHAINES = {
     en: "This browser can't receive alerts. WhatsApp messages keep arriving as usual.",
     sw: 'Kivinjari hiki hakiwezi kupokea arifa. Ujumbe wa WhatsApp unaendelea kufika.',
   },
+  carte_y_aller: {
+    fr: '🧭 Y aller — lancer le GPS',
+    en: '🧭 Go there — start GPS',
+    sw: '🧭 Nenda — washa GPS',
+  },
+  course_client_position: {
+    fr: 'Où attend votre client',
+    en: 'Where your client is waiting',
+    sw: 'Mahali mteja wako anasubiri',
+  },
+  course_client_position_absente: {
+    fr: "Votre client n'a pas encore partagé son point exact. Le lieu de départ indiqué reste : {lieu}.",
+    en: "Your client hasn't shared an exact point yet. The pick-up given is: {lieu}.",
+    sw: 'Mteja wako bado hajatuma eneo kamili. Mahali pa kuchukua palipotajwa ni: {lieu}.',
+  },
+  trip_point_rendez_vous: {
+    fr: 'Où vous attendez',
+    en: 'Where you are waiting',
+    sw: 'Mahali unaposubiri',
+  },
+  trip_partager_position: {
+    fr: '📍 Partager ma position exacte au chauffeur',
+    en: '📍 Share my exact position with the driver',
+    sw: '📍 Tuma eneo langu kamili kwa dereva',
+  },
+  trip_position_invite: {
+    fr: 'Votre chauffeur ne voit que le nom du quartier. Un appui, et il sait exactement où venir vous prendre.',
+    en: 'Your driver only sees the area name. One tap, and they know exactly where to pick you up.',
+    sw: 'Dereva wako anaona jina la eneo pekee. Bonyeza mara moja, naye atajua hasa mahali pa kukuchukua.',
+  },
+  trip_position_partagee: {
+    fr: '✓ Position envoyée — votre chauffeur vous trouvera sans chercher.',
+    en: '✓ Position sent — your driver will find you without searching.',
+    sw: '✓ Eneo limetumwa — dereva wako atakupata bila kutafuta.',
+  },
+  trip_position_maj: {
+    fr: '📍 J’ai bougé — renvoyer ma position',
+    en: '📍 I moved — send my position again',
+    sw: '📍 Nimehama — tuma eneo langu tena',
+  },
   carte_itineraire: {
     fr: 'Ouvrir dans Google Maps (itinéraire)',
     en: 'Open in Google Maps (directions)',

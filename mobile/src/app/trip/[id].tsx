@@ -7,6 +7,7 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import { Alert, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { CartePosition } from '@/components/CartePosition';
 import { Etoiles } from '@/components/Etoiles';
 import { TimelineStatut } from '@/components/TimelineStatut';
 import {
@@ -22,6 +23,7 @@ import {
   TexteErreur,
   Titre,
 } from '@/components/ui';
+import { positionActuelle } from '@/lib/position';
 import { api, definirCleEquipe, ErreurApi } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useRafraichissementAuto } from '@/lib/rafraichissementAuto';
@@ -65,6 +67,9 @@ export default function EcranTrajet() {
   const [chargeNote, setChargeNote] = useState(false);
   const [noteEnvoyee, setNoteEnvoyee] = useState(false);
   const [chargeAnnulation, setChargeAnnulation] = useState(false);
+  // Point de rendez-vous exact envoyé au chauffeur (course privée).
+  const [chargePosition, setChargePosition] = useState(false);
+  const [erreurPosition, setErreurPosition] = useState('');
 
   const charger = useCallback(async () => {
     if (!id) return;
@@ -128,6 +133,30 @@ export default function EcranTrajet() {
       : null;
   const peutAnnuler =
     statut === 'requested' || statut === 'driver_confirmed' || tauxRembours !== null;
+  // POINT DE RENDEZ-VOUS — course privée encore vivante : le client peut
+  // envoyer sa position exacte, et la renvoyer s'il s'est déplacé.
+  const estPrivee = champ<TypeTrajet>(trajet, 'trip_type', 'tripType') === 'private';
+  const courseVivante = !annule && statut !== 'completed';
+  const positionPartagee =
+    Number.isFinite(Number(champ(trajet, 'pickup_lat') ?? NaN)) &&
+    Number.isFinite(Number(champ(trajet, 'pickup_lng') ?? NaN));
+  const partagerMaPosition = async () => {
+    setErreurPosition('');
+    setChargePosition(true);
+    try {
+      const { position, souci } = await positionActuelle();
+      if (!position) {
+        setErreurPosition(souci ?? '');
+        return;
+      }
+      setTrajet(await api.partagerPointRendezVous(trajet.id, position.lat, position.lng));
+    } catch (e) {
+      setErreurPosition(e instanceof ErreurApi ? e.message : t('trip_introuvable'));
+    } finally {
+      setChargePosition(false);
+    }
+  };
+
   // Notation : course terminée, jamais notée (rating null côté serveur).
   const dejaNotee = champ<number>(trajet, 'rating') !== undefined;
   const peutNoter = statut === 'completed' && !dejaNotee && !noteEnvoyee;
@@ -362,6 +391,41 @@ export default function EcranTrajet() {
             charge={chargeCredit}
           />
         )}
+      {/* POINT DE RENDEZ-VOUS EXACT — « Nungwi » ne dit pas devant quelle
+          porte attendre. Un geste du client, et le chauffeur le trouve sans
+          chercher. Tant que la course est vivante, il peut le renvoyer : on
+          se déplace, on change de plage. */}
+      {estPrivee && courseVivante && (
+        <Carte>
+          <SousTitre>{t('trip_point_rendez_vous')}</SousTitre>
+          {positionPartagee ? (
+            <>
+              <EncartInfo icone="checkmark-circle-outline" ton="succes">
+                {t('trip_position_partagee')}
+              </EncartInfo>
+              {/* Le client voit exactement ce que voit son chauffeur : s'il
+                  s'est trompé d'endroit, il le corrige avant qu'on parte. */}
+              <CartePosition
+                lat={Number(champ(trajet, 'pickup_lat'))}
+                lng={Number(champ(trajet, 'pickup_lng'))}
+                hauteur={150}
+                lien={false}
+              />
+            </>
+          ) : (
+            <EncartInfo icone="information-circle-outline">{t('trip_position_invite')}</EncartInfo>
+          )}
+          <Bouton
+            titre={positionPartagee ? t('trip_position_maj') : t('trip_partager_position')}
+            icone="location-outline"
+            variante={positionPartagee ? 'secondaire' : 'primaire'}
+            onPress={partagerMaPosition}
+            charge={chargePosition}
+          />
+          <TexteErreur>{erreurPosition}</TexteErreur>
+        </Carte>
+      )}
+
       {peutPayer && (
         <Bouton
           titre={t('trip_payer')}

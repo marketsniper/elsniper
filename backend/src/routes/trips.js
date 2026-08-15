@@ -531,6 +531,47 @@ router.post(
   })
 );
 
+// PATCH /trips/:id/pickup-position — le client (ou l'hôtel qui a réservé pour
+// lui) partage son point de rendez-vous EXACT. Le chauffeur assigné le voit
+// alors sur une carte et peut lancer son GPS dessus.
+//
+// Réservé au réservateur de la course et à l'équipe : personne d'autre ne
+// peut poser un point sur la course de quelqu'un. Et seulement tant que la
+// course est vivante — une course terminée ou annulée ne bouge plus.
+const positionSchema = z.object({
+  lat: z.number().min(-90).max(90),
+  lng: z.number().min(-180).max(180),
+});
+
+router.patch(
+  '/:id/pickup-position',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const { lat, lng } = positionSchema.parse(req.body);
+    const trip = await getTrip(req.params.id);
+    const isBooker =
+      (trip.user_id !== null && trip.user_id === req.auth.userId) ||
+      (trip.hotel_id !== null && trip.hotel_id === req.auth.hotelId);
+    if (!isAdmin(req) && !isBooker) {
+      throw new HttpError(403, 'forbidden', 'Seul le réservateur de la course peut partager le point de rendez-vous');
+    }
+    if (['completed', 'cancelled'].includes(trip.status)) {
+      throw new HttpError(
+        409,
+        'invalid_status',
+        `Cette course est ${trip.status === 'completed' ? 'terminée' : 'annulée'} — le point de rendez-vous ne sert plus`
+      );
+    }
+
+    const { rows } = await query(
+      `UPDATE trips SET pickup_lat = $1, pickup_lng = $2, pickup_position_at = now()
+       WHERE id = $3 RETURNING *`,
+      [lat, lng, req.params.id]
+    );
+    res.json(avecAnnonceGroupe(rows[0], req));
+  })
+);
+
 // PATCH /trips/:id/start — le chauffeur assigné (ou l'équipe) démarre la
 // course d'une simple touche. Pas de QR à scanner : la position GPS déjà
 // partagée en continu (PATCH /drivers/:id/location) reste la preuve de

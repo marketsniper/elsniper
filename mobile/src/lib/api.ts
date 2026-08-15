@@ -1144,6 +1144,22 @@ export async function desabonnerAlertes(endpoint: string): Promise<unknown> {
   });
 }
 
+/**
+ * PATCH /trips/:id/pickup-position — le client partage son point de
+ * rendez-vous EXACT. Le chauffeur assigné le voit alors sur une carte et
+ * peut lancer son GPS dessus. Réservé au réservateur de la course.
+ */
+export async function partagerPointRendezVous(
+  trajetId: string,
+  lat: number,
+  lng: number
+): Promise<Trajet> {
+  return requete<Trajet>(`/trips/${trajetId}/pickup-position`, {
+    methode: 'PATCH',
+    corps: { lat, lng },
+  });
+}
+
 /** POST /notifications/test — alerte d'essai, pour vérifier et chronométrer. */
 export async function testerAlertes(): Promise<{ envoyes: number }> {
   return requete<{ envoyes: number }>('/notifications/test', { methode: 'POST', admin: true });
@@ -1335,6 +1351,7 @@ export const api = {
   creerAttentePartage,
   listerAttentesPartage,
   annulerAttentePartage,
+  partagerPointRendezVous,
   clePush,
   abonnerAlertes,
   desabonnerAlertes,

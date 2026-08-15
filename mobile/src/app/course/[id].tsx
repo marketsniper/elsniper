@@ -7,6 +7,7 @@ import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import { Alert } from 'react-native';
 
+import { CartePosition } from '@/components/CartePosition';
 import { TimelineStatut } from '@/components/TimelineStatut';
 import {
   BadgeStatutTrajet,
@@ -146,6 +147,35 @@ export default function EcranDetailCourse() {
                 valeur={formaterMontant(Math.round((prix - commission) * 100) / 100, devise)}
               />
             </>
+          );
+        })()}
+      </Carte>
+
+      {/* OÙ ATTEND LE CLIENT — le nom du village ne dit pas devant quelle
+          porte. Quand le client a partagé son point exact, il s'affiche ici
+          sur une carte, avec le bouton qui lance le guidage routier. */}
+      <Carte>
+        <SousTitre>{t('course_client_position')}</SousTitre>
+        {(() => {
+          const lat = Number(champ(course, 'pickup_lat') ?? NaN);
+          const lng = Number(champ(course, 'pickup_lng') ?? NaN);
+          if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+            return (
+              <EncartInfo icone="location-outline" ton="attente">
+                {t('course_client_position_absente', {
+                  lieu: String(champ(course, 'pickup_location', 'pickupLocation') ?? '—'),
+                })}
+              </EncartInfo>
+            );
+          }
+          return (
+            <CartePosition
+              lat={lat}
+              lng={lng}
+              navigation
+              titre={String(champ(course, 'pickup_location', 'pickupLocation') ?? '')}
+              hauteur={220}
+            />
           );
         })()}
       </Carte>
