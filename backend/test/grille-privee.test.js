@@ -40,6 +40,16 @@ describe('Grille privée au kilomètre', () => {
     }
   });
 
+  it('sauter un village : Bwejuu ↔ Jambiani à 16 USD, par-dessus Paje', () => {
+    assert.equal(privateUsdForRoute('Bwejuu', 'Jambiani'), 16);
+    assert.equal(privateUsdForRoute('Jambiani', 'Bwejuu'), 16);
+    const saut = priceTrip('private', 'tourist', { pickup: 'Bwejuu', dropoff: 'Jambiani' });
+    assert.equal(saut.commission, 3.2, 'commission 20 % comme les autres petits trajets');
+    assert.equal(saut.price - saut.commission, 12.8, 'le gain chauffeur a changé');
+    // Michamvi ↔ Paje, l'autre trajet à un village d'écart, garde ses 20 USD.
+    assert.equal(privateUsdForRoute('Michamvi', 'Paje'), 20);
+  });
+
   it('sauts de village : 12 USD à 20 % — le chauffeur garde 9,60', () => {
     const saut = priceTrip('private', 'tourist', { pickup: 'Paje', dropoff: 'Jambiani' });
     assert.equal(saut.price, 12);
@@ -61,7 +71,6 @@ describe('Grille privée au kilomètre', () => {
   it('paires de villes : 0,85 USD/km, arrondi aux 5 USD, minimum 20', () => {
     // Voisines et moyennes distances : le minimum de 20 USD s'applique.
     assert.equal(privateUsdForRoute('Nungwi', 'Kendwa'), 20);
-    assert.equal(privateUsdForRoute('Bwejuu', 'Jambiani'), 20);
     assert.equal(privateUsdForRoute('Nungwi', 'Matemwe'), 20);
     // Grandes traversées : au kilomètre.
     assert.equal(privateUsdForRoute('Matemwe', 'Paje'), 55); // ≈ 65 km

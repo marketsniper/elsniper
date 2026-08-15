@@ -403,8 +403,8 @@ export const TARIFS_TRAJET_USD: Partial<Record<TypeTrajet, number>> = {
 // commission sur chaque course, l'app n'affiche que ses valeurs.
 //
 // LA CHAÎNE DE LA CÔTE EST : Michamvi → Bwejuu → Paje → Jambiani →
-// Makunduchi. D'un village au SUIVANT, c'est 12 USD. En sauter un coûte le
-// tarif normal.
+// Makunduchi. D'un village au SUIVANT, c'est 12 USD ; Bwejuu ↔ Jambiani,
+// qui saute Paje, vaut 16 USD.
 export const TRAJETS_SPECIAUX_PRIVE_USD: { villes: [string, string]; prix: number }[] = [
   { villes: ['Nungwi', 'Paje'], prix: 65 },
   { villes: ['Nungwi', 'Kizimkazi'], prix: 70 },
@@ -413,6 +413,7 @@ export const TRAJETS_SPECIAUX_PRIVE_USD: { villes: [string, string]; prix: numbe
   { villes: ['Bwejuu', 'Paje'], prix: 12 },
   { villes: ['Paje', 'Jambiani'], prix: 12 },
   { villes: ['Jambiani', 'Makunduchi'], prix: 12 },
+  { villes: ['Bwejuu', 'Jambiani'], prix: 16 },
 ];
 
 /** Trajets spéciaux TZS : place locale en taxi partagé (deux sens). */
