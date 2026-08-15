@@ -11,16 +11,22 @@ useTestDb();
 
 describe('Grille privée au kilomètre', () => {
   it('ancrages : les trajets connus gardent leurs prix', () => {
-    // Hubs → zone (grille historique inchangée).
-    assert.equal(privateUsdForRoute('Stone Town', 'Nungwi'), 50);
-    assert.equal(privateUsdForRoute('Aéroport (AAKIA)', 'Paje'), 50);
-    assert.equal(privateUsdForRoute('Stone Town Ferry', 'Matemwe'), 45);
+    // Hubs → zone : grille alignée sur le marché des transferts.
+    assert.equal(privateUsdForRoute('Stone Town', 'Nungwi'), 40);
+    assert.equal(privateUsdForRoute('Stone Town', 'Kendwa'), 40);
+    assert.equal(privateUsdForRoute('Stone Town Ferry', 'Matemwe'), 40);
+    assert.equal(privateUsdForRoute('Aéroport (AAKIA)', 'Paje'), 45);
+    assert.equal(privateUsdForRoute('Stone Town', 'Bwejuu'), 45);
+    assert.equal(privateUsdForRoute('Stone Town', 'Jambiani'), 50);
+    assert.equal(privateUsdForRoute('Stone Town', 'Michamvi'), 50);
+    assert.equal(privateUsdForRoute('Stone Town', 'Kizimkazi'), 45);
+    assert.equal(privateUsdForRoute('Stone Town', 'Makunduchi'), 45);
     // Trajets spéciaux : prioritaires sur la formule (et sur le minimum de
     // 20 USD pour les sauts de village de la côte est à 12 USD).
-    assert.equal(privateUsdForRoute('Nungwi', 'Paje'), 65);
-    assert.equal(privateUsdForRoute('Paje', 'Nungwi'), 65);
-    assert.equal(privateUsdForRoute('Nungwi', 'Kizimkazi'), 70);
-    assert.equal(privateUsdForRoute('Kizimkazi', 'Nungwi'), 70);
+    assert.equal(privateUsdForRoute('Nungwi', 'Paje'), 60);
+    assert.equal(privateUsdForRoute('Paje', 'Nungwi'), 60);
+    assert.equal(privateUsdForRoute('Nungwi', 'Kizimkazi'), 65);
+    assert.equal(privateUsdForRoute('Kizimkazi', 'Nungwi'), 65);
   });
 
   it('la chaîne de la côte est : d’un village au suivant, 12 USD', () => {
@@ -84,7 +90,7 @@ describe('Grille privée au kilomètre', () => {
   });
 
   it('ville inconnue : retombe sur la grille par zone (jamais d\'erreur)', () => {
-    assert.equal(privateUsdForRoute('Hôtel Mystère', 'Nungwi'), 50);
+    assert.equal(privateUsdForRoute('Hôtel Mystère', 'Nungwi'), 40);
     assert.equal(privateUsdForRoute('Quelque part', 'Ailleurs'), 50);
   });
 

@@ -141,19 +141,19 @@ describe('Devises taxi partagé (parcours local complet)', () => {
     assert.equal(refus.body.error.code, 'no_shared_route');
   });
 
-  it('tarif local UNIQUEMENT sur les grands axes (privé ≥ 45 USD) — ailleurs, prix touriste en TZS', async () => {
+  it('tarif local UNIQUEMENT sur les grands axes (privé ≥ 40 USD) — ailleurs, prix touriste en TZS', async () => {
     const { token: tokenChauffeur } = await createVerifiedDriver();
     const depart = new Date(Date.now() + 6 * 3600 * 1000).toISOString();
-    // Kiwengwa → Paje : privé 40 USD — partagé autorisé (≥ 35) mais PAS de
-    // place locale à 15 000 (< 45) : prix touriste de la zone est (15 USD)
+    // Pongwe → Paje : privé 35 USD — partagé autorisé (≥ 35) mais PAS de
+    // place locale à 15 000 (< 40) : prix touriste de la zone est (15 USD)
     // converti en shillings.
     const moyen = await request(app)
       .post('/api/rides')
       .set(authHeaders(tokenChauffeur))
-      .send({ origin: 'Kiwengwa', destination: 'Paje', departureAt: depart, seatsTotal: 4 });
+      .send({ origin: 'Pongwe', destination: 'Paje', departureAt: depart, seatsTotal: 4 });
     assert.equal(moyen.status, 201, JSON.stringify(moyen.body));
     assert.equal(Number(moyen.body.price_per_seat), 39000);
-    // Grande traversée au kilomètre (Matemwe → Paje, privé 55 USD ≥ 45) :
+    // Grande traversée au kilomètre (Matemwe → Paje, privé 55 USD ≥ 40) :
     // le tarif local unifié reste valable.
     const grand = await request(app)
       .post('/api/rides')
@@ -161,6 +161,14 @@ describe('Devises taxi partagé (parcours local complet)', () => {
       .send({ origin: 'Matemwe', destination: 'Paje', departureAt: depart, seatsTotal: 4 });
     assert.equal(grand.status, 201);
     assert.equal(Number(grand.body.price_per_seat), 15000);
+    // Les grands axes du NORD gardent leur place à 15 000 malgré la baisse
+    // du transfert à 40 USD : c'est tout l'intérêt du seuil abaissé.
+    const nord = await request(app)
+      .post('/api/rides')
+      .set(authHeaders(tokenChauffeur))
+      .send({ origin: 'Stone Town', destination: 'Nungwi', departureAt: depart, seatsTotal: 4 });
+    assert.equal(nord.status, 201, JSON.stringify(nord.body));
+    assert.equal(Number(nord.body.price_per_seat), 15000);
   });
 
   it('départ passé de +10 min : annonce automatiquement CLÔTURÉE (pas annulée), invisible, non réservable', async () => {

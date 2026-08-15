@@ -264,11 +264,13 @@ Verified drivers, published prices, one booking from your reception desk.</p>
 <h2>Your partner prices — private car</h2>
 <table>
   <tr><th>Route</th><th>Guest price</th><th>Your price −5%</th></tr>
-  <tr><td>Airport / Stone Town ↔ Nungwi, Kendwa</td><td>50.00</td><td class="remise">47.50</td></tr>
-  <tr><td>Airport / Stone Town ↔ Matemwe, Kiwengwa</td><td>45.00</td><td class="remise">42.75</td></tr>
-  <tr><td>Airport / Stone Town ↔ Paje, Jambiani, Bwejuu</td><td>50.00</td><td class="remise">47.50</td></tr>
+  <tr><td>Stone Town ↔ Airport</td><td>17.00</td><td class="remise">16.15</td></tr>
+  <tr><td>Airport / Stone Town ↔ Nungwi, Kendwa</td><td>40.00</td><td class="remise">38.00</td></tr>
+  <tr><td>Airport / Stone Town ↔ Matemwe, Kiwengwa, Uroa, Pongwe</td><td>40.00</td><td class="remise">38.00</td></tr>
+  <tr><td>Airport / Stone Town ↔ Paje, Bwejuu</td><td>45.00</td><td class="remise">42.75</td></tr>
+  <tr><td>Airport / Stone Town ↔ Jambiani, Michamvi</td><td>50.00</td><td class="remise">47.50</td></tr>
   <tr><td>Airport / Stone Town ↔ Kizimkazi, Makunduchi</td><td>45.00</td><td class="remise">42.75</td></tr>
-  <tr><td>Nungwi ↔ Paje — coast to coast</td><td>65.00</td><td class="remise">61.75</td></tr>
+  <tr><td>Nungwi ↔ Paje — coast to coast</td><td>60.00</td><td class="remise">57.00</td></tr>
   <tr><td>Shared taxi seat, per person (from)</td><td>14.00</td><td class="egal">14.00</td></tr>
   <tr><td>Parcel between towns (medium size)</td><td>10.00</td><td class="egal">10.00</td></tr>
 </table>
@@ -364,11 +366,13 @@ neighbouring hotels already use.</p>
 <h2>Your partner prices — private car</h2>
 <table>
   <tr><th>Route</th><th>Customer price</th><th>Your price −5%</th></tr>
-  <tr><td>Stone Town ↔ Nungwi, Kendwa</td><td>50.00</td><td class="remise">47.50</td></tr>
-  <tr><td>Stone Town ↔ Matemwe, Kiwengwa</td><td>45.00</td><td class="remise">42.75</td></tr>
-  <tr><td>Stone Town ↔ Paje, Jambiani, Bwejuu</td><td>50.00</td><td class="remise">47.50</td></tr>
+  <tr><td>Stone Town ↔ Airport</td><td>17.00</td><td class="remise">16.15</td></tr>
+  <tr><td>Stone Town ↔ Nungwi, Kendwa</td><td>40.00</td><td class="remise">38.00</td></tr>
+  <tr><td>Stone Town ↔ Matemwe, Kiwengwa, Uroa, Pongwe</td><td>40.00</td><td class="remise">38.00</td></tr>
+  <tr><td>Stone Town ↔ Paje, Bwejuu</td><td>45.00</td><td class="remise">42.75</td></tr>
+  <tr><td>Stone Town ↔ Jambiani, Michamvi</td><td>50.00</td><td class="remise">47.50</td></tr>
   <tr><td>Stone Town ↔ Kizimkazi, Makunduchi</td><td>45.00</td><td class="remise">42.75</td></tr>
-  <tr><td>Nungwi ↔ Paje — coast to coast</td><td>65.00</td><td class="remise">61.75</td></tr>
+  <tr><td>Nungwi ↔ Paje — coast to coast</td><td>60.00</td><td class="remise">57.00</td></tr>
   <tr><td>Shared taxi seat, per person (from)</td><td>14.00</td><td class="egal">14.00</td></tr>
 </table>
 

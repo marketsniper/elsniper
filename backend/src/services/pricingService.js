@@ -14,9 +14,10 @@ import { config } from '../config.js';
 // Tarif local UNIFIÉ : 15 000 TZS la place partout (sauf trajets spéciaux
 // ci-dessous) — plus simple à retenir pour les clients et les chauffeurs.
 const ZONE_TIERS = {
-  nord: { privateUsd: 50, sharedUsd: 18, localTzs: 15000 }, // Nungwi / Kendwa
-  nordEst: { privateUsd: 45, sharedUsd: 16, localTzs: 15000 }, // Matemwe / Kiwengwa
-  est: { privateUsd: 50, sharedUsd: 15, localTzs: 15000 }, // Paje / Jambiani
+  nord: { privateUsd: 40, sharedUsd: 18, localTzs: 15000 }, // Nungwi / Kendwa
+  nordEst: { privateUsd: 40, sharedUsd: 16, localTzs: 15000 }, // Matemwe / Kiwengwa
+  est: { privateUsd: 45, sharedUsd: 15, localTzs: 15000 }, // Paje / Bwejuu
+  estSud: { privateUsd: 50, sharedUsd: 15, localTzs: 15000 }, // Jambiani
   estPointe: { privateUsd: 50, sharedUsd: 18, localTzs: 15000 }, // Michamvi (route directe)
   sud: { privateUsd: 45, sharedUsd: 14, localTzs: 15000 }, // Kizimkazi / Makunduchi
 };
@@ -46,8 +47,8 @@ const CITY_ZONES = {
   pongwe: 'nordEst',
   chwaka: 'nordEst',
   paje: 'est',
-  jambiani: 'est',
   bwejuu: 'est',
+  jambiani: 'estSud',
   michamvi: 'estPointe',
   kizimkazi: 'sud',
   makunduchi: 'sud',
@@ -65,8 +66,16 @@ const CITY_ZONES = {
 // répètent dans la journée, la plateforme s'y rattrape au volume plutôt
 // qu'au montant. Au-delà de deux villages, la grille au kilomètre reprend.
 const SPECIAL_PRIVATE_ROUTES_USD = [
-  { a: 'Nungwi', b: 'Paje', usd: 65 },
-  { a: 'Nungwi', b: 'Kizimkazi', usd: 70 },
+  // Transfert aéroport : sept kilomètres, très demandé, commission 20 %
+  // comme les autres courses courtes (le chauffeur garde 13,60 USD).
+  { a: 'Aéroport international Abeid Amani Karume', b: 'Stone Town', usd: 17, commission: 0.2 },
+  { a: 'Aéroport international Abeid Amani Karume', b: 'Stone Town Ferry', usd: 17, commission: 0.2 },
+  { a: 'Aéroport (AAKIA)', b: 'Stone Town', usd: 17, commission: 0.2 },
+  { a: 'Aéroport (AAKIA)', b: 'Stone Town Ferry', usd: 17, commission: 0.2 },
+  { a: 'Aéroport', b: 'Stone Town', usd: 17, commission: 0.2 },
+  { a: 'Aéroport', b: 'Stone Town Ferry', usd: 17, commission: 0.2 },
+  { a: 'Nungwi', b: 'Paje', usd: 60 },
+  { a: 'Nungwi', b: 'Kizimkazi', usd: 65 },
   // Voisins immédiats.
   { a: 'Michamvi', b: 'Bwejuu', usd: 12, commission: 0.2 },
   { a: 'Bwejuu', b: 'Paje', usd: 12, commission: 0.2 },
@@ -187,6 +196,11 @@ const HUBS = new Set([
   'airport',
 ]);
 
+// Stone Town et son terminal ferry sont la MÊME place : cinq minutes à pied.
+// Aucune course ne se vend entre les deux. L'aéroport, lui, est à sept
+// kilomètres — c'est un vrai transfert, et l'un des plus demandés de l'île.
+const HUBS_VILLE = new Set(['stone town', 'stone town ferry']);
+
 // Kilomètres de ROUTE estimés entre deux villes connues (sinon null).
 export function kmEntreVilles(a, b) {
   const ca = CITY_COORDS[normCity(a)];
@@ -228,10 +242,14 @@ export function sharedSeatUsdForRoute(pickup, dropoff) {
 
 // Le TARIF LOCAL (place à 15 000 TZS, spéciaux inclus, ex. Nungwi ↔ Paje
 // 20 000) ne s'applique que sur les GRANDS AXES — définis par : le taxi
-// privé du même trajet coûte au moins 45 USD. Sur les petits trajets
-// (privé sous les 45 USD), pas de tarif local : la place se paie au prix
+// privé du même trajet coûte au moins 40 USD. Sur les petits trajets
+// (privé sous les 40 USD), pas de tarif local : la place se paie au prix
 // touriste de la zone, converti en shillings.
-const GRAND_AXE_PRIVE_MIN_USD = 45;
+//
+// Ce seuil suit la grille : quand les transferts vers Nungwi sont passés de
+// 50 à 40 USD, le laisser à 45 aurait sorti les grands axes du nord du tarif
+// local — un Zanzibarite aurait payé 46 800 TZS sa place au lieu de 15 000.
+const GRAND_AXE_PRIVE_MIN_USD = 40;
 
 function estGrandAxe(pickup, dropoff) {
   return privateUsdForRoute(pickup, dropoff) >= GRAND_AXE_PRIVE_MIN_USD;
@@ -246,10 +264,11 @@ export function sharedAllowedForRoute(pickup, dropoff) {
   return privateUsdForRoute(pickup, dropoff) >= PARTAGE_PRIVE_MIN_USD;
 }
 
-// Stone Town, le ferry et l'aéroport sont à quelques minutes les uns des
-// autres : AUCUNE course n'est proposée entre ces trois points.
+// Seuls Stone Town et le terminal ferry sont confondus : aucune course entre
+// eux. Aéroport ↔ Stone Town et aéroport ↔ ferry sont des transferts normaux,
+// facturés 17 USD (voir SPECIAL_PRIVATE_ROUTES_USD).
 export function hubToHubRoute(pickup, dropoff) {
-  return HUBS.has(normCity(pickup)) && HUBS.has(normCity(dropoff));
+  return HUBS_VILLE.has(normCity(pickup)) && HUBS_VILLE.has(normCity(dropoff));
 }
 
 // Prix local (TZS) d'une place — c'est LUI qui est posé automatiquement sur

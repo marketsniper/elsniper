@@ -223,14 +223,11 @@ export const HUBS_RIDES: string[] = [
   'Stone Town Ferry',
 ];
 
-// Stone Town, le ferry et l'aéroport sont à quelques minutes les uns des
-// autres : aucune course n'est proposée entre ces trois points (même règle
-// côté serveur, code d'erreur route_indisponible).
-export const POINTS_STONE_TOWN: string[] = [
-  'Stone Town',
-  'Stone Town Ferry',
-  'Aéroport international Abeid Amani Karume',
-];
+// Stone Town et son terminal ferry sont la MÊME place : aucune course n'est
+// proposée entre les deux (même règle côté serveur, code d'erreur
+// route_indisponible). L'aéroport, lui, est à sept kilomètres — c'est un
+// vrai transfert, facturé 17 USD.
+export const POINTS_STONE_TOWN: string[] = ['Stone Town', 'Stone Town Ferry'];
 export const DESTINATIONS_RIDES: string[] = [
   'Stone Town',
   'Nungwi',
@@ -405,8 +402,11 @@ export const TARIFS_TRAJET_USD: Partial<Record<TypeTrajet, number>> = {
 // LA CHAÎNE DE LA CÔTE EST : Michamvi → Bwejuu → Paje → Jambiani →
 // Makunduchi. Village voisin 12 USD, un village d'écart 16 USD.
 export const TRAJETS_SPECIAUX_PRIVE_USD: { villes: [string, string]; prix: number }[] = [
-  { villes: ['Nungwi', 'Paje'], prix: 65 },
-  { villes: ['Nungwi', 'Kizimkazi'], prix: 70 },
+  // Transfert aéroport : sept kilomètres, commission 20 % côté serveur.
+  { villes: ['Aéroport international Abeid Amani Karume', 'Stone Town'], prix: 17 },
+  { villes: ['Aéroport international Abeid Amani Karume', 'Stone Town Ferry'], prix: 17 },
+  { villes: ['Nungwi', 'Paje'], prix: 60 },
+  { villes: ['Nungwi', 'Kizimkazi'], prix: 65 },
   { villes: ['Michamvi', 'Bwejuu'], prix: 12 },
   { villes: ['Bwejuu', 'Paje'], prix: 12 },
   { villes: ['Paje', 'Jambiani'], prix: 12 },
@@ -464,7 +464,7 @@ export const TARIF_LOCAL_TZS = 15000;
 // privé 50 USD · partagé 18 USD · local 15 000 TZS.
 // ---------------------------------------------------------------------------
 
-export type ZoneTarifaire = 'nord' | 'nord_est' | 'est' | 'est_pointe' | 'sud';
+export type ZoneTarifaire = 'nord' | 'nord_est' | 'est' | 'est_sud' | 'est_pointe' | 'sud';
 
 export interface TarifsZone {
   priveUsd: number;
@@ -475,9 +475,10 @@ export interface TarifsZone {
 // Tarif local UNIFIÉ : 15 000 TZS la place partout (sauf trajets spéciaux,
 // ex. Nungwi ↔ Paje 20 000) — miroir de la grille serveur.
 export const TARIFS_ZONE: Record<ZoneTarifaire, TarifsZone> = {
-  nord: { priveUsd: 50, partageUsd: 18, localTzs: 15000 }, // Nungwi, Kendwa
-  nord_est: { priveUsd: 45, partageUsd: 16, localTzs: 15000 }, // Matemwe → Chwaka
-  est: { priveUsd: 50, partageUsd: 15, localTzs: 15000 }, // Paje, Jambiani, Bwejuu
+  nord: { priveUsd: 40, partageUsd: 18, localTzs: 15000 }, // Nungwi, Kendwa
+  nord_est: { priveUsd: 40, partageUsd: 16, localTzs: 15000 }, // Matemwe → Chwaka
+  est: { priveUsd: 45, partageUsd: 15, localTzs: 15000 }, // Paje, Bwejuu
+  est_sud: { priveUsd: 50, partageUsd: 15, localTzs: 15000 }, // Jambiani
   est_pointe: { priveUsd: 50, partageUsd: 18, localTzs: 15000 }, // Michamvi
   sud: { priveUsd: 45, partageUsd: 14, localTzs: 15000 }, // Kizimkazi, Makunduchi, Fumba
 };
@@ -500,8 +501,8 @@ export const VILLES_ZONE: Record<string, ZoneTarifaire> = {
   pongwe: 'nord_est',
   chwaka: 'nord_est',
   paje: 'est',
-  jambiani: 'est',
   bwejuu: 'est',
+  jambiani: 'est_sud',
   michamvi: 'est_pointe',
   kizimkazi: 'sud',
   makunduchi: 'sud',
