@@ -23,7 +23,12 @@ describe('Page hôtels partenaires', () => {
     assert.match(page, /fixed/i, 'le prix fixe manque');
     // 3. Combien ça leur coûte ?
     assert.match(page, /47\.50/, 'le prix partenaire remisé manque');
-    assert.match(page, /You keep/i, 'ce que l’hôtel garde n’est pas montré');
+    // Ce qu'une réception veut vraiment savoir : combien de temps son client
+    // va attendre. Les chauffeurs partagent leur position, on envoie le plus
+    // proche — c'est l'argument, pas la marge.
+    assert.match(page, /straight away/i, 'la disponibilité immédiate n’est pas dite');
+    assert.match(page, /share their position/i, 'le repérage GPS des taxis manque');
+    assert.ok(!/You keep/i.test(page), 'la colonne de marge ne doit plus figurer');
     assert.match(page, /Nungwi/, 'les destinations manquent');
     // 4. Comment je démarre ?
     assert.match(page, /wa\.me\/255666241749/, 'le contact WhatsApp manque');
