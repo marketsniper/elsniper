@@ -72,6 +72,59 @@ const createTripSchema = z
   });
 
 const assignDriverSchema = z.object({ driverId: z.string().uuid() });
+
+// POST /trips/purge — FAIRE LE VIDE (équipe uniquement).
+//
+// Pendant la phase pilote, la base se remplit de courses de test et de
+// courses annulées : le tableau de bord devient illisible. Cet outil efface
+// DÉFINITIVEMENT des courses, au choix par statut.
+//
+// Contrairement au « coup de balai » de l'app — qui masque seulement les
+// courses sur UN téléphone —, ici les lignes disparaissent de la base. Les
+// paiements rattachés partent avec (sinon la clé étrangère bloquerait), le
+// tout dans une transaction : soit tout est effacé, soit rien.
+//
+// Sans filtre `statuses`, TOUTES les courses sont effacées : l'appelant doit
+// alors confirmer explicitement (`confirm: 'EFFACER TOUT'`), pour qu'un appel
+// distrait ne vide pas l'historique des gains.
+const purgeSchema = z
+  .object({
+    statuses: z
+      .array(z.enum(['requested', 'driver_confirmed', 'paid', 'in_progress', 'completed', 'cancelled']))
+      .min(1)
+      .optional(),
+    confirm: z.string().optional(),
+  })
+  .refine((d) => d.statuses !== undefined || d.confirm === 'EFFACER TOUT', {
+    path: ['confirm'],
+    message: 'Pour tout effacer sans filtre, envoyez confirm: "EFFACER TOUT"',
+  });
+
+router.post(
+  '/purge',
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    const { statuses } = purgeSchema.parse(req.body ?? {});
+
+    const resultat = await withTransaction(async (client) => {
+      const filtre = statuses ? 'WHERE status = ANY($1)' : '';
+      const params = statuses ? [statuses] : [];
+      const { rows: cibles } = await client.query(
+        `SELECT id FROM trips ${filtre}`,
+        params
+      );
+      const ids = cibles.map((t) => t.id);
+      if (ids.length === 0) return { courses: 0, paiements: 0 };
+
+      // Les paiements d'abord : ils pointent vers les courses.
+      const paiements = await client.query('DELETE FROM payments WHERE trip_id = ANY($1)', [ids]);
+      const courses = await client.query('DELETE FROM trips WHERE id = ANY($1)', [ids]);
+      return { courses: courses.rowCount, paiements: paiements.rowCount };
+    });
+
+    res.json({ ...resultat, statuts: statuses ?? 'tous' });
+  })
+);
 const ratingSchema = z.object({
   rating: z.number().int().min(1).max(5),
   comment: z.string().max(1000).optional(),
