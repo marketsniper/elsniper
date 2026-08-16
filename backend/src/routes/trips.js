@@ -93,6 +93,10 @@ const purgeSchema = z
       .array(z.enum(['requested', 'driver_confirmed', 'paid', 'in_progress', 'completed', 'cancelled']))
       .min(1)
       .optional(),
+    // Efface AUSSI les taxis partagés : annonces des chauffeurs, places
+    // réservées et demandes en liste d'attente. Sans ça, le chiffre d'affaires
+    // du tableau garde un reliquat que plus aucune course n'explique.
+    partages: z.boolean().optional(),
     confirm: z.string().optional(),
   })
   .refine((d) => d.statuses !== undefined || d.confirm === 'EFFACER TOUT', {
@@ -104,25 +108,46 @@ router.post(
   '/purge',
   requireAdmin,
   asyncHandler(async (req, res) => {
-    const { statuses } = purgeSchema.parse(req.body ?? {});
+    const { statuses, partages } = purgeSchema.parse(req.body ?? {});
 
     const resultat = await withTransaction(async (client) => {
       const filtre = statuses ? 'WHERE status = ANY($1)' : '';
       const params = statuses ? [statuses] : [];
-      const { rows: cibles } = await client.query(
-        `SELECT id FROM trips ${filtre}`,
-        params
-      );
+      const { rows: cibles } = await client.query(`SELECT id FROM trips ${filtre}`, params);
       const ids = cibles.map((t) => t.id);
-      if (ids.length === 0) return { courses: 0, paiements: 0 };
 
-      // Les paiements d'abord : ils pointent vers les courses.
-      const paiements = await client.query('DELETE FROM payments WHERE trip_id = ANY($1)', [ids]);
-      const courses = await client.query('DELETE FROM trips WHERE id = ANY($1)', [ids]);
-      return { courses: courses.rowCount, paiements: paiements.rowCount };
+      let courses = 0;
+      let paiements = 0;
+      if (ids.length > 0) {
+        // Les paiements d'abord : ils pointent vers les courses.
+        const p = await client.query('DELETE FROM payments WHERE trip_id = ANY($1)', [ids]);
+        const c = await client.query('DELETE FROM trips WHERE id = ANY($1)', [ids]);
+        paiements = p.rowCount;
+        courses = c.rowCount;
+      }
+
+      let annonces = 0;
+      let places = 0;
+      let attentes = 0;
+      if (partages) {
+        // Ordre imposé par les clés étrangères : les paiements des places, puis
+        // les annonces (les places tombent en cascade avec leur annonce).
+        const pp = await client.query(
+          'DELETE FROM payments WHERE ride_booking_id IS NOT NULL'
+        );
+        paiements += pp.rowCount;
+        const { rows: nb } = await client.query('SELECT count(*)::int AS n FROM ride_bookings');
+        places = nb[0]?.n ?? 0;
+        const a = await client.query('DELETE FROM posted_rides');
+        annonces = a.rowCount;
+        const w = await client.query('DELETE FROM ride_waitlist');
+        attentes = w.rowCount;
+      }
+
+      return { courses, paiements, annonces, places, attentes };
     });
 
-    res.json({ ...resultat, statuts: statuses ?? 'tous' });
+    res.json({ ...resultat, statuts: statuses ?? 'tous', partages: !!partages });
   })
 );
 const ratingSchema = z.object({

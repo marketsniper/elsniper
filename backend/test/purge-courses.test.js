@@ -131,3 +131,49 @@ describe('Faire le vide (purge des courses)', () => {
     );
   });
 });
+
+describe('Faire le vide — taxis partagés', () => {
+  it('efface aussi annonces, places et liste d’attente quand on le demande', async () => {
+    const { token: chauffeurToken } = await createVerifiedDriver();
+    const annonce = await request(app)
+      .post('/api/rides')
+      .set(authHeaders(chauffeurToken))
+      .send({
+        origin: 'Stone Town',
+        destination: 'Nungwi',
+        departureAt: new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
+        seatsTotal: 4,
+      });
+    assert.equal(annonce.status, 201, JSON.stringify(annonce.body));
+
+    const { token, user } = await createTourist();
+    const place = await request(app)
+      .post(`/api/rides/${annonce.body.id}/book`)
+      .set(authHeaders(token))
+      .send({ seats: 2 });
+    assert.equal(place.status, 201, JSON.stringify(place.body));
+
+    // Sans l'option, les partagés survivent à une purge des courses.
+    await request(app)
+      .post('/api/trips/purge')
+      .set(adminHeaders())
+      .send({ confirm: 'EFFACER TOUT' });
+    const encoreLa = await request(app).get('/api/rides').set(adminHeaders());
+    assert.ok(
+      encoreLa.body.some((r) => r.id === annonce.body.id),
+      'sans l’option, l’annonce doit rester'
+    );
+
+    // Avec l'option : tout part.
+    const purge = await request(app)
+      .post('/api/trips/purge')
+      .set(adminHeaders())
+      .send({ confirm: 'EFFACER TOUT', partages: true });
+    assert.equal(purge.status, 200, JSON.stringify(purge.body));
+    assert.ok(purge.body.annonces >= 1, 'annonce non effacée');
+    assert.ok(purge.body.places >= 1, 'place non effacée');
+
+    const apres = await request(app).get('/api/rides').set(adminHeaders());
+    assert.deepEqual(apres.body, [], 'plus aucune annonce ne doit subsister');
+  });
+});
