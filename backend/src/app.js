@@ -137,7 +137,7 @@ l'icône 🌅 s'installe comme une vraie app, en plein écran.</small>
 
 <div class="separateur">Vous êtes chauffeur zanziGo ?</div>
 <div id="zone-android">
-<a class="bouton secondaire" href="https://expo.dev/artifacts/eas/kM6cP9BmGjkwOHQH2LenHGHHF0oBldgFlQYLQTRUCx0.apk">📥 Installer l'app chauffeur (Android)</a>
+<a class="bouton secondaire" href="https://expo.dev/artifacts/eas/cJNvxejVN3wvSAfdXdVq3adlaczFCVjPOtVV10VkYg8.apk">📥 Installer l'app chauffeur (Android)</a>
 <p>Touchez le bouton pour télécharger, puis ouvrez le fichier. Si
 <strong>Google Play Protect</strong> affiche « App blocked / Application
 bloquée », touchez <strong>« More details / Plus de détails »</strong> puis
@@ -453,7 +453,7 @@ small{color:#8A7168;display:block;margin-top:14px;line-height:1.5}small a{color:
 <h2>🚕 Madereva — Chauffeurs</h2>
 <p><strong>Pokea safari na mizigo kwenye simu yako.</strong><br>
 Recevez des courses et des colis directement sur votre téléphone.</p>
-<a class="bouton" href="https://expo.dev/artifacts/eas/kM6cP9BmGjkwOHQH2LenHGHHF0oBldgFlQYLQTRUCx0.apk">📥 Sakinisha app — Installer l'app (Android)</a>
+<a class="bouton" href="https://expo.dev/artifacts/eas/cJNvxejVN3wvSAfdXdVq3adlaczFCVjPOtVV10VkYg8.apk">📥 Sakinisha app — Installer l'app (Android)</a>
 <ol>
 <li><strong>Sakinisha — Installer</strong> : touchez le bouton pour télécharger. Si <em>Google Play Protect</em> affiche « <strong>App blocked / Application bloquée</strong> », touchez <strong>« More details / Plus de détails »</strong>, puis <strong>« Install anyway / Installer quand même »</strong>. C'est normal : l'app ne vient pas du Play Store, mais elle est sûre.</li>
 <li><strong>Jisajili — S'inscrire</strong> : ouvrez l'app, choisissez « Chauffeur », entrez votre numéro.</li>
