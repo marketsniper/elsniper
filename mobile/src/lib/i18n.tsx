@@ -2855,6 +2855,70 @@ const CHAINES = {
     it: 'Troppo tardi — un altro autista ha appena preso questa corsa.',
     de: 'Zu spät — ein anderer Fahrer hat diese Fahrt gerade übernommen.',
   },
+  // --- Quand part la course : le chauffeur doit le voir d'un coup d'œil ---
+  courses_depart_immediat: {
+    fr: 'Départ immédiat — le client attend',
+    en: 'Leaving now — the client is waiting',
+    sw: 'Kuondoka sasa hivi — mteja anasubiri',
+    it: 'Partenza immediata — il cliente sta aspettando',
+    de: 'Sofortige Abfahrt — der Kunde wartet',
+  },
+  courses_depart_maintenant: {
+    fr: 'Départ maintenant',
+    en: 'Leaving now',
+    sw: 'Kuondoka sasa',
+    it: 'Partenza adesso',
+    de: 'Abfahrt jetzt',
+  },
+  courses_depart_dans_min: {
+    fr: 'Départ dans {n} min ({heure})',
+    en: 'Leaving in {n} min ({heure})',
+    sw: 'Kuondoka baada ya dakika {n} ({heure})',
+    it: 'Partenza tra {n} min ({heure})',
+    de: 'Abfahrt in {n} Min. ({heure})',
+  },
+  courses_depart_aujourdhui: {
+    fr: "Aujourd'hui à {heure}",
+    en: 'Today at {heure}',
+    sw: 'Leo saa {heure}',
+    it: 'Oggi alle {heure}',
+    de: 'Heute um {heure}',
+  },
+  courses_depart_demain: {
+    fr: 'Demain à {heure}',
+    en: 'Tomorrow at {heure}',
+    sw: 'Kesho saa {heure}',
+    it: 'Domani alle {heure}',
+    de: 'Morgen um {heure}',
+  },
+  courses_depart_date: {
+    fr: '{date} à {heure}',
+    en: '{date} at {heure}',
+    sw: '{date} saa {heure}',
+    it: '{date} alle {heure}',
+    de: '{date} um {heure}',
+  },
+  courses_dispo_urgent: {
+    fr: 'URGENT',
+    en: 'URGENT',
+    sw: 'HARAKA',
+    it: 'URGENTE',
+    de: 'DRINGEND',
+  },
+  courses_dispo_programmee: {
+    fr: 'Programmée',
+    en: 'Scheduled',
+    sw: 'Imepangwa',
+    it: 'Programmata',
+    de: 'Geplant',
+  },
+  courses_dispo_demandee_depuis: {
+    fr: 'Demandée {quand}',
+    en: 'Requested {quand}',
+    sw: 'Iliombwa {quand}',
+    it: 'Richiesta {quand}',
+    de: 'Angefragt {quand}',
+  },
   courses_dispo_indisponible: {
     fr: 'Vous êtes en « indisponible » — repassez disponible pour prendre une course.',
     en: 'You are set to “unavailable” — switch back to available to take a ride.',
@@ -3278,6 +3342,56 @@ export function libelleTailleColis(taille: TailleColis | undefined, t: FonctionT
  * Date relative traduite (« il y a 5 min », '5 min ago', 'dakika 5 zilizopita'),
  * date courte au-delà d'une semaine, '' si absente/invalide.
  */
+/**
+ * QUAND PART CETTE COURSE — libellé pensé pour le chauffeur qui décide s'il la
+ * prend. « il y a 5 min » disait quand la course avait été DEMANDÉE, pas quand
+ * il fallait partir : ambigu, et invisible pour les départs immédiats.
+ *
+ * Renvoie le texte à afficher et un niveau d'urgence :
+ *  - 'immediat' : aucun horaire choisi par le client → il attend maintenant ;
+ *  - 'urgent'   : départ dans moins d'une heure (ou déjà dû) ;
+ *  - 'planifie' : plus tard — on annonce clairement le jour ET l'heure.
+ */
+export function departCourse(
+  scheduledAt: unknown,
+  t: FonctionT,
+  langue: Langue
+): { texte: string; urgence: 'immediat' | 'urgent' | 'planifie' } {
+  const locale = LOCALES_INTL[langue];
+  if (typeof scheduledAt !== 'string' || !scheduledAt) {
+    return { texte: t('courses_depart_immediat'), urgence: 'immediat' };
+  }
+  const date = new Date(scheduledAt);
+  if (Number.isNaN(date.getTime())) {
+    return { texte: t('courses_depart_immediat'), urgence: 'immediat' };
+  }
+  const heure = date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
+  const minutes = Math.round((date.getTime() - Date.now()) / 60000);
+
+  // Départ dû, ou dans l'heure : c'est urgent, on compte en minutes.
+  if (minutes <= 0) return { texte: t('courses_depart_maintenant'), urgence: 'urgent' };
+  if (minutes < 60) {
+    return { texte: t('courses_depart_dans_min', { n: minutes, heure }), urgence: 'urgent' };
+  }
+
+  // Aujourd'hui / demain / date complète — toujours avec le jour, jamais une
+  // heure seule (un chauffeur ne doit pas avoir à deviner le jour).
+  const jour = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+  const maintenant = new Date();
+  const auj = new Date(maintenant.getFullYear(), maintenant.getMonth(), maintenant.getDate()).getTime();
+  const UN_JOUR = 86400000;
+  if (jour === auj) return { texte: t('courses_depart_aujourdhui', { heure }), urgence: 'planifie' };
+  if (jour === auj + UN_JOUR) {
+    return { texte: t('courses_depart_demain', { heure }), urgence: 'planifie' };
+  }
+  const libelleJour = date.toLocaleDateString(locale, {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+  });
+  return { texte: t('courses_depart_date', { date: libelleJour, heure }), urgence: 'planifie' };
+}
+
 export function formaterDateRelativeI18n(iso: unknown, t: FonctionT): string {
   if (typeof iso !== 'string' || !iso) return '';
   const date = new Date(iso);

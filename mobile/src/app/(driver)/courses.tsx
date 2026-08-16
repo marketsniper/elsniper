@@ -23,7 +23,7 @@ import {
 import { api, ErreurApi } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { effacerColisMasques, listerColisMasques, masquerColis } from '@/lib/colisLocal';
-import { formaterDateRelativeI18n, libelleTailleColis, useT } from '@/lib/i18n';
+import { departCourse, formaterDateRelativeI18n, libelleTailleColis, useT } from '@/lib/i18n';
 import { estBalaye, lireCoupDeBalai, passerCoupDeBalai } from '@/lib/menageLocal';
 import { couleurs, espaces, ombres, rayons } from '@/lib/theme';
 import {
@@ -41,7 +41,7 @@ import {
 export default function EcranCourses() {
   const router = useRouter();
   const { session } = useAuth();
-  const { t } = useT();
+  const { t, langue } = useT();
   const [idSaisi, setIdSaisi] = useState('');
   const [recentes, setRecentes] = useState<Trajet[]>([]);
   // Bourse aux colis : colis payés en attente de ramassage (hôtels en tête).
@@ -308,7 +308,9 @@ export default function EcranCourses() {
       {coursesDispo.map((course) => {
         const net = Number(champ(course, 'net_chauffeur', 'netChauffeur') ?? NaN);
         const devise = String(champ(course, 'currency', 'devise') ?? '');
-        const quand = champ(course, 'scheduled_at', 'scheduledAt');
+        // QUAND partir : jour + heure explicites, ou « départ immédiat ».
+        const depart = departCourse(champ(course, 'scheduled_at', 'scheduledAt'), t, langue);
+        const presse = depart.urgence !== 'planifie';
         const options: string[] = [];
         if (champ<boolean>(course, 'round_trip', 'roundTrip') === true)
           options.push(t('trip_aller_retour_valeur'));
@@ -318,17 +320,38 @@ export default function EcranCourses() {
           options.push(t('reserver_gros_bagages'));
         const vol = champ<string>(course, 'flight_number', 'flightNumber');
         return (
-          <View key={course.id} style={styles.carte}>
+          <View
+            key={course.id}
+            style={[styles.carte, presse && styles.carteUrgente]}
+          >
+            {/* Bandeau d'urgence : URGENT (départ immédiat ou dans l'heure)
+                ou Programmée — visible avant même de lire le trajet. */}
+            <View style={styles.ligneUrgence}>
+              <View style={[styles.pastilleUrgence, presse && styles.pastilleUrgenteForte]}>
+                <Ionicons
+                  name={presse ? 'flash' : 'calendar-outline'}
+                  size={12}
+                  color={presse ? couleurs.surPrimaire : couleurs.texteSecondaire}
+                />
+                <Text style={[styles.texteUrgence, presse && styles.texteUrgenceFort]}>
+                  {presse ? t('courses_dispo_urgent') : t('courses_dispo_programmee')}
+                </Text>
+              </View>
+              <Text style={[styles.departTexte, presse && styles.departTexteFort]}>
+                {depart.texte}
+              </Text>
+            </View>
             <Text style={styles.itineraire}>
               {String(champ(course, 'pickup_location', 'pickupLocation') ?? '?')}{'  '}
               <Text style={styles.fleche}>→</Text>{'  '}
               {String(champ(course, 'dropoff_location', 'dropoffLocation') ?? '?')}
             </Text>
             <View style={styles.pied}>
+              {/* Depuis combien de temps la course attend un chauffeur. */}
               <Text style={styles.date}>
-                {quand
-                  ? `⏰ ${formaterDate(quand)}`
-                  : formaterDateRelativeI18n(champ(course, 'created_at', 'createdAt'), t)}
+                {t('courses_dispo_demandee_depuis', {
+                  quand: formaterDateRelativeI18n(champ(course, 'created_at', 'createdAt'), t),
+                })}
               </Text>
               {Number.isFinite(net) && (
                 <Text style={styles.prix}>
@@ -519,11 +542,21 @@ export default function EcranCourses() {
       )}
       {coursesVisibles.map((item) => {
         const statut = champ<StatutTrajet>(item, 'status', 'statut');
+        // Même lecture du départ que dans la bourse : jour + heure explicites,
+        // et mise en avant quand il faut partir tout de suite. Une course
+        // terminée ou annulée n'a plus rien d'urgent.
+        const enCours = statut !== 'completed' && statut !== 'cancelled';
+        const depart = departCourse(champ(item, 'scheduled_at', 'scheduledAt'), t, langue);
+        const presse = enCours && depart.urgence !== 'planifie';
         return (
           <Pressable
             key={item.id}
             onPress={() => router.push(`/course/${item.id}`)}
-            style={({ pressed }) => [styles.carte, pressed && { opacity: 0.7 }]}
+            style={({ pressed }) => [
+              styles.carte,
+              presse && styles.carteUrgente,
+              pressed && { opacity: 0.7 },
+            ]}
           >
             <View style={styles.enTete}>
               <Text style={styles.type}>{t('trajets_course_defaut')}</Text>
@@ -535,11 +568,13 @@ export default function EcranCourses() {
               {champ(item, 'dropoff_location', 'dropoffLocation') ?? '?'}
             </Text>
             <View style={styles.pied}>
-              <Text style={styles.date}>
-                {formaterDateRelativeI18n(
-                  champ(item, 'scheduled_at', 'scheduledAt', 'created_at', 'createdAt'),
-                  t
-                )}
+              <Text style={[styles.date, presse && styles.departTexteFort]}>
+                {enCours
+                  ? depart.texte
+                  : formaterDateRelativeI18n(
+                      champ(item, 'scheduled_at', 'scheduledAt', 'created_at', 'createdAt'),
+                      t
+                    )}
               </Text>
               <Text style={styles.prix}>{formaterPrix(item)}</Text>
             </View>
@@ -572,6 +607,48 @@ const styles = StyleSheet.create({
     padding: espaces.l,
     gap: espaces.s,
     ...ombres.carte,
+  },
+  // Course à départ immédiat (ou dans l'heure) : liseré corail sur le bord
+  // gauche — elle se repère avant même d'être lue.
+  carteUrgente: {
+    borderLeftWidth: 4,
+    borderLeftColor: couleurs.primaire,
+  },
+  ligneUrgence: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: espaces.s,
+  },
+  pastilleUrgence: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 3,
+    paddingHorizontal: espaces.s,
+    borderRadius: rayons.pastille,
+    backgroundColor: couleurs.bordure,
+  },
+  pastilleUrgenteForte: {
+    backgroundColor: couleurs.primaire,
+  },
+  texteUrgence: {
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.4,
+    color: couleurs.texteSecondaire,
+  },
+  texteUrgenceFort: {
+    color: couleurs.surPrimaire,
+  },
+  departTexte: {
+    flexShrink: 1,
+    fontSize: 14,
+    fontWeight: '700',
+    color: couleurs.encre,
+  },
+  departTexteFort: {
+    color: couleurs.primaireFonce,
   },
   enTete: {
     flexDirection: 'row',
