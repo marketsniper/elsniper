@@ -2837,14 +2837,49 @@ export const HEURES_CHOIX: string[] = (() => {
 export const JOURS_RESERVATION_AVANCE = 90;
 
 /**
- * Libellés des dates proposées, dans la langue active : Aujourd'hui, Demain,
- * puis les jours suivants formatés (ex. « ven. 14 août »), jusqu'à un mois à
- * l'avance. L'index dans la liste correspond au décalage en jours par rapport
- * à aujourd'hui.
+ * Combine une date « yyyy-mm-dd » (choisie au calendrier) et une heure
+ * « HH:MM » en ISO 8601, en heure LOCALE de l'appareil. null si l'une des deux
+ * est absente ou mal formée.
  */
-export function libellesDates(t: FonctionT, langue: Langue): string[] {
-  const libelles = [t('sel_aujourdhui'), t('sel_demain')];
-  for (let i = 2; i <= JOURS_RESERVATION_AVANCE; i += 1) {
+export function isoDepuisDateHeure(dateYmd: string, heure: string): string | null {
+  const [y, mo, d] = (dateYmd || '').split('-').map(Number);
+  const [h, mi] = (heure || '').split(':').map(Number);
+  if (![y, mo, d, h, mi].every(Number.isInteger)) return null;
+  const date = new Date(y, mo - 1, d, h, mi, 0, 0);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toISOString();
+}
+
+/**
+ * Libellé lisible d'une date « yyyy-mm-dd » dans la langue active, ex.
+ * « vendredi 14 août » — pour le récap affiché sous le calendrier.
+ */
+export function formaterDateChoisie(dateYmd: string, langue: Langue): string {
+  if (!dateYmd) return '';
+  const [y, mo, d] = dateYmd.split('-').map(Number);
+  const date = new Date(y, mo - 1, d);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleDateString(LOCALES_INTL[langue], {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  });
+}
+
+// Menu déroulant de dates encore utilisé par les écrans « proposer un trajet »
+// (chauffeur) et « envoyer un colis » : une échéance proche suffit (une
+// semaine). L'écran de réservation client, lui, utilise le calendrier
+// (CalendrierDate) qui va jusqu'à trois mois.
+const JOURS_MENU_DATES = 7;
+
+/**
+ * Libellés des dates proposées : Aujourd'hui, Demain, puis les jours suivants
+ * formatés (ex. « ven. 14 août »). L'index dans la liste correspond au
+ * décalage en jours par rapport à aujourd'hui.
+ */
+export function libellesDates(_t: FonctionT, langue: Langue): string[] {
+  const libelles = [_t('sel_aujourdhui'), _t('sel_demain')];
+  for (let i = 2; i <= JOURS_MENU_DATES; i += 1) {
     const date = new Date();
     date.setDate(date.getDate() + i);
     libelles.push(
@@ -2859,9 +2894,8 @@ export function libellesDates(t: FonctionT, langue: Langue): string[] {
 }
 
 /**
- * Combine un libellé de date (issu de libellesDates) et une heure « HH:MM »
- * en ISO 8601 (heure locale de l'appareil), ou null si la sélection est
- * incomplète ou inconnue.
+ * Combine un libellé de date (issu de libellesDates) et une heure « HH:MM » en
+ * ISO 8601 (heure locale), ou null si la sélection est incomplète/inconnue.
  */
 export function isoDepuisChoix(
   libelles: string[],

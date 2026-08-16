@@ -16,15 +16,17 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { CalendrierDate } from '@/components/CalendrierDate';
 import { RidesPartages } from '@/components/RidesPartages';
 import { Selecteur } from '@/components/Selecteur';
 import { Bouton, Champ, Ecran, EncartInfo, EtatVide, TexteErreur } from '@/components/ui';
 import { api, ErreurApi } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import {
+  formaterDateChoisie,
   HEURES_CHOIX,
-  isoDepuisChoix,
-  libellesDates,
+  isoDepuisDateHeure,
+  JOURS_RESERVATION_AVANCE,
   libelleTypeTrajet,
   useT,
 } from '@/lib/i18n';
@@ -69,11 +71,11 @@ export default function EcranReserver() {
   const [depart, setDepart] = useState('');
   const [arrivee, setArrivee] = useState('');
   const [precision, setPrecision] = useState('');
-  // Programmation optionnelle : date + heure en menus déroulants ; date vide
-  // = départ dès que possible (option « Maintenant »).
-  const [dateProgramme, setDateProgramme] = useState('');
+  // Programmation optionnelle : date choisie au calendrier (« yyyy-mm-dd ») +
+  // heure ; date vide = départ dès que possible (« Maintenant »).
+  const [dateChoisie, setDateChoisie] = useState('');
   const [heureProgramme, setHeureProgramme] = useState('');
-  const choixDates = libellesDates(t, langue);
+  const [calendrierOuvert, setCalendrierOuvert] = useState(false);
   const [nomClient, setNomClient] = useState('');
   const [telClient, setTelClient] = useState('+255');
   const [erreur, setErreur] = useState('');
@@ -174,10 +176,8 @@ export default function EcranReserver() {
       }
     }
     let scheduledAt: string | undefined;
-    if (dateProgramme) {
-      const iso = heureProgramme
-        ? isoDepuisChoix(choixDates, dateProgramme, heureProgramme)
-        : null;
+    if (dateChoisie) {
+      const iso = heureProgramme ? isoDepuisDateHeure(dateChoisie, heureProgramme) : null;
       if (!iso) {
         setErreur(t('sel_erreur_datetime'));
         return;
@@ -221,8 +221,9 @@ export default function EcranReserver() {
       setDepart('');
       setArrivee('');
       setPrecision('');
-      setDateProgramme('');
+      setDateChoisie('');
       setHeureProgramme('');
+      setCalendrierOuvert(false);
       setNomClient('');
       setTelClient('+255');
       setNumeroVol('');
@@ -423,21 +424,58 @@ export default function EcranReserver() {
             </>
           )}
 
-          <Selecteur
-            label={t('reserver_programmer')}
-            valeur={dateProgramme}
-            options={[t('sel_maintenant'), ...choixDates]}
-            placeholder={t('sel_maintenant')}
-            onChange={(choix) => {
-              if (choix === t('sel_maintenant')) {
-                setDateProgramme('');
-                setHeureProgramme('');
-              } else {
-                setDateProgramme(choix);
-              }
-            }}
-          />
-          {!!dateProgramme && (
+          {/* Quand ? Un champ qui ouvre un vrai calendrier — on tape le jour
+              voulu (jusqu'à 3 mois), au lieu de dérouler une longue liste. */}
+          <Text style={styles.libelleChamp}>{t('reserver_programmer')}</Text>
+          <Pressable
+            onPress={() => setCalendrierOuvert((v) => !v)}
+            accessibilityRole="button"
+            style={({ pressed }) => [styles.champQuand, pressed && { opacity: 0.7 }]}
+          >
+            <Ionicons
+              name="calendar-outline"
+              size={18}
+              color={dateChoisie ? couleurs.primaireFonce : couleurs.texteSecondaire}
+            />
+            <Text style={[styles.champQuandTexte, !dateChoisie && styles.champQuandVide]}>
+              {dateChoisie ? formaterDateChoisie(dateChoisie, langue) : t('sel_maintenant')}
+            </Text>
+            <Ionicons
+              name={calendrierOuvert ? 'chevron-up' : 'chevron-down'}
+              size={18}
+              color={couleurs.texteSecondaire}
+            />
+          </Pressable>
+
+          {calendrierOuvert && (
+            <View style={{ gap: espaces.s }}>
+              {/* Revenir à « départ dès que possible » (efface la date). */}
+              {!!dateChoisie && (
+                <Pressable
+                  onPress={() => {
+                    setDateChoisie('');
+                    setHeureProgramme('');
+                    setCalendrierOuvert(false);
+                  }}
+                  accessibilityRole="button"
+                  style={({ pressed }) => [styles.optionMaintenant, pressed && { opacity: 0.7 }]}
+                >
+                  <Ionicons name="flash-outline" size={16} color={couleurs.primaireFonce} />
+                  <Text style={styles.optionMaintenantTexte}>{t('sel_maintenant')}</Text>
+                </Pressable>
+              )}
+              <CalendrierDate
+                valeur={dateChoisie}
+                maxJours={JOURS_RESERVATION_AVANCE}
+                langue={langue}
+                onChange={(date) => {
+                  setDateChoisie(date);
+                  setCalendrierOuvert(false);
+                }}
+              />
+            </View>
+          )}
+          {!!dateChoisie && (
             <Selecteur
               label={t('sel_heure')}
               valeur={heureProgramme}
@@ -662,5 +700,45 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: couleurs.texteSecondaire,
     lineHeight: 17,
+  },
+  libelleChamp: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: couleurs.texteSecondaire,
+    marginBottom: espaces.xs,
+  },
+  champQuand: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: espaces.s,
+    backgroundColor: couleurs.surface,
+    borderWidth: 1,
+    borderColor: couleurs.bordure,
+    borderRadius: rayons.bouton,
+    paddingHorizontal: espaces.m,
+    minHeight: 48,
+  },
+  champQuandTexte: {
+    flex: 1,
+    fontSize: 16,
+    color: couleurs.encre,
+  },
+  champQuandVide: {
+    color: couleurs.texteSecondaire,
+  },
+  optionMaintenant: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: espaces.xs,
+    paddingVertical: espaces.s,
+    paddingHorizontal: espaces.m,
+    backgroundColor: couleurs.primaireClair,
+    borderRadius: rayons.bouton,
+  },
+  optionMaintenantTexte: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: couleurs.primaireFonce,
   },
 });
