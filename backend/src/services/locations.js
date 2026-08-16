@@ -10,7 +10,8 @@ export const AEROPORT = 'Aéroport international Abeid Amani Karume';
 // acceptés à la validation, plus proposés dans les menus.
 export const ANCIENS_LIBELLES_AEROPORT = ['Aéroport Abeid Amani Karume', 'Aéroport (AAKIA)'];
 
-export const RIDE_DESTINATIONS = [
+// Les 16 villes de l'île (hors hubs) — communes au départ et à l'arrivée.
+const VILLES_RIDES = [
   'Stone Town',
   'Nungwi',
   'Kendwa',
@@ -29,9 +30,15 @@ export const RIDE_DESTINATIONS = [
   'Fumba',
 ];
 
+// Arrivées AFFICHÉES : l'aéroport EN PLUS des villes. Un touriste du sud
+// (Makunduchi, Jambiani…) rentre prendre son vol — l'aéroport est une arrivée
+// à part entière, pas seulement un départ. Le ferry, lui, ne se propose qu'au
+// départ (personne ne réserve un partagé POUR aller au ferry).
+export const RIDE_DESTINATIONS = [AEROPORT, ...VILLES_RIDES];
+
 // Départs AFFICHÉS : les deux hubs (aéroport, ferry) + toutes les villes de
 // l'île — permet aussi les liaisons inter-villes comme Nungwi → Paje.
-export const RIDE_ORIGINS = [AEROPORT, 'Stone Town Ferry', ...RIDE_DESTINATIONS];
+export const RIDE_ORIGINS = [AEROPORT, 'Stone Town Ferry', ...VILLES_RIDES];
 
 // Départs ACCEPTÉS à la validation : les affichés + les anciens libellés.
 export const RIDE_ORIGINS_ACCEPTES = [...RIDE_ORIGINS, ...ANCIENS_LIBELLES_AEROPORT];

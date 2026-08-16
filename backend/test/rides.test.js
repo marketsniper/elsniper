@@ -79,14 +79,40 @@ describe('Trajets partagés (rides)', () => {
     assert.equal(badDestination.body.error.code, 'validation_error');
   });
 
-  it('GET /rides/locations : listes pour les menus déroulants (2 départs)', async () => {
+  it('GET /rides/locations : listes pour les menus déroulants', async () => {
     const res = await request(app).get('/api/rides/locations');
     assert.equal(res.status, 200);
     assert.ok(res.body.origins.includes('Aéroport international Abeid Amani Karume'));
     assert.ok(res.body.origins.includes('Stone Town Ferry'));
     assert.ok(res.body.origins.includes('Nungwi'), 'les villes sont aussi des départs');
     assert.ok(res.body.destinations.includes('Nungwi'));
+    // L'aéroport est une ARRIVÉE à part entière (rentrer prendre son vol).
+    assert.ok(
+      res.body.destinations.includes('Aéroport international Abeid Amani Karume'),
+      'l’aéroport doit être une arrivée proposée'
+    );
     assert.ok(res.body.destinations.length >= 10);
+  });
+
+  it('Makunduchi → aéroport : un chauffeur du sud peut poster ce retour (201)', async () => {
+    const { token } = await createVerifiedDriver();
+    const res = await postRide(token, {
+      origin: 'Makunduchi',
+      destination: 'Aéroport international Abeid Amani Karume',
+    });
+    assert.equal(res.status, 201, JSON.stringify(res.body));
+    assert.equal(res.body.origin, 'Makunduchi');
+    assert.equal(res.body.destination, 'Aéroport international Abeid Amani Karume');
+  });
+
+  it('aéroport → aéroport : départ = arrivée → 422 route_indisponible', async () => {
+    const { token } = await createVerifiedDriver();
+    const res = await postRide(token, {
+      origin: 'Aéroport (AAKIA)', // ancien libellé accepté au départ
+      destination: 'Aéroport international Abeid Amani Karume',
+    });
+    assert.equal(res.status, 422, JSON.stringify(res.body));
+    assert.equal(res.body.error.code, 'route_indisponible');
   });
 
   it('la liste publique montre les trajets ouverts à venir avec les infos chauffeur', async () => {

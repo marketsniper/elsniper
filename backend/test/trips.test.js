@@ -453,6 +453,25 @@ describe('Courses taxi (trips)', () => {
     assert.equal(admin.body.length, 1);
   });
 
+  it('file équipe : la course porte QUI a réservé (nom + téléphone), même en réservation client', async () => {
+    // Un client réserve pour lui-même : en base, client_name/client_phone sont
+    // vides (l'identité vit dans son compte). La file équipe doit quand même
+    // montrer son nom ET son téléphone, joints depuis son compte.
+    const { token, user } = await createTourist({ fullName: 'Amina Hassan' });
+    const trip = await createTrip(token, user.id);
+
+    const file = await request(app)
+      .get('/api/trips')
+      .query({ status: 'requested' })
+      .set(adminHeaders());
+    assert.equal(file.status, 200);
+    const vue = file.body.find((t) => t.id === trip.id);
+    assert.ok(vue, 'la course doit figurer dans la file équipe');
+    assert.equal(vue.booker_name, 'Amina Hassan');
+    assert.equal(vue.booker_phone, user.phone);
+    assert.equal(vue.hotel_name, null, "pas d'hôtel : réservation faite par le client");
+  });
+
   it('GET /:id : chauffeur assigné → 200, autre chauffeur → 403, tiers → 403, inconnu → 404', async () => {
     const { token, user } = await createTourist();
     const { token: driverToken, driver } = await createVerifiedDriver();

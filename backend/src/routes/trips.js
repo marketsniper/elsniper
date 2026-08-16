@@ -283,9 +283,19 @@ router.get(
         params.push(status);
         where = 'WHERE t.status = $1';
       }
+      // Contexte pour l'équipe qui valide : QUI a réservé (nom + téléphone du
+      // compte client, ou nom/téléphone saisis par un hôtel partenaire) et,
+      // le cas échéant, le nom de l'établissement partenaire. Réservé à
+      // l'équipe (liste admin) — ces champs ne sortent pas ailleurs.
       const { rows } = await query(
-        `SELECT t.*, ${CHAMPS_CHAUFFEUR}
-         FROM trips t LEFT JOIN drivers d ON d.id = t.driver_id
+        `SELECT t.*, ${CHAMPS_CHAUFFEUR},
+                u.full_name AS booker_name, u.phone AS booker_phone,
+                u.account_type AS booker_account_type,
+                h.name AS hotel_name
+         FROM trips t
+         LEFT JOIN drivers d ON d.id = t.driver_id
+         LEFT JOIN users u ON u.id = t.user_id
+         LEFT JOIN hotels h ON h.id = t.hotel_id
          ${where}
          ORDER BY t.created_at DESC LIMIT 200`,
         params

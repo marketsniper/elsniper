@@ -19,6 +19,7 @@ import { config } from '../config.js';
 import {
   hubToHubRoute,
   localSeatTzsForRoute,
+  memeEndroit,
   sharedAllowedForRoute,
   sharedSeatUsdForRoute,
 } from '../services/pricingService.js';
@@ -218,6 +219,16 @@ router.post(
 
     if (new Date(data.departureAt).getTime() <= Date.now()) {
       throw new HttpError(400, 'departure_in_past', "L'heure de départ doit être dans le futur");
+    }
+
+    // Départ et arrivée identiques (ex. aéroport → aéroport, maintenant que
+    // l'aéroport est aussi une arrivée) : trajet impossible.
+    if (memeEndroit(data.origin, data.destination)) {
+      throw new HttpError(
+        422,
+        'route_indisponible',
+        'Le départ et l\'arrivée doivent être différents'
+      );
     }
 
     // Stone Town, le ferry et l'aéroport sont à quelques minutes : aucune

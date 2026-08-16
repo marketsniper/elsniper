@@ -228,7 +228,9 @@ export const HUBS_RIDES: string[] = [
 // route_indisponible). L'aéroport, lui, est à sept kilomètres — c'est un
 // vrai transfert, facturé 17 USD.
 export const POINTS_STONE_TOWN: string[] = ['Stone Town', 'Stone Town Ferry'];
-export const DESTINATIONS_RIDES: string[] = [
+
+// Les 16 villes de l'île (hors hubs) — communes au départ et à l'arrivée.
+const VILLES_RIDES: string[] = [
   'Stone Town',
   'Nungwi',
   'Kendwa',
@@ -246,8 +248,15 @@ export const DESTINATIONS_RIDES: string[] = [
   'Kizimkazi',
   'Fumba',
 ];
-// Départs ouverts à toutes les villes : hubs + 16 villes (miroir de origins).
-export const ORIGINES_RIDES: string[] = [...HUBS_RIDES, ...DESTINATIONS_RIDES];
+
+// Arrivées : l'aéroport EN PLUS des villes — un touriste du sud rentre prendre
+// son vol (Makunduchi → aéroport, Jambiani → aéroport…). Miroir du serveur.
+export const DESTINATIONS_RIDES: string[] = [
+  'Aéroport international Abeid Amani Karume',
+  ...VILLES_RIDES,
+];
+// Départs ouverts à toutes les villes : hubs (aéroport, ferry) + 16 villes.
+export const ORIGINES_RIDES: string[] = [...HUBS_RIDES, ...VILLES_RIDES];
 
 /**
  * Devise du compte utilisateur : TZS pour un compte local (carte tanzanienne),

@@ -138,6 +138,25 @@ const round2 = (n) => Math.round(n * 100) / 100;
 // « Ville (précision) » → « ville » ; insensible à la casse.
 const normCity = (s) => (s || '').replace(/\s*\(.*\)\s*$/, '').trim().toLowerCase();
 
+// L'aéroport a plusieurs libellés historiques ; tous désignent le même lieu.
+const AEROPORT_ALIAS = new Set([
+  'aéroport (aakia)',
+  'aéroport abeid amani karume',
+  'aéroport international abeid amani karume',
+  'aéroport',
+  'airport',
+]);
+
+// Deux points sont « le même endroit » si leurs noms coïncident, ou s'ils
+// désignent tous deux l'aéroport. Sert à refuser un trajet départ = arrivée
+// (ex. aéroport → aéroport, désormais que l'aéroport est aussi une arrivée).
+export function memeEndroit(a, b) {
+  const na = (a || '').trim().toLowerCase();
+  const nb = (b || '').trim().toLowerCase();
+  if (AEROPORT_ALIAS.has(na) && AEROPORT_ALIAS.has(nb)) return true;
+  return normCity(a) === normCity(b);
+}
+
 // Zone tarifaire d'un itinéraire : la ville zonée du trajet (l'autre bout
 // étant en général la ville/l'aéroport). Si les deux bouts sont zonés,
 // on retient la zone au tarif privé le plus élevé.

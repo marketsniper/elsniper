@@ -654,7 +654,15 @@ export default function EcranEquipe() {
       )}
       {coursesATraiter.map((course) => {
         const type = champ<TypeTrajet>(course, 'trip_type', 'tripType');
-        const nomClient = champ<string>(course, 'client_name', 'clientName');
+        // Nom & téléphone : ceux saisis par un hôtel partenaire, sinon ceux du
+        // compte client qui a réservé (booker_*, joints côté serveur).
+        const nomClient =
+          champ<string>(course, 'client_name', 'clientName') ??
+          champ<string>(course, 'booker_name', 'bookerName');
+        const telClient =
+          champ<string>(course, 'client_phone', 'clientPhone') ??
+          champ<string>(course, 'booker_phone', 'bookerPhone');
+        const partenaire = champ<string>(course, 'hotel_name', 'hotelName');
         return (
           <Carte key={course.id}>
             <Text style={styles.itineraire}>
@@ -672,6 +680,64 @@ export default function EcranEquipe() {
                 <Text style={styles.detail}>{String(nomClient)}</Text>
               </View>
             )}
+            {/* Réservé par un hôtel / restaurant partenaire : à facturer à
+                l'établissement, pas au client. */}
+            {!!partenaire && (
+              <View style={styles.ligneDetail}>
+                <Ionicons name="business-outline" size={14} color={couleurs.texteSecondaire} />
+                <Text style={styles.detail}>{String(partenaire)}</Text>
+              </View>
+            )}
+            {/* QUAND la course est prévue — l'info clé pour valider et choisir
+                le bon chauffeur. Mise en avant (gras, corail). */}
+            {!!champ(course, 'scheduled_at', 'scheduledAt') && (
+              <View style={styles.ligneDetail}>
+                <Ionicons name="time-outline" size={14} color={couleurs.primaireFonce} />
+                <Text style={[styles.detail, { color: couleurs.primaireFonce, fontWeight: '700' }]}>
+                  {t('equipe_paiement_depart')} : {formaterDate(champ(course, 'scheduled_at', 'scheduledAt'))}
+                </Text>
+              </View>
+            )}
+            {/* Téléphone du client : un appui = appel direct (le dispatch peut
+                le joindre sans quitter l'écran). */}
+            {!!telClient && (
+              <Pressable
+                onPress={() => Linking.openURL(`tel:${String(telClient).replace(/\s/g, '')}`)}
+                accessibilityRole="button"
+                style={styles.ligneDetail}
+              >
+                <Ionicons name="call-outline" size={14} color={couleurs.primaire} />
+                <Text style={[styles.detail, { color: couleurs.primaire, fontWeight: '600' }]}>
+                  {String(telClient)}
+                </Text>
+              </Pressable>
+            )}
+            {/* Numéro de vol : indispensable pour un transfert aéroport. */}
+            {!!champ(course, 'flight_number', 'flightNumber') && (
+              <View style={styles.ligneDetail}>
+                <Ionicons name="airplane-outline" size={14} color={couleurs.texteSecondaire} />
+                <Text style={styles.detail}>
+                  {t('trip_vol')} : {String(champ(course, 'flight_number', 'flightNumber'))}
+                </Text>
+              </View>
+            )}
+            {/* Options demandées : aller-retour, siège bébé, gros bagages —
+                le chauffeur doit les connaître avant de partir. */}
+            {(() => {
+              const opts: string[] = [];
+              if (champ<boolean>(course, 'round_trip', 'roundTrip') === true)
+                opts.push(t('trip_aller_retour_valeur'));
+              if (champ<boolean>(course, 'baby_seat', 'babySeat') === true)
+                opts.push(t('reserver_siege_bebe'));
+              if (champ<boolean>(course, 'bulky_luggage', 'bulkyLuggage') === true)
+                opts.push(t('reserver_gros_bagages'));
+              return opts.length ? (
+                <View style={styles.ligneDetail}>
+                  <Ionicons name="options-outline" size={14} color={couleurs.texteSecondaire} />
+                  <Text style={styles.detail}>{opts.join('  ·  ')}</Text>
+                </View>
+              ) : null;
+            })()}
             {/* Course privée : l'annonce toute prête (anglais + swahili) pour
                 le groupe WhatsApp des chauffeurs. Un appui, on choisit le
                 groupe, c'est envoyé — sans nom ni numéro du client. */}
