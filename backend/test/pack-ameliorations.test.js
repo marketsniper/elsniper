@@ -111,7 +111,7 @@ describe('Pack améliorations', () => {
         });
       assert.equal(transfert.status, 201, `${depart} → ${arrivee} : ${JSON.stringify(transfert.body)}`);
       assert.equal(Number(transfert.body.price), 17, `${depart} → ${arrivee}`);
-      assert.equal(Number(transfert.body.commission), 2.55, `${depart} → ${arrivee}`);
+      assert.equal(Number(transfert.body.commission), 3.4, `${depart} → ${arrivee}`);
     }
 
     // Trop court pour un taxi partagé : l'annonce reste refusée.

@@ -41,17 +41,26 @@ function sharedSeatUsd(priveUsd) {
 }
 
 // Commissions zanziGo par service (grille « Chauffeur reçoit ») :
-//  - privé 15 % sur TOUS les trajets, courts comme longs (45 → 38,25 chez
-//    le chauffeur) : un seul taux, simple à retenir et à expliquer ;
+//  - privé : deux paliers selon le prix du trajet —
+//      40 USD et plus  → 15 % (grand axe, le chauffeur roule longtemps : 85 %) ;
+//      moins de 40 USD → 20 % (petit trajet : transfert aéroport, saut de
+//      village, liaison courte — proportionnellement plus de frais fixes).
 //  - partagé, touriste comme local, 20 % ;
 //  - colis 20 % (5 → 4,00).
 // Les réservations d'hôtel restent sur le taux général config.commissionRate.
 const COMMISSION_RATES = {
-  private: 0.15,
+  private: 0.15, // grands trajets, 40 USD et plus
+  privateCourt: 0.2, // petits trajets, moins de 40 USD
   shared: 0.2,
   local: 0.2,
   package: 0.2,
 };
+
+// Seuil de bascule de la commission privée : à 40 USD pile, on est déjà sur
+// le grand tarif (15 %). En dessous, 20 %. Ce seuil coïncide avec celui du
+// tarif local (GRAND_AXE_PRIVE_MIN_USD) : un « grand axe » et un « grand
+// trajet » sont la même chose, ce qui garde la grille cohérente.
+const COMMISSION_PRIVE_SEUIL_USD = 40;
 
 // Rattachement des villes aux zones. Les villes de la côte centre-est et
 // Fumba sont assimilées aux zones voisines (ajustable sur demande).
@@ -80,11 +89,11 @@ const CITY_ZONES = {
 // se suivent le long de la même route. Une règle, deux prix :
 //   village voisin        → 12 USD
 //   un village d'écart    → 16 USD
-// Commission privée uniforme (15 %) comme partout ailleurs. Au-delà de deux
-// villages, la grille au kilomètre reprend.
+// Ces prix sont sous les 40 USD : la commission privée y est de 20 % (comme
+// tout petit trajet). Au-delà de deux villages, la grille au kilomètre reprend.
 const SPECIAL_PRIVATE_ROUTES_USD = [
-  // Transfert aéroport : sept kilomètres, très demandé (le chauffeur garde
-  // 14,45 USD sur 17, commission privée 15 %).
+  // Transfert aéroport : sept kilomètres, très demandé (17 USD, sous les
+  // 40 USD → commission 20 %, le chauffeur garde 13,60).
   { a: 'Aéroport international Abeid Amani Karume', b: 'Stone Town', usd: 17 },
   { a: 'Aéroport international Abeid Amani Karume', b: 'Stone Town Ferry', usd: 17 },
   { a: 'Aéroport (AAKIA)', b: 'Stone Town', usd: 17 },
@@ -157,11 +166,16 @@ function specialPrivateRouteUsd(pickup, dropoff) {
   return specialPrivateRoute(pickup, dropoff)?.usd;
 }
 
-// Taux de commission d'une course privée : 15 % partout. Un trajet spécial
-// peut encore forcer un taux dédié (champ `commission`), mais aucun ne le
-// fait — la règle est uniforme.
+// Taux de commission d'une course privée, décidé par le PRIX du trajet :
+// 15 % à partir de 40 USD, 20 % en dessous. Le prix privé de référence est
+// toujours le tarif USD de la grille (avant remise résident/hôtel et avant
+// conversion en TZS) : c'est la « taille » du trajet qui compte, pas
+// l'arrangement du client.
 function privateCommissionRate(pickup, dropoff) {
-  return specialPrivateRoute(pickup, dropoff)?.commission ?? COMMISSION_RATES.private;
+  const usd = privateUsdForRoute(pickup, dropoff);
+  return usd >= COMMISSION_PRIVE_SEUIL_USD
+    ? COMMISSION_RATES.private
+    : COMMISSION_RATES.privateCourt;
 }
 
 function specialLocalRouteTzs(pickup, dropoff) {
@@ -328,8 +342,8 @@ export function priceTrip(tripType, audience, route = {}) {
 
   if (audience === 'local') {
     // Course PRIVÉE : même prix que la grille touriste (grille au kilomètre
-    // ville ↔ ville incluse), converti en shillings — commission privé 10 %
-    // (ou le taux dédié du trajet spécial).
+    // ville ↔ ville incluse), converti en shillings — commission privée
+    // selon le prix (15 % dès 40 USD, 20 % en dessous).
     if (tripType === 'private') {
       const usd = privateUsdForRoute(route.pickup, route.dropoff);
       const price = Math.round(usd * config.usdToTzsRate);
@@ -347,7 +361,7 @@ export function priceTrip(tripType, audience, route = {}) {
   let taux;
   if (tripType === 'private') {
     usd = privateUsdForRoute(route.pickup, route.dropoff);
-    // 10 % (le chauffeur reçoit 90 %), sauf taux dédié du trajet spécial.
+    // 15 % dès 40 USD (chauffeur 85 %), 20 % sous 40 USD (chauffeur 80 %).
     taux = privateCommissionRate(route.pickup, route.dropoff);
   } else if (tripType === 'shared_tourist' || tripType === 'posted_return') {
     usd = sharedSeatUsdForRoute(route.pickup, route.dropoff);
