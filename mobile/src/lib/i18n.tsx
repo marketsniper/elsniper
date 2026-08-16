@@ -2831,10 +2831,10 @@ export const HEURES_CHOIX: string[] = (() => {
 
 /**
  * Nombre de jours à l'avance qu'on peut réserver (au-delà d'aujourd'hui) :
- * un mois complet. Un client qui prépare son séjour peut réserver son
- * transfert deux, trois semaines à l'avance.
+ * trois mois. Un client qui prépare son voyage peut réserver son transfert
+ * bien à l'avance — au moins deux mois, avec de la marge.
  */
-export const JOURS_RESERVATION_AVANCE = 30;
+export const JOURS_RESERVATION_AVANCE = 90;
 
 /**
  * Libellés des dates proposées, dans la langue active : Aujourd'hui, Demain,
