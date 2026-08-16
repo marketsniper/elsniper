@@ -1,8 +1,16 @@
-// Mode chauffeur — mes courses.
-// La liste vient du serveur (GET /drivers/:id/trips) : dès que l'équipe
-// assigne le chauffeur sur une course, elle apparaît ici au prochain
-// rafraîchissement — plus besoin de la référence WhatsApp, qui reste
-// utilisable en secours pour ouvrir une course directement.
+// TABLEAU DE BORD CHAUFFEUR — volontairement minimal.
+//
+// Nos chauffeurs zanzibarites ne sont pas des habitués des applications :
+// l'écran répond à DEUX questions, dans cet ordre, et rien d'autre.
+//   1. « Qu'est-ce que je dois faire maintenant ? »  → À FAIRE
+//   2. « Qu'est-ce que je peux prendre ? »           → À PRENDRE
+// En tête, ce que la journée a rapporté ; en bas, l'historique replié.
+//
+// Ce qui a été RETIRÉ volontairement : le champ où recopier une référence de
+// course (personne ne tape un identifiant à la main) et la séparation
+// courses / colis, qui multipliait les sections. Pour le chauffeur, une
+// course et un colis sont deux façons de gagner sa journée : même liste.
+// Le scanner de QR garde son propre onglet.
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
@@ -12,15 +20,11 @@ import {
   BadgeStatutColis,
   BadgeStatutTrajet,
   Bouton,
-  Carte,
-  Champ,
   Ecran,
   EncartInfo,
-  EtatVide,
   TexteErreur,
-  Titre,
 } from '@/components/ui';
-import { api, ErreurApi } from '@/lib/api';
+import { api, ErreurApi, type StatsChauffeur } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { effacerColisMasques, listerColisMasques, masquerColis } from '@/lib/colisLocal';
 import { departCourse, formaterDateRelativeI18n, libelleTailleColis, useT } from '@/lib/i18n';
@@ -42,9 +46,13 @@ export default function EcranCourses() {
   const router = useRouter();
   const { session } = useAuth();
   const { t, langue } = useT();
-  const [idSaisi, setIdSaisi] = useState('');
   const [recentes, setRecentes] = useState<Trajet[]>([]);
   // Bourse aux colis : colis payés en attente de ramassage (hôtels en tête).
+  // Gains du jour, affichés en tête d'écran : la première chose qu'un
+  // chauffeur veut savoir en ouvrant l'app.
+  const [statsJour, setStatsJour] = useState<StatsChauffeur | null>(null);
+  // Historique replié par défaut : l'écran reste court.
+  const [historiqueOuvert, setHistoriqueOuvert] = useState(false);
   // Bourse aux courses : les courses privées encore sans chauffeur.
   const [coursesDispo, setCoursesDispo] = useState<Trajet[]>([]);
   const [colisDispo, setColisDispo] = useState<Colis[]>([]);
@@ -53,7 +61,6 @@ export default function EcranCourses() {
   // Colis masqués par CE chauffeur (« Pas intéressé ») — local au téléphone.
   const [colisMasques, setColisMasques] = useState<string[]>([]);
   const [erreur, setErreur] = useState('');
-  const [charge, setCharge] = useState(false);
   const [balai, setBalai] = useState(0);
 
   const chauffeurId = session?.driver?.id ?? null;
@@ -107,6 +114,11 @@ export default function EcranCourses() {
       setRecentes(await api.listerCoursesChauffeur(chauffeurId));
     } catch {
       // silencieux : hors-ligne, on garde la dernière liste affichée
+    }
+    try {
+      setStatsJour(await api.statsChauffeur(chauffeurId));
+    } catch {
+      // silencieux : le bandeau des gains reste discret
     }
     try {
       setCoursesDispo(await api.listerCoursesDisponibles());
@@ -222,6 +234,17 @@ export default function EcranCourses() {
   );
   const nbNettoyables = coursesVisibles.filter(estNettoyable).length;
 
+  // DEUX QUESTIONS, DEUX LISTES. Ce que le chauffeur doit assurer maintenant
+  // (« À faire »), et ce qu'il peut prendre (« À prendre »). Le reste — ses
+  // courses terminées — se déplie à la demande, pour ne pas noyer l'écran.
+  const coursesEnCours = coursesVisibles.filter((trajet) => {
+    const statut = champ<StatutTrajet>(trajet, 'status', 'statut');
+    return statut !== 'completed' && statut !== 'cancelled';
+  });
+  const coursesPassees = coursesVisibles.filter((trajet) => !coursesEnCours.includes(trajet));
+  const nbAFaire = coursesEnCours.length + mesColis.length;
+  const nbAPrendre = coursesDispo.length + colisVisibles.length;
+
   const faireLeMenage = () => {
     if (!chauffeurId) return;
     Alert.alert(t('menage_titre'), t('menage_texte'), [
@@ -240,70 +263,160 @@ export default function EcranCourses() {
     }, [rafraichir])
   );
 
-  const ouvrir = async () => {
-    setErreur('');
-    // Tolère un lien collé contenant la référence (on extrait l'UUID).
-    const correspondance = idSaisi.match(
-      /[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/
-    );
-    const id = correspondance?.[0] ?? '';
-    if (!id) {
-      setErreur(t('courses_erreur_reference'));
-      return;
-    }
-    setCharge(true);
-    try {
-      await api.obtenirTrajet(id); // vérifie l'accès (chauffeur assigné)
-      setIdSaisi('');
-      router.push(`/course/${id}`);
-    } catch (e) {
-      setErreur(e instanceof ErreurApi ? e.message : t('courses_erreur_introuvable'));
-    } finally {
-      setCharge(false);
-    }
-  };
 
   return (
     <Ecran fond="vagues" onRefresh={rafraichir}>
-      <EncartInfo icone="logo-whatsapp">{t('courses_info')}</EncartInfo>
+      {/* ------------------------------------------------------------------
+          TABLEAU DE BORD CHAUFFEUR — volontairement réduit à DEUX questions :
+          « qu'est-ce que je dois faire maintenant ? » et « qu'est-ce que je
+          peux prendre ? ». Le champ de référence à recopier a disparu (on ne
+          tape pas un identifiant à la main), le scanner reste sur son onglet,
+          et l'historique se déplie à la demande.
+          ------------------------------------------------------------------ */}
+
+      {/* Ce que la journée a rapporté : gros chiffre, en shillings. */}
+      <View style={styles.bandeauJour}>
+        <Text style={styles.bandeauTitre}>{t('courses_bandeau_titre')}</Text>
+        <Text style={styles.bandeauLabel}>{t('courses_bandeau_gagne')}</Text>
+        <Text style={styles.bandeauMontant}>
+          {formaterMontant(totalEnTzs(statsJour?.today.gains ?? {}), 'TZS')}
+        </Text>
+        <Text style={styles.bandeauDetail}>
+          {t('courses_bandeau_detail', {
+            courses: statsJour?.today.courses ?? 0,
+            colis: statsJour?.today.colis ?? 0,
+          })}
+        </Text>
+      </View>
+
+      {/* Les échecs d'action (« trop tard, un autre l'a prise », « vous êtes
+          en indisponible »…) s'affichent ici, en haut, impossibles à rater. */}
+      <TexteErreur>{erreur}</TexteErreur>
+
       {partagePosition && (
         <EncartInfo icone="location-outline" ton="succes">
           {t('courses_position_active')}
         </EncartInfo>
       )}
 
-      <Carte>
-        <Titre>{t('courses_ouvrir_titre')}</Titre>
-        <Champ
-          label={t('courses_reference')}
-          value={idSaisi}
-          onChangeText={setIdSaisi}
-          placeholder={t('courses_reference_placeholder')}
-          autoCapitalize="none"
-        />
-        <TexteErreur>{erreur}</TexteErreur>
-        <Bouton
-          titre={t('courses_ouvrir_bouton')}
-          icone="open-outline"
-          onPress={ouvrir}
-          charge={charge}
-        />
-        <Bouton
-          titre={t('courses_scanner_bouton')}
-          icone="qr-code-outline"
-          variante="secondaire"
-          onPress={() => router.push('/(driver)/scanner')}
-        />
-      </Carte>
-
-      {/* BOURSE AUX COURSES — en tête d'écran : c'est là que le chauffeur
-          gagne sa journée. Le nom et le téléphone du client n'apparaissent
-          qu'une fois la course prise. */}
+      {/* ===== 1. À FAIRE MAINTENANT — ses courses et colis en cours ===== */}
       <Text style={styles.titreSection}>
-        {t('courses_dispo_titre')} ({coursesDispo.length})
+        ▶ {t('courses_a_faire')} ({nbAFaire})
       </Text>
-      {coursesDispo.length === 0 && (
-        <EncartInfo icone="car-outline">{t('courses_dispo_vide')}</EncartInfo>
+      {nbAFaire === 0 && (
+        <EncartInfo icone="checkmark-circle-outline" ton="succes">
+          {t('courses_a_faire_vide')}
+        </EncartInfo>
+      )}
+      {coursesEnCours.map((item) => {
+        const statut = champ<StatutTrajet>(item, 'status', 'statut');
+        const depart = departCourse(champ(item, 'scheduled_at', 'scheduledAt'), t, langue);
+        const presse = depart.urgence !== 'planifie';
+        return (
+          <Pressable
+            key={item.id}
+            onPress={() => router.push(`/course/${item.id}`)}
+            style={({ pressed }) => [
+              styles.carte,
+              presse && styles.carteUrgente,
+              pressed && { opacity: 0.7 },
+            ]}
+          >
+            <View style={styles.enTete}>
+              <Text style={styles.type}>{t('courses_etiquette_course')}</Text>
+              <BadgeStatutTrajet statut={statut} />
+            </View>
+            <Text style={styles.itineraire}>
+              {champ(item, 'pickup_location', 'pickupLocation') ?? '?'}{'  '}
+              <Text style={styles.fleche}>→</Text>{'  '}
+              {champ(item, 'dropoff_location', 'dropoffLocation') ?? '?'}
+            </Text>
+            <View style={styles.pied}>
+              <Text style={[styles.date, presse && styles.departTexteFort]}>{depart.texte}</Text>
+              <Text style={styles.prix}>{formaterPrix(item)}</Text>
+            </View>
+            <Bouton
+              titre={t('courses_ouvrir_court')}
+              icone="arrow-forward-circle-outline"
+              onPress={() => router.push(`/course/${item.id}`)}
+            />
+          </Pressable>
+        );
+      })}
+      {/* Mes colis : réservés via « Je prends la livraison » et en cours de
+          livraison — le scan du QR au ramassage reste obligatoire. */}
+      {mesColis.length > 0 && (
+        <>
+          <Text style={styles.titreSection}>
+            {t('courses_mes_colis')} ({mesColis.length})
+          </Text>
+          {mesColis.map((colis) => {
+            const statut = champ(colis, 'status', 'statut') as
+              | Parameters<typeof BadgeStatutColis>[0]['statut'];
+            const prixC = Number(champ(colis, 'price') ?? NaN);
+            const commissionC = Number(champ(colis, 'commission') ?? NaN);
+            const deviseC = String(champ(colis, 'currency') ?? '');
+            const telDestinataire = champ<string>(colis, 'recipient_phone', 'recipientPhone');
+            const netC =
+              Number.isFinite(prixC) && Number.isFinite(commissionC)
+                ? Math.round((prixC - commissionC) * 100) / 100
+                : null;
+            return (
+              <View key={colis.id} style={styles.carte}>
+                <View style={styles.enTete}>
+                  <BadgeStatutColis statut={statut} />
+                  <Text style={styles.type}>
+                    {libelleTailleColis(champ(colis, 'size'), t)}
+                  </Text>
+                </View>
+                <Text style={styles.itineraire}>
+                  {champ(colis, 'pickup_location', 'pickupLocation') ?? '?'}{'  '}
+                  <Text style={styles.fleche}>→</Text>{'  '}
+                  {champ(colis, 'dropoff_location', 'dropoffLocation') ?? '?'}
+                </Text>
+                <View style={styles.pied}>
+                  <Text style={styles.date}>
+                    {champ(colis, 'pickup_at', 'pickupAt')
+                      ? `⏰ ${formaterDate(champ(colis, 'pickup_at', 'pickupAt'))}`
+                      : t('ncolis_asap')}
+                  </Text>
+                  {netC !== null && (
+                    <Text style={styles.prix}>
+                      💰 {t('gain_net')} : {formaterMontant(totalEnTzs({ [deviseC]: netC }), 'TZS')}
+                    </Text>
+                  )}
+                </View>
+                {/* Raccourci d'appel : le DESTINATAIRE — c'est lui qu'il faut
+                    joindre pour la remise du colis. */}
+                {!!telDestinataire && (
+                  <Pressable
+                    onPress={() => Linking.openURL(`tel:${telDestinataire}`)}
+                    accessibilityRole="button"
+                    style={({ pressed }) => [styles.ligneAppel, pressed && { opacity: 0.6 }]}
+                  >
+                    <Text style={styles.texteAppel}>
+                      {t('colis_appeler_destinataire')} · {telDestinataire}
+                    </Text>
+                  </Pressable>
+                )}
+                <Bouton
+                  titre={t('courses_colis_scanner')}
+                  icone="qr-code-outline"
+                  variante="secondaire"
+                  onPress={() => router.push('/(driver)/scanner')}
+                />
+              </View>
+            );
+          })}
+        </>
+      )}
+
+      {/* ===== 2. À PRENDRE — courses libres, puis colis libres ===== */}
+      <Text style={styles.titreSection}>
+        ✋ {t('courses_a_prendre')} ({nbAPrendre})
+      </Text>
+      {nbAPrendre === 0 && (
+        <EncartInfo icone="car-outline">{t('courses_a_prendre_vide')}</EncartInfo>
       )}
       {coursesDispo.map((course) => {
         const net = Number(champ(course, 'net_chauffeur', 'netChauffeur') ?? NaN);
@@ -374,82 +487,10 @@ export default function EcranCourses() {
         );
       })}
 
-      {/* Mes colis : réservés via « Je prends la livraison » et en cours de
-          livraison — le scan du QR au ramassage reste obligatoire. */}
-      {mesColis.length > 0 && (
-        <>
-          <Text style={styles.titreSection}>
-            {t('courses_mes_colis')} ({mesColis.length})
-          </Text>
-          {mesColis.map((colis) => {
-            const statut = champ(colis, 'status', 'statut') as
-              | Parameters<typeof BadgeStatutColis>[0]['statut'];
-            const prixC = Number(champ(colis, 'price') ?? NaN);
-            const commissionC = Number(champ(colis, 'commission') ?? NaN);
-            const deviseC = String(champ(colis, 'currency') ?? '');
-            const telDestinataire = champ<string>(colis, 'recipient_phone', 'recipientPhone');
-            const netC =
-              Number.isFinite(prixC) && Number.isFinite(commissionC)
-                ? Math.round((prixC - commissionC) * 100) / 100
-                : null;
-            return (
-              <View key={colis.id} style={styles.carte}>
-                <View style={styles.enTete}>
-                  <BadgeStatutColis statut={statut} />
-                  <Text style={styles.type}>
-                    {libelleTailleColis(champ(colis, 'size'), t)}
-                  </Text>
-                </View>
-                <Text style={styles.itineraire}>
-                  {champ(colis, 'pickup_location', 'pickupLocation') ?? '?'}{'  '}
-                  <Text style={styles.fleche}>→</Text>{'  '}
-                  {champ(colis, 'dropoff_location', 'dropoffLocation') ?? '?'}
-                </Text>
-                <View style={styles.pied}>
-                  <Text style={styles.date}>
-                    {champ(colis, 'pickup_at', 'pickupAt')
-                      ? `⏰ ${formaterDate(champ(colis, 'pickup_at', 'pickupAt'))}`
-                      : t('ncolis_asap')}
-                  </Text>
-                  {netC !== null && (
-                    <Text style={styles.prix}>
-                      💰 {t('gain_net')} : {formaterMontant(totalEnTzs({ [deviseC]: netC }), 'TZS')}
-                    </Text>
-                  )}
-                </View>
-                {/* Raccourci d'appel : le DESTINATAIRE — c'est lui qu'il faut
-                    joindre pour la remise du colis. */}
-                {!!telDestinataire && (
-                  <Pressable
-                    onPress={() => Linking.openURL(`tel:${telDestinataire}`)}
-                    accessibilityRole="button"
-                    style={({ pressed }) => [styles.ligneAppel, pressed && { opacity: 0.6 }]}
-                  >
-                    <Text style={styles.texteAppel}>
-                      {t('colis_appeler_destinataire')} · {telDestinataire}
-                    </Text>
-                  </Pressable>
-                )}
-                <Bouton
-                  titre={t('courses_colis_scanner')}
-                  icone="qr-code-outline"
-                  variante="secondaire"
-                  onPress={() => router.push('/(driver)/scanner')}
-                />
-              </View>
-            );
-          })}
-        </>
-      )}
 
-      {/* Bourse aux colis : colis payés à ramasser (envois des hôtels en tête).
-          Ramassage via l'onglet Scanner — le QR est sur le colis. */}
-      <Text style={styles.titreSection}>
-        {t('courses_colis_titre')} ({colisVisibles.length})
-      </Text>
-      {colisVisibles.length === 0 && (
-        <EncartInfo icone="cube-outline">{t('courses_colis_vide')}</EncartInfo>
-      )}
+      {/* Colis libres — dans la MÊME section « À prendre » que les courses :
+          pour le chauffeur c'est du travail à saisir, peu importe la nature.
+          Le ramassage passe ensuite par l'onglet Scanner (QR sur le colis). */}
       {colisVisibles.map((colis) => {
         const nomHotel = champ<string>(colis, 'sender_hotel_name');
         const nomClient = champ<string>(colis, 'sender_user_name');
@@ -532,15 +573,27 @@ export default function EcranCourses() {
         </Pressable>
       )}
 
-      <Text style={styles.titreSection}>{t('courses_recentes')}</Text>
-      {coursesVisibles.length === 0 && (
-        <EtatVide
-          icone="car-outline"
-          titre={t('courses_vide_titre')}
-          message={t('courses_vide_texte')}
-        />
+      {/* ===== 3. HISTORIQUE — replié : l'écran ne montre que le travail ===== */}
+      {coursesPassees.length > 0 && (
+        <Pressable
+          onPress={() => setHistoriqueOuvert((v) => !v)}
+          accessibilityRole="button"
+          style={({ pressed }) => [styles.lienHistorique, pressed && { opacity: 0.6 }]}
+        >
+          <Ionicons
+            name={historiqueOuvert ? 'chevron-up' : 'chevron-down'}
+            size={16}
+            color={couleurs.primaireFonce}
+          />
+          <Text style={styles.texteHistorique}>
+            {historiqueOuvert
+              ? t('courses_historique_masquer')
+              : t('courses_historique_voir', { n: coursesPassees.length })}
+          </Text>
+        </Pressable>
       )}
-      {coursesVisibles.map((item) => {
+      {historiqueOuvert &&
+        coursesPassees.map((item) => {
         const statut = champ<StatutTrajet>(item, 'status', 'statut');
         // Même lecture du départ que dans la bourse : jour + heure explicites,
         // et mise en avant quand il faut partir tout de suite. Une course
@@ -595,6 +648,47 @@ export default function EcranCourses() {
 }
 
 const styles = StyleSheet.create({
+  // Bandeau des gains du jour : le gros chiffre qui accueille le chauffeur.
+  bandeauJour: {
+    backgroundColor: couleurs.nuit,
+    borderRadius: rayons.carte,
+    padding: espaces.l,
+    alignItems: 'center',
+    gap: 2,
+  },
+  bandeauTitre: {
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 1.2,
+    color: couleurs.or,
+  },
+  bandeauLabel: {
+    fontSize: 13,
+    color: couleurs.voilePhotoClair,
+  },
+  bandeauMontant: {
+    fontSize: 34,
+    fontWeight: '900',
+    color: couleurs.surPrimaire,
+    letterSpacing: -0.5,
+  },
+  bandeauDetail: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: couleurs.or,
+  },
+  lienHistorique: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: espaces.xs,
+    paddingVertical: espaces.m,
+  },
+  texteHistorique: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: couleurs.primaireFonce,
+  },
   titreSection: {
     fontSize: 15,
     fontWeight: '700',
