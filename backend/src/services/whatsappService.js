@@ -52,45 +52,79 @@ export function tripRequestMessage(trip, bookerLabel, audience) {
  * au client : ni son nom, ni son numéro. Ces informations-là, l'équipe ne les
  * confie qu'au chauffeur retenu.
  */
-export function messageGroupeChauffeurs(trip) {
-  const quand = trip.scheduled_at
-    ? new Date(trip.scheduled_at).toLocaleString('en-GB', {
-        timeZone: 'Africa/Dar_es_Salaam',
-        dateStyle: 'short',
-        timeStyle: 'short',
-      })
-    : null;
+const FUSEAU_ZANZIBAR = 'Africa/Dar_es_Salaam';
 
-  // Gain net du chauffeur : le prix moins la commission zanziGo. Les courses
-  // en dollars sont aussi données en shillings — c'est la monnaie dans
-  // laquelle un chauffeur juge une course.
+/**
+ * Jour et heure en swahili simple, à l'heure de Zanzibar :
+ * « LEO saa 14:30 », « KESHO saa 09:00 », sinon « 21/08 saa 14:00 ».
+ * On ne convertit PAS en heure swahili traditionnelle : les chauffeurs lisent
+ * l'heure du téléphone, c'est celle-là qu'il faut donner.
+ */
+function jourHeureSwahili(iso) {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return null;
+  const heure = date.toLocaleTimeString('en-GB', {
+    timeZone: FUSEAU_ZANZIBAR,
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+  const jour = (d) => d.toLocaleDateString('en-CA', { timeZone: FUSEAU_ZANZIBAR });
+  const maintenant = new Date();
+  if (jour(date) === jour(maintenant)) return `LEO saa ${heure}`;
+  if (jour(date) === jour(new Date(maintenant.getTime() + 86400000))) {
+    return `KESHO saa ${heure}`;
+  }
+  const court = date.toLocaleDateString('en-GB', {
+    timeZone: FUSEAU_ZANZIBAR,
+    day: '2-digit',
+    month: '2-digit',
+  });
+  return `${court} saa ${heure}`;
+}
+
+/**
+ * Annonce à coller dans le groupe WhatsApp des chauffeurs.
+ *
+ * EN SWAHILI UNIQUEMENT, et le plus court possible : nos chauffeurs sont
+ * zanzibarites et lisent l'annonce sur un téléphone, souvent au volant. Une
+ * ligne = une information. L'anglais a été retiré : il doublait la longueur
+ * du message pour rien.
+ *
+ * Le gain est donné en SHILLINGS, la monnaie dans laquelle un chauffeur juge
+ * une course — même quand le client paie en dollars.
+ *
+ * Ce message part dans un groupe de dizaines de chauffeurs : il ne contient
+ * NI le nom NI le numéro du client. Seul celui qui est retenu les reçoit.
+ */
+export function messageGroupeChauffeurs(trip) {
+  const quand = trip.scheduled_at ? jourHeureSwahili(trip.scheduled_at) : null;
+
   const prix = Number(trip.price);
   const commission = Number(trip.commission);
   const net = Number.isFinite(prix) && Number.isFinite(commission) ? prix - commission : null;
-  const montant =
+  const netTzs =
     net === null
       ? null
       : trip.currency === 'USD'
-        ? `${Math.round(net * 100) / 100} USD (≈ ${Math.round(
-            net * config.usdToTzsRate
-          ).toLocaleString('en-US')} TZS)`
-        : `${Math.round(net).toLocaleString('en-US')} ${trip.currency}`;
+        ? Math.round(net * config.usdToTzsRate)
+        : Math.round(net);
 
   return [
-    '🚕 zanziGo — Private ride / Safari ya binafsi',
+    '🚕 SAFARI MPYA — zanziGo',
     '',
-    `📍 ${trip.pickup_location} → ${trip.dropoff_location}`,
-    ...(quand ? [`🕒 ${quand}`] : ['🕒 As soon as possible / Haraka iwezekanavyo']),
-    ...(trip.round_trip ? ['🔁 Return trip, waiting included / Kwenda na kurudi, kusubiri kumejumuishwa'] : []),
-    ...(trip.flight_number ? [`✈️ Flight / Ndege: ${trip.flight_number}`] : []),
-    ...(trip.baby_seat ? ['👶 Baby seat needed / Kiti cha mtoto kinahitajika'] : []),
-    ...(trip.bulky_luggage ? ['🧳 Large luggage / Mizigo mikubwa'] : []),
-    ...(montant ? [`💰 Driver / Dereva: ${montant}`] : []),
+    `📍 ${trip.pickup_location} ➡️ ${trip.dropoff_location}`,
+    `🕒 ${quand ?? 'SASA HIVI — mteja anasubiri'}`,
+    ...(netTzs === null ? [] : [`💰 Unapata ${netTzs.toLocaleString('en-US')} TZS`]),
+    // Les contraintes : seulement celles qui existent, une par ligne.
+    ...(trip.round_trip ? ['🔁 Kwenda na kurudi'] : []),
+    ...(trip.flight_number ? [`✈️ Ndege ${trip.flight_number}`] : []),
+    ...(trip.baby_seat ? ['👶 Kiti cha mtoto'] : []),
+    ...(trip.bulky_luggage ? ['🧳 Mizigo mikubwa'] : []),
     '',
-    'EN — Who is available? Reply here, first to answer gets it.',
-    'SW — Nani yupo? Jibu hapa, wa kwanza kujibu atapata.',
+    'Nani yupo? Jibu hapa.',
+    'Wa kwanza kujibu ndiye atapata.',
     '',
-    `Ref: ${String(trip.id).slice(0, 8)}`,
+    `Namba: ${String(trip.id).slice(0, 8)}`,
   ].join('\n');
 }
 
