@@ -329,6 +329,126 @@ router.get(
   })
 );
 
+// ---------------------------------------------------------------------------
+// BOURSE AUX COURSES — le chauffeur se sert lui-même
+// ---------------------------------------------------------------------------
+// Jusqu'ici, seule l'équipe assignait les chauffeurs : chaque course demandait
+// une manipulation humaine. Désormais un chauffeur VÉRIFIÉ voit les courses
+// libres et en prend une en un clic (premier arrivé, premier servi), exactement
+// comme la bourse aux colis.
+//
+// L'ÉQUIPE GARDE LA MAIN : si personne ne prend la course, elle assigne depuis
+// son tableau de bord comme avant ; et elle peut reprendre une course déjà
+// prise (chauffeur injoignable) — voir PATCH /assign-driver.
+//
+// VIE PRIVÉE : avant la prise, le chauffeur voit le trajet, l'heure, ce qu'il
+// gagne et les contraintes (siège bébé, gros bagages, vol) — mais NI le nom NI
+// le téléphone du client, ni sa position exacte. Il les obtient en prenant la
+// course, comme pour un colis.
+function courseSansIdentiteClient(trip) {
+  return {
+    id: trip.id,
+    trip_type: trip.trip_type,
+    status: trip.status,
+    pickup_location: trip.pickup_location,
+    dropoff_location: trip.dropoff_location,
+    scheduled_at: trip.scheduled_at,
+    created_at: trip.created_at,
+    price: trip.price,
+    commission: trip.commission,
+    currency: trip.currency,
+    // Ce que le chauffeur touche réellement — la seule ligne qui l'intéresse.
+    net_chauffeur: Number((Number(trip.price) - Number(trip.commission)).toFixed(2)),
+    flight_number: trip.flight_number,
+    round_trip: trip.round_trip,
+    baby_seat: trip.baby_seat,
+    bulky_luggage: trip.bulky_luggage,
+  };
+}
+
+// GET /trips/disponibles — les courses libres, pour les chauffeurs vérifiés.
+// Déclarée AVANT /:id (sinon « disponibles » serait pris pour un identifiant).
+router.get(
+  '/disponibles',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    if (!isAdmin(req) && !req.auth.driverId) {
+      throw new HttpError(403, 'forbidden', 'Accès réservé aux chauffeurs');
+    }
+    const { rows } = await query(
+      `SELECT * FROM trips
+       WHERE status = 'requested' AND driver_id IS NULL AND trip_type = 'private'
+         AND created_at >= now() - interval '48 hours'
+       ORDER BY COALESCE(scheduled_at, created_at) ASC
+       LIMIT 100`
+    );
+    res.json(rows.map(courseSansIdentiteClient));
+  })
+);
+
+// POST /trips/:id/claim — « Je prends cette course ».
+// Prise ATOMIQUE : la condition driver_id IS NULL dans le UPDATE empêche deux
+// chauffeurs de prendre la même course, même au même instant.
+router.post(
+  '/:id/claim',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    if (!req.auth.driverId) {
+      throw new HttpError(403, 'forbidden', 'Accès réservé aux chauffeurs');
+    }
+    const { rows: driverRows } = await query(
+      `SELECT full_name, phone, available FROM drivers
+       WHERE id = $1 AND verification_status = 'verified'`,
+      [req.auth.driverId]
+    );
+    if (!driverRows[0]) {
+      throw new HttpError(
+        403,
+        'driver_not_verified',
+        "Votre compte chauffeur n'a pas encore été validé par l'équipe"
+      );
+    }
+    if (!driverRows[0].available) {
+      throw new HttpError(
+        409,
+        'driver_not_available',
+        'Vous êtes en indisponible — repassez disponible pour prendre une course'
+      );
+    }
+
+    const { rows } = await query(
+      `UPDATE trips SET driver_id = $1, status = 'driver_confirmed'
+       WHERE id = $2 AND status = 'requested' AND driver_id IS NULL AND trip_type = 'private'
+       RETURNING *`,
+      [req.auth.driverId, req.params.id]
+    );
+    if (!rows[0]) {
+      const trip = await getTrip(req.params.id); // 404 si la course n'existe pas
+      throw new HttpError(
+        409,
+        'course_deja_prise',
+        trip.driver_id
+          ? 'Trop tard — cette course vient d’être prise'
+          : `Cette course n'est plus disponible (statut actuel : ${trip.status})`
+      );
+    }
+
+    // L'équipe est prévenue : elle voit dans la seconde qui a pris quoi.
+    const chauffeur = driverRows[0];
+    const course = rows[0];
+    notifierEquipe(
+      '🚕 Course prise par un chauffeur',
+      [
+        `Chauffeur : ${chauffeur.full_name} (${chauffeur.phone})`,
+        `Trajet : ${course.pickup_location} → ${course.dropoff_location}`,
+        `Prix : ${course.price} ${course.currency}`,
+        `Réf : ${course.id}`,
+      ].join('\n')
+    ).catch(() => {});
+    res.json(course);
+  })
+);
+
 // GET /trips/:id — détail (le client, le chauffeur assigné ou l'équipe).
 router.get(
   '/:id',
@@ -355,11 +475,17 @@ router.patch(
     const { driverId } = assignDriverSchema.parse(req.body);
     const trip = await getTrip(req.params.id);
 
-    if (trip.status !== 'requested') {
+    // L'ÉQUIPE GARDE LA MAIN. Elle assigne une course libre ('requested'), et
+    // peut aussi REPRENDRE une course déjà prise par un chauffeur
+    // ('driver_confirmed') pour la confier à un autre — le cas concret : le
+    // chauffeur qui a cliqué ne répond plus. Au-delà (payée, démarrée,
+    // terminée, annulée), on ne touche plus : de l'argent ou une course en
+    // cours sont en jeu.
+    if (trip.status !== 'requested' && trip.status !== 'driver_confirmed') {
       throw new HttpError(
         409,
         'invalid_status',
-        `Un chauffeur ne peut être assigné que sur un trajet 'requested' (statut actuel: ${trip.status})`
+        `Un chauffeur ne peut être assigné que sur un trajet 'requested' ou 'driver_confirmed' (statut actuel: ${trip.status})`
       );
     }
 

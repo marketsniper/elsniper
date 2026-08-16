@@ -45,6 +45,8 @@ export default function EcranCourses() {
   const [idSaisi, setIdSaisi] = useState('');
   const [recentes, setRecentes] = useState<Trajet[]>([]);
   // Bourse aux colis : colis payés en attente de ramassage (hôtels en tête).
+  // Bourse aux courses : les courses privées encore sans chauffeur.
+  const [coursesDispo, setCoursesDispo] = useState<Trajet[]>([]);
   const [colisDispo, setColisDispo] = useState<Colis[]>([]);
   // Mes colis : réservés (« Je prends la livraison ») et en cours de livraison.
   const [mesColis, setMesColis] = useState<Colis[]>([]);
@@ -107,6 +109,11 @@ export default function EcranCourses() {
       // silencieux : hors-ligne, on garde la dernière liste affichée
     }
     try {
+      setCoursesDispo(await api.listerCoursesDisponibles());
+    } catch {
+      // silencieux : la bourse aux courses reste vide
+    }
+    try {
       setColisDispo(await api.listerColisARamasser());
     } catch {
       // silencieux : la section colis reste vide
@@ -119,6 +126,32 @@ export default function EcranCourses() {
     setColisMasques(await listerColisMasques(chauffeurId));
     setBalai(await lireCoupDeBalai('courses', chauffeurId));
   }, [chauffeurId]);
+
+  // « Je prends cette course » : premier arrivé, premier servi. Le serveur
+  // tranche (mise à jour atomique) — si un autre a été plus rapide, on le dit
+  // clairement et la liste se rafraîchit.
+  const [courseEnCours, setCourseEnCours] = useState<string | null>(null);
+  const prendreUneCourse = async (course: Trajet) => {
+    setCourseEnCours(course.id);
+    setErreur('');
+    try {
+      await api.prendreCourse(course.id);
+      Alert.alert(t('courses_dispo_titre'), t('courses_dispo_prise'));
+    } catch (e) {
+      setErreur(
+        e instanceof ErreurApi && e.code === 'course_deja_prise'
+          ? t('courses_dispo_trop_tard')
+          : e instanceof ErreurApi && e.code === 'driver_not_available'
+            ? t('courses_dispo_indisponible')
+            : e instanceof ErreurApi
+              ? e.message
+              : t('equipe_action_erreur')
+      );
+    } finally {
+      setCourseEnCours(null);
+      await rafraichir();
+    }
+  };
 
   // « Je prends la livraison » depuis la carte : réservation en un clic.
   const [priseEnCours, setPriseEnCours] = useState<string | null>(null);
@@ -262,6 +295,61 @@ export default function EcranCourses() {
           onPress={() => router.push('/(driver)/scanner')}
         />
       </Carte>
+
+      {/* BOURSE AUX COURSES — en tête d'écran : c'est là que le chauffeur
+          gagne sa journée. Le nom et le téléphone du client n'apparaissent
+          qu'une fois la course prise. */}
+      <Text style={styles.titreSection}>
+        {t('courses_dispo_titre')} ({coursesDispo.length})
+      </Text>
+      {coursesDispo.length === 0 && (
+        <EncartInfo icone="car-outline">{t('courses_dispo_vide')}</EncartInfo>
+      )}
+      {coursesDispo.map((course) => {
+        const net = Number(champ(course, 'net_chauffeur', 'netChauffeur') ?? NaN);
+        const devise = String(champ(course, 'currency', 'devise') ?? '');
+        const quand = champ(course, 'scheduled_at', 'scheduledAt');
+        const options: string[] = [];
+        if (champ<boolean>(course, 'round_trip', 'roundTrip') === true)
+          options.push(t('trip_aller_retour_valeur'));
+        if (champ<boolean>(course, 'baby_seat', 'babySeat') === true)
+          options.push(t('reserver_siege_bebe'));
+        if (champ<boolean>(course, 'bulky_luggage', 'bulkyLuggage') === true)
+          options.push(t('reserver_gros_bagages'));
+        const vol = champ<string>(course, 'flight_number', 'flightNumber');
+        return (
+          <View key={course.id} style={styles.carte}>
+            <Text style={styles.itineraire}>
+              {String(champ(course, 'pickup_location', 'pickupLocation') ?? '?')}{'  '}
+              <Text style={styles.fleche}>→</Text>{'  '}
+              {String(champ(course, 'dropoff_location', 'dropoffLocation') ?? '?')}
+            </Text>
+            <View style={styles.pied}>
+              <Text style={styles.date}>
+                {quand
+                  ? `⏰ ${formaterDate(quand)}`
+                  : formaterDateRelativeI18n(champ(course, 'created_at', 'createdAt'), t)}
+              </Text>
+              {Number.isFinite(net) && (
+                <Text style={styles.prix}>
+                  💰 {t('courses_dispo_gain')} :{' '}
+                  {formaterMontant(totalEnTzs({ [devise]: net }), 'TZS')}
+                </Text>
+              )}
+            </View>
+            {!!vol && <Text style={styles.date}>✈️ {t('trip_vol')} : {vol}</Text>}
+            {options.length > 0 && (
+              <Text style={styles.date}>⚙️ {options.join('  ·  ')}</Text>
+            )}
+            <Bouton
+              titre={t('courses_dispo_prendre')}
+              icone="checkmark-circle-outline"
+              onPress={() => prendreUneCourse(course)}
+              charge={courseEnCours === course.id}
+            />
+          </View>
+        );
+      })}
 
       {/* Mes colis : réservés via « Je prends la livraison » et en cours de
           livraison — le scan du QR au ramassage reste obligatoire. */}

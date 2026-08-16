@@ -272,17 +272,23 @@ describe('Courses taxi (trips)', () => {
     assert.equal(res.body.error.code, 'driver_not_available');
   });
 
-  it('assignation d\'une course déjà confirmée → 409 invalid_status', async () => {
+  it('course déjà confirmée : l\'équipe peut CHANGER de chauffeur (elle garde la main)', async () => {
+    // Depuis la bourse aux courses, un chauffeur peut se servir lui-même —
+    // l'équipe doit pouvoir reprendre la course et la confier à un autre si
+    // celui qui l'a prise ne répond plus.
     const { token, user } = await createTourist();
     const { driver } = await createVerifiedDriver();
+    const { driver: remplacant } = await createVerifiedDriver({ fullName: 'Chauffeur Remplaçant' });
     const trip = await createTrip(token, user.id);
     await assignDriver(trip.id, driver.id);
-    const again = await request(app)
+
+    const change = await request(app)
       .patch(`/api/trips/${trip.id}/assign-driver`)
       .set(adminHeaders())
-      .send({ driverId: driver.id });
-    assert.equal(again.status, 409);
-    assert.equal(again.body.error.code, 'invalid_status');
+      .send({ driverId: remplacant.id });
+    assert.equal(change.status, 200, JSON.stringify(change.body));
+    assert.equal(change.body.driver_id, remplacant.id);
+    assert.equal(change.body.status, 'driver_confirmed');
   });
 
   it('paiement avant confirmation d\'un chauffeur → 409 invalid_status', async () => {

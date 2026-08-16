@@ -11,7 +11,13 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { Langue } from '@/lib/i18n';
 import { couleurs, espaces, rayons } from '@/lib/theme';
 
-const LOCALES: Record<Langue, string> = { fr: 'fr-FR', en: 'en-GB', sw: 'sw-TZ' };
+const LOCALES: Record<Langue, string> = {
+  fr: 'fr-FR',
+  en: 'en-GB',
+  sw: 'sw-TZ',
+  it: 'it-IT',
+  de: 'de-DE',
+};
 
 // Date locale ramenée à minuit (comparaisons de jours, sans l'heure).
 const aMinuit = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());

@@ -995,6 +995,21 @@ export async function listerCoursesChauffeur(driverId: string, equipe = false): 
   return commeListe<Trajet>(reponse, 'trips');
 }
 
+/**
+ * GET /trips/disponibles — la BOURSE AUX COURSES : les courses privées encore
+ * sans chauffeur. Le nom et le téléphone du client n'y figurent pas : le
+ * chauffeur les obtient en prenant la course.
+ */
+export async function listerCoursesDisponibles(): Promise<Trajet[]> {
+  const reponse = await requete<unknown>('/trips/disponibles');
+  return commeListe<Trajet>(reponse, 'trips');
+}
+
+/** POST /trips/:id/claim — « Je prends cette course » (premier arrivé). */
+export async function prendreCourse(id: string): Promise<Trajet> {
+  return requete<Trajet>(`/trips/${id}/claim`, { methode: 'POST' });
+}
+
 /** Position GPS d'un chauffeur (table driver_positions). */
 export interface PositionChauffeur {
   driver_id: string;
@@ -1403,6 +1418,8 @@ export const api = {
   envoyerPositionChauffeur,
   statsChauffeur,
   listerCoursesChauffeur,
+  listerCoursesDisponibles,
+  prendreCourse,
   positionColis,
   colisParQr,
   recupererColis,

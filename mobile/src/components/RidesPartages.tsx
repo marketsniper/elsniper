@@ -28,7 +28,13 @@ import { useT, type FonctionT, type Langue } from '@/lib/i18n';
 import { couleurs, espaces, ombres, rayons } from '@/lib/theme';
 import { champ, DESTINATIONS_RIDES, formaterMontant, type Ride, type TypeCompte } from '@/lib/types';
 
-const LOCALES: Record<Langue, string> = { fr: 'fr-FR', en: 'en-GB', sw: 'sw-TZ' };
+const LOCALES: Record<Langue, string> = {
+  fr: 'fr-FR',
+  en: 'en-GB',
+  sw: 'sw-TZ',
+  it: 'it-IT',
+  de: 'de-DE',
+};
 
 /** Heure de départ « 14:30 » (le jour est porté par le bandeau de groupe). */
 function heureDepart(valeur: unknown, langue: Langue): string {
