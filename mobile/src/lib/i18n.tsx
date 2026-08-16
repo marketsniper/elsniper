@@ -740,6 +740,23 @@ const CHAINES = {
     sw: 'Bei kamili kwa USD, akaunti inaanza mara moja.',
   },
   client_type_resident: { fr: 'Résident', en: 'Resident', sw: 'Mkazi' },
+  client_type_local: { fr: 'Local', en: 'Local', sw: 'Mwenyeji' },
+  // --- Fiche course côté équipe : heure, détails dépliables, point exact ---
+  equipe_course_demandee: { fr: 'Demandée', en: 'Requested', sw: 'Iliombwa' },
+  equipe_course_details_voir: { fr: 'Voir les détails', en: 'View details', sw: 'Ona maelezo' },
+  equipe_course_details_masquer: { fr: 'Masquer les détails', en: 'Hide details', sw: 'Ficha maelezo' },
+  equipe_course_point_exact: {
+    fr: 'Point de rendez-vous exact',
+    en: 'Exact pickup point',
+    sw: 'Mahali hasa pa kuchukua',
+  },
+  equipe_course_point_non_partage: {
+    fr: 'Position exacte non partagée par le client',
+    en: 'Client has not shared an exact location',
+    sw: 'Mteja hajashiriki mahali hasa',
+  },
+  equipe_course_commission: { fr: 'Commission zanziGo', en: 'zanziGo commission', sw: 'Kamisheni ya zanziGo' },
+  equipe_course_net_chauffeur: { fr: 'Le chauffeur reçoit', en: 'Driver receives', sw: 'Dereva anapokea' },
   client_type_resident_desc: {
     fr: 'Prix en USD avec remise de 10 % après validation de vos documents de résidence (sous 48 h).',
     en: 'USD prices with a 10% discount once your residence documents are validated (within 48 h).',

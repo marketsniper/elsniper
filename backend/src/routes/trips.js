@@ -290,7 +290,7 @@ router.get(
       const { rows } = await query(
         `SELECT t.*, ${CHAMPS_CHAUFFEUR},
                 u.full_name AS booker_name, u.phone AS booker_phone,
-                u.account_type AS booker_account_type,
+                u.email AS booker_email, u.account_type AS booker_account_type,
                 h.name AS hotel_name
          FROM trips t
          LEFT JOIN drivers d ON d.id = t.driver_id

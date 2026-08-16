@@ -124,6 +124,8 @@ export default function EcranEquipe() {
   const [sauvegardeEnCours, setSauvegardeEnCours] = useState(false);
   // Courses passées : jours dépliés dans l'historique (repliés par défaut).
   const [joursOuverts, setJoursOuverts] = useState<Record<string, boolean>>({});
+  // Courses à valider : fiche détaillée dépliée au clic (repliée par défaut).
+  const [detailsCourse, setDetailsCourse] = useState<Record<string, boolean>>({});
   // Document affiché en plein écran (permis, assurance, carte NIDA…).
   const [documentOuvert, setDocumentOuvert] = useState<{ url: string; titre: string } | null>(null);
   // Alertes instantanées sur CE téléphone.
@@ -663,13 +665,52 @@ export default function EcranEquipe() {
           champ<string>(course, 'client_phone', 'clientPhone') ??
           champ<string>(course, 'booker_phone', 'bookerPhone');
         const partenaire = champ<string>(course, 'hotel_name', 'hotelName');
+        // Type de client (touriste / résident / local) — langue et tarif.
+        const typeCompte = champ<string>(course, 'booker_account_type', 'bookerAccountType');
+        const libelleCompte =
+          typeCompte === 'local'
+            ? t('client_type_local')
+            : typeCompte === 'resident'
+              ? t('client_type_resident')
+              : typeCompte === 'tourist'
+                ? t('client_type_touriste')
+                : null;
+        // Heure : prévue si le client en a choisi une, sinon depuis quand la
+        // demande attend (created_at) — toujours quelque chose à l'écran.
+        const heurePrevue = champ(course, 'scheduled_at', 'scheduledAt');
+        const heureDemande = champ(course, 'created_at', 'createdAt');
+        // Fiche détaillée dépliée au clic.
+        const ouvert = !!detailsCourse[course.id];
+        const pickupLat = Number(champ(course, 'pickup_lat', 'pickupLat') ?? NaN);
+        const pickupLng = Number(champ(course, 'pickup_lng', 'pickupLng') ?? NaN);
+        const pointExact = Number.isFinite(pickupLat) && Number.isFinite(pickupLng);
+        const statutCourse = champ<StatutTrajet>(course, 'status', 'statut');
+        const commission = champ<number | string>(course, 'commission');
         return (
           <Carte key={course.id}>
-            <Text style={styles.itineraire}>
-              {String(champ(course, 'pickup_location', 'pickupLocation') ?? '?')}{'  '}
-              <Text style={styles.fleche}>→</Text>{'  '}
-              {String(champ(course, 'dropoff_location', 'dropoffLocation') ?? '?')}
-            </Text>
+            {/* Toucher l'itinéraire ouvre / referme la fiche détaillée. */}
+            <Pressable
+              onPress={() =>
+                setDetailsCourse((prev) => ({ ...prev, [course.id]: !prev[course.id] }))
+              }
+              accessibilityRole="button"
+              style={({ pressed }) => [
+                { flexDirection: 'row', alignItems: 'flex-start', gap: 6 },
+                pressed && { opacity: 0.6 },
+              ]}
+            >
+              <Text style={[styles.itineraire, { flex: 1 }]}>
+                {String(champ(course, 'pickup_location', 'pickupLocation') ?? '?')}{'  '}
+                <Text style={styles.fleche}>→</Text>{'  '}
+                {String(champ(course, 'dropoff_location', 'dropoffLocation') ?? '?')}
+              </Text>
+              <Ionicons
+                name={ouvert ? 'chevron-up' : 'chevron-down'}
+                size={18}
+                color={couleurs.texteSecondaire}
+                style={{ marginTop: 2 }}
+              />
+            </Pressable>
             <View style={styles.ligneDetails}>
               <Badge texte={type ? libelleTypeTrajet(type, t) : '—'} ton="primaire" />
               <Text style={styles.prix}>{formaterPrix(course)}</Text>
@@ -688,14 +729,22 @@ export default function EcranEquipe() {
                 <Text style={styles.detail}>{String(partenaire)}</Text>
               </View>
             )}
-            {/* QUAND la course est prévue — l'info clé pour valider et choisir
-                le bon chauffeur. Mise en avant (gras, corail). */}
-            {!!champ(course, 'scheduled_at', 'scheduledAt') && (
+            {/* QUAND — toujours affiché : heure prévue si le client en a choisi
+                une, sinon depuis combien de temps la demande attend. L'info clé
+                pour valider et choisir le bon chauffeur (gras, corail). */}
+            <View style={styles.ligneDetail}>
+              <Ionicons name="time-outline" size={14} color={couleurs.primaireFonce} />
+              <Text style={[styles.detail, { color: couleurs.primaireFonce, fontWeight: '700' }]}>
+                {heurePrevue
+                  ? `${t('equipe_paiement_depart')} : ${formaterDate(heurePrevue)}`
+                  : `${t('equipe_course_demandee')} ${formaterDateRelativeI18n(heureDemande, t)}`}
+              </Text>
+            </View>
+            {/* Type de client : touriste, résident ou local (langue, tarif). */}
+            {!!libelleCompte && (
               <View style={styles.ligneDetail}>
-                <Ionicons name="time-outline" size={14} color={couleurs.primaireFonce} />
-                <Text style={[styles.detail, { color: couleurs.primaireFonce, fontWeight: '700' }]}>
-                  {t('equipe_paiement_depart')} : {formaterDate(champ(course, 'scheduled_at', 'scheduledAt'))}
-                </Text>
+                <Ionicons name="pricetag-outline" size={14} color={couleurs.texteSecondaire} />
+                <Text style={styles.detail}>{libelleCompte}</Text>
               </View>
             )}
             {/* Téléphone du client : un appui = appel direct (le dispatch peut
@@ -738,6 +787,63 @@ export default function EcranEquipe() {
                 </View>
               ) : null;
             })()}
+            {/* FICHE DÉTAILLÉE au clic : point de rendez-vous exact (carte),
+                heure de la demande, e-mail, statut, répartition du prix. */}
+            {ouvert && (
+              <View style={styles.detailsCourse}>
+                {pointExact ? (
+                  <>
+                    <Text style={styles.detailsTitre}>{t('equipe_course_point_exact')}</Text>
+                    <CartePosition
+                      lat={pickupLat}
+                      lng={pickupLng}
+                      titre={String(champ(course, 'pickup_location', 'pickupLocation') ?? '')}
+                    />
+                  </>
+                ) : (
+                  <View style={styles.ligneDetail}>
+                    <Ionicons name="location-outline" size={14} color={couleurs.texteSecondaire} />
+                    <Text style={styles.detail}>{t('equipe_course_point_non_partage')}</Text>
+                  </View>
+                )}
+                <View style={styles.ligneDetail}>
+                  <Ionicons name="calendar-outline" size={14} color={couleurs.texteSecondaire} />
+                  <Text style={styles.detail}>
+                    {t('equipe_paiement_demande')} {formaterDate(heureDemande)}
+                  </Text>
+                </View>
+                {!!champ(course, 'booker_email', 'bookerEmail') && (
+                  <View style={styles.ligneDetail}>
+                    <Ionicons name="mail-outline" size={14} color={couleurs.texteSecondaire} />
+                    <Text style={styles.detail}>
+                      {String(champ(course, 'booker_email', 'bookerEmail'))}
+                    </Text>
+                  </View>
+                )}
+                {!!statutCourse && (
+                  <View style={[styles.ligneDetail, { marginTop: 2 }]}>
+                    <BadgeStatutTrajet statut={statutCourse} />
+                  </View>
+                )}
+                {commission !== undefined &&
+                  (() => {
+                    const devise = champ<string>(course, 'currency', 'devise') ?? '';
+                    const prix = Number(champ(course, 'price', 'prix') ?? 0);
+                    const com = Number(commission);
+                    return (
+                      <View style={styles.ligneDetail}>
+                        <Ionicons name="cash-outline" size={14} color={couleurs.texteSecondaire} />
+                        <Text style={styles.detail}>
+                          {t('equipe_course_commission')} :{' '}
+                          {formaterPrix({ price: com, currency: devise })} ·{' '}
+                          {t('equipe_course_net_chauffeur')} :{' '}
+                          {formaterPrix({ price: prix - com, currency: devise })}
+                        </Text>
+                      </View>
+                    );
+                  })()}
+              </View>
+            )}
             {/* Course privée : l'annonce toute prête (anglais + swahili) pour
                 le groupe WhatsApp des chauffeurs. Un appui, on choisit le
                 groupe, c'est envoyé — sans nom ni numéro du client. */}
@@ -1664,6 +1770,21 @@ const styles = StyleSheet.create({
   detail: {
     fontSize: 13,
     color: couleurs.texteSecondaire,
+  },
+  // Fiche détaillée dépliée au clic : bloc séparé par un filet, sous la carte.
+  detailsCourse: {
+    marginTop: espaces.s,
+    paddingTop: espaces.s,
+    borderTopWidth: 1,
+    borderTopColor: couleurs.bordure,
+    gap: espaces.xs,
+  },
+  detailsTitre: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: couleurs.texteSecondaire,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
   },
   prix: {
     fontSize: 15,
