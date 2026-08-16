@@ -2830,13 +2830,21 @@ export const HEURES_CHOIX: string[] = (() => {
 })();
 
 /**
+ * Nombre de jours à l'avance qu'on peut réserver (au-delà d'aujourd'hui) :
+ * un mois complet. Un client qui prépare son séjour peut réserver son
+ * transfert deux, trois semaines à l'avance.
+ */
+export const JOURS_RESERVATION_AVANCE = 30;
+
+/**
  * Libellés des dates proposées, dans la langue active : Aujourd'hui, Demain,
- * puis les 6 jours suivants formatés (ex. « ven. 14 août »). L'index dans la
- * liste correspond au décalage en jours par rapport à aujourd'hui.
+ * puis les jours suivants formatés (ex. « ven. 14 août »), jusqu'à un mois à
+ * l'avance. L'index dans la liste correspond au décalage en jours par rapport
+ * à aujourd'hui.
  */
 export function libellesDates(t: FonctionT, langue: Langue): string[] {
   const libelles = [t('sel_aujourdhui'), t('sel_demain')];
-  for (let i = 2; i <= 7; i += 1) {
+  for (let i = 2; i <= JOURS_RESERVATION_AVANCE; i += 1) {
     const date = new Date();
     date.setDate(date.getDate() + i);
     libelles.push(
