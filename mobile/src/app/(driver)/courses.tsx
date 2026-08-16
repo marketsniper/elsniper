@@ -42,6 +42,9 @@ import {
   type Trajet,
 } from '@/lib/types';
 
+/** Les quatre cases du menu chauffeur. */
+type CaseChauffeur = 'encours' | 'aprendre' | 'colis';
+
 export default function EcranCourses() {
   const router = useRouter();
   const { session } = useAuth();
@@ -53,6 +56,8 @@ export default function EcranCourses() {
   const [statsJour, setStatsJour] = useState<StatsChauffeur | null>(null);
   // Historique replié par défaut : l'écran reste court.
   const [historiqueOuvert, setHistoriqueOuvert] = useState(false);
+  // QUATRE CASES, une seule à la fois. null = le menu.
+  const [caseOuverte, setCaseOuverte] = useState<CaseChauffeur | null>(null);
   // Bourse aux courses : les courses privées encore sans chauffeur.
   const [coursesDispo, setCoursesDispo] = useState<Trajet[]>([]);
   const [colisDispo, setColisDispo] = useState<Colis[]>([]);
@@ -299,11 +304,93 @@ export default function EcranCourses() {
         </EncartInfo>
       )}
 
-      {/* ===== 1. À FAIRE MAINTENANT — ses courses et colis en cours ===== */}
+      {/* ===== LE MENU : quatre cases, une seule chose à choisir ===== */}
+      {caseOuverte === null && (
+        <>
+          <Text style={styles.introMenu}>{t('courses_menu_intro')}</Text>
+          <View style={styles.grilleMenu}>
+            {(
+              [
+                {
+                  cle: 'encours' as const,
+                  label: t('courses_case_encours'),
+                  icone: 'car-sport-outline' as const,
+                  n: coursesEnCours.length,
+                },
+                {
+                  cle: 'aprendre' as const,
+                  label: t('courses_case_aprendre'),
+                  icone: 'hand-left-outline' as const,
+                  n: coursesDispo.length,
+                },
+                {
+                  cle: 'colis' as const,
+                  label: t('courses_case_colis'),
+                  icone: 'cube-outline' as const,
+                  n: mesColis.length + colisVisibles.length,
+                },
+              ] satisfies { cle: CaseChauffeur; label: string; icone: React.ComponentProps<typeof Ionicons>['name']; n: number }[]
+            ).map((rubrique) => (
+              <Pressable
+                key={rubrique.cle}
+                onPress={() => setCaseOuverte(rubrique.cle)}
+                accessibilityRole="button"
+                style={({ pressed }) => [styles.caseMenu, pressed && { opacity: 0.75 }]}
+              >
+                <View style={styles.bulleMenu}>
+                  <Ionicons name={rubrique.icone} size={30} color={couleurs.primaire} />
+                </View>
+                <Text style={styles.labelMenu}>{rubrique.label}</Text>
+                <View style={[styles.pastilleMenu, rubrique.n > 0 && styles.pastilleMenuAction]}>
+                  <Text
+                    style={[
+                      styles.textePastilleMenu,
+                      rubrique.n > 0 && styles.textePastilleMenuAction,
+                    ]}
+                  >
+                    {rubrique.n}
+                  </Text>
+                </View>
+              </Pressable>
+            ))}
+            {/* Quatrième case : poster son propre trajet — elle n'ouvre pas
+                une liste mais l'écran des annonces, déjà existant. */}
+            <Pressable
+              onPress={() => router.push('/(driver)/annonces')}
+              accessibilityRole="button"
+              style={({ pressed }) => [styles.caseMenu, pressed && { opacity: 0.75 }]}
+            >
+              <View style={styles.bulleMenu}>
+                <Ionicons name="megaphone-outline" size={30} color={couleurs.primaire} />
+              </View>
+              <Text style={styles.labelMenu}>{t('courses_case_poster')}</Text>
+              <View style={styles.pastilleMenu}>
+                <Ionicons name="arrow-forward" size={14} color={couleurs.primaireFonce} />
+              </View>
+            </Pressable>
+          </View>
+        </>
+      )}
+
+      {/* Dans une case : le chemin du retour, toujours au même endroit. */}
+      {caseOuverte !== null && (
+        <Pressable
+          onPress={() => setCaseOuverte(null)}
+          accessibilityRole="button"
+          style={({ pressed }) => [styles.retourMenu, pressed && { opacity: 0.7 }]}
+        >
+          <Ionicons name="chevron-back" size={18} color={couleurs.primaireFonce} />
+          <Text style={styles.texteRetourMenu}>{t('courses_retour_menu')}</Text>
+        </Pressable>
+      )}
+
+      {/* ===== CASE 1 — COURSE EN COURS ===== */}
+      {caseOuverte === 'encours' && (
+        <>
       <Text style={styles.titreSection}>
-        ▶ {t('courses_a_faire')} ({nbAFaire})
+        {t('courses_case_encours')} ({coursesEnCours.length})
       </Text>
-      {nbAFaire === 0 && (
+      {coursesEnCours.length === 0 && (
         <EncartInfo icone="checkmark-circle-outline" ton="succes">
           {t('courses_a_faire_vide')}
         </EncartInfo>
@@ -343,9 +430,13 @@ export default function EcranCourses() {
           </Pressable>
         );
       })}
+        </>
+      )}
+
+      {/* ===== CASE 3 — COLIS : les miens, puis ceux à prendre ===== */}
       {/* Mes colis : réservés via « Je prends la livraison » et en cours de
           livraison — le scan du QR au ramassage reste obligatoire. */}
-      {mesColis.length > 0 && (
+      {caseOuverte === 'colis' && mesColis.length > 0 && (
         <>
           <Text style={styles.titreSection}>
             {t('courses_mes_colis')} ({mesColis.length})
@@ -411,11 +502,13 @@ export default function EcranCourses() {
         </>
       )}
 
-      {/* ===== 2. À PRENDRE — courses libres, puis colis libres ===== */}
+      {/* ===== CASE 2 — COURSE À PRENDRE ===== */}
+      {caseOuverte === 'aprendre' && (
+        <>
       <Text style={styles.titreSection}>
-        ✋ {t('courses_a_prendre')} ({nbAPrendre})
+        {t('courses_case_aprendre')} ({coursesDispo.length})
       </Text>
-      {nbAPrendre === 0 && (
+      {coursesDispo.length === 0 && (
         <EncartInfo icone="car-outline">{t('courses_a_prendre_vide')}</EncartInfo>
       )}
       {coursesDispo.map((course) => {
@@ -486,11 +579,19 @@ export default function EcranCourses() {
           </View>
         );
       })}
+        </>
+      )}
 
-
-      {/* Colis libres — dans la MÊME section « À prendre » que les courses :
-          pour le chauffeur c'est du travail à saisir, peu importe la nature.
-          Le ramassage passe ensuite par l'onglet Scanner (QR sur le colis). */}
+      {/* Colis libres — dans la case COLIS, sous ceux que le chauffeur porte
+          déjà. Le ramassage passe par l'onglet Scanner (QR sur le colis). */}
+      {caseOuverte === 'colis' && (
+        <>
+      <Text style={styles.titreSection}>
+        {t('courses_colis_a_prendre')} ({colisVisibles.length})
+      </Text>
+      {colisVisibles.length === 0 && (
+        <EncartInfo icone="cube-outline">{t('courses_colis_vide')}</EncartInfo>
+      )}
       {colisVisibles.map((colis) => {
         const nomHotel = champ<string>(colis, 'sender_hotel_name');
         const nomClient = champ<string>(colis, 'sender_user_name');
@@ -572,9 +673,12 @@ export default function EcranCourses() {
           </Text>
         </Pressable>
       )}
+        </>
+      )}
 
-      {/* ===== 3. HISTORIQUE — replié : l'écran ne montre que le travail ===== */}
-      {coursesPassees.length > 0 && (
+      {/* Historique — replié, et seulement dans la case « Course en cours » :
+          il n'a rien à faire sur le menu ni dans les autres cases. */}
+      {caseOuverte === 'encours' && coursesPassees.length > 0 && (
         <Pressable
           onPress={() => setHistoriqueOuvert((v) => !v)}
           accessibilityRole="button"
@@ -676,6 +780,72 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: couleurs.or,
+  },
+  // Le menu à quatre cases : de grosses cibles, faciles à toucher.
+  introMenu: {
+    fontSize: 14,
+    color: couleurs.texteSecondaire,
+    textAlign: 'center',
+  },
+  grilleMenu: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: espaces.m,
+  },
+  caseMenu: {
+    flexBasis: '45%',
+    flexGrow: 1,
+    backgroundColor: couleurs.carteTranslucide,
+    borderRadius: rayons.carte,
+    paddingVertical: espaces.xl,
+    paddingHorizontal: espaces.m,
+    alignItems: 'center',
+    gap: espaces.s,
+    ...ombres.carte,
+  },
+  bulleMenu: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: couleurs.primaireClair,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  labelMenu: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: couleurs.encre,
+    textAlign: 'center',
+  },
+  pastilleMenu: {
+    minWidth: 32,
+    alignItems: 'center',
+    backgroundColor: couleurs.primaireClair,
+    borderRadius: rayons.pastille,
+    paddingHorizontal: espaces.s,
+    paddingVertical: 3,
+  },
+  pastilleMenuAction: {
+    backgroundColor: couleurs.primaire,
+  },
+  textePastilleMenu: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: couleurs.primaireFonce,
+  },
+  textePastilleMenuAction: {
+    color: couleurs.surPrimaire,
+  },
+  retourMenu: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: espaces.xs,
+    paddingVertical: espaces.s,
+  },
+  texteRetourMenu: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: couleurs.primaireFonce,
   },
   lienHistorique: {
     flexDirection: 'row',
