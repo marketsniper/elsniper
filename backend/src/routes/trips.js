@@ -87,6 +87,10 @@ const assignDriverSchema = z.object({ driverId: z.string().uuid() });
 // Sans filtre `statuses`, TOUTES les courses sont effacées : l'appelant doit
 // alors confirmer explicitement (`confirm: 'EFFACER TOUT'`), pour qu'un appel
 // distrait ne vide pas l'historique des gains.
+//
+// Attention : les options `partages` et `colis` ne connaissent pas le filtre
+// par statut — elles vident leur table entière. C'est voulu : on s'en sert
+// pour repartir d'une base propre, pas pour trier.
 const purgeSchema = z
   .object({
     statuses: z
@@ -97,6 +101,10 @@ const purgeSchema = z
     // réservées et demandes en liste d'attente. Sans ça, le chiffre d'affaires
     // du tableau garde un reliquat que plus aucune course n'explique.
     partages: z.boolean().optional(),
+    // Efface AUSSI les colis (table à part) : un colis livré pendant les
+    // essais continue sinon d'alimenter à lui seul le chiffre d'affaires du
+    // tableau de bord, alors que plus aucune course ne l'accompagne.
+    colis: z.boolean().optional(),
     confirm: z.string().optional(),
   })
   .refine((d) => d.statuses !== undefined || d.confirm === 'EFFACER TOUT', {
@@ -108,7 +116,7 @@ router.post(
   '/purge',
   requireAdmin,
   asyncHandler(async (req, res) => {
-    const { statuses, partages } = purgeSchema.parse(req.body ?? {});
+    const { statuses, partages, colis } = purgeSchema.parse(req.body ?? {});
 
     const resultat = await withTransaction(async (client) => {
       const filtre = statuses ? 'WHERE status = ANY($1)' : '';
@@ -144,7 +152,23 @@ router.post(
         attentes = w.rowCount;
       }
 
-      return { courses, paiements, annonces, places, attentes };
+      let colisEfaces = 0;
+      if (colis) {
+        // Les colis vivent dans leur propre table : la purge des courses ne
+        // les touche pas. Deux références à défaire avant de les supprimer —
+        // leurs paiements, et les bons de fidélité qui pointent vers eux.
+        const pc = await client.query('DELETE FROM payments WHERE package_id IS NOT NULL');
+        paiements += pc.rowCount;
+        // Le bon de fidélité, lui, reste acquis à l'hôtel : on coupe juste le
+        // lien vers le colis effacé (sans quoi la clé étrangère bloquerait).
+        await client.query(
+          'UPDATE hotel_vouchers SET package_id = NULL WHERE package_id IS NOT NULL'
+        );
+        const c = await client.query('DELETE FROM packages');
+        colisEfaces = c.rowCount;
+      }
+
+      return { courses, paiements, annonces, places, attentes, colis: colisEfaces };
     });
 
     res.json({ ...resultat, statuts: statuses ?? 'tous', partages: !!partages });

@@ -17,6 +17,7 @@ import React, { useCallback, useState } from 'react';
 import { Alert, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import {
+  Badge,
   BadgeStatutColis,
   BadgeStatutTrajet,
   Bouton,
@@ -27,7 +28,13 @@ import {
 import { api, ErreurApi, type StatsChauffeur } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { effacerColisMasques, listerColisMasques, masquerColis } from '@/lib/colisLocal';
-import { departCourse, formaterDateRelativeI18n, libelleTailleColis, useT } from '@/lib/i18n';
+import {
+  departCourse,
+  formaterDateRelativeI18n,
+  libelleStatutRide,
+  libelleTailleColis,
+  useT,
+} from '@/lib/i18n';
 import { estBalaye, lireCoupDeBalai, passerCoupDeBalai } from '@/lib/menageLocal';
 import { couleurs, espaces, ombres, rayons } from '@/lib/theme';
 import {
@@ -38,12 +45,14 @@ import {
   totalEnTzs,
   trajetExpire,
   type Colis,
+  type Ride,
+  type StatutRide,
   type StatutTrajet,
   type Trajet,
 } from '@/lib/types';
 
-/** Les quatre cases du menu chauffeur. */
-type CaseChauffeur = 'encours' | 'aprendre' | 'colis';
+/** Les cases du menu chauffeur (« Poster un trajet » ouvre un autre écran). */
+type CaseChauffeur = 'encours' | 'aprendre' | 'colis' | 'mestrajets';
 
 export default function EcranCourses() {
   const router = useRouter();
@@ -63,6 +72,9 @@ export default function EcranCourses() {
   const [colisDispo, setColisDispo] = useState<Colis[]>([]);
   // Mes colis : réservés (« Je prends la livraison ») et en cours de livraison.
   const [mesColis, setMesColis] = useState<Colis[]>([]);
+  // Mes trajets postés (taxis partagés) : le chauffeur veut voir ce qu'il a
+  // publié et si des places se remplissent, sans repasser par l'onglet.
+  const [mesTrajets, setMesTrajets] = useState<Ride[]>([]);
   // Colis masqués par CE chauffeur (« Pas intéressé ») — local au téléphone.
   const [colisMasques, setColisMasques] = useState<string[]>([]);
   const [erreur, setErreur] = useState('');
@@ -139,6 +151,11 @@ export default function EcranCourses() {
       setMesColis(await api.listerMesColisChauffeur());
     } catch {
       // silencieux : la section « mes colis » reste vide
+    }
+    try {
+      setMesTrajets(await api.listerMesRides());
+    } catch {
+      // silencieux : la case « mes trajets » reste vide
     }
     setColisMasques(await listerColisMasques(chauffeurId));
     setBalai(await lireCoupDeBalai('courses', chauffeurId));
@@ -250,6 +267,19 @@ export default function EcranCourses() {
   const nbAFaire = coursesEnCours.length + mesColis.length;
   const nbAPrendre = coursesDispo.length + colisVisibles.length;
 
+  // Mes trajets postés : ceux encore en ligne d'abord (le compteur de la case
+  // ne compte QUE ceux-là — un trajet clôturé n'appelle aucune action), et le
+  // PROCHAIN DÉPART en tête : c'est celui-là que le chauffeur doit préparer.
+  const quandPart = (ride: Ride) =>
+    new Date(String(champ(ride, 'departure_at', 'departureAt') ?? 0)).getTime() || 0;
+  const trajetsOuverts = mesTrajets
+    .filter((ride) => champ<StatutRide>(ride, 'status', 'statut') === 'open')
+    .sort((a, b) => quandPart(a) - quandPart(b));
+  // Les clôturés/annulés se lisent à l'envers : le plus récent d'abord.
+  const trajetsClos = mesTrajets
+    .filter((ride) => champ<StatutRide>(ride, 'status', 'statut') !== 'open')
+    .sort((a, b) => quandPart(b) - quandPart(a));
+
   const faireLeMenage = () => {
     if (!chauffeurId) return;
     Alert.alert(t('menage_titre'), t('menage_texte'), [
@@ -328,6 +358,12 @@ export default function EcranCourses() {
                   label: t('courses_case_colis'),
                   icone: 'cube-outline' as const,
                   n: mesColis.length + colisVisibles.length,
+                },
+                {
+                  cle: 'mestrajets' as const,
+                  label: t('courses_case_mes_trajets'),
+                  icone: 'bus-outline' as const,
+                  n: trajetsOuverts.length,
                 },
               ] satisfies { cle: CaseChauffeur; label: string; icone: React.ComponentProps<typeof Ionicons>['name']; n: number }[]
             ).map((rubrique) => (
@@ -676,6 +712,76 @@ export default function EcranCourses() {
         </>
       )}
 
+      {/* ===== CASE 4 — MES TRAJETS POSTÉS =====
+          Le chauffeur publie ses propres taxis partagés ; il veut savoir, sans
+          chercher, si des places se sont vendues. Une carte = un trajet, avec
+          la seule question qui compte : combien de places restent, combien
+          j'ai déjà gagné. Le détail (qui a réservé) s'ouvre au toucher. */}
+      {caseOuverte === 'mestrajets' && (
+        <>
+          <Text style={styles.titreSection}>
+            {t('courses_case_mes_trajets')} ({trajetsOuverts.length})
+          </Text>
+          {mesTrajets.length === 0 && (
+            <EncartInfo icone="bus-outline">{t('courses_mes_trajets_vide')}</EncartInfo>
+          )}
+          {[...trajetsOuverts, ...trajetsClos].map((ride) => {
+            const statut = champ<StatutRide>(ride, 'status', 'statut');
+            const ouvert = statut === 'open';
+            const total = Number(champ(ride, 'seats_total', 'seatsTotal') ?? 0);
+            const restantes = Number(champ(ride, 'seats_available', 'seatsAvailable') ?? 0);
+            const vendues = Math.max(0, total - restantes);
+            // Gain net des places PAYÉES seulement, tout ramené en shillings.
+            const reservations = champ<{ seats: number; paid?: boolean; currency?: string; net_per_seat?: number | string }[]>(ride, 'bookings') ?? [];
+            const gainTzs = Math.round(
+              reservations
+                .filter((resa) => resa.paid)
+                .reduce((somme, resa) => {
+                  const net = Number(resa.net_per_seat ?? 0) * resa.seats;
+                  return somme + totalEnTzs({ [String(resa.currency ?? 'TZS')]: net });
+                }, 0)
+            );
+            return (
+              <Pressable
+                key={ride.id}
+                onPress={() => router.push(`/annonce/${ride.id}`)}
+                accessibilityRole="button"
+                style={({ pressed }) => [
+                  styles.carte,
+                  !ouvert && styles.carteClose,
+                  pressed && { opacity: 0.75 },
+                ]}
+              >
+                <View style={styles.enTete}>
+                  <Text style={styles.type}>
+                    🕒 {formaterDate(champ(ride, 'departure_at', 'departureAt'))}
+                  </Text>
+                  <Badge
+                    texte={libelleStatutRide(statut, t)}
+                    ton={ouvert ? 'primaire' : 'neutre'}
+                  />
+                </View>
+                <Text style={styles.itineraire}>
+                  {String(champ(ride, 'origin', 'origine') ?? '?')}{'  '}
+                  <Text style={styles.fleche}>→</Text>{'  '}
+                  {String(champ(ride, 'destination') ?? '?')}
+                </Text>
+                <View style={styles.pied}>
+                  <Text style={styles.date}>
+                    🪑 {t('courses_mes_trajets_places', { vendues, total })}
+                  </Text>
+                  {gainTzs > 0 && (
+                    <Text style={styles.prix}>
+                      💰 {formaterMontant(gainTzs, 'TZS')}
+                    </Text>
+                  )}
+                </View>
+              </Pressable>
+            );
+          })}
+        </>
+      )}
+
       {/* Historique — replié, et seulement dans la case « Course en cours » :
           il n'a rien à faire sur le menu ni dans les autres cases. */}
       {caseOuverte === 'encours' && coursesPassees.length > 0 && (
@@ -877,6 +983,10 @@ const styles = StyleSheet.create({
   carteUrgente: {
     borderLeftWidth: 4,
     borderLeftColor: couleurs.primaire,
+  },
+  // Trajet posté qui n'est plus en ligne : présent, mais en retrait.
+  carteClose: {
+    opacity: 0.65,
   },
   ligneUrgence: {
     flexDirection: 'row',

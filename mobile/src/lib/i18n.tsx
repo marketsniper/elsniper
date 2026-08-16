@@ -2906,6 +2906,27 @@ const CHAINES = {
     it: 'Pubblica un viaggio',
     de: 'Fahrt anbieten',
   },
+  courses_case_mes_trajets: {
+    fr: 'Mes trajets postés',
+    en: 'My posted trips',
+    sw: 'Safari zangu',
+    it: 'I miei viaggi',
+    de: 'Meine Fahrten',
+  },
+  courses_mes_trajets_vide: {
+    fr: "Vous n'avez encore posté aucun trajet. Touchez « Poster un trajet » pour en publier un.",
+    en: 'You have not posted any trip yet. Tap “Post a trip” to publish one.',
+    sw: 'Bado hujatangaza safari yoyote. Gusa « Tangaza safari » kuweka moja.',
+    it: 'Non hai ancora pubblicato nessun viaggio. Tocca « Pubblica un viaggio » per crearne uno.',
+    de: 'Sie haben noch keine Fahrt angeboten. Tippen Sie auf „Fahrt anbieten“.',
+  },
+  courses_mes_trajets_places: {
+    fr: '{vendues}/{total} places prises',
+    en: '{vendues}/{total} seats taken',
+    sw: 'Viti {vendues}/{total} vimechukuliwa',
+    it: '{vendues}/{total} posti occupati',
+    de: '{vendues}/{total} Plätze belegt',
+  },
   courses_menu_intro: {
     fr: 'Touchez une case.',
     en: 'Tap a box.',

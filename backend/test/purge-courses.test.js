@@ -132,6 +132,55 @@ describe('Faire le vide (purge des courses)', () => {
   });
 });
 
+describe('Faire le vide — colis', () => {
+  it('les colis ne partent QUE si on le demande (table à part)', async () => {
+    const { token, user } = await createTourist();
+    const colis = await request(app)
+      .post('/api/packages')
+      .set(authHeaders(token))
+      .send({
+        senderType: 'user',
+        senderUserId: user.id,
+        size: 'small',
+        pickupLocation: 'Paje',
+        dropoffLocation: 'Stone Town',
+        recipientName: 'Ali Destinataire',
+        recipientPhone: '+255780000009',
+      });
+    assert.equal(colis.status, 201, JSON.stringify(colis.body));
+    // Un paiement rattaché : c'est lui qui alimentait le chiffre d'affaires
+    // résiduel du tableau de bord.
+    const paiement = await request(app)
+      .post(`/api/packages/${colis.body.id}/payment`)
+      .set(authHeaders(token));
+    assert.equal(paiement.status, 201, JSON.stringify(paiement.body));
+
+    const voirColis = async () => {
+      const res = await request(app).get(`/api/packages/${colis.body.id}`).set(adminHeaders());
+      return res.status;
+    };
+
+    // Effacer TOUTES les courses ne touche pas aux colis.
+    const sansColis = await request(app)
+      .post('/api/trips/purge')
+      .set(adminHeaders())
+      .send({ confirm: 'EFFACER TOUT' });
+    assert.equal(sansColis.status, 200, JSON.stringify(sansColis.body));
+    assert.equal(sansColis.body.colis, 0, 'aucun colis ne devait être touché');
+    assert.equal(await voirColis(), 200, 'le colis devait survivre');
+
+    // Avec l'option : le colis et son paiement disparaissent.
+    const avecColis = await request(app)
+      .post('/api/trips/purge')
+      .set(adminHeaders())
+      .send({ confirm: 'EFFACER TOUT', colis: true });
+    assert.equal(avecColis.status, 200, JSON.stringify(avecColis.body));
+    assert.equal(avecColis.body.colis, 1, 'le colis devait être effacé');
+    assert.ok(avecColis.body.paiements >= 1, 'le paiement du colis devait partir aussi');
+    assert.equal(await voirColis(), 404, 'le colis ne devait plus exister');
+  });
+});
+
 describe('Faire le vide — taxis partagés', () => {
   it('efface aussi annonces, places et liste d’attente quand on le demande', async () => {
     const { token: chauffeurToken } = await createVerifiedDriver();
