@@ -69,7 +69,7 @@ describe('Courses taxi (trips)', () => {
     assert.equal(trip.status, 'requested');
     assert.equal(trip.currency, 'USD');
     assert.equal(Number(trip.price), 45);
-    assert.equal(Number(trip.commission), 6.75); // 15 % — le chauffeur reçoit 38,25 USD
+    assert.equal(Number(trip.commission), 4.5); // 10 % (≥ 40 USD) — le chauffeur reçoit 40,50 USD
     assert.match(trip.whatsapp_link, /wa\.me/);
     assert.equal(trip.driver_id, null);
 

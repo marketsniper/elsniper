@@ -138,9 +138,12 @@ l'icône 🌅 s'installe comme une vraie app, en plein écran.</small>
 <div class="separateur">Vous êtes chauffeur zanziGo ?</div>
 <div id="zone-android">
 <a class="bouton secondaire" href="https://expo.dev/artifacts/eas/kM6cP9BmGjkwOHQH2LenHGHHF0oBldgFlQYLQTRUCx0.apk">📥 Installer l'app chauffeur (Android)</a>
-<p>Touchez le bouton, acceptez l'installation (« Installer quand même » si
-votre téléphone le demande) — l'app s'installe avec son icône 🌅, sans aucun
-compte. N'utilisez PAS Expo Go sur Android.</p>
+<p>Touchez le bouton pour télécharger, puis ouvrez le fichier. Si
+<strong>Google Play Protect</strong> affiche « App blocked / Application
+bloquée », touchez <strong>« More details / Plus de détails »</strong> puis
+<strong>« Install anyway / Installer quand même »</strong> — c'est normal,
+l'app ne vient pas du Play Store mais elle est sûre. L'icône 🌅 s'installe,
+sans aucun compte. N'utilisez PAS Expo Go sur Android.</p>
 </div>
 <div id="zone-iphone">
 <p>Sur iPhone, l'app chauffeur est en accès sur invitation pendant le pilote —
@@ -452,9 +455,9 @@ small{color:#8A7168;display:block;margin-top:14px;line-height:1.5}small a{color:
 Recevez des courses et des colis directement sur votre téléphone.</p>
 <a class="bouton" href="https://expo.dev/artifacts/eas/kM6cP9BmGjkwOHQH2LenHGHHF0oBldgFlQYLQTRUCx0.apk">📥 Sakinisha app — Installer l'app (Android)</a>
 <ol>
-<li><strong>Sakinisha</strong> — touchez le bouton, acceptez « Installer quand même » si le téléphone le demande.</li>
-<li><strong>Jisajili</strong> — ouvrez l'app, choisissez « Chauffeur », entrez votre numéro.</li>
-<li><strong>Endesha</strong> — l'équipe valide vos papiers, et les courses arrivent.</li>
+<li><strong>Sakinisha — Installer</strong> : touchez le bouton pour télécharger. Si <em>Google Play Protect</em> affiche « <strong>App blocked / Application bloquée</strong> », touchez <strong>« More details / Plus de détails »</strong>, puis <strong>« Install anyway / Installer quand même »</strong>. C'est normal : l'app ne vient pas du Play Store, mais elle est sûre.</li>
+<li><strong>Jisajili — S'inscrire</strong> : ouvrez l'app, choisissez « Chauffeur », entrez votre numéro.</li>
+<li><strong>Endesha — Rouler</strong> : l'équipe valide vos papiers, et les courses arrivent.</li>
 </ol>
 <a class="bouton secondaire" href="https://wa.me/255666241749?text=${encodeURIComponent('🚕 Nataka kuwa dereva wa zanziGo — Je veux devenir chauffeur zanziGo')}">💬 Maswali ? WhatsApp équipe zanziGo</a>
 <small>iPhone : accès sur invitation — écrivez-nous sur WhatsApp.<br>

@@ -55,7 +55,7 @@ describe('Pack améliorations', () => {
     assert.equal(ar.status, 201, JSON.stringify(ar.body));
     assert.equal(ar.body.round_trip, true);
     assert.equal(Number(ar.body.price), 81); // 45 × 1,8
-    assert.equal(Number(ar.body.commission), 12.15); // 81 × 15 %
+    assert.equal(Number(ar.body.commission), 8.1); // 81 × 10 % (≥ 40 USD)
 
     // Sur un partagé, le drapeau est ignoré (pas d'aller-retour partagé).
     const partage = await request(app)
@@ -94,7 +94,7 @@ describe('Pack améliorations', () => {
     }
 
     // L'aéroport, lui, est à sept kilomètres : c'est un vrai transfert, et
-    // l'un des plus demandés de l'île. 17 USD, commission 20 %.
+    // l'un des plus demandés de l'île. 17 USD, commission 15 % (< 40 USD).
     for (const [depart, arrivee] of [
       ['Aéroport international Abeid Amani Karume', 'Stone Town'],
       ['Stone Town', 'Aéroport international Abeid Amani Karume'],
@@ -111,7 +111,7 @@ describe('Pack améliorations', () => {
         });
       assert.equal(transfert.status, 201, `${depart} → ${arrivee} : ${JSON.stringify(transfert.body)}`);
       assert.equal(Number(transfert.body.price), 17, `${depart} → ${arrivee}`);
-      assert.equal(Number(transfert.body.commission), 3.4, `${depart} → ${arrivee}`);
+      assert.equal(Number(transfert.body.commission), 2.55, `${depart} → ${arrivee}`);
     }
 
     // Trop court pour un taxi partagé : l'annonce reste refusée.
