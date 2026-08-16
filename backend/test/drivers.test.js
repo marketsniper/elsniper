@@ -239,8 +239,8 @@ describe('Chauffeur — compteur de gains', () => {
       .set(authHeaders(driverToken));
     assert.equal(stats.status, 200);
     assert.equal(stats.body.today.courses, 1);
-    // Kendwa (Nord) privé 45 USD, commission 10 % → net 40,50 USD.
-    assert.equal(stats.body.today.gains.USD, 40.5);
+    // Kendwa (Nord) privé 45 USD, commission 15 % → net 38,25 USD.
+    assert.equal(stats.body.today.gains.USD, 38.25);
     assert.equal(stats.body.week.courses, 1);
     assert.equal(stats.body.month.courses, 1);
     assert.equal(stats.body.today.colis, 0);
@@ -252,12 +252,12 @@ describe('Chauffeur — compteur de gains', () => {
     assert.equal(interdit.status, 403);
 
     // Le chiffre d'affaires équipe reflète la même course : CA = prix payé,
-    // net zanziGo = commission (Nord privé 45 USD, commission 10 % → 4,50).
+    // net zanziGo = commission (Nord privé 45 USD, commission 15 % → 6,75).
     const equipe = await request(app).get('/api/stats').set(adminHeaders());
     assert.equal(equipe.status, 200);
     assert.equal(equipe.body.revenue.today.courses, 1);
     assert.equal(equipe.body.revenue.today.ca.USD, 45);
-    assert.equal(equipe.body.revenue.today.gains.USD, 4.5);
+    assert.equal(equipe.body.revenue.today.gains.USD, 6.75);
     assert.equal(equipe.body.revenue.month.courses, 1);
   });
 });

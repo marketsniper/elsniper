@@ -41,25 +41,17 @@ function sharedSeatUsd(priveUsd) {
 }
 
 // Commissions zanziGo par service (grille « Chauffeur reçoit ») :
-//  - privé LONG 10 % (45 → 40,50 chez le chauffeur) ;
-//  - privé COURT 20 % — voir COURSE_COURTE_MAX_USD ci-dessous ;
+//  - privé 15 % sur TOUS les trajets, courts comme longs (45 → 38,25 chez
+//    le chauffeur) : un seul taux, simple à retenir et à expliquer ;
 //  - partagé, touriste comme local, 20 % ;
 //  - colis 20 % (5 → 4,00).
 // Les réservations d'hôtel restent sur le taux général config.commissionRate.
 const COMMISSION_RATES = {
-  private: 0.1,
-  privateCourt: 0.2,
+  private: 0.15,
   shared: 0.2,
   local: 0.2,
   package: 0.2,
 };
-
-// Une course privée sous ce prix est une COURSE COURTE : saut de village,
-// transfert aéroport, liaison entre plages voisines. Elle porte 20 % au lieu
-// de 10 %. Ces courses tournent vite et se répètent dans la journée — la
-// plateforme s'y rattrape au volume plutôt qu'au montant, et le chauffeur
-// enchaîne. Le seuil est calé juste sous le premier vrai transfert (40 USD).
-const COURSE_COURTE_MAX_USD = 40;
 
 // Rattachement des villes aux zones. Les villes de la côte centre-est et
 // Fumba sont assimilées aux zones voisines (ajustable sur demande).
@@ -86,25 +78,24 @@ const CITY_ZONES = {
 //
 // LA CHAÎNE DE LA CÔTE EST — Michamvi, Bwejuu, Paje, Jambiani, Makunduchi
 // se suivent le long de la même route. Une règle, deux prix :
-//   village voisin        → 12 USD (chauffeur 9,60)
-//   un village d'écart    → 16 USD (chauffeur 12,80)
-// Commission 20 % dans les deux cas : ces courses tournent vite et se
-// répètent dans la journée, la plateforme s'y rattrape au volume plutôt
-// qu'au montant. Au-delà de deux villages, la grille au kilomètre reprend.
+//   village voisin        → 12 USD
+//   un village d'écart    → 16 USD
+// Commission privée uniforme (15 %) comme partout ailleurs. Au-delà de deux
+// villages, la grille au kilomètre reprend.
 const SPECIAL_PRIVATE_ROUTES_USD = [
-  // Transfert aéroport : sept kilomètres, très demandé, commission 20 %
-  // comme les autres courses courtes (le chauffeur garde 13,60 USD).
-  { a: 'Aéroport international Abeid Amani Karume', b: 'Stone Town', usd: 17, commission: 0.2 },
-  { a: 'Aéroport international Abeid Amani Karume', b: 'Stone Town Ferry', usd: 17, commission: 0.2 },
-  { a: 'Aéroport (AAKIA)', b: 'Stone Town', usd: 17, commission: 0.2 },
-  { a: 'Aéroport (AAKIA)', b: 'Stone Town Ferry', usd: 17, commission: 0.2 },
-  { a: 'Aéroport', b: 'Stone Town', usd: 17, commission: 0.2 },
-  { a: 'Aéroport', b: 'Stone Town Ferry', usd: 17, commission: 0.2 },
+  // Transfert aéroport : sept kilomètres, très demandé (le chauffeur garde
+  // 14,45 USD sur 17, commission privée 15 %).
+  { a: 'Aéroport international Abeid Amani Karume', b: 'Stone Town', usd: 17 },
+  { a: 'Aéroport international Abeid Amani Karume', b: 'Stone Town Ferry', usd: 17 },
+  { a: 'Aéroport (AAKIA)', b: 'Stone Town', usd: 17 },
+  { a: 'Aéroport (AAKIA)', b: 'Stone Town Ferry', usd: 17 },
+  { a: 'Aéroport', b: 'Stone Town', usd: 17 },
+  { a: 'Aéroport', b: 'Stone Town Ferry', usd: 17 },
   // Voisins immédiats.
-  { a: 'Michamvi', b: 'Bwejuu', usd: 12, commission: 0.2 },
-  { a: 'Bwejuu', b: 'Paje', usd: 12, commission: 0.2 },
-  { a: 'Paje', b: 'Jambiani', usd: 12, commission: 0.2 },
-  { a: 'Jambiani', b: 'Makunduchi', usd: 12, commission: 0.2 },
+  { a: 'Michamvi', b: 'Bwejuu', usd: 12 },
+  { a: 'Bwejuu', b: 'Paje', usd: 12 },
+  { a: 'Paje', b: 'Jambiani', usd: 12 },
+  { a: 'Jambiani', b: 'Makunduchi', usd: 12 },
   // MICHAMVI DEPUIS LE NORD — la pointe se gagne en contournant toute la
   // baie de Chwaka : la route est bien plus longue que la distance à vol
   // d'oiseau, sur laquelle les paliers se calculent. Prix de terrain.
@@ -114,9 +105,9 @@ const SPECIAL_PRIVATE_ROUTES_USD = [
   // par l'intérieur au lieu de longer la côte. Prix de terrain.
   { a: 'Kizimkazi', b: 'Jambiani', usd: 17 },
   // Un village sauté.
-  { a: 'Michamvi', b: 'Paje', usd: 16, commission: 0.2 },
-  { a: 'Bwejuu', b: 'Jambiani', usd: 16, commission: 0.2 },
-  { a: 'Paje', b: 'Makunduchi', usd: 16, commission: 0.2 },
+  { a: 'Michamvi', b: 'Paje', usd: 16 },
+  { a: 'Bwejuu', b: 'Jambiani', usd: 16 },
+  { a: 'Paje', b: 'Makunduchi', usd: 16 },
 ];
 
 // Trajets spéciaux à prix fixe (TZS, place locale en taxi partagé), deux
@@ -166,15 +157,11 @@ function specialPrivateRouteUsd(pickup, dropoff) {
   return specialPrivateRoute(pickup, dropoff)?.usd;
 }
 
-// Taux de commission d'une course privée sur cet itinéraire : celui du
-// trajet spécial s'il en définit un, sinon 20 % pour une course courte et
-// 10 % pour un transfert.
+// Taux de commission d'une course privée : 15 % partout. Un trajet spécial
+// peut encore forcer un taux dédié (champ `commission`), mais aucun ne le
+// fait — la règle est uniforme.
 function privateCommissionRate(pickup, dropoff) {
-  const dedie = specialPrivateRoute(pickup, dropoff)?.commission;
-  if (dedie !== undefined) return dedie;
-  return privateUsdForRoute(pickup, dropoff) < COURSE_COURTE_MAX_USD
-    ? COMMISSION_RATES.privateCourt
-    : COMMISSION_RATES.private;
+  return specialPrivateRoute(pickup, dropoff)?.commission ?? COMMISSION_RATES.private;
 }
 
 function specialLocalRouteTzs(pickup, dropoff) {

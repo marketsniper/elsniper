@@ -402,7 +402,7 @@ export const TARIFS_TRAJET_USD: Partial<Record<TypeTrajet, number>> = {
 // LA CHAÎNE DE LA CÔTE EST : Michamvi → Bwejuu → Paje → Jambiani →
 // Makunduchi. Village voisin 12 USD, un village d'écart 16 USD.
 export const TRAJETS_SPECIAUX_PRIVE_USD: { villes: [string, string]; prix: number }[] = [
-  // Transfert aéroport : sept kilomètres, commission 20 % côté serveur.
+  // Transfert aéroport : sept kilomètres (commission privée 15 % côté serveur).
   { villes: ['Aéroport international Abeid Amani Karume', 'Stone Town'], prix: 17 },
   { villes: ['Aéroport international Abeid Amani Karume', 'Stone Town Ferry'], prix: 17 },
   // Michamvi depuis le nord : la route contourne la baie de Chwaka.
