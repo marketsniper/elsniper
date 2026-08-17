@@ -239,8 +239,8 @@ describe('Chauffeur — compteur de gains', () => {
       .set(authHeaders(driverToken));
     assert.equal(stats.status, 200);
     assert.equal(stats.body.today.courses, 1);
-    // Kendwa (Nord) privé 47 USD, commission 10 % (≥ 40) → net 42,30 USD.
-    assert.equal(stats.body.today.gains.USD, 42.3);
+    // Kendwa (Nord) privé 47 USD, commission 12 % (≥ 40) → net 41,36 USD.
+    assert.equal(stats.body.today.gains.USD, 41.36);
     assert.equal(stats.body.week.courses, 1);
     assert.equal(stats.body.month.courses, 1);
     assert.equal(stats.body.today.colis, 0);
@@ -257,7 +257,7 @@ describe('Chauffeur — compteur de gains', () => {
     assert.equal(equipe.status, 200);
     assert.equal(equipe.body.revenue.today.courses, 1);
     assert.equal(equipe.body.revenue.today.ca.USD, 47);
-    assert.equal(equipe.body.revenue.today.gains.USD, 4.7);
+    assert.equal(equipe.body.revenue.today.gains.USD, 5.64);
     assert.equal(equipe.body.revenue.month.courses, 1);
   });
 });

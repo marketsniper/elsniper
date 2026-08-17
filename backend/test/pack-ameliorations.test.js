@@ -55,7 +55,7 @@ describe('Pack améliorations', () => {
     assert.equal(ar.status, 201, JSON.stringify(ar.body));
     assert.equal(ar.body.round_trip, true);
     assert.equal(Number(ar.body.price), 84.6); // 47 × 1,8
-    assert.equal(Number(ar.body.commission), 8.46); // 84,60 × 10 % (≥ 40 USD)
+    assert.equal(Number(ar.body.commission), 10.15); // 84,60 × 12 % (≥ 40 USD)
 
     // Sur un partagé, le drapeau est ignoré (pas d'aller-retour partagé).
     const partage = await request(app)
@@ -111,7 +111,7 @@ describe('Pack améliorations', () => {
         });
       assert.equal(transfert.status, 201, `${depart} → ${arrivee} : ${JSON.stringify(transfert.body)}`);
       assert.equal(Number(transfert.body.price), 18, `${depart} → ${arrivee}`);
-      assert.equal(Number(transfert.body.commission), 2.7, `${depart} → ${arrivee}`);
+      assert.equal(Number(transfert.body.commission), 3.06, `${depart} → ${arrivee}`);
     }
 
     // Trop court pour un taxi partagé : l'annonce reste refusée.

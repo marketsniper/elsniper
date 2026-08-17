@@ -100,9 +100,9 @@ describe('Surcharge carte : sur une vraie course', () => {
 
     const vue = await request(app).get(`/api/trips/${course.id}`).set(adminHeaders());
     assert.equal(Number(vue.body.price), 47, 'le prix de la course n’a pas bougé');
-    assert.equal(Number(vue.body.commission), 4.7, '10 % de 47, pas de 48,88');
-    // Le chauffeur touche 42,30 : la banque ne se sert pas dans sa poche.
-    assert.equal(Number(vue.body.price) - Number(vue.body.commission), 42.3);
+    assert.equal(Number(vue.body.commission), 5.64, '12 % de 47, pas de 48,88');
+    // Le chauffeur touche 41,36 : la banque ne se sert pas dans sa poche.
+    assert.equal(Number(vue.body.price) - Number(vue.body.commission), 41.36);
   });
 
   it('un LOCAL qui paie en shillings n’a aucune surcharge', async () => {

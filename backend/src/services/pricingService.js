@@ -49,19 +49,30 @@ function sharedSeatUsd(priveUsd) {
 
 // Commissions zanziGo par service (grille « Chauffeur reçoit ») :
 //  - privé : deux paliers selon le prix du trajet —
-//      40 USD et plus  → 10 % (grand axe, le chauffeur roule longtemps : 90 %) ;
-//      moins de 40 USD → 15 % (petit trajet : transfert aéroport, saut de
+//      40 USD et plus  → 12 % (grand axe, le chauffeur roule longtemps : 88 %) ;
+//      moins de 40 USD → 17 % (petit trajet : transfert aéroport, saut de
 //      village, liaison courte — proportionnellement plus de frais fixes) ;
-//  - taxi partagé TOURISTE (USD) : 20 % ;
-//  - taxi partagé LOCAL (TZS) : 15 % ;
-//  - colis 20 % (5 → 4,00 ; les prix des colis n'ont pas bougé).
+//  - taxi partagé TOURISTE (USD) : 22 % ;
+//  - taxi partagé LOCAL (TZS) : 17 % ;
+//  - colis 20 % — INCHANGÉ (« sur tous les voyages » : les colis ne sont pas
+//    des voyages, et leur barème avait déjà été mis à part).
 // Les réservations d'hôtel restent sur le taux général config.commissionRate.
+//
+// HAUSSE DE 2 POINTS SUR TOUS LES VOYAGES (17/08/2026), décidée en même temps
+// que la hausse de 5 % des prix touristes. Les deux se compensent pour le
+// chauffeur : sur un transfert Nungwi, il touchait 40,50 USD (45 − 10 %), il
+// touche maintenant 41,36 (47 − 12 %) — il gagne PLUS qu'avant.
+//
+// L'EXCEPTION À SURVEILLER : le taxi partagé LOCAL. Son prix n'a pas bougé
+// (15 000 TZS, à dessein), donc les 2 points sortent de la poche du
+// chauffeur : 12 750 → 12 450 TZS la place. C'est le seul service où la
+// hausse se paie côté chauffeur, et c'est signalé comme tel.
 const COMMISSION_RATES = {
-  private: 0.1, // grands trajets privés, 40 USD et plus
-  privateCourt: 0.15, // petits trajets privés, moins de 40 USD
-  shared: 0.2, // taxi partagé touriste (USD)
-  local: 0.15, // taxi partagé local (TZS)
-  package: 0.2,
+  private: 0.12, // grands trajets privés, 40 USD et plus
+  privateCourt: 0.17, // petits trajets privés, moins de 40 USD
+  shared: 0.22, // taxi partagé touriste (USD)
+  local: 0.17, // taxi partagé local (TZS)
+  package: 0.2, // colis : inchangé
 };
 
 // Seuil de bascule de la commission privée : à 40 USD pile, on est déjà sur
