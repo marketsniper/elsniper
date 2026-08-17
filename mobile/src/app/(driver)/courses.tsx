@@ -270,6 +270,16 @@ export default function EcranCourses() {
   // Mes trajets postés : ceux encore en ligne d'abord (le compteur de la case
   // ne compte QUE ceux-là — un trajet clôturé n'appelle aucune action), et le
   // PROCHAIN DÉPART en tête : c'est celui-là que le chauffeur doit préparer.
+  // Le serveur décide si les coordonnées du client sont ouvertes : il ne les
+  // envoie qu'une fois le paiement validé par l'équipe. (Repli sur le statut
+  // pour les anciennes versions de l'API, qui n'envoient pas le drapeau.)
+  const contactOuvert = (trajet: Trajet) => {
+    const drapeau = champ<boolean>(trajet, 'contact_client_visible');
+    if (drapeau !== undefined) return drapeau === true;
+    const statut = champ<StatutTrajet>(trajet, 'status', 'statut');
+    return statut !== 'requested' && statut !== 'driver_confirmed';
+  };
+
   const quandPart = (ride: Ride) =>
     new Date(String(champ(ride, 'departure_at', 'departureAt') ?? 0)).getTime() || 0;
   const trajetsOuverts = mesTrajets
@@ -458,6 +468,29 @@ export default function EcranCourses() {
               <Text style={[styles.date, presse && styles.departTexteFort]}>{depart.texte}</Text>
               <Text style={styles.prix}>{formaterPrix(item)}</Text>
             </View>
+            {/* Les coordonnées du client ne s'ouvrent qu'au paiement validé
+                par l'équipe. Une fois ouvertes, le numéro s'appelle d'ici —
+                sans ouvrir la fiche. */}
+            {contactOuvert(item) ? (
+              !!champ<string>(item, 'client_phone', 'clientPhone') && (
+                <Pressable
+                  onPress={() =>
+                    Linking.openURL(
+                      `tel:${String(champ(item, 'client_phone', 'clientPhone'))}`
+                    )
+                  }
+                  accessibilityRole="button"
+                  style={({ pressed }) => [styles.ligneAppel, pressed && { opacity: 0.6 }]}
+                >
+                  <Text style={styles.texteAppel}>
+                    📞 {t('course_client_appeler')} ·{' '}
+                    {String(champ(item, 'client_phone', 'clientPhone'))}
+                  </Text>
+                </Pressable>
+              )
+            ) : (
+              <Text style={styles.texteVerrou}>🔒 {t('courses_contact_verrouille')}</Text>
+            )}
             <Bouton
               titre={t('courses_ouvrir_court')}
               icone="arrow-forward-circle-outline"
@@ -1086,6 +1119,12 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     color: couleurs.primaireFonce,
+  },
+  // Coordonnées client encore fermées : dit pourquoi, sans alarmer.
+  texteVerrou: {
+    fontSize: 12.5,
+    color: couleurs.texteSecondaire,
+    lineHeight: 18,
   },
   boutonPrendre: {
     flexDirection: 'row',

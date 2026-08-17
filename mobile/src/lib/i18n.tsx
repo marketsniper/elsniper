@@ -1040,6 +1040,36 @@ const CHAINES = {
     en: 'Where your client is waiting',
     sw: 'Mahali mteja wako anasubiri',
   },
+  course_client_titre: {
+    fr: 'Votre client',
+    en: 'Your client',
+    sw: 'Mteja wako',
+    it: 'Il tuo cliente',
+    de: 'Ihr Fahrgast',
+  },
+  // Le chauffeur doit comprendre qu'il ne manque rien : c'est l'argent qui
+  // n'est pas encore validé, pas l'information qui a disparu.
+  course_client_verrouille: {
+    fr: "Le nom, le numéro et le point de rendez-vous exact de votre client s'afficheront ici dès que l'équipe aura validé le paiement. Départ prévu : {lieu}.",
+    en: 'Your client’s name, phone number and exact meeting point will appear here as soon as the team has confirmed the payment. Pick-up: {lieu}.',
+    sw: 'Jina, namba ya simu na mahali kamili pa kukutana na mteja vitaonekana hapa mara tu timu itakapothibitisha malipo. Mahali pa kuchukua: {lieu}.',
+    it: 'Nome, numero di telefono e punto d’incontro esatto del cliente compariranno qui non appena il team avrà confermato il pagamento. Partenza: {lieu}.',
+    de: 'Name, Telefonnummer und genauer Treffpunkt Ihres Fahrgasts erscheinen hier, sobald das Team die Zahlung bestätigt hat. Abfahrt: {lieu}.',
+  },
+  courses_contact_verrouille: {
+    fr: 'Coordonnées du client dès que l’équipe valide le paiement',
+    en: 'Client details as soon as the team confirms the payment',
+    sw: 'Mawasiliano ya mteja mara timu itakapothibitisha malipo',
+    it: 'Contatti del cliente non appena il team conferma il pagamento',
+    de: 'Fahrgastdaten, sobald das Team die Zahlung bestätigt',
+  },
+  course_client_appeler: {
+    fr: 'Appeler le client',
+    en: 'Call the client',
+    sw: 'Piga simu kwa mteja',
+    it: 'Chiama il cliente',
+    de: 'Fahrgast anrufen',
+  },
   course_client_position_absente: {
     fr: "Votre client n'a pas encore partagé son point exact. Le lieu de départ indiqué reste : {lieu}.",
     en: "Your client hasn't shared an exact point yet. The pick-up given is: {lieu}.",

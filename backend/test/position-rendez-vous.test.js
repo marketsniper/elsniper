@@ -1,7 +1,10 @@
-// Point de rendez-vous exact : le client le partage, le chauffeur le voit.
+// Point de rendez-vous exact : le client le partage, le chauffeur le voit
+// UNE FOIS LE PAIEMENT VALIDÉ par l'équipe.
 //
 // « Nungwi » ne dit pas devant quelle porte attendre. Le client peut donc
-// poser sa position exacte sur SA course — et seulement la sienne.
+// poser sa position exacte sur SA course — et seulement la sienne. Le point
+// est une donnée personnelle : il ne part vers le chauffeur qu'au moment où
+// la course est payée (voir contact-client-apres-paiement.test.js).
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import request from 'supertest';
@@ -67,7 +70,7 @@ async function course(client) {
 }
 
 describe('Point de rendez-vous exact', () => {
-  it('le client partage sa position, le chauffeur assigné la voit', async () => {
+  it('le client partage sa position, le chauffeur la voit une fois payée', async () => {
     const client = await compte('cliente');
     const taxi = await chauffeurVerifie();
     const trajet = await course(client);
@@ -85,13 +88,35 @@ describe('Point de rendez-vous exact', () => {
     assert.equal(Number(partage.body.pickup_lng), POINT.lng);
     assert.ok(partage.body.pickup_position_at, "l'heure du partage n'est pas enregistrée");
 
-    // Le chauffeur assigné lit la course : le point y est.
-    const vue = await request(app)
-      .get(`/api/trips/${trajet.id}`)
-      .set('Authorization', `Bearer ${taxi.jeton}`);
-    assert.equal(vue.status, 200, JSON.stringify(vue.body));
-    assert.equal(Number(vue.body.pickup_lat), POINT.lat);
-    assert.equal(Number(vue.body.pickup_lng), POINT.lng);
+    const vuChauffeur = async () => {
+      const res = await request(app)
+        .get(`/api/trips/${trajet.id}`)
+        .set('Authorization', `Bearer ${taxi.jeton}`);
+      assert.equal(res.status, 200, JSON.stringify(res.body));
+      return res.body;
+    };
+
+    // AVANT paiement : le chauffeur a la course, mais pas la porte du client.
+    const avant = await vuChauffeur();
+    assert.equal(avant.pickup_lat, null, 'la position ne doit pas partir avant paiement');
+    assert.equal(avant.contact_client_visible, false);
+
+    // L'équipe encaisse et valide.
+    const paiement = await request(app)
+      .post(`/api/trips/${trajet.id}/payment`)
+      .set('Authorization', `Bearer ${client.jeton}`);
+    assert.equal(paiement.status, 201, JSON.stringify(paiement.body));
+    const confirme = await request(app)
+      .post(`/api/payments/${paiement.body.id}/confirm`)
+      .set(adminHeaders())
+      .send({});
+    assert.equal(confirme.status, 200, JSON.stringify(confirme.body));
+
+    // APRÈS : le point exact s'ouvre — il doit pouvoir se garer devant.
+    const apres = await vuChauffeur();
+    assert.equal(Number(apres.pickup_lat), POINT.lat);
+    assert.equal(Number(apres.pickup_lng), POINT.lng);
+    assert.equal(apres.contact_client_visible, true);
   });
 
   it('un inconnu ne peut pas poser un point sur la course d’un autre', async () => {

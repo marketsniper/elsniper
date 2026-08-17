@@ -5,7 +5,7 @@
 // preuve de terrain — elle ne dépend pas de ce départ/arrivée.
 import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useState } from 'react';
-import { Alert } from 'react-native';
+import { Alert, Linking, Pressable, StyleSheet, Text } from 'react-native';
 
 import { CartePosition } from '@/components/CartePosition';
 import { TimelineStatut } from '@/components/TimelineStatut';
@@ -23,6 +23,7 @@ import {
 } from '@/components/ui';
 import { api, ErreurApi } from '@/lib/api';
 import { libelleStatutTrajet, libelleTypeTrajet, useT } from '@/lib/i18n';
+import { couleurs, espaces } from '@/lib/theme';
 import {
   champ,
   ETAPES_TRAJET,
@@ -70,6 +71,15 @@ export default function EcranDetailCourse() {
   const statut = champ<StatutTrajet>(course, 'status', 'statut');
   const typeTrajet = champ<TypeTrajet>(course, 'trip_type', 'tripType');
   const nomClient = champ<string>(course, 'client_name', 'clientName');
+  const telClient = champ<string>(course, 'client_phone', 'clientPhone');
+  // Le serveur dit lui-même si les coordonnées sont ouvertes : elles ne le
+  // sont qu'une fois le paiement validé par l'équipe. (Les anciennes versions
+  // de l'API n'envoient pas ce drapeau — on se rabat alors sur le statut.)
+  const contactOuvert = champ<boolean>(course, 'contact_client_visible');
+  const contactVerrouille =
+    contactOuvert === undefined
+      ? statut === 'requested' || statut === 'driver_confirmed'
+      : contactOuvert === false;
   // Règles serveur : départ uniquement sur une course payée, arrivée sur une
   // course en cours.
   const peutDemarrer = statut === 'paid';
@@ -114,7 +124,6 @@ export default function EcranDetailCourse() {
         {typeTrajet && (
           <LigneInfo label={t('commun_type')} valeur={libelleTypeTrajet(typeTrajet, t)} />
         )}
-        {!!nomClient && <LigneInfo label={t('commun_client')} valeur={String(nomClient)} />}
         <LigneInfo
           label={t('commun_depart')}
           valeur={String(champ(course, 'pickup_location', 'pickupLocation') ?? '—')}
@@ -151,33 +160,55 @@ export default function EcranDetailCourse() {
         })()}
       </Carte>
 
-      {/* OÙ ATTEND LE CLIENT — le nom du village ne dit pas devant quelle
-          porte. Quand le client a partagé son point exact, il s'affiche ici
-          sur une carte, avec le bouton qui lance le guidage routier. */}
+      {/* VOTRE CLIENT — qui appeler, et devant quelle porte se présenter.
+          Ces informations appartiennent au client : le serveur ne les livre
+          qu'une fois le paiement validé par l'équipe. Avant, on l'annonce
+          clairement plutôt que d'afficher un vide inquiétant. */}
       <Carte>
-        <SousTitre>{t('course_client_position')}</SousTitre>
-        {(() => {
-          const lat = Number(champ(course, 'pickup_lat') ?? NaN);
-          const lng = Number(champ(course, 'pickup_lng') ?? NaN);
-          if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
-            return (
-              <EncartInfo icone="location-outline" ton="attente">
-                {t('course_client_position_absente', {
-                  lieu: String(champ(course, 'pickup_location', 'pickupLocation') ?? '—'),
-                })}
-              </EncartInfo>
-            );
-          }
-          return (
-            <CartePosition
-              lat={lat}
-              lng={lng}
-              navigation
-              titre={String(champ(course, 'pickup_location', 'pickupLocation') ?? '')}
-              hauteur={220}
-            />
-          );
-        })()}
+        <SousTitre>{t('course_client_titre')}</SousTitre>
+        {contactVerrouille ? (
+          <EncartInfo icone="lock-closed-outline" ton="attente">
+            {t('course_client_verrouille', {
+              lieu: String(champ(course, 'pickup_location', 'pickupLocation') ?? '—'),
+            })}
+          </EncartInfo>
+        ) : (
+          <>
+            {!!nomClient && <LigneInfo label={t('commun_client')} valeur={String(nomClient)} />}
+            {/* Le numéro se touche : un appui, ça appelle. */}
+            {!!telClient && (
+              <Pressable
+                onPress={() => Linking.openURL(`tel:${telClient}`)}
+                accessibilityRole="button"
+                style={({ pressed }) => [styles.ligneAppel, pressed && { opacity: 0.6 }]}
+              >
+                <Text style={styles.texteAppel}>📞 {t('course_client_appeler')} · {telClient}</Text>
+              </Pressable>
+            )}
+            {(() => {
+              const lat = Number(champ(course, 'pickup_lat') ?? NaN);
+              const lng = Number(champ(course, 'pickup_lng') ?? NaN);
+              if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+                return (
+                  <EncartInfo icone="location-outline" ton="attente">
+                    {t('course_client_position_absente', {
+                      lieu: String(champ(course, 'pickup_location', 'pickupLocation') ?? '—'),
+                    })}
+                  </EncartInfo>
+                );
+              }
+              return (
+                <CartePosition
+                  lat={lat}
+                  lng={lng}
+                  navigation
+                  titre={String(champ(course, 'pickup_location', 'pickupLocation') ?? '')}
+                  hauteur={220}
+                />
+              );
+            })()}
+          </>
+        )}
       </Carte>
 
       <Carte>
@@ -226,3 +257,16 @@ export default function EcranDetailCourse() {
     </Ecran>
   );
 }
+
+const styles = StyleSheet.create({
+  // Le numéro du client se touche pour appeler : cible large, texte lisible
+  // au volant.
+  ligneAppel: {
+    paddingVertical: espaces.s,
+  },
+  texteAppel: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: couleurs.primaireFonce,
+  },
+});

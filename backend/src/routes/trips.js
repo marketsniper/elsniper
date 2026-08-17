@@ -23,6 +23,7 @@ import {
   alerterCoursePayee,
   alerterNouvelleCourse,
 } from '../services/alertesChauffeur.js';
+import { CHAMPS_CLIENT_POUR_CHAUFFEUR, vueChauffeur } from '../services/vueChauffeur.js';
 
 const router = Router();
 
@@ -547,7 +548,9 @@ router.post(
         `Réf : ${course.id}`,
       ].join('\n')
     ).catch(() => {});
-    res.json(course);
+    // Prendre la course ne donne PAS encore les coordonnées du client : elles
+    // s'ouvrent quand l'équipe valide le paiement (services/vueChauffeur.js).
+    res.json(vueChauffeur(course));
   })
 );
 
@@ -557,14 +560,31 @@ router.get(
   requireAuth,
   asyncHandler(async (req, res) => {
     const trip = await getTrip(req.params.id);
-    const allowed =
-      isAdmin(req) ||
+    const estReservateur =
       (trip.user_id !== null && trip.user_id === req.auth.userId) ||
-      (trip.hotel_id !== null && trip.hotel_id === req.auth.hotelId) ||
-      (trip.driver_id !== null && trip.driver_id === req.auth.driverId);
+      (trip.hotel_id !== null && trip.hotel_id === req.auth.hotelId);
+    const estChauffeurAssigne = trip.driver_id !== null && trip.driver_id === req.auth.driverId;
+    const allowed = isAdmin(req) || estReservateur || estChauffeurAssigne;
     if (!allowed) {
       throw new HttpError(403, 'forbidden', 'Accès réservé au réservateur, au chauffeur assigné ou à l\'équipe');
     }
+
+    // Vue CHAUFFEUR : les coordonnées du client ne lui sont confiées qu'une
+    // fois le paiement validé par l'équipe (voir services/vueChauffeur.js).
+    // L'équipe et le réservateur, eux, voient la course entière.
+    if (estChauffeurAssigne && !isAdmin(req) && !estReservateur) {
+      const { rows } = await query(
+        `SELECT t.*, ${CHAMPS_CHAUFFEUR}, ${CHAMPS_CLIENT_POUR_CHAUFFEUR}
+         FROM trips t
+         LEFT JOIN drivers d ON d.id = t.driver_id
+         LEFT JOIN users u ON u.id = t.user_id
+         LEFT JOIN hotels h ON h.id = t.hotel_id
+         WHERE t.id = $1`,
+        [req.params.id]
+      );
+      return res.json(vueChauffeur(rows[0]));
+    }
+
     res.json(avecAnnonceGroupe(trip, req));
   })
 );

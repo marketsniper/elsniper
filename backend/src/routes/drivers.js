@@ -10,6 +10,7 @@ import { valeurReservationPlace } from './stats.js';
 import { notifierEquipe } from '../services/emailService.js';
 import { hashPassword } from '../services/passwordService.js';
 import { alerterCompteValide } from '../services/alertesChauffeur.js';
+import { CHAMPS_CLIENT_POUR_CHAUFFEUR, vueChauffeur } from '../services/vueChauffeur.js';
 
 // Le hash de mot de passe ne sort JAMAIS de l'API.
 export function sanitizeDriver(driver) {
@@ -214,13 +215,20 @@ router.get(
       throw new HttpError(403, 'forbidden', 'Accès réservé au chauffeur concerné');
     }
     const { rows } = await query(
-      `SELECT * FROM trips
-       WHERE driver_id = $1
-       ORDER BY COALESCE(scheduled_at, created_at) DESC
+      `SELECT t.*, ${CHAMPS_CLIENT_POUR_CHAUFFEUR}
+       FROM trips t
+       LEFT JOIN users u ON u.id = t.user_id
+       LEFT JOIN hotels h ON h.id = t.hotel_id
+       WHERE t.driver_id = $1
+       ORDER BY COALESCE(t.scheduled_at, t.created_at) DESC
        LIMIT 100`,
       [req.params.id]
     );
-    res.json(rows);
+    // Les coordonnées du client ne sont confiées qu'une fois le paiement
+    // validé par l'équipe — même pour l'équipe qui consulte cette liste-là,
+    // c'est la vue du chauffeur (elle a son propre tableau de bord pour tout
+    // voir). Voir services/vueChauffeur.js.
+    res.json(rows.map(vueChauffeur));
   })
 );
 
