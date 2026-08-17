@@ -16,31 +16,42 @@ import { Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-nati
 import { Bouton } from '@/components/ui';
 import { useT } from '@/lib/i18n';
 import { lienNavigation } from '@/lib/position';
-import { couleurs, espaces, rayons } from '@/lib/theme';
+import { couleurs, espaces, ombres, rayons } from '@/lib/theme';
 
 /** Fenêtre affichée autour du point : ~1,1 km de côté, l'échelle du village. */
 const MARGE_DEGRES = 0.01;
 
 /**
+ * Cadre TOUJOURS CENTRÉ sur le point principal.
+ *
+ * C'est ce qui permet de poser notre propre pictogramme (la petite voiture)
+ * pile dessus : le centre de la fenêtre demandée reste le centre de la carte
+ * affichée, quelle que soit la forme du cadre. Un marqueur placé ailleurs
+ * qu'au centre dériverait, parce qu'OpenStreetMap élargit la vue pour la
+ * remplir et choisit son propre zoom.
+ *
  * @param cadrer Second point à garder dans le cadre — le client qui suit
  *   l'approche de son taxi veut les voir tous les deux, pas seulement le
- *   taxi tout seul au milieu de nulle part. Le marqueur, lui, reste sur le
- *   point principal.
+ *   taxi tout seul au milieu de nulle part. On élargit alors la fenêtre
+ *   SYMÉTRIQUEMENT, de quoi englober ce point sans décentrer le taxi.
+ * @param voiture Dessine-t-on nous-mêmes le marqueur ? Si oui, on n'en
+ *   demande pas un à OpenStreetMap : deux marqueurs se chevaucheraient.
  */
-function lienOpenStreetMap(lat: number, lng: number, cadrer?: { lat: number; lng: number }): string {
-  // Marge élargie d'un quart : sans ça, les deux points collent aux bords.
+function lienOpenStreetMap(
+  lat: number,
+  lng: number,
+  cadrer?: { lat: number; lng: number },
+  voiture = false
+): string {
+  // Marge élargie d'un quart : sans ça, les points collent aux bords.
   const marge = MARGE_DEGRES * 1.25;
-  const lats = cadrer ? [lat, cadrer.lat] : [lat];
-  const lngs = cadrer ? [lng, cadrer.lng] : [lng];
-  const bbox = [
-    Math.min(...lngs) - marge,
-    Math.min(...lats) - marge,
-    Math.max(...lngs) + marge,
-    Math.max(...lats) + marge,
-  ];
+  const demiLat = cadrer ? Math.max(marge, Math.abs(lat - cadrer.lat) + marge) : marge;
+  const demiLng = cadrer ? Math.max(marge, Math.abs(lng - cadrer.lng) + marge) : marge;
+  const bbox = [lng - demiLng, lat - demiLat, lng + demiLng, lat + demiLat];
   return (
     'https://www.openstreetmap.org/export/embed.html' +
-    `?bbox=${bbox.join('%2C')}&layer=mapnik&marker=${lat}%2C${lng}`
+    `?bbox=${bbox.join('%2C')}&layer=mapnik` +
+    (voiture ? '' : `&marker=${lat}%2C${lng}`)
   );
 }
 
@@ -52,6 +63,7 @@ export function CartePosition({
   navigation = false,
   lien = true,
   cadrer,
+  marqueur = 'point',
 }: {
   lat: number;
   lng: number;
@@ -70,8 +82,16 @@ export function CartePosition({
   lien?: boolean;
   /** Second point à garder dans le cadre (sans marqueur). */
   cadrer?: { lat: number; lng: number };
+  /**
+   * Ce qu'on pose sur la carte. `point` : l'épingle d'OpenStreetMap, pour un
+   * LIEU (un point de rendez-vous ne bouge pas). `voiture` : notre petite
+   * voiture zanziGo, pour un VÉHICULE — le client qui regarde son taxi
+   * approcher doit reconnaître une voiture, pas déchiffrer une épingle.
+   */
+  marqueur?: 'point' | 'voiture';
 }) {
   const { t } = useT();
+  const estVoiture = marqueur === 'voiture';
   const ouvrirItineraire = () =>
     Linking.openURL(
       navigation ? lienNavigation(lat, lng) : `https://www.google.com/maps?q=${lat},${lng}`
@@ -85,7 +105,7 @@ export function CartePosition({
     return (
       <Bouton
         titre={navigation ? t('carte_y_aller') : (titre ?? t('equipe_position'))}
-        icone={navigation ? 'navigate' : 'location-outline'}
+        icone={navigation ? 'navigate' : estVoiture ? 'car-sport' : 'location-outline'}
         variante={navigation ? 'primaire' : 'secondaire'}
         onPress={ouvrirItineraire}
       />
@@ -102,11 +122,23 @@ export function CartePosition({
       )}
       <View style={[styles.cadre, { height: hauteur }]}>
         {React.createElement('iframe', {
-          src: lienOpenStreetMap(lat, lng, cadrer),
+          src: lienOpenStreetMap(lat, lng, cadrer, estVoiture),
           title: titre ?? t('equipe_position'),
           loading: 'lazy',
           style: { border: 0, width: '100%', height: '100%', display: 'block' },
         })}
+        {/* LA PETITE VOITURE, posée au centre — c'est-à-dire exactement sur
+            le taxi, puisque le cadre est centré sur lui. Un halo derrière,
+            pour qu'elle se détache du fond de carte quel qu'il soit ; elle
+            ne capte pas le toucher, la carte reste manipulable dessous. */}
+        {estVoiture && (
+          <View style={styles.zoneVoiture} pointerEvents="none">
+            <View style={styles.halo} />
+            <View style={styles.pastilleVoiture}>
+              <Ionicons name="car-sport" size={22} color={couleurs.surPrimaire} />
+            </View>
+          </View>
+        )}
       </View>
       {navigation ? (
         <Bouton titre={t('carte_y_aller')} icone="navigate" onPress={ouvrirItineraire} />
@@ -147,6 +179,32 @@ const styles = StyleSheet.create({
     backgroundColor: couleurs.primaireClair,
     borderWidth: 1,
     borderColor: couleurs.bordure,
+  },
+  // La voiture se pose au centre du cadre — et le cadre est centré sur le
+  // taxi (voir lienOpenStreetMap).
+  zoneVoiture: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  halo: {
+    position: 'absolute',
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: 'rgba(228, 87, 46, 0.22)',
+  },
+  pastilleVoiture: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: couleurs.primaire,
+    alignItems: 'center',
+    justifyContent: 'center',
+    // Liseré blanc : la voiture reste lisible sur une route, un toit ou la mer.
+    borderWidth: 3,
+    borderColor: couleurs.blanc,
+    ...ombres.carte,
   },
   lien: {
     flexDirection: 'row',

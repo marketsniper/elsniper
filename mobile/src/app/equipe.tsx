@@ -888,6 +888,7 @@ export default function EcranEquipe() {
                       lat={lat}
                       lng={lng}
                       titre={`${String(champ(choisi, 'zone') ?? '—')} · ${formaterDateRelativeI18n(majPosition, t)}`}
+                      marqueur="voiture"
                     />
                   ) : (
                     <View style={styles.ligneDetail}>

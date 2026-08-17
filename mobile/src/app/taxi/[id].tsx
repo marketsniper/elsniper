@@ -258,7 +258,7 @@ export default function EcranTaxiEquipe() {
           valeur={String(champ(chauffeur, 'vehicle_qr_code', 'vehicleQrCode') ?? '—')}
         />
         {positionConnue ? (
-          <CartePosition lat={lat} lng={lng} titre={t('equipe_position')} />
+          <CartePosition lat={lat} lng={lng} titre={t('equipe_position')} marqueur="voiture" />
         ) : (
           <Text style={styles.detail}>{t('equipe_position_inconnue')}</Text>
         )}

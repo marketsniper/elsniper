@@ -414,6 +414,9 @@ export default function EcranTrajet() {
                   }`}
                   hauteur={200}
                   lien={false}
+                  // Ce point-là est un VÉHICULE : le client doit reconnaître
+                  // une voiture qui approche, pas déchiffrer une épingle.
+                  marqueur="voiture"
                   cadrer={
                     positionPartagee
                       ? {
