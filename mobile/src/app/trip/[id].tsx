@@ -495,6 +495,9 @@ export default function EcranTrajet() {
                 lng={Number(champ(trajet, 'pickup_lng'))}
                 hauteur={150}
                 lien={false}
+                // C'est LUI, à cet endroit — turquoise, comme sur l'écran de
+                // son chauffeur. Les deux voient le même repère.
+                marqueur="client"
               />
             </>
           ) : (

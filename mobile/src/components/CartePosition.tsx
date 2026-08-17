@@ -83,15 +83,23 @@ export function CartePosition({
   /** Second point à garder dans le cadre (sans marqueur). */
   cadrer?: { lat: number; lng: number };
   /**
-   * Ce qu'on pose sur la carte. `point` : l'épingle d'OpenStreetMap, pour un
-   * LIEU (un point de rendez-vous ne bouge pas). `voiture` : notre petite
-   * voiture zanziGo, pour un VÉHICULE — le client qui regarde son taxi
-   * approcher doit reconnaître une voiture, pas déchiffrer une épingle.
+   * Ce qu'on pose sur la carte. L'épingle grise d'OpenStreetMap ne dit rien :
+   * on dessine nos propres pastilles, et chacune a sa couleur pour qu'on
+   * sache d'un coup d'œil QUI on regarde.
+   *   · `voiture` — corail, une voiture : le TAXI, ça bouge ;
+   *   · `client`  — turquoise, un personnage : LE CLIENT et son point de
+   *                 rendez-vous. Couleur volontairement différente du corail :
+   *                 sur une même carte, on ne doit jamais les confondre ;
+   *   · `point`   — l'épingle d'OpenStreetMap, pour tout le reste.
    */
-  marqueur?: 'point' | 'voiture';
+  marqueur?: 'point' | 'voiture' | 'client';
 }) {
   const { t } = useT();
   const estVoiture = marqueur === 'voiture';
+  const estClient = marqueur === 'client';
+  // Les deux pastilles maison partagent la même mécanique : on ne demande
+  // plus de marqueur à OpenStreetMap et on pose le nôtre au centre.
+  const marqueurMaison = estVoiture || estClient;
   const ouvrirItineraire = () =>
     Linking.openURL(
       navigation ? lienNavigation(lat, lng) : `https://www.google.com/maps?q=${lat},${lng}`
@@ -105,7 +113,15 @@ export function CartePosition({
     return (
       <Bouton
         titre={navigation ? t('carte_y_aller') : (titre ?? t('equipe_position'))}
-        icone={navigation ? 'navigate' : estVoiture ? 'car-sport' : 'location-outline'}
+        icone={
+          navigation
+            ? 'navigate'
+            : estVoiture
+              ? 'car-sport'
+              : estClient
+                ? 'person'
+                : 'location-outline'
+        }
         variante={navigation ? 'primaire' : 'secondaire'}
         onPress={ouvrirItineraire}
       />
@@ -122,20 +138,24 @@ export function CartePosition({
       )}
       <View style={[styles.cadre, { height: hauteur }]}>
         {React.createElement('iframe', {
-          src: lienOpenStreetMap(lat, lng, cadrer, estVoiture),
+          src: lienOpenStreetMap(lat, lng, cadrer, marqueurMaison),
           title: titre ?? t('equipe_position'),
           loading: 'lazy',
           style: { border: 0, width: '100%', height: '100%', display: 'block' },
         })}
-        {/* LA PETITE VOITURE, posée au centre — c'est-à-dire exactement sur
-            le taxi, puisque le cadre est centré sur lui. Un halo derrière,
-            pour qu'elle se détache du fond de carte quel qu'il soit ; elle
-            ne capte pas le toucher, la carte reste manipulable dessous. */}
-        {estVoiture && (
-          <View style={styles.zoneVoiture} pointerEvents="none">
-            <View style={styles.halo} />
-            <View style={styles.pastilleVoiture}>
-              <Ionicons name="car-sport" size={22} color={couleurs.surPrimaire} />
+        {/* NOTRE PASTILLE, posée au centre — c'est-à-dire exactement sur le
+            point, puisque le cadre est centré sur lui. Un halo derrière, pour
+            qu'elle se détache du fond de carte quel qu'il soit ; elle ne
+            capte pas le toucher, la carte reste manipulable dessous. */}
+        {marqueurMaison && (
+          <View style={styles.zoneMarqueur} pointerEvents="none">
+            <View style={[styles.halo, estClient && styles.haloClient]} />
+            <View style={[styles.pastille, estClient && styles.pastilleClient]}>
+              <Ionicons
+                name={estClient ? 'person' : 'car-sport'}
+                size={estClient ? 20 : 22}
+                color={couleurs.blanc}
+              />
             </View>
           </View>
         )}
@@ -180,9 +200,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: couleurs.bordure,
   },
-  // La voiture se pose au centre du cadre — et le cadre est centré sur le
-  // taxi (voir lienOpenStreetMap).
-  zoneVoiture: {
+  // La pastille se pose au centre du cadre — et le cadre est centré sur le
+  // point (voir lienOpenStreetMap).
+  zoneMarqueur: {
     ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
@@ -192,19 +212,25 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: 'rgba(228, 87, 46, 0.22)',
+    backgroundColor: 'rgba(228, 87, 46, 0.22)', // corail voilé — le taxi
   },
-  pastilleVoiture: {
+  haloClient: {
+    backgroundColor: 'rgba(14, 154, 167, 0.22)', // turquoise voilé — le client
+  },
+  pastille: {
     width: 38,
     height: 38,
     borderRadius: 19,
     backgroundColor: couleurs.primaire,
     alignItems: 'center',
     justifyContent: 'center',
-    // Liseré blanc : la voiture reste lisible sur une route, un toit ou la mer.
+    // Liseré blanc : la pastille reste lisible sur une route, un toit ou la mer.
     borderWidth: 3,
     borderColor: couleurs.blanc,
     ...ombres.carte,
+  },
+  pastilleClient: {
+    backgroundColor: couleurs.turquoise,
   },
   lien: {
     flexDirection: 'row',

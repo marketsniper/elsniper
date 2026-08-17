@@ -798,6 +798,7 @@ export default function EcranEquipe() {
                       lat={pickupLat}
                       lng={pickupLng}
                       titre={String(champ(course, 'pickup_location', 'pickupLocation') ?? '')}
+                      marqueur="client"
                     />
                   </>
                 ) : (

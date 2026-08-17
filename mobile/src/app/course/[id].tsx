@@ -204,6 +204,8 @@ export default function EcranDetailCourse() {
                   navigation
                   titre={String(champ(course, 'pickup_location', 'pickupLocation') ?? '')}
                   hauteur={220}
+                  // Turquoise : c'est le client qu'on va chercher, pas un taxi.
+                  marqueur="client"
                 />
               );
             })()}

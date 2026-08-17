@@ -40,6 +40,10 @@ export const couleurs = {
   // PAYÉE — celui qui lui ouvre les coordonnées du client.
   vertFeu: '#15A34A',
   surVertFeu: '#FFFFFF',
+  // LE CLIENT sur une carte — turquoise lagon. Complémentaire du corail :
+  // posées côte à côte, les deux pastilles ne se confondent jamais, et le
+  // ton reste chaleureux (c'est un invité qu'on attend, pas une alerte).
+  turquoise: '#0E9AA7',
 };
 
 export const rayons = {
