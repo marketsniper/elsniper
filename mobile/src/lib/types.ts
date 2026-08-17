@@ -600,9 +600,12 @@ const DETOUR_ROUTIER = 1.35;
  */
 const PALIERS_KM_USD: { maxKm: number; usd: number }[] = [
   { maxKm: 12, usd: 12 }, // village voisin
-  { maxKm: 30, usd: 16 }, // un village d'écart
-  { maxKm: 50, usd: 25 },
-  { maxKm: 75, usd: 40 },
+  { maxKm: 24, usd: 16 }, // un village d'écart
+  { maxKm: 30, usd: 21 }, // deux villages
+  { maxKm: 40, usd: 25 },
+  { maxKm: 50, usd: 32 }, // Paje ↔ Kiwengwa
+  { maxKm: 65, usd: 40 },
+  { maxKm: 75, usd: 48 },
   { maxKm: 100, usd: 60 }, // d'une côte à l'autre
   { maxKm: Infinity, usd: 65 }, // du nord au sud
 ];

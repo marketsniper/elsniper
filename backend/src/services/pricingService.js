@@ -222,14 +222,25 @@ function specialLocalRouteTzs(pickup, dropoff) {
 // village voisin 12 USD, un village d'écart 16 USD. Ils prolongent la même
 // logique jusqu'à la grande traversée du nord au sud, à 65 USD.
 //
-// Le prix au kilomètre baisse à mesure que le trajet s'allonge (0,90 USD/km
+// Le prix au kilomètre baisse à mesure que le trajet s'allonge (1,00 USD/km
 // sur un saut de village, 0,61 sur la traversée) : c'est le carburant qui
 // domine sur les longues distances, pas le temps du chauffeur.
+//
+// ATTENTION AUX PALIERS TROP LARGES — la leçon de Paje ↔ Kiwengwa.
+// Un palier plat de 20 km écrase le prix à son sommet : entre 30 et 50 km on
+// payait 25 USD, soit 0,83 USD/km à 30 km mais 0,50 à 50 km. Paje ↔ Kiwengwa
+// (48 km) tombait pile en haut de cette marche et payait moitié moins du
+// kilomètre que le village d'à côté — le chauffeur y perdait sa journée.
+// Les paliers du milieu font donc 8 à 15 km, jamais 20 : le prix au kilomètre
+// reste entre 0,65 et 1,00 sur toute la gamme, au lieu de tomber à 0,50.
 const PALIERS_KM_USD = [
   { maxKm: 12, usd: 12 }, // village voisin — Nungwi ↔ Kendwa, Paje ↔ Jambiani
-  { maxKm: 30, usd: 16 }, // un village d'écart — Nungwi ↔ Matemwe
-  { maxKm: 50, usd: 25 }, // Nungwi ↔ Kiwengwa
-  { maxKm: 75, usd: 40 }, // Nungwi ↔ Michamvi, ↔ Chwaka
+  { maxKm: 24, usd: 16 }, // un village d'écart — Nungwi ↔ Matemwe
+  { maxKm: 30, usd: 21 }, // deux villages — Kiwengwa ↔ Chwaka, Paje ↔ Michamvi
+  { maxKm: 40, usd: 25 }, // Paje ↔ Uroa
+  { maxKm: 50, usd: 32 }, // Paje ↔ Kiwengwa, Nungwi ↔ Kiwengwa
+  { maxKm: 65, usd: 40 }, // Kiwengwa ↔ Jambiani
+  { maxKm: 75, usd: 48 }, // Paje ↔ Matemwe, Nungwi ↔ Chwaka
   { maxKm: 100, usd: 60 }, // Nungwi ↔ Paje, ↔ Jambiani — d'une côte à l'autre
   { maxKm: Infinity, usd: 65 }, // du nord au sud — Nungwi ↔ Makunduchi
 ];

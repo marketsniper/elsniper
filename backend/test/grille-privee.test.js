@@ -72,18 +72,20 @@ describe('Grille privée au kilomètre', () => {
     const local = priceTrip('private', 'local', { pickup: 'Paje', dropoff: 'Jambiani' });
     assert.equal(local.price, 12 * 2600);
     assert.equal(local.commission, 12 * 2600 * 0.15);
-    // Un transfert plus long bascule à 10 % dès 40 USD (Matemwe → Paje 40 → 4).
+    // Un transfert plus long bascule à 10 % dès 40 USD (Matemwe → Paje, 65 km,
+    // 48 USD depuis le rééquilibrage des paliers → commission 4,80).
     const normal = priceTrip('private', 'tourist', { pickup: 'Matemwe', dropoff: 'Paje' });
-    assert.equal(normal.commission, 4);
+    assert.equal(normal.commission, 4.8);
   });
 
   it('paliers de distance : du village voisin à la traversée du nord au sud', () => {
     // La même logique que la côte est, prolongée à toute l'île.
     assert.equal(privateUsdForRoute('Nungwi', 'Kendwa'), 12); // ≈ 5 km, voisins
     assert.equal(privateUsdForRoute('Nungwi', 'Matemwe'), 16); // ≈ 23 km
-    assert.equal(privateUsdForRoute('Nungwi', 'Kiwengwa'), 25); // ≈ 41 km
-    assert.equal(privateUsdForRoute('Nungwi', 'Chwaka'), 40); // ≈ 68 km
-    assert.equal(privateUsdForRoute('Matemwe', 'Paje'), 40); // ≈ 65 km
+    assert.equal(privateUsdForRoute('Kiwengwa', 'Chwaka'), 21); // ≈ 27 km
+    assert.equal(privateUsdForRoute('Nungwi', 'Kiwengwa'), 32); // ≈ 41 km
+    assert.equal(privateUsdForRoute('Nungwi', 'Chwaka'), 48); // ≈ 68 km
+    assert.equal(privateUsdForRoute('Matemwe', 'Paje'), 48); // ≈ 65 km
     assert.equal(privateUsdForRoute('Nungwi', 'Paje'), 60); // ≈ 88 km, côte à côte
     assert.equal(privateUsdForRoute('Kendwa', 'Kizimkazi'), 65); // ≈ 102 km, nord → sud
     assert.equal(privateUsdForRoute('Nungwi', 'Makunduchi'), 65); // ≈ 107 km
@@ -126,10 +128,10 @@ describe('Grille privée au kilomètre', () => {
 
   it('priceTrip applique les paliers (touriste USD, local en TZS ×2600)', () => {
     const touriste = priceTrip('private', 'tourist', { pickup: 'Matemwe', dropoff: 'Paje' });
-    assert.equal(touriste.price, 40);
+    assert.equal(touriste.price, 48); // 65 km — palier 65-75
     assert.equal(touriste.currency, 'USD');
     const local = priceTrip('private', 'local', { pickup: 'Matemwe', dropoff: 'Paje' });
-    assert.equal(local.price, 40 * 2600);
+    assert.equal(local.price, 48 * 2600);
     assert.equal(local.currency, 'TZS');
   });
 
@@ -160,7 +162,7 @@ describe('Grille privée au kilomètre', () => {
     assert.equal(Number(prive.body.price), 12);
   });
 
-  it('bout en bout : une course privée Matemwe → Paje est créée à 40 USD', async () => {
+  it('bout en bout : une course privée Matemwe → Paje est créée à 48 USD', async () => {
     const { token, user } = await createTourist();
     const creation = await request(app)
       .post('/api/trips')
@@ -172,9 +174,9 @@ describe('Grille privée au kilomètre', () => {
         dropoffLocation: 'Paje',
       });
     assert.equal(creation.status, 201, JSON.stringify(creation.body));
-    assert.equal(Number(creation.body.price), 40);
+    assert.equal(Number(creation.body.price), 48);
     assert.equal(creation.body.currency, 'USD');
-    // Commission privée 10 % (40 USD = grand tarif).
-    assert.equal(Number(creation.body.commission), 4);
+    // Commission privée 10 % (au-dessus du seuil de 40 USD).
+    assert.equal(Number(creation.body.commission), 4.8);
   });
 });
