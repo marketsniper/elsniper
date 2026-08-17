@@ -85,7 +85,13 @@ describe('Paiements — détail', () => {
     assert.equal(res.status, 200);
     assert.equal(res.body.trip_id, trip.id);
     assert.equal(res.body.status, 'pending');
-    assert.equal(Number(res.body.amount), Number(trip.price));
+    // Le montant débité = prix de la course + surcharge carte : c'est ce que
+    // le client a payé. Le prix du trajet, lui, ne bouge pas.
+    assert.equal(
+      Number(res.body.amount),
+      Number(trip.price) + Number(res.body.surcharge)
+    );
+    assert.ok(Number(res.body.surcharge) > 0, 'paiement USD : la surcharge carte s’applique');
     assert.equal(res.body.currency, trip.currency);
     assert.ok(res.body.payment_link);
   });

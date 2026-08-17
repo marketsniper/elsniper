@@ -226,7 +226,7 @@ export const HUBS_RIDES: string[] = [
 // Stone Town et son terminal ferry sont la MÊME place : aucune course n'est
 // proposée entre les deux (même règle côté serveur, code d'erreur
 // route_indisponible). L'aéroport, lui, est à sept kilomètres — c'est un
-// vrai transfert, facturé 17 USD.
+// vrai transfert, facturé 18 USD.
 export const POINTS_STONE_TOWN: string[] = ['Stone Town', 'Stone Town Ferry'];
 
 // Les 16 villes de l'île (hors hubs) — communes au départ et à l'arrivée.
@@ -409,24 +409,24 @@ export const TARIFS_TRAJET_USD: Partial<Record<TypeTrajet, number>> = {
 // que ses valeurs.
 //
 // LA CHAÎNE DE LA CÔTE EST : Michamvi → Bwejuu → Paje → Jambiani →
-// Makunduchi. Village voisin 12 USD, un village d'écart 16 USD.
+// Makunduchi. Village voisin 13 USD, un village d'écart 17 USD.
 export const TRAJETS_SPECIAUX_PRIVE_USD: { villes: [string, string]; prix: number }[] = [
-  // Transfert aéroport : sept kilomètres (17 USD → commission privée 15 %
+  // Transfert aéroport : sept kilomètres (18 USD → commission privée 15 %
   // côté serveur, car sous les 40 USD).
-  { villes: ['Aéroport international Abeid Amani Karume', 'Stone Town'], prix: 17 },
-  { villes: ['Aéroport international Abeid Amani Karume', 'Stone Town Ferry'], prix: 17 },
+  { villes: ['Aéroport international Abeid Amani Karume', 'Stone Town'], prix: 18 },
+  { villes: ['Aéroport international Abeid Amani Karume', 'Stone Town Ferry'], prix: 18 },
   // Michamvi depuis le nord : la route contourne la baie de Chwaka.
-  { villes: ['Nungwi', 'Michamvi'], prix: 65 },
-  { villes: ['Kendwa', 'Michamvi'], prix: 65 },
+  { villes: ['Nungwi', 'Michamvi'], prix: 68 },
+  { villes: ['Kendwa', 'Michamvi'], prix: 68 },
   // La pointe sud : la route descend par l'intérieur.
-  { villes: ['Kizimkazi', 'Jambiani'], prix: 17 },
-  { villes: ['Michamvi', 'Bwejuu'], prix: 12 },
-  { villes: ['Bwejuu', 'Paje'], prix: 12 },
-  { villes: ['Paje', 'Jambiani'], prix: 12 },
-  { villes: ['Jambiani', 'Makunduchi'], prix: 12 },
-  { villes: ['Michamvi', 'Paje'], prix: 16 },
-  { villes: ['Bwejuu', 'Jambiani'], prix: 16 },
-  { villes: ['Paje', 'Makunduchi'], prix: 16 },
+  { villes: ['Kizimkazi', 'Jambiani'], prix: 18 },
+  { villes: ['Michamvi', 'Bwejuu'], prix: 13 },
+  { villes: ['Bwejuu', 'Paje'], prix: 13 },
+  { villes: ['Paje', 'Jambiani'], prix: 13 },
+  { villes: ['Jambiani', 'Makunduchi'], prix: 13 },
+  { villes: ['Michamvi', 'Paje'], prix: 17 },
+  { villes: ['Bwejuu', 'Jambiani'], prix: 17 },
+  { villes: ['Paje', 'Makunduchi'], prix: 17 },
 ];
 
 /** Trajets spéciaux TZS : place locale en taxi partagé (deux sens). */
@@ -487,29 +487,29 @@ export interface TarifsZone {
 /**
  * Prix d'une place en taxi partagé — déduit du prix de la course PRIVÉE du
  * même trajet, jamais fixé à part (miroir exact de la grille serveur) :
- * privé 40 → 12 · 45 → 15 · 50 → 16 · 60 et plus → 18.
+ * privé 42 → 13 · 47 → 16 · 53 → 17 · 63 et plus → 19.
  */
 export function tarifPlacePartagee(priveUsd: number): number {
-  if (priveUsd >= 60) return 18;
-  if (priveUsd >= 50) return 16;
-  if (priveUsd >= 45) return 15;
-  return 12;
+  if (priveUsd >= 63) return 19;
+  if (priveUsd >= 53) return 17;
+  if (priveUsd >= 47) return 16;
+  return 13;
 }
 
 // Tarif local UNIFIÉ : 15 000 TZS la place partout (sauf trajets spéciaux,
 // ex. Nungwi ↔ Paje 20 000) — miroir de la grille serveur.
 export const TARIFS_ZONE: Record<ZoneTarifaire, TarifsZone> = {
-  nord: { priveUsd: 45, localTzs: 15000 }, // Nungwi, Kendwa
-  nord_est: { priveUsd: 40, localTzs: 15000 }, // Matemwe → Chwaka
-  est: { priveUsd: 45, localTzs: 15000 }, // Paje, Bwejuu
-  est_sud: { priveUsd: 50, localTzs: 15000 }, // Jambiani
-  est_pointe: { priveUsd: 50, localTzs: 15000 }, // Michamvi
-  sud: { priveUsd: 45, localTzs: 15000 }, // Kizimkazi, Makunduchi, Fumba
+  nord: { priveUsd: 47, localTzs: 15000 }, // Nungwi, Kendwa
+  nord_est: { priveUsd: 42, localTzs: 15000 }, // Matemwe → Chwaka
+  est: { priveUsd: 47, localTzs: 15000 }, // Paje, Bwejuu
+  est_sud: { priveUsd: 53, localTzs: 15000 }, // Jambiani
+  est_pointe: { priveUsd: 53, localTzs: 15000 }, // Michamvi
+  sud: { priveUsd: 47, localTzs: 15000 }, // Kizimkazi, Makunduchi, Fumba
 };
 
 /** Tarifs appliqués quand aucune ville zonée n'apparaît dans l'itinéraire. */
 export const TARIFS_ZONE_DEFAUT: TarifsZone = {
-  priveUsd: 50,
+  priveUsd: 53,
   localTzs: TARIF_LOCAL_TZS,
 };
 
@@ -599,15 +599,15 @@ const DETOUR_ROUTIER = 1.35;
  * la traversée de l'île » ; il ne compte pas les kilomètres.
  */
 const PALIERS_KM_USD: { maxKm: number; usd: number }[] = [
-  { maxKm: 12, usd: 12 }, // village voisin
-  { maxKm: 24, usd: 16 }, // un village d'écart
-  { maxKm: 30, usd: 21 }, // deux villages
-  { maxKm: 40, usd: 25 },
-  { maxKm: 50, usd: 32 }, // Paje ↔ Kiwengwa
-  { maxKm: 65, usd: 40 },
-  { maxKm: 75, usd: 48 },
-  { maxKm: 100, usd: 60 }, // d'une côte à l'autre
-  { maxKm: Infinity, usd: 65 }, // du nord au sud
+  { maxKm: 12, usd: 13 }, // village voisin
+  { maxKm: 24, usd: 17 }, // un village d'écart
+  { maxKm: 30, usd: 22 }, // deux villages
+  { maxKm: 40, usd: 26 },
+  { maxKm: 50, usd: 34 }, // Paje ↔ Kiwengwa
+  { maxKm: 65, usd: 42 },
+  { maxKm: 75, usd: 50 },
+  { maxKm: 100, usd: 63 }, // d'une côte à l'autre
+  { maxKm: Infinity, usd: 68 }, // du nord au sud
 ];
 const HUBS_TARIFAIRES = new Set([
   'stone town',

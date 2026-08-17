@@ -48,6 +48,13 @@ export const config = {
   // vraie connexion par code, avec un envoi réel derrière.
   otpActif: env.OTP_ACTIF === '1' || (env.NODE_ENV || 'development') !== 'production',
 
+  // SURCHARGE CARTE BANCAIRE — payée par le client qui choisit la carte.
+  // 4 % : le taux d'équilibre pour 3,5 % de frais est 3,63 % (la banque
+  // prélève sur le montant déjà surchargé), on arrondit au-dessus.
+  // Jamais appliquée aux paiements en TZS (portefeuille mobile) ni au crédit
+  // prépayé des hôtels. Mettre 0 pour la désactiver.
+  surchargeCarte: env.SURCHARGE_CARTE === undefined ? 0.04 : Number(env.SURCHARGE_CARTE),
+
   // Métier
   commissionRate: Number(env.COMMISSION_RATE) || 0.15,
   teamWhatsappNumber: env.TEAM_WHATSAPP_NUMBER || '+255000000000',

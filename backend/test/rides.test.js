@@ -45,7 +45,7 @@ describe('Trajets partagés (rides)', () => {
     assert.equal(Number(res.body.price_per_seat), 15000); // grille Nord, fixée par zanziGo
     // Le chauffeur voit LES DEUX prix : TZS (locaux) et USD (touristes) —
     // chaque client paie dans sa devise, le chauffeur doit le savoir.
-    assert.equal(Number(res.body.price_per_seat_usd), 15);
+    assert.equal(Number(res.body.price_per_seat_usd), 16);
     assert.ok(res.body.whatsapp_link.includes('wa.me'));
   });
 
@@ -131,17 +131,17 @@ describe('Trajets partagés (rides)', () => {
     assert.equal(anonymous.status, 401);
   });
 
-  it('cloison tarifaire : touriste 15 USD, résident vérifié 13,50 USD, local TZS', async () => {
+  it('cloison tarifaire : touriste 16 USD, résident vérifié 14,40 USD, local TZS', async () => {
     const { token } = await createVerifiedDriver();
     const ride = (await postRide(token)).body;
 
     const { token: touristToken } = await createTourist();
     const forTourist = await request(app).get('/api/rides').set(authHeaders(touristToken));
     const t = forTourist.body.find((r) => r.id === ride.id);
-    assert.equal(t.price_per_seat_usd, 15);
+    assert.equal(t.price_per_seat_usd, 16);
     assert.equal(t.currency, 'USD');
     assert.equal(t.price_per_seat, undefined, 'le prix local ne doit pas fuiter vers un touriste');
-    assert.ok(t.whatsapp_link.includes(encodeURIComponent('15 USD')));
+    assert.ok(t.whatsapp_link.includes(encodeURIComponent('16 USD')));
 
     const { createResident, createLocal } = await import('./setup.js');
 
@@ -149,7 +149,7 @@ describe('Trajets partagés (rides)', () => {
     const { token: residentToken } = await createResident();
     const forResident = await request(app).get('/api/rides').set(authHeaders(residentToken));
     const r = forResident.body.find((x) => x.id === ride.id);
-    assert.equal(r.price_per_seat_usd, 13.5);
+    assert.equal(r.price_per_seat_usd, 14.4);
     assert.equal(r.currency, 'USD');
     assert.equal(r.price_per_seat, undefined);
 
@@ -256,10 +256,10 @@ describe('Trajets partagés — réservation de places dans l\'app', () => {
     assert.equal(mine.body[0].bookings.length, 1);
     assert.equal(mine.body[0].bookings[0].seats, 2);
     assert.equal(mine.body[0].bookings[0].client_type, 'tourist');
-    assert.equal(mine.body[0].bookings[0].price_per_seat, 15); // Nungwi : privé 45 → place 15
+    assert.equal(mine.body[0].bookings[0].price_per_seat, 16); // Nungwi : privé 47 → place 16
     assert.equal(mine.body[0].bookings[0].currency, 'USD');
-    assert.equal(mine.body[0].bookings[0].commission_per_seat, 3); // 20 % de 15
-    assert.equal(mine.body[0].bookings[0].net_per_seat, 12); // le chauffeur garde 80 %
+    assert.equal(mine.body[0].bookings[0].commission_per_seat, 3.2); // 20 % de 16
+    assert.equal(mine.body[0].bookings[0].net_per_seat, 12.8); // le chauffeur garde 80 %
   });
 
   it('surréservation → 409 not_enough_seats, places inchangées', async () => {

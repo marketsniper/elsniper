@@ -64,12 +64,12 @@ describe('Courses taxi (trips)', () => {
     const { token: userToken, user } = await createTourist();
     const { token: driverToken, driver } = await createVerifiedDriver();
 
-    // Création : prix USD figé côté serveur (private → 45 USD, commission 10 %)
+    // Création : prix USD figé côté serveur (private → 47 USD, commission 10 %)
     const trip = await createTrip(userToken, user.id);
     assert.equal(trip.status, 'requested');
     assert.equal(trip.currency, 'USD');
-    assert.equal(Number(trip.price), 45);
-    assert.equal(Number(trip.commission), 4.5); // 10 % (≥ 40 USD) — le chauffeur reçoit 40,50 USD
+    assert.equal(Number(trip.price), 47);
+    assert.equal(Number(trip.commission), 4.7); // 10 % (≥ 40 USD) — le chauffeur reçoit 42,30 USD
     assert.match(trip.whatsapp_link, /wa\.me/);
     assert.equal(trip.driver_id, null);
 
@@ -81,7 +81,9 @@ describe('Courses taxi (trips)', () => {
     // Paiement (stub Pesapal) → course payée
     const payment = await payTrip(userToken, trip.id);
     assert.equal(payment.trip_id, trip.id);
-    assert.equal(Number(payment.amount), 45);
+    // Débité = prix de la course + surcharge carte 4 % (47 → 48,88).
+    assert.equal(Number(payment.amount), 48.88);
+    assert.equal(Number(payment.prix_course), 47);
     const paid = await request(app).get(`/api/trips/${trip.id}`).set(authHeaders(userToken));
     assert.equal(paid.body.status, 'paid');
     // Course payée : le client voit SON taxi — nom du chauffeur, plaque
@@ -127,40 +129,40 @@ describe('Courses taxi (trips)', () => {
 
     // Aéroport → Nungwi : privé 45 USD, donc la place vaut 15.
     const shared = await createTrip(touristToken, tourist.id, { tripType: 'shared_tourist' });
-    assert.equal(Number(shared.price), 15);
+    assert.equal(Number(shared.price), 16);
     assert.equal(shared.currency, 'USD');
 
     const posted = await createTrip(touristToken, tourist.id, { tripType: 'posted_return' });
-    assert.equal(Number(posted.price), 15);
+    assert.equal(Number(posted.price), 16);
 
     // Trajet spécial Nungwi ↔ Paje : 60 USD en privé (54 pour un résident).
     const special = await createTrip(touristToken, tourist.id, {
       pickupLocation: 'Nungwi',
       dropoffLocation: 'Paje',
     });
-    assert.equal(Number(special.price), 60);
+    assert.equal(Number(special.price), 63);
     const specialResident = await createTrip(residentToken, resident.id, {
       pickupLocation: 'Paje',
       dropoffLocation: 'Nungwi',
     });
-    assert.equal(Number(specialResident.price), 54);
+    assert.equal(Number(specialResident.price), 56.7);
 
     // Résident vérifié : remise de 10 % sur le tarif touriste, en USD.
     const privateResident = await createTrip(residentToken, resident.id);
-    assert.equal(Number(privateResident.price), 40.5);
+    assert.equal(Number(privateResident.price), 42.3);
     assert.equal(privateResident.currency, 'USD');
 
     // Résident NON vérifié : plein tarif touriste tant que les documents
     // de résidence ne sont pas validés.
     const { token: pendingToken, user: pending } = await createResident({ verify: false });
     const privatePending = await createTrip(pendingToken, pending.id);
-    assert.equal(Number(privatePending.price), 45);
+    assert.equal(Number(privatePending.price), 47);
 
     // Local vérifié : course PRIVÉE au tarif touriste converti en TZS
     // (45 USD × 2 600), navettes au tarif local de la zone.
     const { token: localToken, user: local } = await createLocal();
     const privateLocal = await createTrip(localToken, local.id);
-    assert.equal(Number(privateLocal.price), 117000); // 45 USD × 2 600
+    assert.equal(Number(privateLocal.price), 122200); // 47 USD × 2 600
     assert.equal(privateLocal.currency, 'TZS');
     const sharedLocalFlat = await createTrip(localToken, local.id, { tripType: 'shared_tourist' });
     assert.equal(Number(sharedLocalFlat.price), 15000);

@@ -53,8 +53,8 @@ describe('Bourse aux courses', () => {
     // Ce que le chauffeur DOIT voir pour décider.
     assert.equal(vue.pickup_location, 'Stone Town');
     assert.equal(vue.dropoff_location, 'Nungwi');
-    assert.equal(Number(vue.price), 45);
-    assert.equal(Number(vue.net_chauffeur), 40.5, 'son gain net, commission déduite');
+    assert.equal(Number(vue.price), 47);
+    assert.equal(Number(vue.net_chauffeur), 42.3, 'son gain net, commission déduite');
     assert.equal(vue.flight_number, 'TK123');
 
     // Ce qu'il ne doit PAS voir avant d'avoir pris la course.

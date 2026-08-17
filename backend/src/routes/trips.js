@@ -24,6 +24,7 @@ import {
   alerterNouvelleCourse,
 } from '../services/alertesChauffeur.js';
 import { CHAMPS_CLIENT_POUR_CHAUFFEUR, vueChauffeur } from '../services/vueChauffeur.js';
+import { mentionSurcharge, montantAvecSurcharge } from '../services/surchargeCarte.js';
 
 const router = Router();
 
@@ -821,8 +822,14 @@ router.post(
       return;
     }
 
+    // SURCHARGE CARTE : le client qui paie par carte règle les frais de la
+    // banque. En TZS (portefeuille mobile), rien n'est ajouté. Le prix de la
+    // course et la commission du chauffeur sont inchangés — seule la somme
+    // débitée grossit (voir services/surchargeCarte.js).
+    const { montant: aRegler, surcharge } = montantAvecSurcharge(trip.price, trip.currency);
+
     const paypal = await circuitPaiementUsd({
-      amount: trip.price,
+      amount: aRegler,
       currency: trip.currency,
       description: `zanziGo trajet ${trip.id}`,
     });
@@ -838,7 +845,8 @@ router.post(
             '💳 Paiement course zanziGo',
             `Réf: ${trip.id}`,
             `Trajet: ${trip.pickup_location} → ${trip.dropoff_location}`,
-            `Montant: ${trip.price} ${trip.currency}`,
+            `Montant: ${aRegler} ${trip.currency}`,
+            ...(surcharge > 0 ? [`(dont ${surcharge} ${trip.currency} de frais bancaires carte)`] : []),
             'Bonjour, je souhaite régler cette course — merci de m\'envoyer le lien de paiement.',
           ].join('\n')
         ),
@@ -848,16 +856,16 @@ router.post(
     const { reference, paymentLink } =
       circuit ??
       (await createPaymentOrder({
-        amount: trip.price,
+        amount: aRegler,
         currency: trip.currency,
         description: `zanziGo trajet ${trip.id}`,
       }));
 
     const { rows } = await query(
-      `INSERT INTO payments (trip_id, amount, currency, pesapal_reference, payment_link)
-       VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO payments (trip_id, amount, currency, pesapal_reference, payment_link, surcharge)
+       VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING *`,
-      [trip.id, trip.price, trip.currency, reference, paymentLink]
+      [trip.id, aRegler, trip.currency, reference, paymentLink, surcharge]
     );
 
     // Paiement que l'ÉQUIPE devra encaisser puis valider à la main : elle est
@@ -876,6 +884,11 @@ router.post(
     res.status(201).json({
       ...rows[0],
       payment_method: paypal?.method ?? (isStubMode() ? 'manual' : 'pesapal'),
+      // Le client doit voir la surcharge AVANT de payer, jamais la découvrir
+      // sur son relevé : prix de la course, frais, total.
+      prix_course: Number(trip.price),
+      surcharge,
+      mention_surcharge: mentionSurcharge(trip.price, trip.currency),
     });
   })
 );
@@ -1115,7 +1128,12 @@ router.post(
       if (trip.status === 'paid' && !isAdmin(req) && tauxPaye !== null) {
         const { rows: paiements } = await client.query(
           `UPDATE payments
-           SET refund_amount = ROUND(amount * $2, 2), refund_due_at = now()
+           -- Le barème (100 % / 50 %) porte sur le PRIX DE LA COURSE, pas
+           -- sur la surcharge carte : celle-ci a déjà été prélevée par la
+           -- banque, elle n'est pas dans nos caisses. Sans ce (amount −
+           -- surcharge), un client annulant à +72 h se ferait rembourser
+           -- des frais bancaires que nous ne récupérons jamais.
+           SET refund_amount = ROUND((amount - surcharge) * $2, 2), refund_due_at = now()
            WHERE trip_id = $1 AND status = 'confirmed' AND refund_due_at IS NULL
            RETURNING refund_amount, currency`,
           [req.params.id, tauxPaye]

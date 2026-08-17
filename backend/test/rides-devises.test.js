@@ -51,7 +51,7 @@ describe('Devises taxi partagé (parcours local complet)', () => {
     const mine = await request(app).get('/api/rides/mine').set(authHeaders(tokenChauffeur));
     const annonce = mine.body[0];
     assert.equal(Number(annonce.price_per_seat), 15000);
-    assert.equal(Number(annonce.price_per_seat_usd), 15);
+    assert.equal(Number(annonce.price_per_seat_usd), 16);
     const booking = annonce.bookings[0];
     assert.equal(booking.client_type, 'local');
     assert.equal(booking.currency, 'TZS');
@@ -79,7 +79,7 @@ describe('Devises taxi partagé (parcours local complet)', () => {
       .set(authHeaders(tokenTouriste))
       .set(adminHeaders());
     assert.equal(liste.body[0].currency, 'USD');
-    assert.equal(Number(liste.body[0].price_per_seat_usd), 15);
+    assert.equal(Number(liste.body[0].price_per_seat_usd), 16);
     assert.equal(liste.body[0].price_per_seat, undefined);
 
     const resa = await request(app)
@@ -89,7 +89,7 @@ describe('Devises taxi partagé (parcours local complet)', () => {
       .send({ seats: 1 });
     assert.equal(resa.status, 201);
     assert.equal(resa.body.payment.currency, 'USD');
-    assert.equal(Number(resa.body.payment.amount), 15);
+    assert.equal(Number(resa.body.payment.amount), 16);
 
     // « Mes places » du touriste : USD aussi, même avec la clé embarquée.
     const mesPlaces = await request(app)
@@ -97,7 +97,7 @@ describe('Devises taxi partagé (parcours local complet)', () => {
       .set(authHeaders(tokenTouriste))
       .set(adminHeaders());
     assert.equal(mesPlaces.body[0].currency, 'USD');
-    assert.equal(Number(mesPlaces.body[0].amount), 15);
+    assert.equal(Number(mesPlaces.body[0].amount), 16);
     // Le client sait quel taxi assure le trajet : plaque + modèle visibles.
     assert.ok(mesPlaces.body[0].vehicle_plate);
     assert.equal(mesPlaces.body[0].vehicle_model, 'Toyota Noah');

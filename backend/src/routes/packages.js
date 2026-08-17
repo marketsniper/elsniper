@@ -13,6 +13,7 @@ import { buildTeamNotificationLink, packageRequestMessage } from '../services/wh
 import { notifierEquipe } from '../services/emailService.js';
 import { alertePaiementColis, aValiderALaMain } from '../services/paiementManuel.js';
 import { assertHotelVerified, libellePartenaire } from './hotels.js';
+import { mentionSurcharge, montantAvecSurcharge } from '../services/surchargeCarte.js';
 
 const router = Router();
 
@@ -429,15 +430,22 @@ router.post(
     // (mobile money M-Pesa/Tigo/Airtel + cartes) dès que les clés sont
     // présentes ; en dernier recours (mode stub) paiement MANUEL : le lien
     // ouvre WhatsApp vers l'équipe, qui confirme une fois l'argent reçu.
+    // Même règle que pour les courses : le client qui paie par carte règle
+    // les frais bancaires ; en TZS (portefeuille mobile), rien n'est ajouté.
+    const { montant: aReglerColis, surcharge: surchargeColis } = montantAvecSurcharge(
+      pkg.price,
+      pkg.currency
+    );
+
     const paypal = await circuitPaiementUsd({
-      amount: pkg.price,
+      amount: aReglerColis,
       currency: pkg.currency,
       description: `zanziGo colis ${pkg.qr_code}`,
     });
     let circuit = paypal;
     if (!circuit && !isStubMode()) {
       circuit = await createPaymentOrder({
-        amount: pkg.price,
+        amount: aReglerColis,
         currency: pkg.currency,
         description: `zanziGo colis ${pkg.qr_code}`,
       });
@@ -451,17 +459,20 @@ router.post(
           `Réf: ${pkg.id}`,
           `QR: ${pkg.qr_code}`,
           `Taille: ${pkg.size}`,
-          `Montant: ${pkg.price} ${pkg.currency}`,
+          `Montant: ${aReglerColis} ${pkg.currency}`,
+          ...(surchargeColis > 0
+            ? [`(dont ${surchargeColis} ${pkg.currency} de frais bancaires carte)`]
+            : []),
           `Trajet: ${pkg.pickup_location} → ${pkg.dropoff_location}`,
           'Bonjour, je souhaite régler ce colis — merci de m’envoyer le lien de paiement.',
         ].join('\n')
       );
 
     const { rows } = await query(
-      `INSERT INTO payments (package_id, amount, currency, pesapal_reference, payment_link)
-       VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO payments (package_id, amount, currency, pesapal_reference, payment_link, surcharge)
+       VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING *`,
-      [pkg.id, pkg.price, pkg.currency, reference, paymentLink]
+      [pkg.id, aReglerColis, pkg.currency, reference, paymentLink, surchargeColis]
     );
 
     // Paiement que l'équipe devra encaisser puis valider : son téléphone

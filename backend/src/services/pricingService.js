@@ -13,31 +13,38 @@ import { config } from '../config.js';
 // Zones (depuis/vers la ville ou l'aéroport) :
 // Tarif local UNIFIÉ : 15 000 TZS la place partout (sauf trajets spéciaux
 // ci-dessous) — plus simple à retenir pour les clients et les chauffeurs.
+// HAUSSE DE 5 % SUR LES PRIX TOURISTES (17/08/2026), arrondie au dollar.
+// Décision commerciale : les transferts touristes avaient de la marge par
+// rapport au marché, les prix LOCAUX n'en ont pas. Le tarif local reste donc
+// à 15 000 TZS la place — il n'a pas bougé et ne doit pas bouger.
 const ZONE_TIERS = {
-  nord: { privateUsd: 45, localTzs: 15000 }, // Nungwi / Kendwa
-  nordEst: { privateUsd: 40, localTzs: 15000 }, // Matemwe / Kiwengwa
-  est: { privateUsd: 45, localTzs: 15000 }, // Paje / Bwejuu
-  estSud: { privateUsd: 50, localTzs: 15000 }, // Jambiani
-  estPointe: { privateUsd: 50, localTzs: 15000 }, // Michamvi (route directe)
-  sud: { privateUsd: 45, localTzs: 15000 }, // Kizimkazi / Makunduchi
+  nord: { privateUsd: 47, localTzs: 15000 }, // Nungwi / Kendwa       (45 → 47)
+  nordEst: { privateUsd: 42, localTzs: 15000 }, // Matemwe / Kiwengwa (40 → 42)
+  est: { privateUsd: 47, localTzs: 15000 }, // Paje / Bwejuu          (45 → 47)
+  estSud: { privateUsd: 53, localTzs: 15000 }, // Jambiani            (50 → 53)
+  estPointe: { privateUsd: 53, localTzs: 15000 }, // Michamvi         (50 → 53)
+  sud: { privateUsd: 47, localTzs: 15000 }, // Kizimkazi / Makunduchi (45 → 47)
 };
 
 // PRIX D'UNE PLACE EN TAXI PARTAGÉ — déduit du prix de la course PRIVÉE du
 // même trajet, jamais fixé à part. Une seule grille à tenir : quand un
 // transfert bouge, sa place suit toute seule.
 //
-//   privé 40 USD        → place 12
-//   privé 45 USD        → place 15
-//   privé 50 USD        → place 16
-//   privé 60 USD et +   → place 18
+//   privé 42 USD        → place 13
+//   privé 47 USD        → place 16
+//   privé 53 USD        → place 17
+//   privé 63 USD et +   → place 19
+//
+// Les SEUILS montent avec les prix (hausse de 5 %) : sans ça, un transfert
+// passé de 45 à 47 USD aurait sauté une tranche et sa place aurait bondi.
 //
 // En dessous de 40 USD la question ne se pose pas : le taxi partagé n'existe
 // pas sur les trajets courts (voir PARTAGE_PRIVE_MIN_USD).
 function sharedSeatUsd(priveUsd) {
-  if (priveUsd >= 60) return 18;
-  if (priveUsd >= 50) return 16;
-  if (priveUsd >= 45) return 15;
-  return 12;
+  if (priveUsd >= 63) return 19;
+  if (priveUsd >= 53) return 17;
+  if (priveUsd >= 47) return 16;
+  return 13;
 }
 
 // Commissions zanziGo par service (grille « Chauffeur reçoit ») :
@@ -47,7 +54,7 @@ function sharedSeatUsd(priveUsd) {
 //      village, liaison courte — proportionnellement plus de frais fixes) ;
 //  - taxi partagé TOURISTE (USD) : 20 % ;
 //  - taxi partagé LOCAL (TZS) : 15 % ;
-//  - colis 20 % (5 → 4,00).
+//  - colis 20 % (5 → 4,00 ; les prix des colis n'ont pas bougé).
 // Les réservations d'hôtel restent sur le taux général config.commissionRate.
 const COMMISSION_RATES = {
   private: 0.1, // grands trajets privés, 40 USD et plus
@@ -88,36 +95,36 @@ const CITY_ZONES = {
 //
 // LA CHAÎNE DE LA CÔTE EST — Michamvi, Bwejuu, Paje, Jambiani, Makunduchi
 // se suivent le long de la même route. Une règle, deux prix :
-//   village voisin        → 12 USD
-//   un village d'écart    → 16 USD
+//   village voisin        → 13 USD
+//   un village d'écart    → 17 USD
 // Ces prix sont sous les 40 USD : la commission privée y est de 15 % (comme
 // tout petit trajet). Au-delà de deux villages, la grille au kilomètre reprend.
 const SPECIAL_PRIVATE_ROUTES_USD = [
-  // Transfert aéroport : sept kilomètres, très demandé (17 USD, sous les
-  // 40 USD → commission 15 %, le chauffeur garde 14,45).
-  { a: 'Aéroport international Abeid Amani Karume', b: 'Stone Town', usd: 17 },
-  { a: 'Aéroport international Abeid Amani Karume', b: 'Stone Town Ferry', usd: 17 },
-  { a: 'Aéroport (AAKIA)', b: 'Stone Town', usd: 17 },
-  { a: 'Aéroport (AAKIA)', b: 'Stone Town Ferry', usd: 17 },
-  { a: 'Aéroport', b: 'Stone Town', usd: 17 },
-  { a: 'Aéroport', b: 'Stone Town Ferry', usd: 17 },
+  // Transfert aéroport : sept kilomètres, très demandé (18 USD, sous les
+  // 40 USD → commission 15 %, le chauffeur garde 15,30).
+  { a: 'Aéroport international Abeid Amani Karume', b: 'Stone Town', usd: 18 },
+  { a: 'Aéroport international Abeid Amani Karume', b: 'Stone Town Ferry', usd: 18 },
+  { a: 'Aéroport (AAKIA)', b: 'Stone Town', usd: 18 },
+  { a: 'Aéroport (AAKIA)', b: 'Stone Town Ferry', usd: 18 },
+  { a: 'Aéroport', b: 'Stone Town', usd: 18 },
+  { a: 'Aéroport', b: 'Stone Town Ferry', usd: 18 },
   // Voisins immédiats.
-  { a: 'Michamvi', b: 'Bwejuu', usd: 12 },
-  { a: 'Bwejuu', b: 'Paje', usd: 12 },
-  { a: 'Paje', b: 'Jambiani', usd: 12 },
-  { a: 'Jambiani', b: 'Makunduchi', usd: 12 },
+  { a: 'Michamvi', b: 'Bwejuu', usd: 13 },
+  { a: 'Bwejuu', b: 'Paje', usd: 13 },
+  { a: 'Paje', b: 'Jambiani', usd: 13 },
+  { a: 'Jambiani', b: 'Makunduchi', usd: 13 },
   // MICHAMVI DEPUIS LE NORD — la pointe se gagne en contournant toute la
   // baie de Chwaka : la route est bien plus longue que la distance à vol
   // d'oiseau, sur laquelle les paliers se calculent. Prix de terrain.
-  { a: 'Nungwi', b: 'Michamvi', usd: 65 },
-  { a: 'Kendwa', b: 'Michamvi', usd: 65 },
+  { a: 'Nungwi', b: 'Michamvi', usd: 68 },
+  { a: 'Kendwa', b: 'Michamvi', usd: 68 },
   // La pointe sud : Kizimkazi est sur l'autre versant, la route y descend
   // par l'intérieur au lieu de longer la côte. Prix de terrain.
-  { a: 'Kizimkazi', b: 'Jambiani', usd: 17 },
+  { a: 'Kizimkazi', b: 'Jambiani', usd: 18 },
   // Un village sauté.
-  { a: 'Michamvi', b: 'Paje', usd: 16 },
-  { a: 'Bwejuu', b: 'Jambiani', usd: 16 },
-  { a: 'Paje', b: 'Makunduchi', usd: 16 },
+  { a: 'Michamvi', b: 'Paje', usd: 17 },
+  { a: 'Bwejuu', b: 'Jambiani', usd: 17 },
+  { a: 'Paje', b: 'Makunduchi', usd: 17 },
 ];
 
 // Trajets spéciaux à prix fixe (TZS, place locale en taxi partagé), deux
@@ -164,7 +171,7 @@ function tierForRoute(pickup, dropoff) {
   const z1 = ZONE_TIERS[CITY_ZONES[normCity(pickup)]];
   const z2 = ZONE_TIERS[CITY_ZONES[normCity(dropoff)]];
   const fallback = {
-    privateUsd: 50,
+    privateUsd: 53,
     sharedUsd: config.sharedRideUsdPerSeat,
     localTzs: config.localTripPriceTzs,
   };
@@ -234,15 +241,15 @@ function specialLocalRouteTzs(pickup, dropoff) {
 // Les paliers du milieu font donc 8 à 15 km, jamais 20 : le prix au kilomètre
 // reste entre 0,65 et 1,00 sur toute la gamme, au lieu de tomber à 0,50.
 const PALIERS_KM_USD = [
-  { maxKm: 12, usd: 12 }, // village voisin — Nungwi ↔ Kendwa, Paje ↔ Jambiani
-  { maxKm: 24, usd: 16 }, // un village d'écart — Nungwi ↔ Matemwe
-  { maxKm: 30, usd: 21 }, // deux villages — Kiwengwa ↔ Chwaka, Paje ↔ Michamvi
-  { maxKm: 40, usd: 25 }, // Paje ↔ Uroa
-  { maxKm: 50, usd: 32 }, // Paje ↔ Kiwengwa, Nungwi ↔ Kiwengwa
-  { maxKm: 65, usd: 40 }, // Kiwengwa ↔ Jambiani
-  { maxKm: 75, usd: 48 }, // Paje ↔ Matemwe, Nungwi ↔ Chwaka
-  { maxKm: 100, usd: 60 }, // Nungwi ↔ Paje, ↔ Jambiani — d'une côte à l'autre
-  { maxKm: Infinity, usd: 65 }, // du nord au sud — Nungwi ↔ Makunduchi
+  { maxKm: 12, usd: 13 }, // village voisin — Nungwi ↔ Kendwa, Paje ↔ Jambiani
+  { maxKm: 24, usd: 17 }, // un village d'écart — Nungwi ↔ Matemwe
+  { maxKm: 30, usd: 22 }, // deux villages — Kiwengwa ↔ Chwaka, Paje ↔ Michamvi
+  { maxKm: 40, usd: 26 }, // Paje ↔ Uroa
+  { maxKm: 50, usd: 34 }, // Paje ↔ Kiwengwa, Nungwi ↔ Kiwengwa
+  { maxKm: 65, usd: 42 }, // Kiwengwa ↔ Jambiani
+  { maxKm: 75, usd: 50 }, // Paje ↔ Matemwe, Nungwi ↔ Chwaka
+  { maxKm: 100, usd: 63 }, // Nungwi ↔ Paje, ↔ Jambiani — d'une côte à l'autre
+  { maxKm: Infinity, usd: 68 }, // du nord au sud — Nungwi ↔ Makunduchi
 ];
 
 function palierUsd(km) {
