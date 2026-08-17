@@ -2943,6 +2943,13 @@ const CHAINES = {
     it: 'Pubblica un viaggio',
     de: 'Fahrt anbieten',
   },
+  annonces_liste_deplacee: {
+    fr: 'Vos trajets déjà publiés sont rangés dans « Mes trajets postés », sur l’écran Mes courses.',
+    en: 'The trips you have already posted are kept under “My posted trips”, on the My rides screen.',
+    sw: 'Safari ulizokwisha tangaza zipo kwenye « Safari zangu », kwenye skrini ya Safari zangu.',
+    it: 'I viaggi già pubblicati si trovano in « I miei viaggi », nella schermata Le mie corse.',
+    de: 'Ihre bereits angebotenen Fahrten finden Sie unter „Meine Fahrten“ im Bildschirm Meine Fahrten.',
+  },
   courses_case_mes_trajets: {
     fr: 'Mes trajets postés',
     en: 'My posted trips',

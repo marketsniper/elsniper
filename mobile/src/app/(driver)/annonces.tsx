@@ -1,65 +1,35 @@
-// Mode chauffeur — trajets partagés publiés (rides).
-// « Proposer un trajet » : POST /rides {origin, destination, departureAt,
-// seatsTotal (1-8), notes?} — le PRIX PAR PLACE est fixé automatiquement par
-// la grille zanziGo selon la zone du trajet. Chauffeur VALIDÉ uniquement
-// (403 driver_not_verified sinon, 400 departure_in_past si l'heure est passée).
-// « Mes trajets publiés » : GET /rides/mine, ajustement des places et
-// clôture/annulation via PATCH /rides/:id. Lieux : listes fermées servies par
-// GET /rides/locations (repli local ORIGINES_RIDES / DESTINATIONS_RIDES).
-import { Ionicons } from '@expo/vector-icons';
+// Mode chauffeur — PUBLIER un trajet partagé. Rien d'autre.
+//
+// POST /rides {origin, destination, departureAt, seatsTotal (1-8), notes?} —
+// le PRIX PAR PLACE est fixé automatiquement par la grille zanziGo selon la
+// zone du trajet. Chauffeur VALIDÉ uniquement (403 driver_not_verified sinon,
+// 400 departure_in_past si l'heure est passée). Lieux : listes fermées
+// servies par GET /rides/locations (repli local ORIGINES_RIDES /
+// DESTINATIONS_RIDES).
+//
+// La LISTE des trajets déjà publiés a quitté cet écran, à la demande du
+// terrain : elle vit dans la case « Mes trajets postés » du tableau de bord
+// chauffeur. Ici, une seule chose à faire — d'où un formulaire, et c'est tout.
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { Selecteur } from '@/components/Selecteur';
-import {
-  Badge,
-  Bouton,
-  Carte,
-  Champ,
-  Ecran,
-  EncartInfo,
-  EtatVide,
-  TexteErreur,
-  Titre,
-} from '@/components/ui';
+import { Bouton, Carte, Champ, Ecran, EncartInfo, TexteErreur, Titre } from '@/components/ui';
 import { api, ErreurApi } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import {
-  HEURES_CHOIX,
-  isoDepuisChoix,
-  libellesDates,
-  libelleStatutRide,
-  useT,
-} from '@/lib/i18n';
-import { estBalaye, lireCoupDeBalai, passerCoupDeBalai } from '@/lib/menageLocal';
-import { couleurs, espaces, ombres, rayons } from '@/lib/theme';
+import { HEURES_CHOIX, isoDepuisChoix, libellesDates, useT } from '@/lib/i18n';
+import { couleurs, espaces } from '@/lib/theme';
 import {
   champ,
   DESTINATIONS_RIDES,
-  formaterDate,
   formaterMontant,
   ORIGINES_RIDES,
   tarifTrajetProfil,
-  TAUX_USD_TZS,
-  type ReservationRide,
-  type Ride,
-  type StatutRide,
   type StatutVerification,
 } from '@/lib/types';
 
 const PLACES_MAX = 8;
-
-function tonStatut(statut: StatutRide | undefined) {
-  switch (statut) {
-    case 'open':
-      return 'primaire' as const;
-    case 'cancelled':
-      return 'danger' as const;
-    default:
-      return 'neutre' as const;
-  }
-}
 
 export default function EcranAnnonces() {
   const router = useRouter();
@@ -98,21 +68,14 @@ export default function EcranAnnonces() {
   const [messageOk, setMessageOk] = useState('');
   const [charge, setCharge] = useState(false);
 
-  const [mesRides, setMesRides] = useState<Ride[]>([]);
-  const [erreurListe, setErreurListe] = useState('');
-  const [balai, setBalai] = useState(0);
   // Listes fermées des lieux (serveur), avec repli sur les valeurs locales.
   const [origines, setOrigines] = useState<string[]>(ORIGINES_RIDES);
   const [destinations, setDestinations] = useState<string[]>(DESTINATIONS_RIDES);
 
+  // Cet écran ne charge plus que ce dont le FORMULAIRE a besoin : la liste
+  // des trajets publiés est partie dans la case « Mes trajets postés ».
   const rafraichir = useCallback(async () => {
     if (!chauffeur) return;
-    try {
-      setMesRides(await api.listerMesRides());
-      setErreurListe('');
-    } catch {
-      setErreurListe(t('annonces_erreur_chargement'));
-    }
     try {
       const lieux = await api.lieuxRides();
       if (lieux.origins.length > 0) setOrigines(lieux.origins);
@@ -120,8 +83,7 @@ export default function EcranAnnonces() {
     } catch {
       // silencieux : repli sur les listes locales
     }
-    if (chauffeur) setBalai(await lireCoupDeBalai('annonces', chauffeur.id));
-  }, [chauffeur, t]);
+  }, [chauffeur]);
 
   useFocusEffect(
     useCallback(() => {
@@ -181,129 +143,6 @@ export default function EcranAnnonces() {
     } finally {
       setCharge(false);
     }
-  };
-
-  // Annonces encore en ligne d'un côté, historique (clôturées/annulées) de
-  // l'autre — les mélanger rendait la liste illisible. Le ménage masque
-  // l'historique antérieur au coup de balai (local au téléphone).
-  const annoncesOuvertes = mesRides.filter(
-    (ride) => champ<StatutRide>(ride, 'status', 'statut') === 'open'
-  );
-  // Le balai compare la date de CRÉATION de l'annonce (toujours dans le
-  // passé) — pas celle du départ : une annonce annulée avant un départ
-  // futur doit pouvoir s'effacer immédiatement.
-  const annoncesPassees = mesRides.filter(
-    (ride) =>
-      champ<StatutRide>(ride, 'status', 'statut') !== 'open' &&
-      !estBalaye(champ(ride, 'created_at', 'createdAt', 'departure_at', 'departureAt'), balai)
-  );
-
-  const faireLeMenage = () => {
-    if (!chauffeur) return;
-    Alert.alert(t('menage_titre'), t('menage_texte'), [
-      { text: t('commun_annuler'), style: 'cancel' },
-      {
-        text: t('menage_confirmer'),
-        style: 'destructive',
-        onPress: async () => setBalai(await passerCoupDeBalai('annonces', chauffeur.id)),
-      },
-    ]);
-  };
-
-  const carteAnnonce = (ride: Ride) => {
-    const statut = champ<StatutRide>(ride, 'status', 'statut');
-    const prixTzs = champ<number | string>(ride, 'price_per_seat', 'pricePerSeat');
-    const prixUsd = champ<number | string>(ride, 'price_per_seat_usd', 'pricePerSeatUsd');
-    const total = Number(champ(ride, 'seats_total', 'seatsTotal') ?? 0);
-    const restantes = Number(champ(ride, 'seats_available', 'seatsAvailable') ?? 0);
-    const reservations = champ<ReservationRide[]>(ride, 'bookings') ?? [];
-    const estOuverte = statut === 'open';
-    // Gain net cumulé des places PAYÉES uniquement, tout converti en
-    // shillings (les places touristes en USD comptent × taux) — le compteur
-    // du chauffeur ne bouge qu'au paiement. Les réservations encore dans
-    // leur fenêtre de paiement (5 min) sont affichées à part.
-    const reservationsPayees = reservations.filter((resa) => resa.paid);
-    const gainTotalTzs = Math.round(
-      reservationsPayees.reduce((somme, resa) => {
-        const net = Number(resa.net_per_seat ?? 0) * resa.seats;
-        return somme + (resa.currency === 'USD' ? net * TAUX_USD_TZS : net);
-      }, 0)
-    );
-    const placesEnAttente = reservations
-      .filter((resa) => !resa.paid)
-      .reduce((somme, resa) => somme + resa.seats, 0);
-    const complet = estOuverte && restantes === 0;
-    return (
-      <Pressable
-        key={ride.id}
-        onPress={() => router.push(`/annonce/${ride.id}`)}
-        accessibilityRole="button"
-        style={({ pressed }) => [
-          styles.carteRide,
-          !estOuverte && styles.carteRidePassee,
-          pressed && { opacity: 0.75 },
-        ]}
-      >
-        <View style={styles.enTeteRide}>
-          <Text style={styles.itineraire}>
-            {champ(ride, 'origin', 'origine') ?? '?'}{'  '}
-            <Text style={styles.fleche}>→</Text>{'  '}
-            {champ(ride, 'destination') ?? '?'}
-          </Text>
-          {complet ? (
-            <Badge texte={`🎉 ${t('rides_complet')}`} ton="succes" />
-          ) : (
-            <Badge texte={libelleStatutRide(statut, t)} ton={tonStatut(statut)} />
-          )}
-        </View>
-        <View style={styles.ligneDetails}>
-          <View style={styles.detail}>
-            <Ionicons name="time-outline" size={14} color={couleurs.texteSecondaire} />
-            <Text style={styles.texteDetail}>
-              {formaterDate(champ(ride, 'departure_at', 'departureAt'))}
-            </Text>
-          </View>
-          <View style={styles.detail}>
-            <Ionicons name="people-outline" size={14} color={couleurs.texteSecondaire} />
-            <Text style={styles.texteDetail}>
-              {t(total > 1 ? 'rides_places_restantes' : 'rides_place_restante', {
-                n: `${restantes}/${total}`,
-              })}
-            </Text>
-          </View>
-        </View>
-        {prixTzs !== undefined && prixUsd !== undefined && (
-          <Text style={styles.prixRide}>
-            {t('annonces_prix_deux', {
-              tzs: formaterMontant(prixTzs, 'TZS'),
-              usd: formaterMontant(prixUsd, 'USD'),
-            })}
-          </Text>
-        )}
-        {/* Gain net cumulé en shillings — places PAYÉES uniquement. */}
-        {gainTotalTzs > 0 && (
-          <Text style={styles.gainRide}>
-            💰 {t('annonces_gain_cumule')} : {formaterMontant(gainTotalTzs, 'TZS')}
-          </Text>
-        )}
-        {/* Blocages temporaires : payé sous 5 min ou la place se libère. */}
-        {placesEnAttente > 0 && (
-          <Text style={styles.attenteRide}>
-            {t('annonces_places_attente', { n: placesEnAttente })}
-          </Text>
-        )}
-        <View style={styles.ligneOuvrir}>
-          <Text style={[styles.texteOuvrir, reservations.length > 0 && styles.texteOuvrirFort]}>
-            {reservations.length > 0
-              ? t('annonces_nb_resa', { n: reservations.length })
-              : t('annonces_aucune_resa')}
-            {'  ·  '}
-            {t('annonces_ouvrir_detail')}
-          </Text>
-          <Ionicons name="chevron-forward" size={18} color={couleurs.primaire} />
-        </View>
-      </Pressable>
-    );
   };
 
   return (
@@ -390,39 +229,23 @@ export default function EcranAnnonces() {
         />
       </Carte>
 
-      <Text style={styles.titreSection}>
-        {t('annonces_ouvertes')} ({annoncesOuvertes.length})
-      </Text>
-      {/* Règle des 10 minutes : le serveur annule automatiquement. */}
+      {/* Règle des 10 minutes : elle concerne le trajet qu'on est en train de
+          publier, elle reste donc ici, juste sous le formulaire. */}
       <EncartInfo icone="time-outline" ton="attente">
         {t('annonces_regle_retard')}
       </EncartInfo>
-      <TexteErreur>{erreurListe}</TexteErreur>
-      {annoncesOuvertes.length === 0 && !erreurListe && (
-        <EtatVide
-          icone="megaphone-outline"
-          titre={t('annonces_vide_titre')}
-          message={t('annonces_vide_texte')}
-        />
-      )}
-      {annoncesOuvertes.map(carteAnnonce)}
 
-      {/* Historique séparé : les annonces clôturées/annulées ne se mélangent
-          plus aux annonces encore réservables. */}
-      {annoncesPassees.length > 0 && (
-        <Text style={styles.titreSection}>
-          {t('annonces_historique')} ({annoncesPassees.length})
-        </Text>
-      )}
-      {annoncesPassees.map(carteAnnonce)}
-      {annoncesPassees.length > 0 && (
-        <Bouton
-          titre={`${t('menage_bouton')} (${annoncesPassees.length})`}
-          icone="trash-outline"
-          variante="secondaire"
-          onPress={faireLeMenage}
-        />
-      )}
+      {/* La LISTE des trajets déjà publiés a quitté cet écran : elle vit dans
+          la case « Mes trajets postés » du tableau de bord. Cette page ne fait
+          plus qu'UNE chose — publier — et le chauffeur sait où retrouver le
+          reste. */}
+      <EncartInfo icone="bus-outline">{t('annonces_liste_deplacee')}</EncartInfo>
+      <Bouton
+        titre={t('courses_case_mes_trajets')}
+        icone="arrow-forward-circle-outline"
+        variante="secondaire"
+        onPress={() => router.push('/(driver)/courses')}
+      />
     </Ecran>
   );
 }
@@ -439,149 +262,5 @@ const styles = StyleSheet.create({
   },
   demiChamp: {
     flex: 1,
-  },
-  titreSection: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: couleurs.encre,
-    marginTop: espaces.s,
-  },
-  carteRide: {
-    backgroundColor: couleurs.carteTranslucide,
-    borderRadius: rayons.carte,
-    padding: espaces.l,
-    gap: espaces.s,
-    ...ombres.carte,
-  },
-  carteRidePassee: {
-    opacity: 0.65,
-  },
-  texteOuvrirFort: {
-    fontWeight: '800',
-  },
-  enTeteRide: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: espaces.m,
-  },
-  itineraire: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: couleurs.encre,
-    flexShrink: 1,
-    lineHeight: 21,
-  },
-  fleche: {
-    color: couleurs.primaire,
-    fontWeight: '800',
-  },
-  ligneDetails: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: espaces.m,
-  },
-  detail: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: espaces.xs,
-    flexShrink: 1,
-  },
-  texteDetail: {
-    fontSize: 13,
-    color: couleurs.texteSecondaire,
-  },
-  prixRide: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: couleurs.primaire,
-  },
-  gainRide: {
-    fontSize: 14.5,
-    fontWeight: '800',
-    color: couleurs.succes,
-  },
-  attenteRide: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: couleurs.attente,
-  },
-  blocReservations: {
-    backgroundColor: couleurs.surface,
-    borderRadius: rayons.bouton,
-    borderWidth: 1,
-    borderColor: couleurs.bordure,
-    padding: espaces.m,
-    gap: espaces.xs,
-  },
-  titreReservations: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: couleurs.encre,
-  },
-  ligneReservation: {
-    fontSize: 13,
-    color: couleurs.texteSecondaire,
-    lineHeight: 19,
-  },
-  ligneOuvrir: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: espaces.s,
-    marginTop: espaces.xs,
-  },
-  texteOuvrir: {
-    flex: 1,
-    fontSize: 13,
-    fontWeight: '600',
-    color: couleurs.primaire,
-  },
-  rangeePlaces: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: espaces.m,
-  },
-  textePlaces: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: couleurs.encre,
-  },
-  boutonsPlaces: {
-    flexDirection: 'row',
-    gap: espaces.s,
-  },
-  boutonRond: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: couleurs.primaireClair,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  rangeeActions: {
-    flexDirection: 'row',
-    gap: espaces.m,
-    marginTop: espaces.xs,
-  },
-  boutonAction: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: espaces.xs,
-    borderRadius: rayons.pastille,
-    borderWidth: 1.5,
-    borderColor: couleurs.primaire,
-    paddingHorizontal: espaces.m,
-    paddingVertical: espaces.s,
-  },
-  boutonAnnuler: {
-    borderColor: couleurs.dangerBordure,
-  },
-  texteAction: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: couleurs.primaireFonce,
   },
 });
