@@ -1056,6 +1056,13 @@ const CHAINES = {
     it: 'Nome, numero di telefono e punto d’incontro esatto del cliente compariranno qui non appena il team avrà confermato il pagamento. Partenza: {lieu}.',
     de: 'Name, Telefonnummer und genauer Treffpunkt Ihres Fahrgasts erscheinen hier, sobald das Team die Zahlung bestätigt hat. Abfahrt: {lieu}.',
   },
+  course_feu_vert: {
+    fr: 'PAYÉE — vous pouvez y aller. Le nom, le numéro et le point de rendez-vous de votre client sont ci-dessus.',
+    en: 'PAID — you can go. Your client’s name, phone and meeting point are above.',
+    sw: 'IMELIPWA — unaweza kwenda. Jina, namba na mahali pa kukutana na mteja vipo hapo juu.',
+    it: 'PAGATA — puoi partire. Nome, telefono e punto d’incontro del cliente sono qui sopra.',
+    de: 'BEZAHLT — Sie können losfahren. Name, Telefon und Treffpunkt Ihres Fahrgasts stehen oben.',
+  },
   courses_contact_verrouille: {
     fr: 'Coordonnées du client dès que l’équipe valide le paiement',
     en: 'Client details as soon as the team confirms the payment',

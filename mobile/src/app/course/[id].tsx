@@ -220,6 +220,14 @@ export default function EcranDetailCourse() {
         />
       </Carte>
 
+      {/* FEU VERT — AVANT le bouton : on annonce la bonne nouvelle, puis on
+          propose l'action. C'est le signal que le chauffeur attend, et le
+          moment exact où les coordonnées du client s'ouvrent au-dessus. */}
+      {statut === 'paid' && (
+        <EncartInfo icone="checkmark-circle" ton="feuVert">
+          {t('course_feu_vert')}
+        </EncartInfo>
+      )}
       {peutDemarrer && (
         <Bouton
           titre={t('course_demarrer_bouton')}

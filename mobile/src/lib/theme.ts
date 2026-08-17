@@ -34,6 +34,12 @@ export const couleurs = {
   surPrimaire: '#FFF8F2', // texte/icônes posés SUR le corail (boutons)
   or: '#F2B84B', // accent doré : étoiles, touches premium
   nuit: '#33222B', // fonds les plus profonds (carte Chauffeur de l'accueil)
+  // FEU VERT — « l'argent est arrivé, tu peux y aller ». Volontairement plus
+  // vif que le vert olive `succes` : c'est un repère qu'un chauffeur doit
+  // reconnaître d'un coup d'œil, au soleil, sans lire. Réservé au statut
+  // PAYÉE — celui qui lui ouvre les coordonnées du client.
+  vertFeu: '#15A34A',
+  surVertFeu: '#FFFFFF',
 };
 
 export const rayons = {
@@ -80,16 +86,21 @@ export const ombres = {
 export const couleursStatutTrajet: Record<StatutTrajet, { fond: string; texte: string }> = {
   requested: { fond: couleurs.attenteFond, texte: couleurs.attente }, // orange doux
   driver_confirmed: { fond: couleurs.orangeFond, texte: couleurs.orange }, // orange
-  paid: { fond: couleurs.primaireClair, texte: couleurs.primaireFonce }, // turquoise clair
-  in_progress: { fond: couleurs.primaire, texte: couleurs.surPrimaire }, // turquoise
-  completed: { fond: couleurs.succesFond, texte: couleurs.succes }, // vert
+  // PAYÉE = feu vert plein. C'est le repère du chauffeur : tant qu'il n'est
+  // pas allumé, il n'a ni le nom ni le numéro du client (vueChauffeur, côté
+  // serveur). Vert plein pour qu'il saute aux yeux ; « Terminée » garde le
+  // vert doux, une course finie n'appelle plus rien.
+  paid: { fond: couleurs.vertFeu, texte: couleurs.surVertFeu },
+  in_progress: { fond: couleurs.primaire, texte: couleurs.surPrimaire }, // corail
+  completed: { fond: couleurs.succesFond, texte: couleurs.succes }, // vert doux
   cancelled: { fond: couleurs.bordure, texte: couleurs.texteSecondaire }, // gris
 };
 
 /** Couleurs de pastille par statut de colis. */
 export const couleursStatutColis: Record<StatutColis, { fond: string; texte: string }> = {
   created: { fond: couleurs.attenteFond, texte: couleurs.attente },
-  paid: { fond: couleurs.primaireClair, texte: couleurs.primaireFonce },
+  // Même repère que pour les courses : payé = feu vert, à prendre.
+  paid: { fond: couleurs.vertFeu, texte: couleurs.surVertFeu },
   picked_up: { fond: couleurs.primaire, texte: couleurs.surPrimaire },
   delivered: { fond: couleurs.succesFond, texte: couleurs.succes },
   cancelled: { fond: couleurs.bordure, texte: couleurs.texteSecondaire }, // gris

@@ -355,17 +355,21 @@ export function EncartInfo({
 }: {
   children: React.ReactNode;
   icone?: NomIonicons;
-  ton?: 'info' | 'attente' | 'succes';
+  // `feuVert` = vert PLEIN, la bonne nouvelle qu'on ne peut pas rater
+  // (« payée, tu peux y aller »). `succes` reste le vert doux, discret.
+  ton?: 'info' | 'attente' | 'succes' | 'feuVert';
 }) {
   const fonds = {
     info: couleurs.primaireClair,
     attente: couleurs.attenteFond,
     succes: couleurs.succesFond,
+    feuVert: couleurs.vertFeu,
   } as const;
   const textes = {
     info: couleurs.primaireFonce,
     attente: couleurs.attente,
     succes: couleurs.succes,
+    feuVert: couleurs.surVertFeu,
   } as const;
   return (
     <View style={[styles.encartInfo, { backgroundColor: fonds[ton] }]}>
