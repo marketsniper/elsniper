@@ -246,7 +246,10 @@ async function appliquerConfirmation(payment) {
 
     if (payment.trip_id) {
       await client.query(
-        `UPDATE trips SET status = 'paid' WHERE id = $1 AND status = 'driver_confirmed'`,
+        // paid_at : la trace qui survit à tout. Le statut peut redescendre
+        // (chauffeur qui se désiste), l'argent, lui, reste encaissé.
+        `UPDATE trips SET status = 'paid', paid_at = COALESCE(paid_at, now())
+          WHERE id = $1 AND status = 'driver_confirmed'`,
         [payment.trip_id]
       );
     } else if (payment.package_id) {

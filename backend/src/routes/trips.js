@@ -466,6 +466,10 @@ function courseSansIdentiteClient(trip) {
     round_trip: trip.round_trip,
     baby_seat: trip.baby_seat,
     bulky_luggage: trip.bulky_luggage,
+    // DÉJÀ PAYÉE : le client a réglé, et le chauffeur précédent s'est
+    // désisté. C'est la course la plus urgente de la bourse — et pour celui
+    // qui la prend, un gain certain. On le dit.
+    deja_payee: trip.paid_at !== null && trip.paid_at !== undefined,
   };
 }
 
@@ -520,9 +524,15 @@ router.post(
     }
 
     const { rows } = await query(
-      `UPDATE trips SET driver_id = $1, status = 'driver_confirmed'
-       WHERE id = $2 AND status = 'requested' AND driver_id IS NULL AND trip_type = 'private'
-       RETURNING *`,
+      // Si le client a DÉJÀ payé (course rendue par un précédent chauffeur),
+      // elle repart directement en 'paid' : le remplaçant ne doit pas
+      // attendre un paiement qui est déjà encaissé.
+      `UPDATE trips
+          SET driver_id = $1,
+              status = CASE WHEN paid_at IS NULL THEN 'driver_confirmed'::trip_status
+                            ELSE 'paid'::trip_status END
+        WHERE id = $2 AND status = 'requested' AND driver_id IS NULL AND trip_type = 'private'
+        RETURNING *`,
       [req.auth.driverId, req.params.id]
     );
     if (!rows[0]) {
@@ -693,8 +703,14 @@ router.patch(
     const { rows } = await query(
       // alerte_figee_at remise à zéro : le nouveau chauffeur repart avec
       // une page blanche, et son propre silence pourra réalerter.
-      `UPDATE trips SET driver_id = $1, status = 'driver_confirmed', alerte_figee_at = NULL
-       WHERE id = $2 RETURNING *`,
+      // Même règle que pour la bourse : une course déjà payée reprend en
+      // 'paid', pas en « en attente de paiement ».
+      `UPDATE trips
+          SET driver_id = $1,
+              status = CASE WHEN paid_at IS NULL THEN 'driver_confirmed'::trip_status
+                            ELSE 'paid'::trip_status END,
+              alerte_figee_at = NULL
+        WHERE id = $2 RETURNING *`,
       [driverId, req.params.id]
     );
     // Son téléphone sonne dans la seconde : c'est l'alerte qui fait gagner le
@@ -766,7 +782,10 @@ router.post(
           [trip.id, trip.price, trip.currency, `CREDIT-${randomUUID()}`]
         );
         await client.query(
-          `UPDATE trips SET status = 'paid' WHERE id = $1 AND status = 'driver_confirmed'`,
+          // paid_at : la trace qui survit à tout. Le statut peut redescendre
+        // (chauffeur qui se désiste), l'argent, lui, reste encaissé.
+        `UPDATE trips SET status = 'paid', paid_at = COALESCE(paid_at, now())
+          WHERE id = $1 AND status = 'driver_confirmed'`,
           [trip.id]
         );
         await client.query(

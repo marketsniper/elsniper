@@ -88,6 +88,81 @@ describe('« Je ne peux plus faire cette course »', () => {
     assert.equal((await statutDe(id)).status, 'requested');
   });
 
+  // LE SCÉNARIO DU TERRAIN, celui qui a révélé le bug : le client paie, le
+  // chauffeur se désiste, l'équipe met quelqu'un d'autre. Le remplaçant
+  // voyait « en attente du paiement du client » — alors que l'argent était
+  // encaissé. Il ne pouvait ni démarrer, ni obtenir les coordonnées.
+  it('course DÉJÀ PAYÉE rendue puis réassignée : le remplaçant la reçoit payée', async () => {
+    const { id, jetonChauffeur, jetonClient } = await coursePrise({ dansHeures: 6 });
+    const paiement = await request(app)
+      .post(`/api/trips/${id}/payment`)
+      .set(authHeaders(jetonClient));
+    await request(app)
+      .post(`/api/payments/${paiement.body.id}/confirm`)
+      .set(adminHeaders())
+      .send({});
+    await request(app).post(`/api/trips/${id}/release`).set(authHeaders(jetonChauffeur));
+
+    // L'équipe confie la course à un autre chauffeur.
+    const { token: jetonRemplacant, driver: remplacant } = await createVerifiedDriver();
+    const assignation = await request(app)
+      .patch(`/api/trips/${id}/assign-driver`)
+      .set(adminHeaders())
+      .send({ driverId: remplacant.id });
+    assert.equal(assignation.status, 200, JSON.stringify(assignation.body));
+    assert.equal(assignation.body.status, 'paid', 'la course était payée : elle doit le rester');
+
+    // Et le remplaçant, LUI, doit voir une course payée : c'est ce statut
+    // qui lui ouvre les coordonnées du client et le bouton « Démarrer ».
+    const saVue = await request(app)
+      .get(`/api/trips/${id}`)
+      .set(authHeaders(jetonRemplacant));
+    assert.equal(saVue.status, 200, JSON.stringify(saVue.body));
+    assert.equal(saVue.body.status, 'paid', 'le remplaçant ne doit pas attendre un paiement reçu');
+    assert.equal(saVue.body.contact_client_visible, true, 'il doit pouvoir appeler le client');
+    assert.ok(saVue.body.client_phone, 'le numéro du client doit lui être ouvert');
+
+    // Il peut démarrer immédiatement.
+    const depart = await request(app)
+      .patch(`/api/trips/${id}/start`)
+      .set(authHeaders(jetonRemplacant));
+    assert.equal(depart.status, 200, JSON.stringify(depart.body));
+  });
+
+  it('course déjà payée reprise depuis la BOURSE : même règle', async () => {
+    const { id, jetonChauffeur, jetonClient } = await coursePrise({ dansHeures: 6 });
+    const paiement = await request(app)
+      .post(`/api/trips/${id}/payment`)
+      .set(authHeaders(jetonClient));
+    await request(app)
+      .post(`/api/payments/${paiement.body.id}/confirm`)
+      .set(adminHeaders())
+      .send({});
+    await request(app).post(`/api/trips/${id}/release`).set(authHeaders(jetonChauffeur));
+
+    // Elle réapparaît dans la bourse, ANNONCÉE COMME DÉJÀ PAYÉE — c'est la
+    // plus urgente, et pour celui qui la prend c'est un gain certain.
+    const { token: autre } = await createVerifiedDriver();
+    const bourse = await request(app).get('/api/trips/disponibles').set(authHeaders(autre));
+    const offre = bourse.body.find((c) => c.id === id);
+    assert.ok(offre, 'la course payée sans chauffeur doit revenir dans la bourse');
+    assert.equal(offre.deja_payee, true, 'la bourse doit signaler qu’elle est déjà payée');
+
+    const prise = await request(app).post(`/api/trips/${id}/claim`).set(authHeaders(autre));
+    assert.equal(prise.status, 200, JSON.stringify(prise.body));
+    assert.equal(prise.body.status, 'paid', 'reprise dans la bourse : elle reste payée');
+    assert.equal(prise.body.contact_client_visible, true);
+  });
+
+  it('une course JAMAIS payée reprise reste bien « en attente de paiement »', async () => {
+    const { id, jetonChauffeur } = await coursePrise({ dansHeures: 6 });
+    await request(app).post(`/api/trips/${id}/release`).set(authHeaders(jetonChauffeur));
+    const { token: autre } = await createVerifiedDriver();
+    const prise = await request(app).post(`/api/trips/${id}/claim`).set(authHeaders(autre));
+    assert.equal(prise.body.status, 'driver_confirmed', 'rien n’a été payé : pas de faux feu vert');
+    assert.equal(prise.body.contact_client_visible, false);
+  });
+
   it('refusé une fois la course démarrée', async () => {
     const { id, jetonChauffeur, jetonClient } = await coursePrise({ dansHeures: 1 });
     const paiement = await request(app)

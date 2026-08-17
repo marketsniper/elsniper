@@ -616,6 +616,15 @@ export default function EcranCourses() {
                 {depart.texte}
               </Text>
             </View>
+            {/* DÉJÀ PAYÉE — le client a réglé et le chauffeur précédent s'est
+                désisté. Pour celui qui la reprend, c'est un gain certain : il
+                doit le voir avant tout le reste. */}
+            {champ<boolean>(course, 'deja_payee') === true && (
+              <View style={styles.bandeauPayee}>
+                <Ionicons name="checkmark-circle" size={14} color={couleurs.surVertFeu} />
+                <Text style={styles.textePayee}>{t('courses_dispo_deja_payee')}</Text>
+              </View>
+            )}
             <Text style={styles.itineraire}>
               {String(champ(course, 'pickup_location', 'pickupLocation') ?? '?')}{'  '}
               <Text style={styles.fleche}>→</Text>{'  '}
@@ -1119,6 +1128,22 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     color: couleurs.primaireFonce,
+  },
+  // « Déjà payée » : vert plein, comme le feu vert d'une course payée.
+  bandeauPayee: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: espaces.xs,
+    alignSelf: 'flex-start',
+    backgroundColor: couleurs.vertFeu,
+    borderRadius: rayons.pastille,
+    paddingHorizontal: espaces.s,
+    paddingVertical: 3,
+  },
+  textePayee: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: couleurs.surVertFeu,
   },
   // Coordonnées client encore fermées : dit pourquoi, sans alarmer.
   texteVerrou: {

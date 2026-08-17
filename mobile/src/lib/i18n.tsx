@@ -1063,6 +1063,13 @@ const CHAINES = {
     it: 'PAGATA — puoi partire. Nome, telefono e punto d’incontro del cliente sono qui sopra.',
     de: 'BEZAHLT — Sie können losfahren. Name, Telefon und Treffpunkt Ihres Fahrgasts stehen oben.',
   },
+  courses_dispo_deja_payee: {
+    fr: 'DÉJÀ PAYÉE — gain assuré',
+    en: 'ALREADY PAID — guaranteed',
+    sw: 'IMESHALIPWA — pesa uhakika',
+    it: 'GIÀ PAGATA — guadagno certo',
+    de: 'BEREITS BEZAHLT — sicherer Verdienst',
+  },
   course_rendre_bouton: {
     fr: 'Je ne peux plus faire cette course',
     en: 'I can no longer do this ride',
