@@ -554,6 +554,75 @@ router.post(
   })
 );
 
+// POST /trips/:id/release — « Je ne peux plus faire cette course ».
+//
+// Contrepartie indispensable de la bourse : un chauffeur qui a pris une
+// course et qui ne peut plus l'assurer n'avait AUCUN moyen de la rendre.
+// Son seul choix était de se taire — et le client découvrait le problème sur
+// le trottoir. Ici, la course retourne dans la bourse sur-le-champ, et
+// l'équipe est prévenue.
+//
+// On accepte le renoncement tant que la course n'a pas démarré, y compris
+// après paiement : mieux vaut le savoir trois heures avant que jamais. Mais
+// l'équipe doit alors le voir comme une urgence — l'argent est encaissé.
+router.post(
+  '/:id/release',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    if (!req.auth.driverId) {
+      throw new HttpError(403, 'forbidden', 'Accès réservé aux chauffeurs');
+    }
+    const trip = await getTrip(req.params.id);
+    if (trip.driver_id !== req.auth.driverId) {
+      throw new HttpError(403, 'forbidden', "Cette course n'est pas la vôtre");
+    }
+    if (trip.status !== 'driver_confirmed' && trip.status !== 'paid') {
+      throw new HttpError(
+        409,
+        'course_non_liberable',
+        `Une course ${trip.status === 'in_progress' ? 'déjà démarrée' : 'terminée ou annulée'} ne peut plus être rendue — appelez l'équipe`
+      );
+    }
+
+    // Retour à l'état « libre » : le statut redescend à 'requested' et la
+    // course réapparaît dans la bourse pour les autres chauffeurs. L'alerte
+    // d'immobilité est remise à zéro — une nouvelle prise qui s'enliserait
+    // doit pouvoir réalerter.
+    const { rows } = await query(
+      `UPDATE trips SET driver_id = NULL, status = 'requested', alerte_figee_at = NULL
+       WHERE id = $1 AND driver_id = $2
+       RETURNING *`,
+      [req.params.id, req.auth.driverId]
+    );
+    if (!rows[0]) {
+      throw new HttpError(409, 'course_non_liberable', 'La course a changé entre-temps');
+    }
+
+    const { rows: chauffeurs } = await query(
+      'SELECT full_name, phone FROM drivers WHERE id = $1',
+      [req.auth.driverId]
+    );
+    const chauffeur = chauffeurs[0] ?? {};
+    const etaitPayee = trip.status === 'paid';
+    notifierEquipe(
+      etaitPayee
+        ? '🔴 URGENT — un chauffeur rend une course DÉJÀ PAYÉE'
+        : '↩️ Un chauffeur rend une course',
+      [
+        `Chauffeur : ${chauffeur.full_name ?? '—'} (${chauffeur.phone ?? '—'})`,
+        `Trajet : ${trip.pickup_location} → ${trip.dropoff_location}`,
+        trip.scheduled_at ? `Départ prévu : ${trip.scheduled_at}` : 'Départ : immédiat',
+        etaitPayee
+          ? 'La course était PAYÉE : trouvez un remplaçant en priorité.'
+          : 'La course est repartie dans la bourse.',
+        `Réf : ${trip.id}`,
+      ].join('\n')
+    ).catch(() => {});
+
+    res.json(vueChauffeur(rows[0]));
+  })
+);
+
 // GET /trips/:id — détail (le client, le chauffeur assigné ou l'équipe).
 router.get(
   '/:id',
@@ -622,7 +691,10 @@ router.patch(
     }
 
     const { rows } = await query(
-      `UPDATE trips SET driver_id = $1, status = 'driver_confirmed' WHERE id = $2 RETURNING *`,
+      // alerte_figee_at remise à zéro : le nouveau chauffeur repart avec
+      // une page blanche, et son propre silence pourra réalerter.
+      `UPDATE trips SET driver_id = $1, status = 'driver_confirmed', alerte_figee_at = NULL
+       WHERE id = $2 RETURNING *`,
       [driverId, req.params.id]
     );
     // Son téléphone sonne dans la seconde : c'est l'alerte qui fait gagner le

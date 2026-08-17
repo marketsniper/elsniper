@@ -35,6 +35,19 @@ export const config = {
   // laisser activé avec de vrais utilisateurs.
   exposeOtpDevCode: env.OTP_EXPOSE_DEV_CODE === '1',
 
+  // LA CONNEXION PAR CODE EST FERMÉE EN PRODUCTION.
+  //
+  // L'app ne s'en sert plus : tout le monde entre avec un identifiant et un
+  // mot de passe (clients, locaux, chauffeurs, hôtels). La porte restait
+  // pourtant ouverte côté serveur — et comme aucun fournisseur d'envoi n'est
+  // branché, elle renvoyait le code dans sa propre réponse : il suffisait de
+  // connaître un numéro pour entrer dans le compte correspondant.
+  //
+  // Elle reste allumée hors production (les tests s'en servent pour fabriquer
+  // des comptes) et se rallume par OTP_ACTIF=1 le jour où l'on voudra une
+  // vraie connexion par code, avec un envoi réel derrière.
+  otpActif: env.OTP_ACTIF === '1' || (env.NODE_ENV || 'development') !== 'production',
+
   // Métier
   commissionRate: Number(env.COMMISSION_RATE) || 0.15,
   teamWhatsappNumber: env.TEAM_WHATSAPP_NUMBER || '+255000000000',

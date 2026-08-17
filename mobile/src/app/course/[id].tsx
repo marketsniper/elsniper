@@ -3,7 +3,7 @@
 // une simple touche (avec confirmation), pas de QR à scanner. La position
 // GPS déjà partagée en continu (courses.tsx, toutes les 45 s) reste la
 // preuve de terrain — elle ne dépend pas de ce départ/arrivée.
-import { useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import { Alert, Linking, Pressable, StyleSheet, Text } from 'react-native';
 
@@ -37,6 +37,7 @@ import {
 
 export default function EcranDetailCourse() {
   const { t } = useT();
+  const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [course, setCourse] = useState<Trajet | null>(null);
   const [erreur, setErreur] = useState('');
@@ -100,6 +101,33 @@ export default function EcranDetailCourse() {
     } finally {
       setChargeAction(false);
     }
+  };
+
+  // RENDRE LA COURSE. Un empêchement arrive — une panne, un imprévu de
+  // famille. Sans ce bouton, le chauffeur n'a aucun moyen de le dire : il se
+  // tait, et le client l'apprend sur le trottoir. Possible tant que la course
+  // n'a pas démarré, même une fois payée : mieux vaut trois heures avant que
+  // jamais.
+  const peutRendre = statut === 'driver_confirmed' || statut === 'paid';
+  const rendreLaCourse = async () => {
+    setChargeAction(true);
+    setErreur('');
+    try {
+      await api.rendreCourse(course.id);
+      Alert.alert(t('course_rendre_titre'), t('course_rendue_ok'));
+      router.replace('/(driver)/courses');
+    } catch (e) {
+      setErreur(e instanceof ErreurApi ? e.message : t('course_erreur_action'));
+    } finally {
+      setChargeAction(false);
+    }
+  };
+
+  const confirmerRendre = () => {
+    Alert.alert(t('course_rendre_titre'), t('course_rendre_confirm'), [
+      { text: t('commun_pas_encore'), style: 'cancel' },
+      { text: t('course_rendre_oui'), style: 'destructive', onPress: rendreLaCourse },
+    ]);
   };
 
   const confirmerAction = (action: 'start' | 'complete') => {
@@ -264,6 +292,17 @@ export default function EcranDetailCourse() {
         variante="secondaire"
         onPress={charger}
       />
+      {/* En dernier, discret, mais toujours là : le chauffeur empêché doit
+          pouvoir le dire d'un geste plutôt que de disparaître. */}
+      {peutRendre && (
+        <Bouton
+          titre={t('course_rendre_bouton')}
+          icone="close-circle-outline"
+          variante="danger"
+          onPress={confirmerRendre}
+          charge={chargeAction}
+        />
+      )}
     </Ecran>
   );
 }

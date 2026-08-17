@@ -57,8 +57,25 @@ function masquerEmail(email) {
 // IDENTITÉ E-MAIL (touristes/visiteurs) : sans téléphone du tout, l'e-mail
 // EST l'identifiant du compte — {email} seul suffit, le code part dans la
 // boîte mail. Les locaux et chauffeurs s'identifient toujours par téléphone.
+// PORTE FERMÉE EN PRODUCTION.
+//
+// Plus aucun écran n'entre par un code : clients, locaux, chauffeurs et
+// hôtels ont tous un identifiant et un mot de passe. La route restait
+// pourtant ouverte, et sans fournisseur d'envoi branché elle renvoyait le
+// code dans sa propre réponse — connaître un numéro suffisait pour entrer
+// dans le compte. On refuse donc à l'entrée (voir config.otpActif).
+function refuserSiOtpFerme() {
+  if (config.otpActif) return;
+  throw new HttpError(
+    410,
+    'otp_desactive',
+    'La connexion par code est désactivée — utilisez votre identifiant et votre mot de passe'
+  );
+}
+
 authRouter.post('/request-otp', async (req, res, next) => {
   try {
+    refuserSiOtpFerme();
     const { phone, channel, email } = z
       .object({
         phone: phoneSchema.optional(),
@@ -152,6 +169,7 @@ authRouter.post('/request-otp', async (req, res, next) => {
 // null si aucun profil n'existe encore pour cet identifiant.
 authRouter.post('/verify-otp', async (req, res, next) => {
   try {
+    refuserSiOtpFerme();
     const { phone, email, code } = z
       .object({
         phone: phoneSchema.optional(),

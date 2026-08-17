@@ -1010,6 +1010,15 @@ export async function prendreCourse(id: string): Promise<Trajet> {
   return requete<Trajet>(`/trips/${id}/claim`, { methode: 'POST' });
 }
 
+/**
+ * POST /trips/:id/release — « Je ne peux plus faire cette course ».
+ * La course retourne dans la bourse et l'équipe est prévenue. Refusé une
+ * fois la course démarrée (409 course_non_liberable).
+ */
+export async function rendreCourse(id: string): Promise<Trajet> {
+  return requete<Trajet>(`/trips/${id}/release`, { methode: 'POST' });
+}
+
 /** Position GPS d'un chauffeur (table driver_positions). */
 export interface PositionChauffeur {
   driver_id: string;
@@ -1420,6 +1429,7 @@ export const api = {
   listerCoursesChauffeur,
   listerCoursesDisponibles,
   prendreCourse,
+  rendreCourse,
   positionColis,
   colisParQr,
   recupererColis,
