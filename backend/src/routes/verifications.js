@@ -42,6 +42,9 @@ const infos = (...paires) =>
 
 // GET /verifications — la file complète (équipe).
 //
+// Chaque famille est bornée à 100 dossiers (l'inscription hôtel est
+// publique : sans borne, une rafale de fausses inscriptions ferait
+// construire un tableau géant en mémoire à chaque ouverture de l'écran).
 // Un seul aller-retour : l'écran de vérification n'a pas à interroger trois
 // routes ni à recoller les morceaux. Le tri met en tête le dossier qui attend
 // depuis le plus longtemps — c'est celui qui coûte le plus cher.
@@ -56,7 +59,8 @@ router.get(
                 id_document_url, license_expires_on, insurance_expires_on, created_at
            FROM drivers
           WHERE verification_status = 'pending' AND archived_at IS NULL
-          ORDER BY created_at ASC`
+          ORDER BY created_at ASC
+          LIMIT 100`
       ),
       // Les touristes n'ont RIEN à faire ici : leur tarif ne dépend d'aucun
       // document. Seuls les locaux (carte NIDA) et les résidents (titre de
@@ -67,13 +71,16 @@ router.get(
           WHERE verification_status = 'pending'
             AND account_type IN ('local', 'resident')
             AND id_document_url IS NOT NULL
-          ORDER BY created_at ASC`
+            AND banned_at IS NULL
+          ORDER BY created_at ASC
+          LIMIT 100`
       ),
       query(
         `SELECT id, name, contact_name, phone, zone, address, created_at
            FROM hotels
           WHERE verification_status = 'pending'
-          ORDER BY created_at ASC`
+          ORDER BY created_at ASC
+          LIMIT 100`
       ),
     ]);
 

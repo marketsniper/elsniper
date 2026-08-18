@@ -49,39 +49,59 @@ function messageAlerte(course, raison) {
  * temps, ce qui est le but.
  */
 export async function signalerCoursesFigees() {
+  // MARQUAGE ET SÉLECTION EN UNE SEULE REQUÊTE. L'ancien SELECT-puis-UPDATE
+  // laissait deux processus (deux instances pendant un déploiement) voir les
+  // mêmes lignes non marquées et envoyer chaque alerte en double. Ici, celui
+  // qui marque est celui qui envoie — l'autre ne trouve plus rien.
   const { rows } = await query(
-    `SELECT t.id, t.pickup_location, t.dropoff_location, t.scheduled_at, t.created_at,
-            t.price, t.currency,
-            d.full_name AS driver_name, d.phone AS driver_phone,
-            -- Laquelle des deux situations a déclenché l'alerte.
-            (t.scheduled_at IS NOT NULL
-             AND t.scheduled_at <= now() + ($1 || ' hours')::interval) AS depart_proche
-       FROM trips t
-       LEFT JOIN drivers d ON d.id = t.driver_id
-      WHERE t.status = 'driver_confirmed'
-        AND t.alerte_figee_at IS NULL
-        AND (
-          -- 1. le départ approche
-          (t.scheduled_at IS NOT NULL
-           AND t.scheduled_at <= now() + ($1 || ' hours')::interval)
-          -- 2. prise depuis longtemps, toujours pas payée
-          OR t.created_at <= now() - ($2 || ' hours')::interval
-        )
-      LIMIT 50`,
+    `UPDATE trips t
+        SET alerte_figee_at = now()
+       FROM (SELECT id FROM trips
+              WHERE alerte_figee_at IS NULL
+                AND (
+                  -- 1. course prise, départ proche, rien n'a démarré
+                  (status = 'driver_confirmed'
+                   AND scheduled_at IS NOT NULL
+                   AND scheduled_at <= now() + ($1 || ' hours')::interval)
+                  -- 2. course prise depuis longtemps, toujours pas payée
+                  OR (status = 'driver_confirmed'
+                      AND created_at <= now() - ($2 || ' hours')::interval)
+                  -- 3. course PAYÉE dont le départ est passé et qui n'a
+                  --    jamais démarré : le pire cas de tous — l'argent est
+                  --    encaissé et le client attend sur le trottoir. Un
+                  --    quart d'heure de marge pour les départs à la minute.
+                  OR (status = 'paid'
+                      AND scheduled_at IS NOT NULL
+                      AND scheduled_at <= now() - interval '15 minutes')
+                )
+              LIMIT 50
+              FOR UPDATE SKIP LOCKED) figees
+      WHERE t.id = figees.id
+      RETURNING t.id, t.status, t.pickup_location, t.dropoff_location,
+                t.scheduled_at, t.created_at, t.price, t.currency, t.driver_id,
+                (t.scheduled_at IS NOT NULL
+                 AND t.scheduled_at <= now() + ($1 || ' hours')::interval) AS depart_proche`,
     [String(HEURES_AVANT_DEPART), String(HEURES_SANS_PAIEMENT)]
   );
   if (rows.length === 0) return [];
 
-  // On marque AVANT d'envoyer : si l'envoi échoue, mieux vaut une alerte
-  // perdue qu'une alerte répétée toutes les minutes.
-  await query('UPDATE trips SET alerte_figee_at = now() WHERE id = ANY($1)', [
-    rows.map((r) => r.id),
-  ]);
+  // Le nom du chauffeur, pour le message (hors transaction : lecture simple).
+  const { rows: chauffeurs } = await query(
+    'SELECT id, full_name, phone FROM drivers WHERE id = ANY($1)',
+    [rows.map((r) => r.driver_id).filter(Boolean)]
+  );
+  const parId = new Map(chauffeurs.map((d) => [d.id, d]));
 
   for (const course of rows) {
-    const raison = course.depart_proche
-      ? `⏰ DÉPART DANS MOINS DE ${HEURES_AVANT_DEPART} H — la course n'a toujours pas démarré.`
-      : `💤 Course prise depuis plus de ${HEURES_SANS_PAIEMENT} h et toujours pas payée.`;
+    const chauffeur = parId.get(course.driver_id);
+    course.driver_name = chauffeur?.full_name ?? null;
+    course.driver_phone = chauffeur?.phone ?? null;
+    const raison =
+      course.status === 'paid'
+        ? '🚨 COURSE PAYÉE, DÉPART PASSÉ, JAMAIS DÉMARRÉE — le client attend.'
+        : course.depart_proche
+          ? `⏰ DÉPART DANS MOINS DE ${HEURES_AVANT_DEPART} H — la course n'a toujours pas démarré.`
+          : `💤 Course prise depuis plus de ${HEURES_SANS_PAIEMENT} h et toujours pas payée.`;
     await notifierEquipe('⚠️ Course figée — zanziGo', messageAlerte(course, raison)).catch(
       () => {}
     );

@@ -182,23 +182,30 @@ describe('Paiements — confirmation (mode stub Pesapal)', () => {
     assert.equal(inconnu.status, 200);
   });
 
-  it('confirmer un paiement solde les doublons pending de la même cible en failed', async () => {
+  it('rappuyer sur « payer » ne crée PLUS de doublon : la même ligne revient', async () => {
     const { token, trip, payment } = await createTripPayment();
-    // Le client a rappuyé sur « payer » : second paiement en attente.
-    const doublon = await request(app)
+    // Avant : chaque appui créait un paiement de plus, chacun avec un lien
+    // vivant — le client pouvait payer deux fois. Maintenant, le paiement en
+    // attente est réutilisé tel quel.
+    const second = await request(app)
       .post(`/api/trips/${trip.id}/payment`)
       .set(authHeaders(token));
-    assert.equal(doublon.status, 201);
+    assert.equal(second.status, 200, JSON.stringify(second.body));
+    assert.equal(second.body.id, payment.id, 'même paiement, pas un doublon');
 
-    await request(app)
+    const confirme = await request(app)
       .post(`/api/payments/${payment.id}/confirm`)
       .set(authHeaders(token))
       .send({});
+    assert.equal(confirme.status, 200);
 
-    const releve = await request(app)
-      .get(`/api/payments/${doublon.body.id}`)
-      .set(authHeaders(token));
-    assert.equal(releve.body.status, 'failed', 'le doublon est soldé automatiquement');
+    // Et une CONFIRMATION ne se rejoue pas : le second confirm est refusé.
+    const rejoue = await request(app)
+      .post(`/api/payments/${payment.id}/confirm`)
+      .set(authHeaders(token))
+      .send({});
+    assert.equal(rejoue.status, 409);
+    assert.equal(rejoue.body.error.code, 'payment_already_processed');
   });
 
   it('un tiers ne peut pas confirmer → 403 forbidden (paiement toujours pending)', async () => {

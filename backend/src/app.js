@@ -47,12 +47,24 @@ function makeLimiter({ windowMs, max }) {
 const otpLimiter = makeLimiter({ windowMs: 15 * 60 * 1000, max: 5 });
 // Routes publiques de création : 30 requêtes / 15 min / IP
 const publicPostLimiter = makeLimiter({ windowMs: 15 * 60 * 1000, max: 30 });
+// Pièces jointes : 20 envois / 15 min / IP — chaque fichier peut peser
+// 25 Mo et finit DANS la base ; sans borne, quelques dizaines de requêtes
+// remplissaient le gigaoctet du plan gratuit et bloquaient la plateforme.
+const uploadLimiter = makeLimiter({ windowMs: 15 * 60 * 1000, max: 20 });
 
 export function createApp() {
   const app = express();
   // Render place un proxy devant le serveur : sans ça, req.protocol vaut
   // « http » et les liens de documents générés seraient en http.
   app.set('trust proxy', 1);
+  // En-têtes de sécurité de base (l'API sert aussi des fichiers déposés par
+  // les utilisateurs : un navigateur ne doit jamais « deviner » leur type).
+  app.use((_req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('Referrer-Policy', 'no-referrer');
+    next();
+  });
   app.use(express.json({ limit: '1mb' }));
 
   // Fichiers uploadés en mode dev (fallback disque local)
@@ -558,6 +570,7 @@ p{color:#8A7168;max-width:44ch;margin:8px auto}</style>
   app.post('/api/users', publicPostLimiter);
   app.post('/api/drivers', publicPostLimiter);
   app.post('/api/hotels', publicPostLimiter);
+  app.post('/api/uploads', uploadLimiter);
 
   app.use('/api/auth', authRouter);
   app.use('/api/users', usersRouter);

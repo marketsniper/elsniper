@@ -288,8 +288,9 @@ authRouter.post('/register', async (req, res, next) => {
 // POST /api/auth/login {identifier, password}
 // CONNEXION CLIENT : l'identifiant saisi est soit le nom choisi à
 // l'inscription, soit — pour les comptes créés avant — le numéro de
-// téléphone. Un compte d'avant les mots de passe adopte le PREMIER mot de
-// passe saisi (simplicité MVP assumée, l'équipe tranche sur WhatsApp).
+// téléphone. Un compte SANS mot de passe ne se connecte pas : l'équipe le
+// définit après vérification d'identité (l'ancien « premier mot de passe
+// saisi devient le bon » ouvrait la prise de compte au premier venu).
 authRouter.post('/login', async (req, res, next) => {
   try {
     const { identifier, password } = z
@@ -317,13 +318,18 @@ authRouter.post('/login', async (req, res, next) => {
       );
     }
     if (!user.password_hash) {
-      if (password.length < 8) {
-        throw new HttpError(400, 'weak_password', 'Mot de passe : 8 caractères minimum');
-      }
-      await pool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [
-        await hashPassword(password),
-        user.id,
-      ]);
+      // COMPTE SANS MOT DE PASSE : la porte est FERMÉE, pas offerte au
+      // premier venu. L'ancien comportement (« le premier mot de passe
+      // présenté devient LE mot de passe ») permettait de prendre n'importe
+      // quel compte de l'ère OTP — ou créé par l'équipe — avec le seul
+      // numéro de téléphone. Le mot de passe se pose désormais par un canal
+      // sûr : l'équipe, qui vérifie l'identité sur WhatsApp avant de le
+      // définir dans le tableau de bord.
+      throw new HttpError(
+        403,
+        'password_not_set',
+        "Ce compte n'a pas encore de mot de passe — contactez l'équipe zanziGo sur WhatsApp pour le définir"
+      );
     } else if (!(await verifyPassword(password, user.password_hash))) {
       throw new HttpError(
         401,
@@ -406,13 +412,18 @@ authRouter.post('/visitor-login', async (req, res, next) => {
       );
     }
     if (!user.password_hash) {
-      if (password.length < 8) {
-        throw new HttpError(400, 'weak_password', 'Mot de passe : 8 caractères minimum');
-      }
-      await pool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [
-        await hashPassword(password),
-        user.id,
-      ]);
+      // COMPTE SANS MOT DE PASSE : la porte est FERMÉE, pas offerte au
+      // premier venu. L'ancien comportement (« le premier mot de passe
+      // présenté devient LE mot de passe ») permettait de prendre n'importe
+      // quel compte de l'ère OTP — ou créé par l'équipe — avec le seul
+      // numéro de téléphone. Le mot de passe se pose désormais par un canal
+      // sûr : l'équipe, qui vérifie l'identité sur WhatsApp avant de le
+      // définir dans le tableau de bord.
+      throw new HttpError(
+        403,
+        'password_not_set',
+        "Ce compte n'a pas encore de mot de passe — contactez l'équipe zanziGo sur WhatsApp pour le définir"
+      );
     } else if (!(await verifyPassword(password, user.password_hash))) {
       throw new HttpError(401, 'invalid_credentials', 'Numéro inconnu ou mot de passe incorrect');
     }
@@ -515,13 +526,14 @@ authRouter.post('/driver-login', async (req, res, next) => {
       );
     }
     if (!driver.password_hash) {
-      if (password.length < 8) {
-        throw new HttpError(400, 'weak_password', 'Mot de passe : 8 caractères minimum');
-      }
-      await pool.query('UPDATE drivers SET password_hash = $1 WHERE id = $2', [
-        await hashPassword(password),
-        driver.id,
-      ]);
+      // Même règle que côté client : un compte sans mot de passe ne
+      // s'attrape pas au premier essai — c'est l'équipe qui le définit
+      // (POST /drivers/:id/mot-de-passe) après vérification d'identité.
+      throw new HttpError(
+        403,
+        'password_not_set',
+        "Ce compte n'a pas encore de mot de passe — contactez l'équipe zanziGo sur WhatsApp pour le définir"
+      );
     } else if (!(await verifyPassword(password, driver.password_hash))) {
       throw new HttpError(401, 'invalid_credentials', 'Numéro inconnu ou mot de passe incorrect');
     }

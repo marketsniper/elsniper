@@ -16,5 +16,10 @@ export async function verifyPassword(password, stored) {
   const [algo, salt, hash] = stored.split(':');
   if (algo !== 'scrypt' || !salt || !hash) return false;
   const derived = await scrypt(password, salt, 64);
-  return crypto.timingSafeEqual(Buffer.from(hash, 'hex'), derived);
+  const attendu = Buffer.from(hash, 'hex');
+  // Longueurs différentes (hash tronqué ou corrompu en base) :
+  // timingSafeEqual LÈVE au lieu de renvoyer false — ce serait un 500 sur
+  // l'écran de connexion là où la seule bonne réponse est « refusé ».
+  if (attendu.length !== derived.length) return false;
+  return crypto.timingSafeEqual(attendu, derived);
 }

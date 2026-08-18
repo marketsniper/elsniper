@@ -152,9 +152,12 @@ describe('Tableau de bord équipe', () => {
       pickupLocation: 'Stone Town',
       dropoffLocation: 'Paje',
     };
+    // Le blocage frappe désormais dès l'authentification (401) : le jeton
+    // d'un compte banni ne vaut plus rien, sur AUCUNE route — pas seulement
+    // sur la réservation.
     const bloque = await request(app).post('/api/trips').set(authHeaders(token)).send(corps);
-    assert.equal(bloque.status, 403);
-    assert.equal(bloque.body.error.code, 'account_blocked');
+    assert.equal(bloque.status, 401);
+    assert.equal(bloque.body.error.code, 'unauthorized');
 
     // Réintégration : le compte peut de nouveau réserver.
     const retour = await request(app)

@@ -483,10 +483,25 @@ router.get(
     if (!isAdmin(req) && !req.auth.driverId) {
       throw new HttpError(403, 'forbidden', 'Accès réservé aux chauffeurs');
     }
+    // La bourse est réservée aux chauffeurs VÉRIFIÉS — la même règle que la
+    // prise de course (claim). Un candidat refusé n'a rien à y observer.
+    if (!isAdmin(req)) {
+      const { rows: moi } = await query(
+        'SELECT verification_status FROM drivers WHERE id = $1',
+        [req.auth.driverId]
+      );
+      if (moi[0]?.verification_status !== 'verified') {
+        throw new HttpError(403, 'driver_not_verified', 'Compte chauffeur non validé');
+      }
+    }
     const { rows } = await query(
+      // Deux familles de courses : les demandes récentes (48 h), et les
+      // courses DÉJÀ PAYÉES rendues par leur chauffeur — celles-là ne
+      // périment JAMAIS : un client a payé, il attend un taxi, la course
+      // doit rester visible jusqu'à ce que quelqu'un la prenne.
       `SELECT * FROM trips
        WHERE status = 'requested' AND driver_id IS NULL AND trip_type = 'private'
-         AND created_at >= now() - interval '48 hours'
+         AND (created_at >= now() - interval '48 hours' OR paid_at IS NOT NULL)
        ORDER BY COALESCE(scheduled_at, created_at) ASC
        LIMIT 100`
     );
@@ -706,17 +721,33 @@ router.patch(
       // une page blanche, et son propre silence pourra réalerter.
       // Même règle que pour la bourse : une course déjà payée reprend en
       // 'paid', pas en « en attente de paiement ».
+      // La garde de statut est DANS le WHERE, pas seulement dans la lecture
+      // faite plus haut : entre les deux, le client peut annuler. Sans elle,
+      // l'équipe pouvait ressusciter une course annulée (ou rétrograder une
+      // course en cours) en assignant un remplaçant au mauvais moment — et
+      // un chauffeur partait pour une course qui n'existait plus.
       `UPDATE trips
           SET driver_id = $1,
               status = CASE WHEN paid_at IS NULL THEN 'driver_confirmed'::trip_status
                             ELSE 'paid'::trip_status END,
               alerte_figee_at = NULL
-        WHERE id = $2 RETURNING *`,
+        WHERE id = $2 AND status IN ('requested', 'driver_confirmed', 'paid')
+        RETURNING *`,
       [driverId, req.params.id]
     );
+    if (!rows[0]) {
+      throw new HttpError(
+        409,
+        'invalid_status',
+        'Cette course a changé d\'état entre-temps (annulée ou démarrée) — rechargez la liste'
+      );
+    }
     // Son téléphone sonne dans la seconde : c'est l'alerte qui fait gagner le
     // plus de temps sur chaque réservation.
     alerterNouvelleCourse(rows[0]);
+    // Course déjà payée : le remplaçant reçoit AUSSI le signal « payée —
+    // vous pouvez démarrer », pas seulement « nouvelle course ».
+    if (rows[0].status === 'paid') alerterCoursePayee(rows[0]);
     res.json(rows[0]);
   })
 );
@@ -780,8 +811,9 @@ router.post(
           [trip.hotel_id, -trip.price, trip.id]
         );
         const { rows } = await client.query(
-          `INSERT INTO payments (trip_id, amount, currency, pesapal_reference, status, confirmed_at)
-           VALUES ($1, $2, $3, $4, 'confirmed', now())
+          `INSERT INTO payments (trip_id, amount, currency, pesapal_reference, status,
+                                 confirmed_at, method)
+           VALUES ($1, $2, $3, $4, 'confirmed', now(), 'credit')
            RETURNING *`,
           [trip.id, trip.price, trip.currency, `CREDIT-${randomUUID()}`]
         );
@@ -821,6 +853,31 @@ router.post(
         ...paiement,
         payment_method: 'credit',
         whatsapp_link: buildTeamNotificationLink(resumeCredit),
+      });
+      return;
+    }
+
+    // UN SEUL PAIEMENT EN ATTENTE PAR COURSE. Un double appui sur « Payer »
+    // créait deux lignes avec deux liens vivants : le client pouvait régler
+    // les deux, et le second débit ne laissait aucune trace de remboursement.
+    // S'il existe déjà un paiement en attente, on le renvoie tel quel — et le
+    // client peut toujours en changer le moyen via POST /payments/:id/moyen.
+    const { rows: dejaEnAttente } = await query(
+      `SELECT * FROM payments WHERE trip_id = $1 AND status = 'pending'
+        ORDER BY created_at DESC LIMIT 1`,
+      [trip.id]
+    );
+    if (dejaEnAttente[0] && (!method || dejaEnAttente[0].method === method)) {
+      const p = dejaEnAttente[0];
+      res.status(200).json({
+        ...p,
+        payment_method: aValiderALaMain(p.pesapal_reference) ? 'manual' : 'pesapal',
+        prix_course: Number(trip.price),
+        devise_course: trip.currency,
+        surcharge: Number(p.surcharge),
+        mention_surcharge: null,
+        moyen: p.method,
+        moyens_disponibles: moyensPour(trip.currency),
       });
       return;
     }
@@ -1090,7 +1147,14 @@ async function validerParrainageApresCourse(userId) {
     [userId]
   );
   if (compte[0].n < 2) return;
-  await query('UPDATE users SET referral_rewarded_at = now() WHERE id = $1', [userId]);
+  // La garde IS NULL fait foi : deux clôtures simultanées (2e et 3e course
+  // terminées ensemble) passeraient toutes deux la lecture ci-dessus — seule
+  // la première écrit, et elle seule envoie l'alerte des 5 $.
+  const { rowCount } = await query(
+    'UPDATE users SET referral_rewarded_at = now() WHERE id = $1 AND referral_rewarded_at IS NULL',
+    [userId]
+  );
+  if (rowCount === 0) return;
   notifierEquipe(
     '🎁 Parrainage validé — zanziGo',
     [
@@ -1124,15 +1188,26 @@ router.post(
 
     // Barème appliqué au réservateur d'une course payée (jamais requis pour
     // l'équipe, qui garde la main sans condition).
+    //
+    // « Payée » se lit sur paid_at, PAS sur le statut : une course payée puis
+    // rendue par son chauffeur redescend en 'requested' en gardant paid_at.
+    // Brancher le barème sur le statut laissait ce cas s'annuler librement,
+    // sans qu'aucun remboursement ne soit tracé — l'argent encaissé
+    // disparaissait en silence.
+    const dejaPayee = trip.paid_at !== null;
     const tauxPaye = trip.scheduled_at ? tauxRemboursement(trip.scheduled_at) : null;
     const annulables = isAdmin(req)
       ? ['requested', 'driver_confirmed', 'paid']
-      : ['requested', 'driver_confirmed', ...(tauxPaye !== null ? ['paid'] : [])];
+      : dejaPayee
+        ? tauxPaye !== null
+          ? ['requested', 'driver_confirmed', 'paid']
+          : []
+        : ['requested', 'driver_confirmed'];
     if (!annulables.includes(trip.status)) {
       throw new HttpError(
         409,
         'invalid_status',
-        trip.status === 'paid'
+        dejaPayee
           ? "Course payée : annulation possible jusqu'à 24 h avant le départ (remboursement 100 % à +48 h, 50 % entre 24 h et 48 h) — passé ce délai, contactez l'équipe sur WhatsApp"
           : `Cette course ne peut plus être annulée (statut actuel: ${trip.status})`
       );
@@ -1146,7 +1221,7 @@ router.post(
       // Course déjà payée annulée par le CLIENT : remboursement dû selon le
       // barème, tracé sur le paiement confirmé.
       let refund = null;
-      if (trip.status === 'paid' && !isAdmin(req) && tauxPaye !== null) {
+      if (dejaPayee && !isAdmin(req) && tauxPaye !== null) {
         const { rows: paiements } = await client.query(
           `UPDATE payments
            -- Le barème (100 % / 50 %) porte sur le PRIX DE LA COURSE, pas

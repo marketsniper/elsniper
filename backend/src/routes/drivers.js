@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { query } from '../db.js';
+import { query, withTransaction } from '../db.js';
 import { HttpError, notFound } from '../errors.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { isAdmin, requireAuth, requireAdmin } from '../middleware/auth.js';
@@ -452,24 +452,51 @@ router.post(
       throw new HttpError(409, 'already_archived', 'Ce chauffeur est déjà radié');
     }
 
-    await query(
-      `UPDATE posted_rides SET status = 'closed' WHERE driver_id = $1 AND status = 'open'`,
-      [req.params.id]
-    );
-    // L'inscription en attente éventuelle part avec la fiche.
-    await query('DELETE FROM driver_signups WHERE phone = $1', [chauffeur.phone]);
-    const misAJour = await query(
-      `UPDATE drivers
-       SET archived_at = now(), available = false, verification_status = 'rejected'
-       WHERE id = $1 RETURNING *`,
-      [req.params.id]
-    );
+    // Tout ou rien : un crash au milieu laissait des annonces fermées et une
+    // inscription supprimée sans que le chauffeur soit archivé.
+    const { misAJour, courses } = await withTransaction(async (client) => {
+      await client.query(
+        `UPDATE posted_rides SET status = 'closed' WHERE driver_id = $1 AND status = 'open'`,
+        [req.params.id]
+      );
+      // SES COURSES EN COURS RETOURNENT À LA BOURSE. Sans ça, une course
+      // prise (voire payée) gardait le driver_id d'un chauffeur devenu
+      // invisible : personne ne pouvait plus la servir ni la voir. Même
+      // logique que le release : une course payée garde paid_at et repartira
+      // en 'paid' à la prochaine prise ; le point de rendez-vous est
+      // conservé, le compteur d'alerte repart de zéro.
+      const { rows: courses } = await client.query(
+        `UPDATE trips
+            SET driver_id = NULL, status = 'requested', alerte_figee_at = NULL
+          WHERE driver_id = $1 AND status IN ('driver_confirmed', 'paid')
+          RETURNING id, pickup_location, dropoff_location, paid_at`,
+        [req.params.id]
+      );
+      // L'inscription en attente éventuelle part avec la fiche.
+      await client.query('DELETE FROM driver_signups WHERE phone = $1', [chauffeur.phone]);
+      const misAJour = await client.query(
+        `UPDATE drivers
+         SET archived_at = now(), available = false, verification_status = 'rejected'
+         WHERE id = $1 RETURNING *`,
+        [req.params.id]
+      );
+      return { misAJour, courses };
+    });
 
     notifierEquipe(
       '🚫 Chauffeur radié — zanziGo',
       [
         `Nom: ${chauffeur.full_name}`,
         `Téléphone: ${chauffeur.phone}`,
+        ...(courses.length > 0
+          ? [
+              `⚠️ ${courses.length} course(s) en cours rendue(s) à la bourse :`,
+              ...courses.map(
+                (c) =>
+                  `• ${c.pickup_location} → ${c.dropoff_location}${c.paid_at ? ' (DÉJÀ PAYÉE — à réassigner en priorité)' : ''}`
+              ),
+            ]
+          : []),
         `Véhicule: ${chauffeur.vehicle_model ?? '—'} (${chauffeur.vehicle_plate})`,
         'Sa fiche est close. Son numéro est de nouveau libre : il peut redéposer une candidature.',
       ].join('\n')

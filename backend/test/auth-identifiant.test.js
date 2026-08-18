@@ -118,15 +118,24 @@ describe('Clients : identifiant + mot de passe', () => {
     assert.equal(connexion.body.user.id, profil.body.id);
   });
 
-  it('les anciens comptes se connectent TOUJOURS avec leur numéro', async () => {
+  it('ancien compte sans mot de passe : fermé jusqu\'à ce que l\'équipe le pose', async () => {
     const { user } = await createTourist();
-    const connexion = await request(app)
+    // SÉCURITÉ : le numéro seul n'ouvre plus rien.
+    const tentative = await request(app)
       .post('/api/auth/login')
       .send({ identifier: user.phone, password: 'PremierMdp1' });
+    assert.equal(tentative.status, 403, JSON.stringify(tentative.body));
+    assert.equal(tentative.body.error.code, 'password_not_set');
+
+    await request(app)
+      .patch(`/api/users/${user.id}/password`)
+      .set(adminHeaders())
+      .send({ password: 'PoseParEquipe1' });
+    const connexion = await request(app)
+      .post('/api/auth/login')
+      .send({ identifier: user.phone, password: 'PoseParEquipe1' });
     assert.equal(connexion.status, 200, JSON.stringify(connexion.body));
     assert.equal(connexion.body.user.id, user.id);
-
-    // Le mot de passe est désormais exigé pour ce compte.
     const mauvais = await request(app)
       .post('/api/auth/login')
       .send({ identifier: user.phone, password: 'AutreChose1' });

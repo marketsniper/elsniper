@@ -5,6 +5,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import request from 'supertest';
 import {
+  adminHeaders,
   app,
   authHeaders,
   createLocal,
@@ -50,13 +51,25 @@ describe('Locaux : numéro + mot de passe', () => {
     assert.equal(mauvais.status, 401);
   });
 
-  it('ancien compte local (sans mot de passe) : le premier mot de passe saisi est adopté', async () => {
+  it('compte local sans mot de passe : porte fermée, l\'équipe le pose', async () => {
     const { user } = await createLocal();
-    const premiere = await request(app)
+    // SÉCURITÉ : plus d'adoption du premier mot de passe présenté — sinon le
+    // compte de n'importe quel local se prenait avec son seul numéro.
+    const tentative = await request(app)
       .post('/api/auth/visitor-login')
       .send({ phone: user.phone, password: 'PremierMdp1' });
-    assert.equal(premiere.status, 200, JSON.stringify(premiere.body));
-    assert.equal(premiere.body.user.id, user.id);
+    assert.equal(tentative.status, 403, JSON.stringify(tentative.body));
+    assert.equal(tentative.body.error.code, 'password_not_set');
+
+    await request(app)
+      .patch(`/api/users/${user.id}/password`)
+      .set(adminHeaders())
+      .send({ password: 'PoseParEquipe1' });
+    const bonne = await request(app)
+      .post('/api/auth/visitor-login')
+      .send({ phone: user.phone, password: 'PoseParEquipe1' });
+    assert.equal(bonne.status, 200, JSON.stringify(bonne.body));
+    assert.equal(bonne.body.user.id, user.id);
 
     const mauvais = await request(app)
       .post('/api/auth/visitor-login')

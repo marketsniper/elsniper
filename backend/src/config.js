@@ -16,6 +16,15 @@ if (!env.JWT_SECRET && isProd) {
   throw new Error('JWT_SECRET est obligatoire en production');
 }
 
+// Clé d'équipe : OBLIGATOIRE et forte en production — même exigence que le
+// secret JWT. Sans ce garde-fou, une variable absente (ou vidée dans le
+// tableau Render) faisait retomber la clé sur « dev-admin-key » : toute la
+// plateforme (sauvegarde complète, remise à zéro, mots de passe) s'ouvrait
+// avec une valeur écrite dans le code source public.
+if (isProd && !env.ADMIN_API_KEY) {
+  throw new Error('ADMIN_API_KEY est obligatoire en production');
+}
+
 export const config = {
   env: env.NODE_ENV || 'development',
   isProd,

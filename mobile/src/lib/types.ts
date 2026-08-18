@@ -401,10 +401,13 @@ export function formaterDate(iso: unknown): string {
 export type ProfilTarifaire = 'tourist' | 'resident' | 'resident_verifie' | 'local' | 'hotel';
 
 /** Plein tarif USD (touristes, résidents non vérifiés). Pas de navette locale. */
+// Miroir du DÉFAUT serveur (aucune ville zonée reconnue) : privé 53 USD,
+// place partagée sharedSeatUsd(53) = 16. Ces valeurs avaient pris du retard
+// sur deux hausses — piège dormant, aucun écran ne les affiche aujourd'hui.
 export const TARIFS_TRAJET_USD: Partial<Record<TypeTrajet, number>> = {
-  private: 50,
-  shared_tourist: 18,
-  posted_return: 18,
+  private: 53,
+  shared_tourist: 16,
+  posted_return: 16,
 };
 
 /**
@@ -443,13 +446,17 @@ export const TRAJETS_SPECIAUX_LOCAL_TZS: { villes: [string, string]; prix: numbe
   { villes: ['Nungwi', 'Paje'], prix: 21000 },
 ];
 
+/** « Ville (précision) » → « ville », comme normCity côté serveur. */
+const normaliserVille = (s: string): string =>
+  s.replace(/\s*\(.*\)\s*$/, '').trim().toLowerCase();
+
 function tarifSpecialItineraire(
   liste: { villes: [string, string]; prix: number }[],
   depart: string,
   arrivee: string
 ): number | null {
-  const a = depart.trim().toLowerCase();
-  const b = arrivee.trim().toLowerCase();
+  const a = normaliserVille(depart);
+  const b = normaliserVille(arrivee);
   if (!a || !b) return null;
   for (const special of liste) {
     const [v1, v2] = [special.villes[0].toLowerCase(), special.villes[1].toLowerCase()];
@@ -509,6 +516,9 @@ export function reglementPaiement(
     const montant = dev === 'USD' ? Math.ceil((prix * TAUX_USD_TZS) / 100) * 100 : prix;
     return { montant, devise: 'TZS', surcharge: 0 };
   }
+  // La carte n'existe qu'en dollars (miroir de surchargeApplicable côté
+  // serveur) : sur une facture en shillings, aucun frais quoi qu'on passe.
+  if (dev !== 'USD') return { montant: prix, devise: dev, surcharge: 0 };
   const surcharge = Math.round(prix * SURCHARGE_CARTE * 100) / 100;
   return { montant: Math.round((prix + surcharge) * 100) / 100, devise: dev, surcharge };
 }

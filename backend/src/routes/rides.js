@@ -209,9 +209,12 @@ export async function annulerReservationsImpayees() {
     }
     for (const [rideId, places] of parRide) {
       await client.query(
+        // Une annonce close ou annulée ne « récupère » pas de places : le
+        // trajet est parti, afficher des places libres dessus serait un
+        // mensonge sur la fiche du chauffeur.
         `UPDATE posted_rides
          SET seats_available = LEAST(seats_total, seats_available + $2)
-         WHERE id = $1`,
+         WHERE id = $1 AND status = 'open'`,
         [rideId, places]
       );
     }
@@ -220,15 +223,19 @@ export async function annulerReservationsImpayees() {
        WHERE status = 'pending' AND ride_booking_id = ANY($1)`,
       [expirees.map((b) => b.id)]
     );
-    // L'équipe est prévenue : une place remise en vente peut valoir un
-    // rappel au client (« votre place est partie faute de paiement »).
-    notifierEquipe(
-      '⌛ Place(s) libérée(s) — paiement non reçu',
-      [
-        `${expirees.length} réservation(s) annulée(s) automatiquement après ${PAIEMENT_RESERVATION_MINUTES} minutes sans paiement :`,
-        ...expirees.map((b) => `• ${b.origin} → ${b.destination} — ${b.seats} place(s) remise(s) en vente`),
-      ].join('\n')
-    );
+    return expirees;
+  }).then((expirees) => {
+    // L'équipe est prévenue APRÈS le commit : si la transaction échoue, on
+    // n'annonce pas des places remises en vente qui ne l'ont jamais été.
+    if (expirees.length > 0) {
+      notifierEquipe(
+        '⌛ Place(s) libérée(s) — paiement non reçu',
+        [
+          `${expirees.length} réservation(s) annulée(s) automatiquement après ${PAIEMENT_RESERVATION_MINUTES} minutes sans paiement :`,
+          ...expirees.map((b) => `• ${b.origin} → ${b.destination} — ${b.seats} place(s) remise(s) en vente`),
+        ].join('\n')
+      );
+    }
     return expirees;
   });
 }
@@ -528,8 +535,15 @@ router.get(
           commission_per_seat: round2(base.price_per_seat * taux),
           net_per_seat: round2(base.price_per_seat * (1 - taux)),
         });
-        // Chaque réservation indique si la place a été payée (équipe).
-        const avecPaiement = (b, resa) => ({ ...resa, paid: b.paid_at !== null });
+        // Chaque réservation indique si la place a été payée — et le NOM du
+        // passager n'apparaît qu'à ce moment-là : même règle que pour les
+        // courses privées (vueChauffeur), l'identité du client se mérite par
+        // le paiement, pas par la réservation.
+        const avecPaiement = (b, resa) => ({
+          ...resa,
+          paid: b.paid_at !== null,
+          client_name: b.paid_at !== null ? resa.client_name : null,
+        });
         out.bookings = (parRide[r.id] ?? []).map((b) => {
           if (b.hotel_name) {
             return avecPaiement(
@@ -731,8 +745,11 @@ router.post(
       let refund = null;
       if (booking.paid_at !== null) {
         const { rows: paiements } = await client.query(
+          // Comme pour les courses : le barème porte sur le PRIX de la
+          // place, pas sur la surcharge carte — la banque l'a déjà
+          // prélevée, elle n'est pas dans nos caisses.
           `UPDATE payments
-           SET refund_amount = ROUND(amount * $2, 2), refund_due_at = now()
+           SET refund_amount = ROUND((amount - surcharge) * $2, 2), refund_due_at = now()
            WHERE ride_booking_id = $1 AND status = 'confirmed' AND refund_due_at IS NULL
            RETURNING refund_amount, currency`,
           [booking.id, taux]
@@ -944,8 +961,8 @@ router.post(
       );
     const { rows: paymentRows } = await query(
       `INSERT INTO payments (ride_booking_id, amount, currency, pesapal_reference, payment_link,
-                             surcharge, method)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+                             surcharge, method, prix_facture, devise_facture)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        RETURNING *`,
       [
         bookingId,
@@ -955,6 +972,8 @@ router.post(
         lienPaiement,
         reglePlace.surcharge,
         reglePlace.moyen,
+        montantTotal,
+        deviseClient,
       ]
     );
     const resumeResa = [
@@ -1011,14 +1030,72 @@ router.patch(
       throw new HttpError(400, 'validation_error', `Ce trajet compte ${ride.seats_total} places au total`);
     }
 
-    const { rows } = await query(
-      `UPDATE posted_rides
-       SET seats_available = COALESCE($1, seats_available),
-           status = COALESCE($2, status)
-       WHERE id = $3
-       RETURNING *`,
-      [data.seatsAvailable ?? null, data.status ?? null, req.params.id]
-    );
+    // ANNULATION D'UNE ANNONCE : les passagers ne disparaissent pas avec
+    // elle. Chaque réservation active est annulée, ses paiements en attente
+    // sont soldés, et les places DÉJÀ PAYÉES ouvrent un remboursement à
+    // 100 % (hors frais bancaires, jamais récupérés) — c'est le chauffeur
+    // qui annule, le client n'y est pour rien, le barème 24/48 h ne
+    // s'applique pas. Sans ça, un passager payé restait sans trajet, sans
+    // remboursement et sans recours : sa fiche affichait même le bouton
+    // d'annulation désactivé.
+    const annule = data.status === 'cancelled' && ride.status !== 'cancelled';
+    const { rows, rembourses } = await withTransaction(async (client) => {
+      const { rows } = await client.query(
+        `UPDATE posted_rides
+         SET seats_available = COALESCE($1, seats_available),
+             status = COALESCE($2, status)
+         WHERE id = $3
+         RETURNING *`,
+        [data.seatsAvailable ?? null, data.status ?? null, req.params.id]
+      );
+      let rembourses = [];
+      if (annule) {
+        const { rows: reservations } = await client.query(
+          `UPDATE ride_bookings SET cancelled_at = now()
+            WHERE ride_id = $1 AND cancelled_at IS NULL
+            RETURNING id, paid_at, seats`,
+          [req.params.id]
+        );
+        const ids = reservations.map((b) => b.id);
+        if (ids.length > 0) {
+          await client.query(
+            `UPDATE payments SET status = 'failed'
+              WHERE status = 'pending' AND ride_booking_id = ANY($1)`,
+            [ids]
+          );
+          const payees = reservations.filter((b) => b.paid_at !== null).map((b) => b.id);
+          if (payees.length > 0) {
+            const { rows: dus } = await client.query(
+              `UPDATE payments
+                  SET refund_amount = ROUND(amount - surcharge, 2), refund_due_at = now()
+                WHERE ride_booking_id = ANY($1) AND status = 'confirmed'
+                  AND refund_due_at IS NULL
+                RETURNING refund_amount, currency`,
+              [payees]
+            );
+            rembourses = dus;
+          }
+        }
+      }
+      return { rows, rembourses };
+    });
+    if (annule) {
+      // Après le commit : l'équipe sait qui rappeler et combien rendre.
+      notifierEquipe(
+        '🚫 Annonce annulée par le chauffeur',
+        [
+          `Trajet: ${ride.origin} → ${ride.destination}`,
+          `Départ prévu: ${new Date(ride.departure_at).toLocaleString('fr-FR', { timeZone: 'Africa/Dar_es_Salaam', dateStyle: 'short', timeStyle: 'short' })}`,
+          ...(rembourses.length > 0
+            ? [
+                `${rembourses.length} place(s) PAYÉE(S) à rembourser à 100 % :`,
+                ...rembourses.map((r) => `• ${r.refund_amount} ${r.currency}`),
+                'Les lignes sont dans « Remboursements à verser ».',
+              ]
+            : ['Aucune place payée — rien à rembourser.']),
+        ].join('\n')
+      );
+    }
     res.json(serializeRide(rows[0], isAdmin(req) ? { mode: 'both', usd: config.sharedRideUsdPerSeat } : PRICING_TZS));
   })
 );

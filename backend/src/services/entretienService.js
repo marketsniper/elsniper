@@ -12,8 +12,21 @@ import { signalerCoursesFigees } from './coursesFigees.js';
 const INTERVALLE_MS = 60 * 1000;
 
 let minuteur = null;
+// Une passe à la fois : si la précédente traîne (envoi d'e-mails lent), la
+// suivante saute son tour au lieu de s'empiler sur le pool de connexions.
+let passeEnCours = false;
 
 export async function passageEntretien() {
+  if (passeEnCours) return [];
+  passeEnCours = true;
+  try {
+    return await passageEntretienInterne();
+  } finally {
+    passeEnCours = false;
+  }
+}
+
+async function passageEntretienInterne() {
   await cloturerRidesPartis();
   const liberees = await annulerReservationsImpayees();
   // Une course prise par un chauffeur qui ne donne plus signe de vie ne se

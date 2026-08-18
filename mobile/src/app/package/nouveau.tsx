@@ -37,7 +37,6 @@ import {
   deviseUtilisateur,
   formaterMontant,
   TAILLES_COLIS,
-  REMISE_HOTEL,
   tarifColisTaille,
   type Devise,
   type TailleColis,
@@ -92,12 +91,12 @@ export default function EcranNouveauColis() {
       .catch(() => setBonsDispo(0));
   }, [hotelId]);
   // Devise de l'expéditeur : USD touriste/résident/hôtel, TZS local.
-  // Hôtel partenaire : même grille USD que les touristes avec −5 %.
+  // La remise partenaire des hôtels (−5 %) ne s'applique PAS aux colis —
+  // c'est la règle du serveur, qui facture le forfait plein. Afficher −5 %
+  // ici promettait 17,10 $ pour une grosse valise facturée 18 $ : le pire
+  // des écarts, celui qu'on découvre au moment de payer.
   const devise: Devise = expediteurHotel ? 'USD' : deviseUtilisateur(expediteurUser);
-  const tarifAffiche = (laTaille: TailleColis): number => {
-    const brut = tarifColisTaille(laTaille, devise);
-    return expediteurHotel ? Math.round(brut * (1 - REMISE_HOTEL) * 100) / 100 : brut;
-  };
+  const tarifAffiche = (laTaille: TailleColis): number => tarifColisTaille(laTaille, devise);
   const prix = taille ? tarifAffiche(taille) : null;
 
   const envoyer = async () => {

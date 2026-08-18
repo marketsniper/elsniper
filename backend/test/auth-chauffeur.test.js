@@ -66,7 +66,7 @@ describe('Chauffeurs : numéro + mot de passe', () => {
     assert.equal(mauvais.status, 401);
   });
 
-  it('numéro déjà chauffeur → 409 à l\'inscription ; ancien chauffeur adopte son premier mot de passe', async () => {
+  it('numéro déjà chauffeur → 409 à l\'inscription ; compte SANS mot de passe : porte fermée', async () => {
     const { driver } = await createVerifiedDriver();
     const doublon = await request(app)
       .post('/api/auth/driver-register')
@@ -74,15 +74,28 @@ describe('Chauffeurs : numéro + mot de passe', () => {
     assert.equal(doublon.status, 409);
     assert.equal(doublon.body.error.code, 'account_exists');
 
-    // Ancien chauffeur (créé par code, sans hash) : premier mot de passe adopté.
-    const premiere = await request(app)
+    // SÉCURITÉ : un compte sans hash n'adopte PLUS le premier mot de passe
+    // présenté — sinon n'importe qui prenait le compte d'un chauffeur avec
+    // son seul numéro. C'est l'équipe qui pose le mot de passe.
+    const tentative = await request(app)
       .post('/api/auth/driver-login')
       .send({ phone: driver.phone, password: 'PremierMdp1' });
-    assert.equal(premiere.status, 200);
-    assert.equal(premiere.body.driver.id, driver.id);
+    assert.equal(tentative.status, 403);
+    assert.equal(tentative.body.error.code, 'password_not_set');
+
+    // …et une fois posé par l'équipe, la connexion marche, et lui seul.
+    await request(app)
+      .post(`/api/drivers/${driver.id}/mot-de-passe`)
+      .set(adminHeaders())
+      .send({ password: 'PoseParEquipe1' });
+    const bonne = await request(app)
+      .post('/api/auth/driver-login')
+      .send({ phone: driver.phone, password: 'PoseParEquipe1' });
+    assert.equal(bonne.status, 200, JSON.stringify(bonne.body));
+    assert.equal(bonne.body.driver.id, driver.id);
     const mauvais = await request(app)
       .post('/api/auth/driver-login')
-      .send({ phone: driver.phone, password: 'AutreChose1' });
+      .send({ phone: driver.phone, password: 'PremierMdp1' });
     assert.equal(mauvais.status, 401);
   });
 

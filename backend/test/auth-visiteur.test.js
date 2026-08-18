@@ -77,21 +77,26 @@ describe('Visiteurs : numéro + mot de passe', () => {
     assert.equal(inconnu.status, 401);
   });
 
-  it('ancien compte sans mot de passe : le PREMIER mot de passe saisi est adopté', async () => {
+  it('compte sans mot de passe : porte fermée — plus d\'adoption au premier essai', async () => {
     const { user } = await createTourist();
-    const premiere = await request(app)
+    const tentative = await request(app)
       .post('/api/auth/visitor-login')
       .send({ phone: user.phone, password: 'PremierMdp1' });
-    assert.equal(premiere.status, 200, JSON.stringify(premiere.body));
+    assert.equal(tentative.status, 403, JSON.stringify(tentative.body));
+    assert.equal(tentative.body.error.code, 'password_not_set');
 
-    // Le mot de passe est désormais exigé.
+    // L'équipe pose le mot de passe après vérification d'identité.
+    await request(app)
+      .patch(`/api/users/${user.id}/password`)
+      .set(adminHeaders())
+      .send({ password: 'PoseParEquipe1' });
     const mauvais = await request(app)
       .post('/api/auth/visitor-login')
       .send({ phone: user.phone, password: 'AutreChose1' });
     assert.equal(mauvais.status, 401);
     const bon = await request(app)
       .post('/api/auth/visitor-login')
-      .send({ phone: user.phone, password: 'PremierMdp1' });
+      .send({ phone: user.phone, password: 'PoseParEquipe1' });
     assert.equal(bon.status, 200);
   });
 

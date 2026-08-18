@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { query, withTransaction } from '../db.js';
 import { HttpError, notFound } from '../errors.js';
@@ -11,6 +12,7 @@ import { annulerReservationsImpayees, baseFacturePlace } from './rides.js';
 import { alerterCoursePayeeParId } from '../services/alertesChauffeur.js';
 import { aValiderALaMain } from '../services/paiementManuel.js';
 import { buildTeamNotificationLink } from '../services/whatsappService.js';
+import { notifierEquipe } from '../services/emailService.js';
 import { libelleMoyen, moyensPour, reglement } from '../services/moyenPaiement.js';
 
 const router = Router();
@@ -231,7 +233,14 @@ router.post(
         `Trajet: ${rows[0].pickup_location} → ${rows[0].dropoff_location}`,
       ];
     } else {
-      base = await baseFacturePlace(payment.ride_booking_id);
+      // La facture FIGÉE au moment de la réservation (migration 037) fait
+      // foi : si la grille a bougé depuis, le client garde son prix. Le
+      // recalcul depuis la grille ne sert que de secours pour les paiements
+      // antérieurs à la colonne.
+      base =
+        payment.prix_facture !== null && payment.prix_facture !== undefined
+          ? { montant: Number(payment.prix_facture), devise: payment.devise_facture }
+          : await baseFacturePlace(payment.ride_booking_id);
       if (!base) throw notFound('Réservation');
       const { rows } = await query(
         `SELECT r.origin, r.destination, b.seats
@@ -254,7 +263,13 @@ router.post(
     // ouvre un nouveau plutôt que d'envoyer le client payer la mauvaise somme.
     let reference = payment.pesapal_reference;
     let paymentLink;
-    if (aValiderALaMain(reference)) {
+    // SANS CLÉS PESAPAL, toujours le circuit manuel — jamais createPaymentOrder.
+    // Sa référence STUB- se confirmerait toute seule (getTransactionStatus
+    // renvoie COMPLETED en stub) SANS passer par l'équipe : un client aurait
+    // pu marquer sa course payée en changeant simplement de moyen. Les trois
+    // autres points de création ont ce garde-fou ; celui-ci l'avait raté.
+    if (aValiderALaMain(reference) || isStubMode()) {
+      reference = reference && aValiderALaMain(reference) ? reference : `WHATSAPP-${randomUUID()}`;
       paymentLink = buildTeamNotificationLink(
         [
           ...entete,
@@ -264,7 +279,7 @@ router.post(
             ? [`(dont ${regle.surcharge} ${regle.devise} de frais bancaires carte)`]
             : []),
           `Prix: ${base.montant} ${base.devise}`,
-          `Réf: ${payment.id}`,
+          `Réf: ${payment.trip_id ?? payment.package_id ?? payment.ride_booking_id}`,
           'Bonjour, je souhaite régler — merci de me confirmer la marche à suivre.',
         ].join('\n')
       );
@@ -286,6 +301,15 @@ router.post(
         RETURNING *`,
       [payment.id, regle.montant, regle.devise, regle.surcharge, regle.moyen, reference, paymentLink]
     );
+    if (!rows[0]) {
+      // Confirmé (ou soldé) pendant qu'on reconstruisait le lien : on ne
+      // touche à rien et on le dit clairement.
+      throw new HttpError(
+        409,
+        'payment_already_processed',
+        'Ce paiement a été traité entre-temps — rien n\'a été modifié'
+      );
+    }
 
     res.json({
       ...rows[0],
@@ -365,29 +389,79 @@ router.post(
 // avancée (course/colis → paid), doublons pending de la même cible soldés.
 async function appliquerConfirmation(payment) {
   return withTransaction(async (client) => {
+    // La garde AND status='pending' fait autorité, pas la lecture faite en
+    // amont : entre les deux il y a un appel réseau (PayPal/Pesapal), pendant
+    // lequel une annulation d'équipe ou un second confirm concurrent peut
+    // passer. Zéro ligne = quelqu'un d'autre a tranché — on ne rejoue rien.
     const { rows: paymentRows } = await client.query(
-      `UPDATE payments SET status = 'confirmed', confirmed_at = now() WHERE id = $1 RETURNING *`,
+      `UPDATE payments SET status = 'confirmed', confirmed_at = now()
+        WHERE id = $1 AND status = 'pending' RETURNING *`,
       [payment.id]
     );
+    if (!paymentRows[0]) {
+      throw new HttpError(
+        409,
+        'payment_already_processed',
+        'Ce paiement a déjà été traité entre-temps'
+      );
+    }
 
+    // L'ARGENT EST LÀ, quoi qu'il soit arrivé à la cible entre-temps. Si la
+    // cible a été annulée pendant que le client payait (course annulée,
+    // réservation balayée au bout de 5 minutes), la confirmation ne doit
+    // JAMAIS être silencieuse : on trace un remboursement dû à 100 % (hors
+    // frais bancaires) et l'équipe est prévenue — sinon un client a payé,
+    // n'a rien reçu, et n'apparaît nulle part.
+    let cibleAnnulee = null;
     if (payment.trip_id) {
-      await client.query(
-        // paid_at : la trace qui survit à tout. Le statut peut redescendre
-        // (chauffeur qui se désiste), l'argent, lui, reste encaissé.
-        `UPDATE trips SET status = 'paid', paid_at = COALESCE(paid_at, now())
-          WHERE id = $1 AND status = 'driver_confirmed'`,
+      const { rows } = await client.query(
+        // paid_at : la trace qui survit à tout, posée INCONDITIONNELLEMENT.
+        // Le statut, lui, n'avance que depuis 'driver_confirmed' : une
+        // course rendue par son chauffeur (redevenue 'requested') garde son
+        // statut — mais son paid_at fait qu'elle repartira en 'paid' à la
+        // prochaine prise, et que la bourse l'affiche « déjà payée ».
+        `UPDATE trips
+            SET paid_at = COALESCE(paid_at, now()),
+                status = CASE WHEN status = 'driver_confirmed'
+                              THEN 'paid'::trip_status ELSE status END
+          WHERE id = $1
+          RETURNING status`,
         [payment.trip_id]
       );
+      if (rows[0]?.status === 'cancelled') cibleAnnulee = 'course annulée';
     } else if (payment.package_id) {
-      await client.query(
-        `UPDATE packages SET status = 'paid' WHERE id = $1 AND status = 'created'`,
+      const { rows } = await client.query(
+        `UPDATE packages
+            SET status = CASE WHEN status = 'created'
+                              THEN 'paid'::package_status ELSE status END
+          WHERE id = $1
+          RETURNING status`,
         [payment.package_id]
       );
+      if (rows[0]?.status === 'cancelled') cibleAnnulee = 'colis annulé';
     } else if (payment.ride_booking_id) {
-      // Place de taxi partagé soldée : la fiche du chauffeur l'affiche payée.
-      await client.query(
-        `UPDATE ride_bookings SET paid_at = now() WHERE id = $1 AND paid_at IS NULL`,
+      // Place soldée — mais JAMAIS sur une réservation déjà annulée : ses
+      // places sont retournées sur l'annonce, peut-être déjà revendues.
+      const { rowCount } = await client.query(
+        `UPDATE ride_bookings SET paid_at = now()
+          WHERE id = $1 AND paid_at IS NULL AND cancelled_at IS NULL`,
         [payment.ride_booking_id]
+      );
+      if (rowCount === 0) {
+        const { rows } = await client.query(
+          'SELECT cancelled_at FROM ride_bookings WHERE id = $1',
+          [payment.ride_booking_id]
+        );
+        if (rows[0]?.cancelled_at) cibleAnnulee = 'réservation annulée (paiement arrivé trop tard)';
+      }
+    }
+
+    if (cibleAnnulee) {
+      await client.query(
+        `UPDATE payments
+            SET refund_amount = ROUND(amount - surcharge, 2), refund_due_at = now()
+          WHERE id = $1 AND refund_due_at IS NULL`,
+        [payment.id]
       );
     }
 
@@ -404,12 +478,25 @@ async function appliquerConfirmation(payment) {
       [payment.id, payment.trip_id, payment.package_id, payment.ride_booking_id]
     );
 
-    return paymentRows[0];
-  }).then((confirme) => {
-    // Course réglée : le chauffeur assigné apprend qu'il peut démarrer.
+    return { confirme: paymentRows[0], cibleAnnulee };
+  }).then(({ confirme, cibleAnnulee }) => {
     // Après la transaction, et sans l'attendre : une alerte ne doit jamais
     // retenir ni annuler un paiement confirmé.
-    if (payment.trip_id) alerterCoursePayeeParId(payment.trip_id);
+    if (cibleAnnulee) {
+      notifierEquipe(
+        '⚠️ Paiement reçu sur une cible annulée — remboursement à verser',
+        [
+          `Un paiement a été confirmé alors que sa cible est ${cibleAnnulee}.`,
+          `Montant reçu: ${confirme.amount} ${confirme.currency}`,
+          `À rembourser (hors frais carte): ${confirme.refund_amount ?? Math.round((confirme.amount - confirme.surcharge) * 100) / 100} ${confirme.currency}`,
+          `Réf paiement: ${confirme.id}`,
+          'La ligne est dans « Remboursements à verser ».',
+        ].join('\n')
+      );
+    } else if (payment.trip_id) {
+      // Course réglée : le chauffeur assigné apprend qu'il peut démarrer.
+      alerterCoursePayeeParId(payment.trip_id);
+    }
     return confirme;
   });
 }

@@ -172,8 +172,9 @@ router.post(
         );
         // Trace comptable : paiement confirmé, couvert par le bon.
         await client.query(
-          `INSERT INTO payments (package_id, amount, currency, pesapal_reference, status, confirmed_at)
-           VALUES ($1, $2, $3, $4, 'confirmed', now())`,
+          `INSERT INTO payments (package_id, amount, currency, pesapal_reference, status,
+                                 confirmed_at, method)
+           VALUES ($1, $2, $3, $4, 'confirmed', now(), 'credit')`,
           [rows[0].id, rows[0].price, rows[0].currency, `VOUCHER-${bon.id}`]
         );
       }
@@ -226,7 +227,17 @@ router.get(
 // réservé la livraison voit en revanche les téléphones de l'expéditeur et
 // du destinataire — nécessaires pour organiser la ramasse et la remise.
 function sansSecretsChauffeur(pkg) {
+  // Le QR ne circule jamais (c'est la preuve de livraison), et les
+  // TÉLÉPHONES (destinataire, expéditeur) n'apparaissent qu'une fois le
+  // colis PAYÉ : avant, un chauffeur pouvait réserver un colis sans jamais
+  // le ramasser et repartir avec le numéro d'un tiers qui n'a rien demandé.
+  // Même principe que vueChauffeur sur les courses : l'identité se mérite
+  // par le paiement.
   const { qr_code, ...reste } = pkg;
+  const paye = ['paid', 'picked_up', 'delivered'].includes(String(pkg.status));
+  if (!paye) {
+    return { ...reste, recipient_phone: null, sender_phone: null };
+  }
   return reste;
 }
 
@@ -392,8 +403,9 @@ router.post(
           [pkg.sender_hotel_id, -pkg.price, pkg.id]
         );
         const { rows } = await client.query(
-          `INSERT INTO payments (package_id, amount, currency, pesapal_reference, status, confirmed_at)
-           VALUES ($1, $2, $3, $4, 'confirmed', now())
+          `INSERT INTO payments (package_id, amount, currency, pesapal_reference, status,
+                                 confirmed_at, method)
+           VALUES ($1, $2, $3, $4, 'confirmed', now(), 'credit')
            RETURNING *`,
           [pkg.id, pkg.price, pkg.currency, `CREDIT-${randomUUID()}`]
         );
@@ -433,6 +445,29 @@ router.post(
     // (mobile money M-Pesa/Tigo/Airtel + cartes) dès que les clés sont
     // présentes ; en dernier recours (mode stub) paiement MANUEL : le lien
     // ouvre WhatsApp vers l'équipe, qui confirme une fois l'argent reçu.
+    // UN SEUL PAIEMENT EN ATTENTE PAR COLIS (même règle que les courses) :
+    // un double appui renvoie la ligne existante au lieu d'en créer une
+    // seconde avec un deuxième lien vivant.
+    const { rows: dejaEnAttente } = await query(
+      `SELECT * FROM payments WHERE package_id = $1 AND status = 'pending'
+        ORDER BY created_at DESC LIMIT 1`,
+      [pkg.id]
+    );
+    if (dejaEnAttente[0] && (!method || dejaEnAttente[0].method === method)) {
+      const p = dejaEnAttente[0];
+      res.status(200).json({
+        ...p,
+        payment_method: aValiderALaMain(p.pesapal_reference) ? 'manual' : 'pesapal',
+        prix_course: Number(pkg.price),
+        devise_course: pkg.currency,
+        surcharge: Number(p.surcharge),
+        mention_surcharge: null,
+        moyen: p.method,
+        moyens_disponibles: moyensPour(pkg.currency),
+      });
+      return;
+    }
+
     // Même règle que pour les courses (services/moyenPaiement.js) : par
     // carte, le prix plus les frais bancaires en dollars ; par portefeuille
     // mobile, le prix converti en shillings, sans frais. Le prix du colis et

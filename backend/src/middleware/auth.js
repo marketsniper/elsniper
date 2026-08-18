@@ -6,6 +6,7 @@
 //                   (équipe zanziGo), sinon 401 admin_required.
 //  - isAdmin(req) : helper pour les routes "owner OU admin" — l'équipe
 //                   zanziGo bypasse tous les contrôles d'ownership.
+import crypto from 'node:crypto';
 import jwt from 'jsonwebtoken';
 import { config } from '../config.js';
 import { pool } from '../db.js';
@@ -28,7 +29,9 @@ export async function requireAuth(req, _res, next) {
     );
   }
   try {
-    req.auth = jwt.verify(token, config.jwtSecret);
+    // Algorithme figé : le secret est une chaîne, donc HMAC de toute façon —
+    // mais l'expliciter coupe court à toute confusion d'algorithme future.
+    req.auth = jwt.verify(token, config.jwtSecret, { algorithms: ['HS256'] });
   } catch {
     return next(
       new HttpError(401, 'unauthorized', 'Jeton invalide ou expiré')
@@ -73,15 +76,40 @@ export async function requireAuth(req, _res, next) {
       );
       if (u.rows[0]) req.auth.userId = u.rows[0].id;
     }
+
+    // RÉVOCATION. Un jeton vit 30 jours : sans ce contrôle, un client banni
+    // ou un chauffeur radié gardait TOUS ses accès jusqu'à l'expiration —
+    // fiche des clients de ses courses comprise. Deux lectures par clé
+    // primaire, le prix d'une porte qui ferme vraiment.
+    if (req.auth.userId) {
+      const u = await pool.query('SELECT banned_at FROM users WHERE id = $1', [req.auth.userId]);
+      if (!u.rows[0] || u.rows[0].banned_at) {
+        return next(new HttpError(401, 'unauthorized', 'Ce compte n\'est plus actif'));
+      }
+    }
+    if (req.auth.driverId) {
+      const d = await pool.query('SELECT archived_at FROM drivers WHERE id = $1', [
+        req.auth.driverId,
+      ]);
+      if (!d.rows[0] || d.rows[0].archived_at) {
+        return next(new HttpError(401, 'unauthorized', 'Ce compte chauffeur n\'est plus actif'));
+      }
+    }
   } catch (err) {
     return next(err);
   }
   next();
 }
 
-// Vrai si la requête vient de l'équipe zanziGo (clé admin valide)
+// Vrai si la requête vient de l'équipe zanziGo (clé admin valide).
+// Comparaison à temps constant : une clé ne se devine pas non plus
+// caractère par caractère en chronométrant les réponses.
 export function isAdmin(req) {
-  return req.headers['x-admin-key'] === config.adminApiKey;
+  const fournie = req.headers['x-admin-key'];
+  if (typeof fournie !== 'string' || fournie.length === 0) return false;
+  const a = Buffer.from(fournie);
+  const b = Buffer.from(config.adminApiKey);
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
 
 export function requireAdmin(req, _res, next) {
