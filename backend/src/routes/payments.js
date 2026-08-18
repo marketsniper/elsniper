@@ -4,12 +4,14 @@ import { query, withTransaction } from '../db.js';
 import { HttpError, notFound } from '../errors.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { isAdmin, requireAdmin, requireAuth } from '../middleware/auth.js';
-import { getTransactionStatus, isStubMode } from '../services/pesapalService.js';
+import { createPaymentOrder, getTransactionStatus, isStubMode } from '../services/pesapalService.js';
 import { capturePaypalOrder } from '../services/paypalService.js';
 import { config } from '../config.js';
-import { annulerReservationsImpayees } from './rides.js';
+import { annulerReservationsImpayees, baseFacturePlace } from './rides.js';
 import { alerterCoursePayeeParId } from '../services/alertesChauffeur.js';
 import { aValiderALaMain } from '../services/paiementManuel.js';
+import { buildTeamNotificationLink } from '../services/whatsappService.js';
+import { libelleMoyen, moyensPour, reglement } from '../services/moyenPaiement.js';
 
 const router = Router();
 
@@ -169,6 +171,130 @@ router.get(
       throw new HttpError(403, 'forbidden', 'Accès réservé au payeur ou à l\'équipe');
     }
     res.json(payment);
+  })
+);
+
+// POST /payments/:id/moyen — le client CHANGE de moyen de paiement avant
+// d'avoir payé : carte bancaire (dollars, frais bancaires en plus) ou
+// portefeuille mobile (shillings, sans frais).
+//
+// Le montant est TOUJOURS recalculé depuis le prix de la grille, jamais
+// depuis la somme déjà affichée : sinon les frais du premier choix se
+// retrouveraient dans le second, et un aller-retour carte → mobile → carte
+// gonflerait la note à chaque passage.
+//
+// Réservé au payeur (et à l'équipe), et seulement tant que le paiement est en
+// attente : une fois l'argent encaissé, on ne rejoue pas la facture.
+const moyenSchema = z.object({ moyen: z.enum(['carte', 'mobile']) });
+
+router.post(
+  '/:id/moyen',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const { moyen } = moyenSchema.parse(req.body ?? {});
+    const payment = await getPayment(req.params.id);
+    if (!isAdmin(req) && !(await isPayer(payment, req.auth))) {
+      throw new HttpError(403, 'forbidden', 'Accès réservé au payeur ou à l\'équipe');
+    }
+    if (payment.status !== 'pending') {
+      throw new HttpError(
+        409,
+        'payment_already_processed',
+        `Ce paiement a déjà été traité (statut: ${payment.status})`
+      );
+    }
+
+    // Le prix d'origine et de quoi remplir le message de l'équipe.
+    let base = null;
+    let entete = [];
+    if (payment.trip_id) {
+      const { rows } = await query(
+        'SELECT price, currency, pickup_location, dropoff_location FROM trips WHERE id = $1',
+        [payment.trip_id]
+      );
+      if (!rows[0]) throw notFound('Course');
+      base = { montant: Number(rows[0].price), devise: rows[0].currency };
+      entete = [
+        '💳 Paiement course zanziGo',
+        `Trajet: ${rows[0].pickup_location} → ${rows[0].dropoff_location}`,
+      ];
+    } else if (payment.package_id) {
+      const { rows } = await query(
+        'SELECT price, currency, qr_code, pickup_location, dropoff_location FROM packages WHERE id = $1',
+        [payment.package_id]
+      );
+      if (!rows[0]) throw notFound('Colis');
+      base = { montant: Number(rows[0].price), devise: rows[0].currency };
+      entete = [
+        '💳 Paiement colis zanziGo',
+        `QR: ${rows[0].qr_code}`,
+        `Trajet: ${rows[0].pickup_location} → ${rows[0].dropoff_location}`,
+      ];
+    } else {
+      base = await baseFacturePlace(payment.ride_booking_id);
+      if (!base) throw notFound('Réservation');
+      const { rows } = await query(
+        `SELECT r.origin, r.destination, b.seats
+           FROM ride_bookings b JOIN posted_rides r ON r.id = b.ride_id
+          WHERE b.id = $1`,
+        [payment.ride_booking_id]
+      );
+      entete = [
+        '💳 Paiement place(s) taxi partagé zanziGo',
+        `Trajet: ${rows[0].origin} → ${rows[0].destination}`,
+        `Places: ${rows[0].seats}`,
+      ];
+    }
+
+    const regle = reglement(base.montant, base.devise, moyen);
+
+    // Le lien de paiement porte le montant : il doit suivre le changement.
+    // Circuit manuel (WhatsApp) : on réécrit le message. Circuit externe
+    // (Pesapal/PayPal) : l'ordre déjà créé porte l'ancien montant, on en
+    // ouvre un nouveau plutôt que d'envoyer le client payer la mauvaise somme.
+    let reference = payment.pesapal_reference;
+    let paymentLink;
+    if (aValiderALaMain(reference)) {
+      paymentLink = buildTeamNotificationLink(
+        [
+          ...entete,
+          `Moyen: ${libelleMoyen(regle.moyen)}`,
+          `Montant: ${regle.montant} ${regle.devise}`,
+          ...(regle.surcharge > 0
+            ? [`(dont ${regle.surcharge} ${regle.devise} de frais bancaires carte)`]
+            : []),
+          `Prix: ${base.montant} ${base.devise}`,
+          `Réf: ${payment.id}`,
+          'Bonjour, je souhaite régler — merci de me confirmer la marche à suivre.',
+        ].join('\n')
+      );
+    } else {
+      const ordre = await createPaymentOrder({
+        amount: regle.montant,
+        currency: regle.devise,
+        description: entete[0],
+      });
+      reference = ordre.reference;
+      paymentLink = ordre.paymentLink;
+    }
+
+    const { rows } = await query(
+      `UPDATE payments
+          SET amount = $2, currency = $3, surcharge = $4, method = $5,
+              pesapal_reference = $6, payment_link = $7
+        WHERE id = $1 AND status = 'pending'
+        RETURNING *`,
+      [payment.id, regle.montant, regle.devise, regle.surcharge, regle.moyen, reference, paymentLink]
+    );
+
+    res.json({
+      ...rows[0],
+      prix_course: base.montant,
+      devise_course: base.devise,
+      mention_surcharge: regle.mention,
+      moyen: regle.moyen,
+      moyens_disponibles: moyensPour(base.devise),
+    });
   })
 );
 

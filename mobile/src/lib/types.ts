@@ -129,6 +129,15 @@ export interface ReservationPlace {
   cancellable: boolean;
   /** 1 = remboursement 100 %, 0.5 = 50 %, null = pas de remboursement. */
   refund_rate: number | null;
+  /** Paiement de la place : ce qu'il y a RÉELLEMENT à régler, et comment.
+   *  `amount` ci-dessus reste le PRIX ; un touriste facturé en dollars peut
+   *  régler en shillings par portefeuille mobile. */
+  payment_id?: string | null;
+  reglement_montant?: number | null;
+  reglement_devise?: string | null;
+  reglement_surcharge?: number | null;
+  reglement_moyen?: MoyenPaiement | null;
+  moyens_disponibles?: MoyenPaiement[];
 }
 
 /** Session authentifiée persistée dans SecureStore. */
@@ -465,6 +474,44 @@ export const REMISE_RESIDENT = 0.1;
 export const TAUX_USD_TZS = 2600;
 /** Remise hôtel partenaire (−5 % sur la grille touriste). */
 export const REMISE_HOTEL = 0.05;
+
+// ---------------------------------------------------------------------------
+// MOYENS DE PAIEMENT — miroir de backend/src/services/moyenPaiement.js.
+// Sert à AFFICHER le montant avant de payer ; le serveur reste seul juge du
+// montant réellement dû. Les deux doivent bouger ensemble : un écart ici, et
+// le client voit un prix et se fait débiter un autre.
+// ---------------------------------------------------------------------------
+
+export type MoyenPaiement = 'carte' | 'mobile';
+
+/** Frais bancaires ajoutés au paiement par carte (à la charge du payeur). */
+export const SURCHARGE_CARTE = 0.04;
+
+/**
+ * Les moyens proposés selon la devise de la facture : en dollars, carte ou
+ * portefeuille mobile ; en shillings, portefeuille mobile uniquement — le
+ * moyen de paiement normal du pays, et le seul des clients locaux.
+ */
+export function moyensPaiement(devise: string): MoyenPaiement[] {
+  return String(devise).toUpperCase() === 'USD' ? ['carte', 'mobile'] : ['mobile'];
+}
+
+/** Ce que le client réglera : montant, devise, et frais éventuels. */
+export function reglementPaiement(
+  prix: number,
+  devise: string,
+  moyen: MoyenPaiement
+): { montant: number; devise: string; surcharge: number } {
+  const dev = String(devise).toUpperCase();
+  if (moyen === 'mobile') {
+    // Conversion au taux de la grille, arrondie aux 100 TZS supérieurs (un
+    // montant rond se saisit sans erreur sur un portefeuille mobile).
+    const montant = dev === 'USD' ? Math.ceil((prix * TAUX_USD_TZS) / 100) * 100 : prix;
+    return { montant, devise: 'TZS', surcharge: 0 };
+  }
+  const surcharge = Math.round(prix * SURCHARGE_CARTE * 100) / 100;
+  return { montant: Math.round((prix + surcharge) * 100) / 100, devise: dev, surcharge };
+}
 
 /** Tarif local par défaut (zone inconnue) — affiché aussi sur l'accueil. */
 export const TARIF_LOCAL_TZS = 16000;

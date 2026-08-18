@@ -36,7 +36,10 @@ import {
   formaterDate,
   formaterMontant,
   formaterPrix,
+  moyensPaiement,
+  reglementPaiement,
   tauxRemboursement,
+  type MoyenPaiement,
   type StatutTrajet,
   type Trajet,
   type TypeTrajet,
@@ -53,6 +56,8 @@ export default function EcranTrajet() {
   const [trajet, setTrajet] = useState<Trajet | null>(null);
   const [erreur, setErreur] = useState('');
   const [chargePaiement, setChargePaiement] = useState(false);
+  // Moyen de paiement en cours de traitement (pour n'animer QUE son bouton).
+  const [moyenEnCours, setMoyenEnCours] = useState<MoyenPaiement | null>(null);
   // Crédit prépayé (hôtels) : solde chargé au focus, bouton dédié si suffisant.
   const [soldeCredit, setSoldeCredit] = useState<number | null>(null);
   const [chargeCredit, setChargeCredit] = useState(false);
@@ -161,6 +166,14 @@ export default function EcranTrajet() {
   const annule = statut === 'cancelled';
   // Règle serveur : le paiement n'est possible qu'après confirmation d'un chauffeur.
   const peutPayer = statut === 'driver_confirmed';
+  // MOYENS DE PAIEMENT et montants correspondants, calculés d'avance pour que
+  // le client voie ce qu'il va régler AVANT de choisir (le serveur refait le
+  // calcul et reste seul juge du montant dû).
+  const prixCourse = Number(champ(trajet, 'price') ?? 0);
+  const deviseCourse = String(champ(trajet, 'currency') ?? 'USD');
+  const moyensDisponibles = moyensPaiement(deviseCourse);
+  const parCarte = reglementPaiement(prixCourse, deviseCourse, 'carte');
+  const parMobile = reglementPaiement(prixCourse, deviseCourse, 'mobile');
   // Annulation par le réservateur : libre avant paiement. Course PAYÉE avec
   // départ planifié : barème 24/48 h — remboursement 100 % à +48 h, 50 %
   // entre 24 h et 48 h, refusée à moins de 24 h (même règle côté serveur).
@@ -216,11 +229,12 @@ export default function EcranTrajet() {
     }
   };
 
-  const payer = async () => {
+  const payer = async (moyen?: MoyenPaiement) => {
+    setMoyenEnCours(moyen ?? null);
     setChargePaiement(true);
     setErreur('');
     try {
-      const paiement = await api.payerTrajet(trajet.id);
+      const paiement = await api.payerTrajet(trajet.id, moyen);
       setPaiementId(paiement.id ?? null);
       setMethodePaiement(String(paiement.payment_method ?? 'manual'));
       if (paiement.payment_link) {
@@ -232,6 +246,7 @@ export default function EcranTrajet() {
       setErreur(e instanceof ErreurApi ? e.message : t('trip_paiement_indisponible'));
     } finally {
       setChargePaiement(false);
+      setMoyenEnCours(null);
     }
   };
 
@@ -514,13 +529,50 @@ export default function EcranTrajet() {
         </Carte>
       )}
 
-      {peutPayer && (
-        <Bouton
-          titre={t('trip_payer')}
-          icone="card-outline"
-          onPress={payer}
-          charge={chargePaiement}
-        />
+      {/* LE CHOIX DU MOYEN DE PAIEMENT. Un client facturé en dollars voit les
+          deux portes avec le montant exact derrière chacune : la carte (prix
+          + frais bancaires) et le portefeuille mobile (converti en shillings,
+          sans frais). Un client facturé en shillings n'a que le portefeuille
+          mobile — un seul bouton, comme avant. */}
+      {peutPayer && moyensDisponibles.length > 1 ? (
+        <Carte>
+          <SousTitre>{t('paiement_choix_titre')}</SousTitre>
+          <Bouton
+            titre={t('paiement_carte', {
+              montant: formaterMontant(parCarte.montant, parCarte.devise),
+            })}
+            icone="card-outline"
+            onPress={() => payer('carte')}
+            charge={chargePaiement && moyenEnCours === 'carte'}
+            desactive={chargePaiement && moyenEnCours !== 'carte'}
+          />
+          <Text style={styles.detailMoyen}>
+            {t('paiement_carte_detail', {
+              prix: formaterMontant(prixCourse, deviseCourse),
+              frais: formaterMontant(parCarte.surcharge, parCarte.devise),
+            })}
+          </Text>
+          <Bouton
+            titre={t('paiement_mobile', {
+              montant: formaterMontant(parMobile.montant, parMobile.devise),
+            })}
+            icone="phone-portrait-outline"
+            variante="secondaire"
+            onPress={() => payer('mobile')}
+            charge={chargePaiement && moyenEnCours === 'mobile'}
+            desactive={chargePaiement && moyenEnCours !== 'mobile'}
+          />
+          <Text style={styles.detailMoyen}>{t('paiement_mobile_detail')}</Text>
+        </Carte>
+      ) : (
+        peutPayer && (
+          <Bouton
+            titre={t('trip_payer')}
+            icone="phone-portrait-outline"
+            onPress={() => payer('mobile')}
+            charge={chargePaiement}
+          />
+        )
       )}
       {peutPayer && paiementId && (methodePaiement === 'paypal' || methodePaiement === 'pesapal') && (
         <Bouton
@@ -612,6 +664,14 @@ export default function EcranTrajet() {
 }
 
 const styles = StyleSheet.create({
+  // Ligne d'explication sous chaque bouton de paiement (frais, sans frais).
+  detailMoyen: {
+    color: couleurs.texteSecondaire,
+    fontSize: 13,
+    lineHeight: 18,
+    marginTop: -espaces.xs,
+    marginBottom: espaces.s,
+  },
   enTete: {
     flexDirection: 'row',
     justifyContent: 'space-between',

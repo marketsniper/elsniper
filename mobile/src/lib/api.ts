@@ -6,6 +6,7 @@ import type {
   Chauffeur,
   Colis,
   Hotel,
+  MoyenPaiement,
   Paiement,
   PaiementEquipe,
   ReponseVerifieOtp,
@@ -557,8 +558,11 @@ export async function obtenirTrajet(id: string): Promise<Trajet> {
  * POST /trips/:id/payment → ligne payments {id, payment_link}.
  * Possible uniquement quand status = 'driver_confirmed' (sinon 409 invalid_status).
  */
-export async function payerTrajet(id: string): Promise<Paiement> {
-  return requete<Paiement>(`/trips/${id}/payment`, { methode: 'POST' });
+export async function payerTrajet(id: string, moyen?: MoyenPaiement): Promise<Paiement> {
+  return requete<Paiement>(`/trips/${id}/payment`, {
+    methode: 'POST',
+    corps: moyen ? { method: moyen } : undefined,
+  });
 }
 
 /**
@@ -795,8 +799,26 @@ export async function listerColisHotel(hotelId: string, equipe = false): Promise
  * POST /packages/:id/payment → ligne payments {id, payment_link}.
  * Possible uniquement quand status = 'created'.
  */
-export async function payerColis(id: string): Promise<Paiement> {
-  return requete<Paiement>(`/packages/${id}/payment`, { methode: 'POST' });
+export async function payerColis(id: string, moyen?: MoyenPaiement): Promise<Paiement> {
+  return requete<Paiement>(`/packages/${id}/payment`, {
+    methode: 'POST',
+    corps: moyen ? { method: moyen } : undefined,
+  });
+}
+
+/**
+ * POST /payments/:id/moyen {moyen} — le client CHANGE de moyen avant d'avoir
+ * payé (carte bancaire ↔ portefeuille mobile). Le serveur recalcule le
+ * montant depuis le prix de la course et réécrit le lien de paiement.
+ */
+export async function choisirMoyenPaiement(
+  paiementId: string,
+  moyen: MoyenPaiement
+): Promise<Paiement> {
+  return requete<Paiement>(`/payments/${paiementId}/moyen`, {
+    methode: 'POST',
+    corps: { moyen },
+  });
 }
 
 /** POST /packages/:id/payment {method:'credit'} — payé avec le crédit hôtel. */
@@ -903,8 +925,15 @@ export async function annulerColis(id: string): Promise<Colis> {
  * décompte automatique côté serveur (409 not_enough_seats / ride_closed),
  * renvoie le trajet à jour + whatsapp_link de notification pour l'équipe.
  */
-export async function reserverPlacesRide(id: string, seats: number): Promise<Ride> {
-  return requete<Ride>(`/rides/${id}/book`, { methode: 'POST', corps: { seats } });
+export async function reserverPlacesRide(
+  id: string,
+  seats: number,
+  moyen?: MoyenPaiement
+): Promise<Ride> {
+  return requete<Ride>(`/rides/${id}/book`, {
+    methode: 'POST',
+    corps: moyen ? { seats, method: moyen } : { seats },
+  });
 }
 
 /**
@@ -1423,6 +1452,7 @@ export const api = {
   listerColisHotel,
   listerColisARamasser,
   payerColis,
+  choisirMoyenPaiement,
   annulerColis,
   envoyerPositionChauffeur,
   statsChauffeur,

@@ -13,7 +13,7 @@ import { buildTeamNotificationLink, packageRequestMessage } from '../services/wh
 import { notifierEquipe } from '../services/emailService.js';
 import { alertePaiementColis, aValiderALaMain } from '../services/paiementManuel.js';
 import { assertHotelVerified, libellePartenaire } from './hotels.js';
-import { mentionSurcharge, montantAvecSurcharge } from '../services/surchargeCarte.js';
+import { libelleMoyen, moyensPour, reglement } from '../services/moyenPaiement.js';
 
 const router = Router();
 
@@ -345,8 +345,11 @@ router.post(
   '/:id/payment',
   requireAuth,
   asyncHandler(async (req, res) => {
+    // Même choix que pour les courses : carte bancaire (dollars, frais en
+    // plus) ou portefeuille mobile (shillings, sans frais). 'credit' reste le
+    // circuit des hôtels partenaires.
     const { method } = z
-      .object({ method: z.enum(['credit']).optional() })
+      .object({ method: z.enum(['credit', 'carte', 'mobile']).optional() })
       .parse(req.body ?? {});
     const pkg = await getPackage(req.params.id);
     if (!isAdmin(req) && !isSender(pkg, req.auth)) {
@@ -430,23 +433,28 @@ router.post(
     // (mobile money M-Pesa/Tigo/Airtel + cartes) dès que les clés sont
     // présentes ; en dernier recours (mode stub) paiement MANUEL : le lien
     // ouvre WhatsApp vers l'équipe, qui confirme une fois l'argent reçu.
-    // Même règle que pour les courses : le client qui paie par carte règle
-    // les frais bancaires ; en TZS (portefeuille mobile), rien n'est ajouté.
-    const { montant: aReglerColis, surcharge: surchargeColis } = montantAvecSurcharge(
-      pkg.price,
-      pkg.currency
-    );
+    // Même règle que pour les courses (services/moyenPaiement.js) : par
+    // carte, le prix plus les frais bancaires en dollars ; par portefeuille
+    // mobile, le prix converti en shillings, sans frais. Le prix du colis et
+    // le gain du chauffeur ne bougent ni dans un cas ni dans l'autre.
+    const regleColis = reglement(pkg.price, pkg.currency, method);
+    const aReglerColis = regleColis.montant;
+    const surchargeColis = regleColis.surcharge;
+    const deviseReglementColis = regleColis.devise;
 
-    const paypal = await circuitPaiementUsd({
-      amount: aReglerColis,
-      currency: pkg.currency,
-      description: `zanziGo colis ${pkg.qr_code}`,
-    });
+    const paypal =
+      deviseReglementColis === 'USD'
+        ? await circuitPaiementUsd({
+            amount: aReglerColis,
+            currency: deviseReglementColis,
+            description: `zanziGo colis ${pkg.qr_code}`,
+          })
+        : null;
     let circuit = paypal;
     if (!circuit && !isStubMode()) {
       circuit = await createPaymentOrder({
         amount: aReglerColis,
-        currency: pkg.currency,
+        currency: deviseReglementColis,
         description: `zanziGo colis ${pkg.qr_code}`,
       });
     }
@@ -459,20 +467,31 @@ router.post(
           `Réf: ${pkg.id}`,
           `QR: ${pkg.qr_code}`,
           `Taille: ${pkg.size}`,
-          `Montant: ${aReglerColis} ${pkg.currency}`,
+          `Moyen: ${libelleMoyen(regleColis.moyen)}`,
+          `Montant: ${aReglerColis} ${deviseReglementColis}`,
           ...(surchargeColis > 0
-            ? [`(dont ${surchargeColis} ${pkg.currency} de frais bancaires carte)`]
+            ? [`(dont ${surchargeColis} ${deviseReglementColis} de frais bancaires carte)`]
             : []),
+          `Prix du colis: ${pkg.price} ${pkg.currency}`,
           `Trajet: ${pkg.pickup_location} → ${pkg.dropoff_location}`,
           'Bonjour, je souhaite régler ce colis — merci de m’envoyer le lien de paiement.',
         ].join('\n')
       );
 
     const { rows } = await query(
-      `INSERT INTO payments (package_id, amount, currency, pesapal_reference, payment_link, surcharge)
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO payments (package_id, amount, currency, pesapal_reference, payment_link,
+                             surcharge, method)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING *`,
-      [pkg.id, aReglerColis, pkg.currency, reference, paymentLink, surchargeColis]
+      [
+        pkg.id,
+        aReglerColis,
+        deviseReglementColis,
+        reference,
+        paymentLink,
+        surchargeColis,
+        regleColis.moyen,
+      ]
     );
 
     // Paiement que l'équipe devra encaisser puis valider : son téléphone
@@ -486,6 +505,14 @@ router.post(
     res.status(201).json({
       ...rows[0],
       payment_method: paypal?.method ?? (isStubMode() ? 'manual' : 'pesapal'),
+      // Le client voit ce qu'il règle AVANT de payer : prix, frais éventuels,
+      // et les moyens entre lesquels il peut basculer.
+      prix_course: Number(pkg.price),
+      devise_course: pkg.currency,
+      surcharge: surchargeColis,
+      mention_surcharge: regleColis.mention,
+      moyen: regleColis.moyen,
+      moyens_disponibles: moyensPour(pkg.currency),
     });
   })
 );

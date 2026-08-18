@@ -1028,6 +1028,20 @@ export default function EcranEquipe() {
               {!estColis && !estPlace && !!paiement.trip_client_name && (
                 <Text style={styles.detail}>{paiement.trip_client_name}</Text>
               )}
+              {/* PAR QUEL MOYEN l'argent arrive : un virement Tigo en
+                  shillings ne se cherche pas au même endroit qu'un paiement
+                  carte en dollars. Sans ça, l'équipe le devinait à la devise
+                  — ce qui ne suffit plus depuis qu'un touriste facturé en
+                  dollars peut régler au portefeuille mobile. */}
+              {!!champ(paiement, 'method') && (
+                <Text style={styles.detail}>
+                  {champ(paiement, 'method') === 'mobile'
+                    ? `📱 ${t('paiement_moyen_mobile_court')}`
+                    : champ(paiement, 'method') === 'credit'
+                      ? `🏨 ${t('trip_payer_credit')}`
+                      : `💳 ${t('paiement_moyen_carte_court')}`}
+                </Text>
+              )}
               {/* QUAND : demandé le… et départ prévu — indispensable pour
                   savoir quoi encaisser en priorité. */}
               <Text style={styles.detail}>

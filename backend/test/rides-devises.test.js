@@ -91,7 +91,12 @@ describe('Devises taxi partagé (parcours local complet)', () => {
       .send({ seats: 1 });
     assert.equal(resa.status, 201);
     assert.equal(resa.body.payment.currency, 'USD');
-    assert.equal(Number(resa.body.payment.amount), 16);
+    // La place vaut 16 USD ; réglée par carte (le choix par défaut d'un
+    // client facturé en dollars), elle se débite 16,64 — les 4 % de frais
+    // bancaires, à la charge du payeur comme sur les courses et les colis.
+    assert.equal(Number(resa.body.payment.amount), 16.64);
+    assert.equal(Number(resa.body.payment.surcharge), 0.64);
+    assert.equal(resa.body.payment.method, 'carte');
 
     // « Mes places » du touriste : USD aussi, même avec la clé embarquée.
     const mesPlaces = await request(app)
@@ -99,7 +104,12 @@ describe('Devises taxi partagé (parcours local complet)', () => {
       .set(authHeaders(tokenTouriste))
       .set(adminHeaders());
     assert.equal(mesPlaces.body[0].currency, 'USD');
-    assert.equal(Number(mesPlaces.body[0].amount), 16);
+    assert.equal(Number(mesPlaces.body[0].amount), 16, 'le PRIX de la place');
+    // …et, à côté, ce qu'il y a réellement à régler avec le moyen choisi.
+    assert.equal(Number(mesPlaces.body[0].reglement_montant), 16.64);
+    assert.equal(mesPlaces.body[0].reglement_devise, 'USD');
+    assert.equal(mesPlaces.body[0].reglement_moyen, 'carte');
+    assert.deepEqual(mesPlaces.body[0].moyens_disponibles, ['carte', 'mobile']);
     // Le client sait quel taxi assure le trajet : plaque + modèle visibles.
     assert.ok(mesPlaces.body[0].vehicle_plate);
     assert.equal(mesPlaces.body[0].vehicle_model, 'Toyota Noah');

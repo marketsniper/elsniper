@@ -25,6 +25,7 @@ import {
   TAUX_PLACE_LOCALE,
   TAUX_PLACE_USD,
 } from '../services/pricingService.js';
+import { libelleMoyen, moyensPour, reglement } from '../services/moyenPaiement.js';
 import { createPaymentOrder, isStubMode } from '../services/pesapalService.js';
 import { RIDE_DESTINATIONS, RIDE_ORIGINS, RIDE_ORIGINS_ACCEPTES } from '../services/locations.js';
 import { randomUUID } from 'node:crypto';
@@ -62,13 +63,16 @@ const updateRideSchema = z
 // clients — un touriste connecté dessus doit voir de l'USD, pas la double
 // grille équipe. Le mode « both » est réservé aux requêtes équipe pures,
 // sans compte client connecté.
-async function viewerPricing(req) {
+// Grille appliquée à UN CLIENT donné (et non au porteur du jeton) : sert
+// quand l'équipe agit sur la place de quelqu'un d'autre — le prix doit rester
+// celui du client, jamais celui de qui regarde.
+async function pricingPourClient({ userId, hotelId }) {
   // Hôtel partenaire : même grille USD que les touristes, avec −5 %.
-  if (req.auth?.hotelId) return { mode: 'USD', remise: config.hotelDiscountRate };
-  if (req.auth?.userId) {
+  if (hotelId) return { mode: 'USD', remise: config.hotelDiscountRate };
+  if (userId) {
     const { rows } = await query(
       'SELECT account_type, verification_status FROM users WHERE id = $1',
-      [req.auth.userId]
+      [userId]
     );
     const user = rows[0];
     if (user && user.account_type !== 'local') {
@@ -76,8 +80,12 @@ async function viewerPricing(req) {
       const verifie = user.account_type === 'resident' && user.verification_status === 'verified';
       return { mode: 'USD', remise: verifie ? config.residentDiscountRate : 0 };
     }
-    return { mode: 'TZS' };
   }
+  return { mode: 'TZS' };
+}
+
+async function viewerPricing(req) {
+  if (req.auth?.hotelId || req.auth?.userId) return pricingPourClient(req.auth);
   if (isAdmin(req)) return { mode: 'both', remise: 0 };
   return { mode: 'TZS' };
 }
@@ -88,6 +96,36 @@ function rideUsd(ride, pricing) {
   return pricing.remise
     ? Math.round(base * (1 - pricing.remise) * 100) / 100
     : base;
+}
+
+/**
+ * Montant facturé pour une réservation de places, dans la devise du CLIENT.
+ * Sert au changement de moyen de paiement (routes/payments.js) : on repart
+ * TOUJOURS du prix de la grille, jamais du montant déjà réglé — sinon les
+ * frais bancaires d'un premier choix se retrouveraient dans le second.
+ */
+export async function baseFacturePlace(bookingId) {
+  const { rows } = await query(
+    `SELECT b.seats, b.user_id, b.hotel_id,
+            r.origin, r.destination, r.price_per_seat, r.currency
+       FROM ride_bookings b JOIN posted_rides r ON r.id = b.ride_id
+      WHERE b.id = $1`,
+    [bookingId]
+  );
+  if (!rows[0]) return null;
+  const place = rows[0];
+  // La grille du CLIENT de la place, pas celle de qui appelle.
+  const pricing = await pricingPourClient({
+    userId: place.user_id,
+    hotelId: place.hotel_id,
+  });
+  if (pricing.mode === 'USD') {
+    return {
+      montant: Math.round(rideUsd(place, pricing) * place.seats * 100) / 100,
+      devise: 'USD',
+    };
+  }
+  return { montant: Number(place.price_per_seat) * place.seats, devise: place.currency };
 }
 
 // Lien WhatsApp de demande de place — le prix affiché suit la même cloison.
@@ -557,13 +595,25 @@ router.get(
     await cloturerRidesPartis();
     await annulerReservationsImpayees();
     const { rows } = await query(
+      // Le paiement encore vivant de la place (jamais les tentatives
+      // échouées) : c'est lui qui porte le MOYEN choisi et le montant
+      // réellement à régler — un touriste facturé en dollars peut avoir
+      // choisi de payer en shillings par portefeuille mobile.
       `SELECT b.id, b.seats, b.created_at, b.paid_at, b.cancelled_at,
               r.origin, r.destination, r.departure_at, r.status AS ride_status,
               r.price_per_seat, r.currency AS ride_currency,
-              d.full_name AS driver_name, d.vehicle_plate, d.vehicle_model
+              d.full_name AS driver_name, d.vehicle_plate, d.vehicle_model,
+              p.id AS payment_id, p.amount AS payment_amount,
+              p.currency AS payment_currency, p.surcharge AS payment_surcharge,
+              p.method AS payment_method
        FROM ride_bookings b
        JOIN posted_rides r ON r.id = b.ride_id
        JOIN drivers d ON d.id = r.driver_id
+       LEFT JOIN LATERAL (
+         SELECT * FROM payments
+          WHERE ride_booking_id = b.id AND status <> 'failed'
+          ORDER BY created_at DESC LIMIT 1
+       ) p ON TRUE
        WHERE ${req.auth.userId ? 'b.user_id = $1' : 'b.hotel_id = $1'}
        ORDER BY r.departure_at DESC
        LIMIT 100`,
@@ -596,6 +646,16 @@ router.get(
           price_per_seat: prixPlace,
           amount: Math.round(prixPlace * b.seats * 100) / 100,
           currency: devise,
+          // CE QUI EST RÉELLEMENT À RÉGLER, moyen de paiement compris. Le
+          // prix ci-dessus reste celui de la place ; ces lignes-ci disent
+          // combien, dans quelle monnaie, et par quel moyen.
+          payment_id: b.payment_id ?? null,
+          reglement_montant: b.payment_amount === undefined ? null : Number(b.payment_amount),
+          reglement_devise: b.payment_currency ?? null,
+          reglement_surcharge:
+            b.payment_surcharge === undefined ? 0 : Number(b.payment_surcharge),
+          reglement_moyen: b.payment_method ?? null,
+          moyens_disponibles: moyensPour(devise),
           paid: b.paid_at !== null,
           cancelled: b.cancelled_at !== null || b.ride_status === 'cancelled',
           // Annulable maintenant ? Place non payée : oui tant que le départ
@@ -740,8 +800,13 @@ router.post(
   '/:id/book',
   requireAuth,
   asyncHandler(async (req, res) => {
-    const { seats } = z
-      .object({ seats: z.number().int().min(1).max(8) })
+    // Le moyen de paiement peut être choisi dès la réservation ; sinon le
+    // client le choisira sur la fiche de sa place (POST /payments/:id/moyen).
+    const { seats, method } = z
+      .object({
+        seats: z.number().int().min(1).max(8),
+        method: z.enum(['carte', 'mobile']).optional(),
+      })
       .parse(req.body);
     if (!req.auth.userId && !req.auth.hotelId && !isAdmin(req)) {
       throw new HttpError(403, 'forbidden', 'Réservé aux clients et aux hôtels partenaires');
@@ -847,11 +912,15 @@ router.post(
         ? Math.round(rideUsd(rideMaj, pricing) * seats * 100) / 100
         : Number(rideMaj.price_per_seat) * seats;
     const deviseClient = pricing.mode === 'USD' ? 'USD' : rideMaj.currency;
+    // Ce que le client règle : par carte, le total plus les frais bancaires ;
+    // par portefeuille mobile, le total converti en shillings, sans frais. Le
+    // prix de la place et le net du chauffeur ne bougent pas.
+    const reglePlace = reglement(montantTotal, deviseClient, method);
     let circuitPaiement = null;
     if (!isStubMode()) {
       circuitPaiement = await createPaymentOrder({
-        amount: montantTotal,
-        currency: deviseClient,
+        amount: reglePlace.montant,
+        currency: reglePlace.devise,
         description: `zanziGo taxi partagé ${rideMaj.origin} → ${rideMaj.destination} (${seats} place·s)`,
       });
     }
@@ -864,15 +933,29 @@ router.post(
           `Client: ${booker}`,
           `Trajet: ${rideMaj.origin} → ${rideMaj.destination}`,
           `Places: ${seats}`,
-          `Montant: ${montantTotal} ${deviseClient}`,
+          `Moyen: ${libelleMoyen(reglePlace.moyen)}`,
+          `Montant: ${reglePlace.montant} ${reglePlace.devise}`,
+          ...(reglePlace.surcharge > 0
+            ? [`(dont ${reglePlace.surcharge} ${reglePlace.devise} de frais bancaires carte)`]
+            : []),
+          `Prix des places: ${montantTotal} ${deviseClient}`,
           `Réf: ${bookingId}`,
         ].join('\n')
       );
     const { rows: paymentRows } = await query(
-      `INSERT INTO payments (ride_booking_id, amount, currency, pesapal_reference, payment_link)
-       VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO payments (ride_booking_id, amount, currency, pesapal_reference, payment_link,
+                             surcharge, method)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING *`,
-      [bookingId, montantTotal, deviseClient, referencePaiement, lienPaiement]
+      [
+        bookingId,
+        reglePlace.montant,
+        reglePlace.devise,
+        referencePaiement,
+        lienPaiement,
+        reglePlace.surcharge,
+        reglePlace.moyen,
+      ]
     );
     const resumeResa = [
         '🚌 Réservation confirmée — taxi partagé zanziGo',

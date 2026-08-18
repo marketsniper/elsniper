@@ -23,7 +23,14 @@ import { api, ErreurApi } from '@/lib/api';
 import { useRafraichissementAuto } from '@/lib/rafraichissementAuto';
 import { useT } from '@/lib/i18n';
 import { couleurs, espaces, rayons } from '@/lib/theme';
-import { formaterDate, formaterMontant, type ReservationPlace } from '@/lib/types';
+import {
+  formaterDate,
+  formaterMontant,
+  moyensPaiement,
+  reglementPaiement,
+  type MoyenPaiement,
+  type ReservationPlace,
+} from '@/lib/types';
 
 const WHATSAPP_EQUIPE = 'https://wa.me/255666241749';
 
@@ -34,6 +41,8 @@ export default function EcranPlace() {
   const [place, setPlace] = useState<ReservationPlace | null>(null);
   const [erreur, setErreur] = useState('');
   const [chargeAnnulation, setChargeAnnulation] = useState(false);
+  // Moyen de paiement en cours d'enregistrement (n'anime que son bouton).
+  const [moyenEnCours, setMoyenEnCours] = useState<MoyenPaiement | null>(null);
   const [introuvable, setIntrouvable] = useState(false);
 
   const charger = useCallback(async () => {
@@ -100,6 +109,35 @@ export default function EcranPlace() {
     `Réf: ${place.id}`,
     'Bonjour, je souhaite régler ma place — merci de me confirmer le moyen de paiement.',
   ].join('\n');
+
+  // MOYENS DE PAIEMENT de la place. Le prix reste celui de la place ; le
+  // règlement, lui, dépend du moyen : carte (prix + frais bancaires) ou
+  // portefeuille mobile (converti en shillings, sans frais).
+  const moyensDisponibles = place.moyens_disponibles ?? moyensPaiement(place.currency);
+  const parCarte = reglementPaiement(place.amount, place.currency, 'carte');
+  const parMobile = reglementPaiement(place.amount, place.currency, 'mobile');
+
+  // Le client choisit son moyen : le serveur recalcule le montant et réécrit
+  // le message de règlement, qu'on ouvre dans la foulée. Sans paiement
+  // rattaché (cas très ancien), on retombe sur le message local.
+  const reglerAvec = async (moyen: MoyenPaiement) => {
+    setMoyenEnCours(moyen);
+    setErreur('');
+    try {
+      const lienLocal = `${WHATSAPP_EQUIPE}?text=${encodeURIComponent(messagePaiement)}`;
+      if (!place.payment_id) {
+        await Linking.openURL(lienLocal);
+        return;
+      }
+      const paiement = await api.choisirMoyenPaiement(place.payment_id, moyen);
+      await Linking.openURL(String(paiement.payment_link ?? lienLocal));
+      await charger();
+    } catch (e) {
+      setErreur(e instanceof ErreurApi ? e.message : t('trip_paiement_indisponible'));
+    } finally {
+      setMoyenEnCours(null);
+    }
+  };
 
   const annuler = () => {
     const message =
@@ -198,13 +236,44 @@ export default function EcranPlace() {
           <EncartInfo icone="cash-outline" ton="attente">
             {t('place_paiement_instructions', { montant })}
           </EncartInfo>
-          <Bouton
-            titre={t('place_payer_bouton', { montant })}
-            icone="logo-whatsapp"
-            onPress={() =>
-              Linking.openURL(`${WHATSAPP_EQUIPE}?text=${encodeURIComponent(messagePaiement)}`)
-            }
-          />
+          {moyensDisponibles.length > 1 ? (
+            <>
+              <Text style={styles.titreMoyens}>{t('paiement_choix_titre')}</Text>
+              <Bouton
+                titre={t('paiement_carte', {
+                  montant: formaterMontant(parCarte.montant, parCarte.devise),
+                })}
+                icone="card-outline"
+                onPress={() => reglerAvec('carte')}
+                charge={moyenEnCours === 'carte'}
+                desactive={moyenEnCours !== null && moyenEnCours !== 'carte'}
+              />
+              <Text style={styles.detailMoyen}>
+                {t('paiement_carte_detail', {
+                  prix: montant,
+                  frais: formaterMontant(parCarte.surcharge, parCarte.devise),
+                })}
+              </Text>
+              <Bouton
+                titre={t('paiement_mobile', {
+                  montant: formaterMontant(parMobile.montant, parMobile.devise),
+                })}
+                icone="phone-portrait-outline"
+                variante="secondaire"
+                onPress={() => reglerAvec('mobile')}
+                charge={moyenEnCours === 'mobile'}
+                desactive={moyenEnCours !== null && moyenEnCours !== 'mobile'}
+              />
+              <Text style={styles.detailMoyen}>{t('paiement_mobile_detail')}</Text>
+            </>
+          ) : (
+            <Bouton
+              titre={t('place_payer_bouton', { montant })}
+              icone="phone-portrait-outline"
+              onPress={() => reglerAvec('mobile')}
+              charge={moyenEnCours === 'mobile'}
+            />
+          )}
         </>
       )}
       {place.paid && !place.cancelled && (
@@ -245,6 +314,20 @@ export default function EcranPlace() {
 }
 
 const styles = StyleSheet.create({
+  titreMoyens: {
+    color: couleurs.encre,
+    fontWeight: '700',
+    fontSize: 15,
+    marginTop: espaces.s,
+  },
+  // Ligne d'explication sous chaque bouton de paiement (frais, sans frais).
+  detailMoyen: {
+    color: couleurs.texteSecondaire,
+    fontSize: 13,
+    lineHeight: 18,
+    marginTop: -espaces.xs,
+    marginBottom: espaces.s,
+  },
   enTete: {
     flexDirection: 'row',
     justifyContent: 'space-between',

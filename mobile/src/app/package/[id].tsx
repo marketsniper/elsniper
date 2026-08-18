@@ -29,7 +29,10 @@ import {
   ETAPES_COLIS,
   formaterMontant,
   formaterPrix,
+  moyensPaiement,
+  reglementPaiement,
   type Colis,
+  type MoyenPaiement,
   type StatutColis,
   type TailleColis,
 } from '@/lib/types';
@@ -51,6 +54,8 @@ export default function EcranDetailColis() {
   const hotelId = session?.hotel?.id ?? null;
   // Paiement créé sur cet écran (pour la simulation de confirmation en dev).
   const [paiementId, setPaiementId] = useState<string | null>(null);
+  // Moyen de paiement en cours de traitement (pour n'animer QUE son bouton).
+  const [moyenEnCours, setMoyenEnCours] = useState<MoyenPaiement | null>(null);
   // 'paypal' = circuit automatique (bouton « J'ai payé — vérifier »).
   const [methodePaiement, setMethodePaiement] = useState<string>('manual');
   const [chargeConfirmation, setChargeConfirmation] = useState(false);
@@ -98,6 +103,13 @@ export default function EcranDetailColis() {
   const lienWhatsapp = champ<string>(colis, 'whatsapp_link', 'whatsappLink') ?? WHATSAPP_EQUIPE;
   // Règle serveur : le paiement n'est possible que sur un colis nouvellement créé.
   const peutPayer = statut === 'created';
+  // Montants des deux moyens, calculés d'avance : le client voit ce qu'il
+  // règle avant de choisir (le serveur refait le calcul de son côté).
+  const prixColis = Number(champ(colis, 'price') ?? 0);
+  const deviseColis = String(champ(colis, 'currency') ?? 'USD');
+  const moyensDisponibles = moyensPaiement(deviseColis);
+  const parCarte = reglementPaiement(prixColis, deviseColis, 'carte');
+  const parMobile = reglementPaiement(prixColis, deviseColis, 'mobile');
   // Annulation par l'expéditeur : uniquement avant paiement.
   const peutAnnuler = statut === 'created';
 
@@ -119,11 +131,12 @@ export default function EcranDetailColis() {
     }
   };
 
-  const payer = async () => {
+  const payer = async (moyen?: MoyenPaiement) => {
+    setMoyenEnCours(moyen ?? null);
     setChargePaiement(true);
     setErreur('');
     try {
-      const paiement = await api.payerColis(colis.id);
+      const paiement = await api.payerColis(colis.id, moyen);
       setPaiementId(paiement.id ?? null);
       setMethodePaiement(String(paiement.payment_method ?? 'manual'));
       if (paiement.payment_link) {
@@ -293,15 +306,50 @@ export default function EcranDetailColis() {
             charge={chargeCredit}
           />
         )}
+      {/* Même choix que sur une course : carte bancaire (prix + frais) ou
+          portefeuille mobile (converti en shillings, sans frais). Un colis
+          facturé en shillings n'a que le portefeuille mobile. */}
       {peutPayer && (
         <>
           <EncartInfo icone="logo-whatsapp">{t('dcolis_whatsapp_aide')}</EncartInfo>
-          <Bouton
-            titre={t('dcolis_payer_whatsapp')}
-            icone="logo-whatsapp"
-            onPress={payer}
-            charge={chargePaiement}
-          />
+          {moyensDisponibles.length > 1 ? (
+            <Carte>
+              <SousTitre>{t('paiement_choix_titre')}</SousTitre>
+              <Bouton
+                titre={t('paiement_carte', {
+                  montant: formaterMontant(parCarte.montant, parCarte.devise),
+                })}
+                icone="card-outline"
+                onPress={() => payer('carte')}
+                charge={chargePaiement && moyenEnCours === 'carte'}
+                desactive={chargePaiement && moyenEnCours !== 'carte'}
+              />
+              <Text style={styles.detailMoyen}>
+                {t('paiement_carte_detail', {
+                  prix: formaterMontant(prixColis, deviseColis),
+                  frais: formaterMontant(parCarte.surcharge, parCarte.devise),
+                })}
+              </Text>
+              <Bouton
+                titre={t('paiement_mobile', {
+                  montant: formaterMontant(parMobile.montant, parMobile.devise),
+                })}
+                icone="phone-portrait-outline"
+                variante="secondaire"
+                onPress={() => payer('mobile')}
+                charge={chargePaiement && moyenEnCours === 'mobile'}
+                desactive={chargePaiement && moyenEnCours !== 'mobile'}
+              />
+              <Text style={styles.detailMoyen}>{t('paiement_mobile_detail')}</Text>
+            </Carte>
+          ) : (
+            <Bouton
+              titre={t('dcolis_payer_whatsapp')}
+              icone="phone-portrait-outline"
+              onPress={() => payer('mobile')}
+              charge={chargePaiement}
+            />
+          )}
         </>
       )}
       {peutPayer && paiementId && (methodePaiement === 'paypal' || methodePaiement === 'pesapal') && (
@@ -381,6 +429,14 @@ export default function EcranDetailColis() {
 }
 
 const styles = StyleSheet.create({
+  // Ligne d'explication sous chaque bouton de paiement (frais, sans frais).
+  detailMoyen: {
+    color: couleurs.texteSecondaire,
+    fontSize: 13,
+    lineHeight: 18,
+    marginTop: -espaces.xs,
+    marginBottom: espaces.s,
+  },
   carteQr: {
     alignItems: 'center',
   },
