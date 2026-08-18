@@ -99,6 +99,13 @@ describe('Parrainage : le crédit se pose et se déduit tout seul', () => {
     assert.equal(await creditDe(filleul.id), 5, 'le filleul est crédité');
     assert.equal(await creditDe(parrain.id), 5, 'le parrain aussi, sans rien faire');
 
+    // Le filleul VOIT son crédit sur son propre profil — il n'a pas à nous
+    // croire sur parole (c'est la carte 🎁 de l'écran Profil).
+    const monProfil = await request(app)
+      .get(`/api/users/${filleul.id}`)
+      .set(authHeaders(token));
+    assert.equal(Number(monProfil.body.credit_parrainage_usd), 5);
+
     // 3e course du filleul : l'écran annonce la remise AVANT le paiement…
     const { token: tokenChauffeur3, driver: chauffeur3 } = await createVerifiedDriver();
     const troisieme = await request(app)

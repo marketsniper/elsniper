@@ -2436,6 +2436,20 @@ const CHAINES = {
     fr: 'À vérifier', en: 'To review', sw: 'Za kukagua',
     it: 'Da verificare', de: 'Zu prüfen',
   },
+  parrainage_credit_titre: {
+    fr: '🎁 Crédit parrainage',
+    en: '🎁 Referral credit',
+    sw: '🎁 Salio la mwaliko',
+    it: '🎁 Credito invito',
+    de: '🎁 Empfehlungsguthaben',
+  },
+  parrainage_credit_texte: {
+    fr: '{montant} vous attendent — déduits automatiquement de votre prochaine course, rien à faire.',
+    en: '{montant} is waiting for you — automatically deducted from your next ride, nothing to do.',
+    sw: '{montant} inakusubiri — itapunguzwa kiotomatiki kwenye safari yako ijayo, hakuna cha kufanya.',
+    it: '{montant} ti aspettano — detratti automaticamente dalla prossima corsa, niente da fare.',
+    de: '{montant} warten auf Sie — automatisch bei der nächsten Fahrt abgezogen, nichts zu tun.',
+  },
   // ----- Remise de parrainage automatique.
   parrainage_remise_info: {
     fr: '🎁 Parrainage : {montant} seront déduits automatiquement de votre paiement.',

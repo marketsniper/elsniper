@@ -23,6 +23,7 @@ import { useAuth } from '@/lib/auth';
 import { useT } from '@/lib/i18n';
 import { couleurs, espaces, rayons, tailles } from '@/lib/theme';
 import {
+  TAUX_USD_TZS,
   champ,
   formaterMontant,
   type StatutVerification,
@@ -54,6 +55,15 @@ export default function EcranProfil() {
   const hotelId = hotel?.id ?? null;
   useFocusEffect(
     useCallback(() => {
+      // Le profil se met à jour TOUT SEUL à chaque ouverture : une
+      // validation de compte ou un crédit de parrainage tombé entre-temps
+      // s'affiche sans que le client ait à trouver le bouton Actualiser.
+      if (utilisateur?.id) {
+        api
+          .obtenirUtilisateur(utilisateur.id)
+          .then((frais) => majSession({ user: frais }))
+          .catch(() => {});
+      }
       if (!hotelId) return;
       (async () => {
         try {
@@ -63,7 +73,7 @@ export default function EcranProfil() {
           // silencieux : les cartes fidélité/crédit restent masquées
         }
       })();
-    }, [hotelId])
+    }, [hotelId, utilisateur?.id])
   );
 
   const demanderRecharge = () => {
@@ -209,8 +219,35 @@ export default function EcranProfil() {
         </EncartInfo>
       )}
 
-      {/* Parrainage : le client partage son code ZG- — récompense pour les
-          deux au prochain paiement (gérée par l'équipe). */}
+      {/* CRÉDIT DE PARRAINAGE : le client VOIT ses 5 $ en attente — dans sa
+          devise (5 USD, ou 13 000 TZS pour un local) — au lieu de devoir
+          nous croire sur parole. La déduction, elle, est automatique. */}
+      {utilisateur &&
+        Number(champ(utilisateur, 'credit_parrainage_usd', 'creditParrainageUsd') ?? 0) > 0 && (
+          <Carte>
+            <Text style={styles.titreBloc}>{t('parrainage_credit_titre')}</Text>
+            <SousTitre>
+              {t('parrainage_credit_texte', {
+                montant:
+                  champ(utilisateur, 'currency') === 'TZS'
+                    ? formaterMontant(
+                        Math.round(
+                          Number(champ(utilisateur, 'credit_parrainage_usd', 'creditParrainageUsd')) *
+                            TAUX_USD_TZS
+                        ),
+                        'TZS'
+                      )
+                    : formaterMontant(
+                        Number(champ(utilisateur, 'credit_parrainage_usd', 'creditParrainageUsd')),
+                        'USD'
+                      ),
+              })}
+            </SousTitre>
+          </Carte>
+        )}
+
+      {/* Parrainage : le client partage son code ZG- — 5 $ de crédit pour
+          les deux à la 2e course du filleul, déduits automatiquement. */}
       {utilisateur && !!champ(utilisateur, 'referral_code', 'referralCode') && (
         <Carte>
           <Text style={styles.titreBloc}>🤝 {t('parrainage_titre')}</Text>
