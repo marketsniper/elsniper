@@ -534,13 +534,15 @@ export interface TarifsZone {
 /**
  * Prix d'une place en taxi partagé — déduit du prix de la course PRIVÉE du
  * même trajet, jamais fixé à part (miroir exact de la grille serveur) :
- * privé 42 → 13 · 47 → 16 · 53 → 17 · 63 et plus → 19.
+ * privé 42 → 12 · 47 → 15 · 53 → 16 · 63 et plus → 18.
+ * Baisse de 1 USD sur toutes les places (18/08/2026) : le taxi partagé est le
+ * produit d'appel, il retrouve son prix d'avant la hausse de 5 %.
  */
 export function tarifPlacePartagee(priveUsd: number): number {
-  if (priveUsd >= 63) return 19;
-  if (priveUsd >= 53) return 17;
-  if (priveUsd >= 47) return 16;
-  return 13;
+  if (priveUsd >= 63) return 18;
+  if (priveUsd >= 53) return 16;
+  if (priveUsd >= 47) return 15;
+  return 12;
 }
 
 // Tarif local UNIFIÉ : 16 000 TZS la place partout (sauf trajets spéciaux,

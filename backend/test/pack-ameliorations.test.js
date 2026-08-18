@@ -70,7 +70,7 @@ describe('Pack améliorations', () => {
       });
     assert.equal(partage.status, 201);
     assert.equal(partage.body.round_trip, false);
-    assert.equal(Number(partage.body.price), 16); // privé 47 → place 16
+    assert.equal(Number(partage.body.price), 15); // privé 47 → place 15
   });
 
   it('Stone Town et son ferry : même place, aucune course entre les deux', async () => {

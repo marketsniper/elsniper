@@ -37,21 +37,27 @@ const ZONE_TIERS = {
 // même trajet, jamais fixé à part. Une seule grille à tenir : quand un
 // transfert bouge, sa place suit toute seule.
 //
-//   privé 42 USD        → place 13
-//   privé 47 USD        → place 16
-//   privé 53 USD        → place 17
-//   privé 63 USD et +   → place 19
+//   privé 42 USD        → place 12
+//   privé 47 USD        → place 15
+//   privé 53 USD        → place 16
+//   privé 63 USD et +   → place 18
 //
 // Les SEUILS montent avec les prix (hausse de 5 %) : sans ça, un transfert
 // passé de 45 à 47 USD aurait sauté une tranche et sa place aurait bondi.
 //
+// BAISSE DE 1 USD SUR TOUTES LES PLACES (18/08/2026). Décision commerciale :
+// le taxi partagé est le produit d'appel — c'est par lui qu'un visiteur essaie
+// zanziGo, et un dollar de moins le rend plus attirant qu'un transfert privé
+// partagé entre amis. Les places retrouvent exactement leur prix d'avant la
+// hausse de 5 % (18 / 16 / 15 / 12) ; les transferts PRIVÉS, eux, la gardent.
+//
 // En dessous de 40 USD la question ne se pose pas : le taxi partagé n'existe
 // pas sur les trajets courts (voir PARTAGE_PRIVE_MIN_USD).
 function sharedSeatUsd(priveUsd) {
-  if (priveUsd >= 63) return 19;
-  if (priveUsd >= 53) return 17;
-  if (priveUsd >= 47) return 16;
-  return 13;
+  if (priveUsd >= 63) return 18;
+  if (priveUsd >= 53) return 16;
+  if (priveUsd >= 47) return 15;
+  return 12;
 }
 
 // Commissions zanziGo par service (grille « Chauffeur reçoit ») :

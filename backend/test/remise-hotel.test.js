@@ -43,7 +43,7 @@ describe('Remise partenaire hôtel', () => {
     assert.equal(priceTrip('private', 'resident', route).price, 42.3);
     assert.equal(
       priceTrip('shared_tourist', 'resident', route).price,
-      Math.round(16 * 0.9 * 100) / 100
+      Math.round(15 * 0.9 * 100) / 100
     );
   });
 
