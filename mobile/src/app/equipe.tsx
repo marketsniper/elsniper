@@ -102,6 +102,8 @@ export default function EcranEquipe() {
   const [chauffeurs, setChauffeurs] = useState<Chauffeur[]>([]);
   // Compteurs d'abonnés (clients / locaux / hôtels) affichés en tête de menu.
   const [abonnes, setAbonnes] = useState<StatsAbonnes | null>(null);
+  // Nombre de dossiers en attente de contrôle humain (file de vérification).
+  const [verifsEnAttente, setVerifsEnAttente] = useState(0);
   // Rubrique ouverte (null = menu en grille de cases).
   const [section, setSection] = useState<SectionEquipe | null>(null);
   // Case chiffre d'affaires : repliée (jour seul) ou dépliée (7 j / 30 j).
@@ -190,6 +192,12 @@ export default function EcranEquipe() {
           api.listerPaiementsRecus().catch(() => []),
           api.listerAttentesPartage(true).catch(() => []),
         ]);
+      // Compteur de la case « À vérifier » : silencieux s'il échoue, la case
+      // affichera 0 plutôt que de faire tomber tout le tableau de bord.
+      api
+        .fileVerification()
+        .then((file) => setVerifsEnAttente(file.total))
+        .catch(() => setVerifsEnAttente(0));
       setCourses(lesCourses);
       setPaiements(lesPaiements);
       setCandidats(lesCandidats);
@@ -455,12 +463,22 @@ export default function EcranEquipe() {
   // (paiements pas encore encaissés compris : le vert est réservé aux
   // paiements par crédit hôtel, déjà dans la caisse).
   const rubriques: {
-    cle: SectionEquipe;
+    cle: SectionEquipe | 'verifications';
     label: string;
     icone: React.ComponentProps<typeof Ionicons>['name'];
     n: number;
     action: boolean;
+    /** Case qui ouvre un ÉCRAN à part au lieu d'une rubrique du tableau. */
+    ecran?: string;
   }[] = [
+    {
+      cle: 'verifications',
+      label: t('equipe_stat_verifications'),
+      icone: 'shield-checkmark-outline',
+      n: verifsEnAttente,
+      action: true,
+      ecran: '/verifications',
+    },
     { cle: 'courses', label: t('equipe_stat_courses'), icone: 'car-outline', n: coursesATraiter.length, action: true },
     { cle: 'attentes', label: t('equipe_stat_attentes'), icone: 'notifications-outline', n: attentes.filter((a) => !a.matched_at).length, action: true },
     { cle: 'paiements', label: t('equipe_stat_paiements'), icone: 'cash-outline', n: paiements.length + remboursements.length, action: true },
@@ -602,7 +620,11 @@ export default function EcranEquipe() {
             {rubriques.map((rubrique) => (
               <Pressable
                 key={rubrique.cle}
-                onPress={() => ouvrirSection(rubrique.cle)}
+                onPress={() =>
+                  rubrique.ecran
+                    ? router.push(rubrique.ecran)
+                    : ouvrirSection(rubrique.cle as SectionEquipe)
+                }
                 accessibilityRole="button"
                 style={({ pressed }) => [styles.caseMenu, pressed && { opacity: 0.75 }]}
               >

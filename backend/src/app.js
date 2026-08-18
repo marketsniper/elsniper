@@ -15,6 +15,7 @@ import paymentsRouter from './routes/payments.js';
 import ridesRouter from './routes/rides.js';
 import { uploadsRouter } from './routes/uploads.js';
 import statsRouter from './routes/stats.js';
+import verificationsRouter from './routes/verifications.js';
 import { notificationsRouter } from './routes/notifications.js';
 import { localUploadsDir } from './services/storageService.js';
 
@@ -569,6 +570,7 @@ p{color:#8A7168;max-width:44ch;margin:8px auto}</style>
   app.use('/api/notifications', notificationsRouter);
   app.use('/api/uploads', uploadsRouter);
   app.use('/api/stats', statsRouter);
+  app.use('/api/verifications', verificationsRouter);
 
   app.use((req, res) => {
     res.status(404).json({ error: { code: 'not_found', message: 'Route inconnue' } });

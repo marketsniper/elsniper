@@ -2349,6 +2349,93 @@ const CHAINES = {
     en: 'Request sent — the zanziGo team confirms a driver, then payment will be offered here.',
     sw: 'Ombi limetumwa — timu ya zanziGo itathibitisha dereva, kisha malipo yataonekana hapa.',
   },
+  // ----- File de vérification des dossiers (équipe).
+  verif_titre: {
+    fr: 'Dossiers à vérifier', en: 'Files to review', sw: 'Faili za kukagua',
+    it: 'Pratiche da verificare', de: 'Zu prüfende Unterlagen',
+  },
+  verif_chargement: {
+    fr: 'Chargement des dossiers…', en: 'Loading files…', sw: 'Inapakia faili…',
+    it: 'Caricamento pratiche…', de: 'Unterlagen werden geladen…',
+  },
+  verif_reste: {
+    fr: '{n} en attente', en: '{n} pending', sw: '{n} zinasubiri',
+    it: '{n} in attesa', de: '{n} offen',
+  },
+  verif_rien: {
+    fr: 'Aucun dossier en attente. Tout est à jour.',
+    en: 'No files pending. Everything is up to date.',
+    sw: 'Hakuna faili linalosubiri. Kila kitu kiko sawa.',
+    it: 'Nessuna pratica in attesa. Tutto aggiornato.',
+    de: 'Keine offenen Unterlagen. Alles erledigt.',
+  },
+  verif_termine: {
+    fr: '{n} dossier(s) traité(s). La file est vide — beau travail.',
+    en: '{n} file(s) handled. The queue is empty — nice work.',
+    sw: 'Faili {n} zimeshughulikiwa. Foleni ni tupu — kazi nzuri.',
+    it: '{n} pratica/e gestita/e. La coda è vuota — ottimo lavoro.',
+    de: '{n} Unterlage(n) bearbeitet. Die Liste ist leer — gute Arbeit.',
+  },
+  verif_type_chauffeur: {
+    fr: 'Chauffeur', en: 'Driver', sw: 'Dereva', it: 'Autista', de: 'Fahrer',
+  },
+  verif_type_client: {
+    fr: 'Client', en: 'Customer', sw: 'Mteja', it: 'Cliente', de: 'Kunde',
+  },
+  verif_type_hotel: {
+    fr: 'Hôtel', en: 'Hotel', sw: 'Hoteli', it: 'Hotel', de: 'Hotel',
+  },
+  verif_attente_minutes: {
+    fr: 'déposé il y a moins d\'une heure', en: 'submitted less than an hour ago',
+    sw: 'imewasilishwa chini ya saa moja iliyopita',
+    it: 'inviato meno di un\'ora fa', de: 'vor weniger als einer Stunde eingereicht',
+  },
+  verif_attente_heures: {
+    fr: 'attend depuis {n} h', en: 'waiting for {n} h', sw: 'inasubiri kwa saa {n}',
+    it: 'in attesa da {n} h', de: 'wartet seit {n} Std.',
+  },
+  verif_attente_jours: {
+    fr: 'attend depuis {n} jour(s)', en: 'waiting for {n} day(s)',
+    sw: 'inasubiri kwa siku {n}', it: 'in attesa da {n} giorno/i',
+    de: 'wartet seit {n} Tag(en)',
+  },
+  verif_agrandir: {
+    fr: 'Appuyez sur l\'image pour l\'agrandir',
+    en: 'Tap the image to enlarge it',
+    sw: 'Gusa picha ili kuikuza',
+    it: 'Tocca l\'immagine per ingrandirla',
+    de: 'Zum Vergrößern auf das Bild tippen',
+  },
+  verif_hotel_telephone: {
+    fr: 'Un hôtel ne dépose aucune pièce : appelez le numéro officiel de l\'établissement pour confirmer que l\'inscription vient bien de lui.',
+    en: 'A hotel submits no documents: call the property\'s official number to confirm the sign-up really comes from them.',
+    sw: 'Hoteli haiwasilishi hati: piga simu kwa nambari rasmi ya hoteli ili kuthibitisha usajili ni wao.',
+    it: 'Un hotel non invia documenti: chiama il numero ufficiale della struttura per confermare che l\'iscrizione venga davvero da loro.',
+    de: 'Ein Hotel reicht keine Dokumente ein: Rufen Sie die offizielle Nummer des Hauses an, um die Anmeldung zu bestätigen.',
+  },
+  verif_valider: {
+    fr: '✅ Valider le dossier', en: '✅ Approve', sw: '✅ Idhinisha',
+    it: '✅ Approva', de: '✅ Freigeben',
+  },
+  verif_refuser: {
+    fr: '❌ Refuser', en: '❌ Reject', sw: '❌ Kataa', it: '❌ Rifiuta', de: '❌ Ablehnen',
+  },
+  verif_plus_tard: {
+    fr: '⏭ Plus tard — passer au suivant', en: '⏭ Later — next file',
+    sw: '⏭ Baadaye — faili linalofuata', it: '⏭ Più tardi — prossima pratica',
+    de: '⏭ Später — nächste Unterlage',
+  },
+  verif_erreur: {
+    fr: 'Impossible de charger les dossiers. Réessayez.',
+    en: 'Could not load the files. Try again.',
+    sw: 'Imeshindwa kupakia faili. Jaribu tena.',
+    it: 'Impossibile caricare le pratiche. Riprova.',
+    de: 'Unterlagen konnten nicht geladen werden. Bitte erneut versuchen.',
+  },
+  equipe_stat_verifications: {
+    fr: 'À vérifier', en: 'To review', sw: 'Za kukagua',
+    it: 'Da verificare', de: 'Zu prüfen',
+  },
   // ----- Choix du moyen de paiement (carte bancaire / portefeuille mobile).
   paiement_choix_titre: {
     fr: 'Comment souhaitez-vous payer ?',

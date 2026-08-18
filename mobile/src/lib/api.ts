@@ -1316,6 +1316,36 @@ export async function assignerChauffeur(tripId: string, driverId: string): Promi
   });
 }
 
+/** Un dossier de la file de vérification (GET /verifications). */
+export interface DossierVerification {
+  type: 'chauffeur' | 'client' | 'hotel';
+  id: string;
+  nom: string;
+  contact: string | null;
+  depuis: string;
+  heures_attente: number;
+  documents: { libelle: string; url: string }[];
+  infos: { label: string; valeur: string }[];
+  /** Hôtels : aucune pièce à lire, le contrôle se fait par téléphone. */
+  verification_par_telephone?: boolean;
+}
+
+export interface FileVerification {
+  total: number;
+  par_type: { chauffeur: number; client: number; hotel: number };
+  dossiers: DossierVerification[];
+}
+
+/**
+ * GET /verifications — tous les dossiers en attente d'un contrôle humain
+ * (chauffeurs, clients à pièce d'identité, hôtels), le plus ancien d'abord,
+ * documents déjà rassemblés. La validation, elle, passe par les routes
+ * existantes : verifierChauffeur / verifierClient / verifierHotel.
+ */
+export async function fileVerification(): Promise<FileVerification> {
+  return requete<FileVerification>('/verifications', { admin: true });
+}
+
 /** PATCH /drivers/:id/verify — valider/refuser une candidature (équipe). */
 export async function verifierChauffeur(
   id: string,
@@ -1478,6 +1508,7 @@ export const api = {
   listerHotelsVerifies,
   statsAbonnes,
   assignerChauffeur,
+  fileVerification,
   verifierChauffeur,
   verifierClient,
   verifierHotel,
