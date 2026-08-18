@@ -4,28 +4,34 @@ import { HttpError } from '../errors.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { requireAdmin } from '../middleware/auth.js';
 import { config } from '../config.js';
-import { sharedSeatUsdForRoute } from '../services/pricingService.js';
+import {
+  sharedSeatUsdForRoute,
+  TAUX_PLACE_LOCALE,
+  TAUX_PLACE_USD,
+} from '../services/pricingService.js';
 
 // Prix, commission et devise d'une réservation de place PAYÉE, selon le
 // profil du client (même cloison que partout ailleurs) :
-//  - hôtel : grille USD −5 %, commission 20 % ;
-//  - local : prix TZS de l'annonce, commission 15 % ;
-//  - résident vérifié : USD −10 %, commission 20 % ; touriste : USD, 20 %.
+//  - hôtel : grille USD −5 %, commission au taux des places USD ;
+//  - local : prix TZS de l'annonce, commission au taux des places locales ;
+//  - résident vérifié : USD −10 % ; touriste : USD plein tarif.
+// Les taux viennent de la grille (pricingService) : les recopier ici avait
+// laissé les places de taxi partagé sur l'ancien barème.
 export function valeurReservationPlace(ligne) {
   const round2 = (x) => Math.round(x * 100) / 100;
   const usd = sharedSeatUsdForRoute(ligne.origin, ligne.destination);
   if (ligne.par_hotel) {
     const price = round2(usd * (1 - config.hotelDiscountRate) * ligne.seats);
-    return { price, commission: round2(price * 0.2), currency: 'USD' };
+    return { price, commission: round2(price * TAUX_PLACE_USD), currency: 'USD' };
   }
   if (ligne.account_type === 'local') {
     const price = Number(ligne.price_per_seat) * ligne.seats;
-    return { price, commission: round2(price * 0.15), currency: 'TZS' };
+    return { price, commission: round2(price * TAUX_PLACE_LOCALE), currency: 'TZS' };
   }
   const resident =
     ligne.account_type === 'resident' && ligne.verification_status === 'verified';
   const price = round2((resident ? usd * (1 - config.residentDiscountRate) : usd) * ligne.seats);
-  return { price, commission: round2(price * 0.2), currency: 'USD' };
+  return { price, commission: round2(price * TAUX_PLACE_USD), currency: 'USD' };
 }
 
 const router = Router();

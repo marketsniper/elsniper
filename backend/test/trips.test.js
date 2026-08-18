@@ -165,7 +165,7 @@ describe('Courses taxi (trips)', () => {
     assert.equal(Number(privateLocal.price), 122200); // 47 USD × 2 600
     assert.equal(privateLocal.currency, 'TZS');
     const sharedLocalFlat = await createTrip(localToken, local.id, { tripType: 'shared_tourist' });
-    assert.equal(Number(sharedLocalFlat.price), 15000);
+    assert.equal(Number(sharedLocalFlat.price), 16000);
   });
 
   it('scheduledAt (ISO avec offset) accepté et stocké', async () => {
@@ -202,11 +202,11 @@ describe('Courses taxi (trips)', () => {
     assert.equal(res.body.error.code, 'local_not_verified');
   });
 
-  it('shared_local par un local vérifié → 201, tarif unique 15 000 TZS figé', async () => {
+  it('shared_local par un local vérifié → 201, tarif unique 16 000 TZS figé', async () => {
     const { token, user } = await createLocal();
     const trip = await createTrip(token, user.id, { tripType: 'shared_local' });
     assert.equal(trip.currency, 'TZS');
-    assert.equal(Number(trip.price), 15000);
+    assert.equal(Number(trip.price), 16000);
   });
 
   it('création pour un autre userId que le jeton → 403 forbidden', async () => {

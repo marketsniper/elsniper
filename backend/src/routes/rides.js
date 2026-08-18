@@ -22,6 +22,8 @@ import {
   memeEndroit,
   sharedAllowedForRoute,
   sharedSeatUsdForRoute,
+  TAUX_PLACE_LOCALE,
+  TAUX_PLACE_USD,
 } from '../services/pricingService.js';
 import { createPaymentOrder, isStubMode } from '../services/pesapalService.js';
 import { RIDE_DESTINATIONS, RIDE_ORIGINS, RIDE_ORIGINS_ACCEPTES } from '../services/locations.js';
@@ -481,8 +483,8 @@ router.get(
         // chaque client paie dans sa devise.
         const out = serializeRide(r, { mode: 'both' });
         const usd = sharedSeatUsdForRoute(r.origin, r.destination);
-        // Commission zanziGo par place : 15 % sur le tarif local (taxi
-        // partagé), 20 % sur les places USD — le chauffeur voit son net.
+        // Commission zanziGo par place : taux local (TZS) ou taux touriste
+        // (USD), pris dans la grille — le chauffeur voit son net.
         const avecGain = (base, taux) => ({
           ...base,
           commission_per_seat: round2(base.price_per_seat * taux),
@@ -502,7 +504,7 @@ router.get(
                   price_per_seat: round2(usd * (1 - config.hotelDiscountRate)),
                   currency: 'USD',
                 },
-                0.2
+                TAUX_PLACE_USD
               )
             );
           }
@@ -517,7 +519,7 @@ router.get(
                   price_per_seat: Number(r.price_per_seat),
                   currency: 'TZS',
                 },
-                0.15
+                TAUX_PLACE_LOCALE
               )
             );
           }
@@ -532,7 +534,7 @@ router.get(
                 price_per_seat: resident ? round2(usd * (1 - config.residentDiscountRate)) : usd,
                 currency: 'USD',
               },
-              0.2
+              TAUX_PLACE_USD
             )
           );
         });

@@ -23,7 +23,7 @@
  *
  * QUI N'EST JAMAIS SURCHARGÉ :
  *  - les paiements en TZS (locaux, portefeuille mobile Tigo / M-Pesa) —
- *    leur moyen de paiement normal, et 2 % sur une course à 15 000 TZS ne
+ *    leur moyen de paiement normal, et 2 % sur une course à 16 000 TZS ne
  *    justifie pas d'abîmer la relation ;
  *  - les hôtels qui règlent sur leur crédit prépayé — ils ont déjà payé les
  *    frais une seule fois en rechargeant leur compte.

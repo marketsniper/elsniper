@@ -11,19 +11,26 @@ import { config } from '../config.js';
 //               (config.hotelDiscountRate, 5 %).
 //
 // Zones (depuis/vers la ville ou l'aéroport) :
-// Tarif local UNIFIÉ : 15 000 TZS la place partout (sauf trajets spéciaux
+// Tarif local UNIFIÉ : 16 000 TZS la place partout (sauf trajets spéciaux
 // ci-dessous) — plus simple à retenir pour les clients et les chauffeurs.
 // HAUSSE DE 5 % SUR LES PRIX TOURISTES (17/08/2026), arrondie au dollar.
 // Décision commerciale : les transferts touristes avaient de la marge par
-// rapport au marché, les prix LOCAUX n'en ont pas. Le tarif local reste donc
-// à 15 000 TZS la place — il n'a pas bougé et ne doit pas bouger.
+// rapport au marché, les prix LOCAUX n'en avaient pas.
+//
+// PUIS LA PLACE LOCALE EST PASSÉE DE 15 000 À 16 000 TZS (18/08/2026), pour
+// une seule raison : la commission a pris 2 points le même jour. À prix
+// constant, ces 2 points seraient sortis entièrement de la poche du chauffeur
+// — le partagé local était le seul service dont le prix n'avait pas bougé. À
+// 16 000, le chauffeur touche 13 280 TZS la place au lieu de 12 750 : il
+// gagne PLUS qu'avant, comme sur tous les autres services. Ce sont les
+// 1 000 TZS d'écart, côté client local, qui financent les deux.
 const ZONE_TIERS = {
-  nord: { privateUsd: 47, localTzs: 15000 }, // Nungwi / Kendwa       (45 → 47)
-  nordEst: { privateUsd: 42, localTzs: 15000 }, // Matemwe / Kiwengwa (40 → 42)
-  est: { privateUsd: 47, localTzs: 15000 }, // Paje / Bwejuu          (45 → 47)
-  estSud: { privateUsd: 53, localTzs: 15000 }, // Jambiani            (50 → 53)
-  estPointe: { privateUsd: 53, localTzs: 15000 }, // Michamvi         (50 → 53)
-  sud: { privateUsd: 47, localTzs: 15000 }, // Kizimkazi / Makunduchi (45 → 47)
+  nord: { privateUsd: 47, localTzs: 16000 }, // Nungwi / Kendwa       (45 → 47)
+  nordEst: { privateUsd: 42, localTzs: 16000 }, // Matemwe / Kiwengwa (40 → 42)
+  est: { privateUsd: 47, localTzs: 16000 }, // Paje / Bwejuu          (45 → 47)
+  estSud: { privateUsd: 53, localTzs: 16000 }, // Jambiani            (50 → 53)
+  estPointe: { privateUsd: 53, localTzs: 16000 }, // Michamvi         (50 → 53)
+  sud: { privateUsd: 47, localTzs: 16000 }, // Kizimkazi / Makunduchi (45 → 47)
 };
 
 // PRIX D'UNE PLACE EN TAXI PARTAGÉ — déduit du prix de la course PRIVÉE du
@@ -63,10 +70,11 @@ function sharedSeatUsd(priveUsd) {
 // chauffeur : sur un transfert Nungwi, il touchait 40,50 USD (45 − 10 %), il
 // touche maintenant 41,36 (47 − 12 %) — il gagne PLUS qu'avant.
 //
-// L'EXCEPTION À SURVEILLER : le taxi partagé LOCAL. Son prix n'a pas bougé
-// (15 000 TZS, à dessein), donc les 2 points sortent de la poche du
-// chauffeur : 12 750 → 12 450 TZS la place. C'est le seul service où la
-// hausse se paie côté chauffeur, et c'est signalé comme tel.
+// L'EXCEPTION, RÉGLÉE : le taxi partagé LOCAL. Son prix touriste n'ayant pas
+// bougé, les 2 points seraient sortis de la poche du chauffeur (12 750 →
+// 12 450 TZS la place). La place locale est donc passée à 16 000 TZS dans le
+// même mouvement : le chauffeur touche 13 280 TZS, plus qu'avant la hausse.
+// Les deux décisions se tiennent — toucher à l'une oblige à relire l'autre.
 const COMMISSION_RATES = {
   private: 0.12, // grands trajets privés, 40 USD et plus
   privateCourt: 0.17, // petits trajets privés, moins de 40 USD
@@ -74,6 +82,14 @@ const COMMISSION_RATES = {
   local: 0.17, // taxi partagé local (TZS)
   package: 0.2, // colis : inchangé
 };
+
+// Les PLACES vendues sur les annonces des chauffeurs (routes rides et stats)
+// se règlent sur les deux mêmes taux. Ils sont EXPORTÉS — et non recopiés —
+// parce qu'ils l'avaient été : la hausse de 2 points ne s'appliquait qu'ici,
+// et les places de taxi partagé étaient restées à l'ancien barème. Une seule
+// source pour la commission, sinon elle diverge en silence.
+export const TAUX_PLACE_LOCALE = COMMISSION_RATES.local; // 17 % (place en TZS)
+export const TAUX_PLACE_USD = COMMISSION_RATES.shared; // 22 % (touriste, résident, hôtel)
 
 // Seuil de bascule de la commission privée : à 40 USD pile, on est déjà sur
 // le grand tarif (10 %). En dessous, 15 %. Ce seuil coïncide avec celui du
@@ -140,8 +156,10 @@ const SPECIAL_PRIVATE_ROUTES_USD = [
 
 // Trajets spéciaux à prix fixe (TZS, place locale en taxi partagé), deux
 // sens : la traversée Nungwi ↔ Paje est plus longue que les liaisons
-// standard, la place locale y vaut 20 000 TZS au lieu de 15 000.
-const SPECIAL_LOCAL_ROUTES_TZS = [{ a: 'Nungwi', b: 'Paje', tzs: 20000 }];
+// standard, la place locale y vaut 21 000 TZS au lieu de 16 000. Elle suit la
+// place ordinaire (20 000 → 21 000) pour la même raison : à prix figé, le
+// chauffeur aurait perdu 400 TZS sur la plus longue traversée de l'île.
+const SPECIAL_LOCAL_ROUTES_TZS = [{ a: 'Nungwi', b: 'Paje', tzs: 21000 }];
 
 // Colis : forfait par taille (Stone Town → n'importe quelle plage),
 // payé en ligne à 100 % par l'expéditeur.
@@ -342,15 +360,15 @@ export function sharedSeatUsdForRoute(pickup, dropoff) {
   return sharedSeatUsd(privateUsdForRoute(pickup, dropoff));
 }
 
-// Le TARIF LOCAL (place à 15 000 TZS, spéciaux inclus, ex. Nungwi ↔ Paje
-// 20 000) ne s'applique que sur les GRANDS AXES — définis par : le taxi
+// Le TARIF LOCAL (place à 16 000 TZS, spéciaux inclus, ex. Nungwi ↔ Paje
+// 21 000) ne s'applique que sur les GRANDS AXES — définis par : le taxi
 // privé du même trajet coûte au moins 40 USD. Sur les petits trajets
 // (privé sous les 40 USD), pas de tarif local : la place se paie au prix
 // touriste de la zone, converti en shillings.
 //
 // Ce seuil suit la grille : quand les transferts vers Nungwi sont passés de
 // 50 à 40 USD, le laisser à 45 aurait sorti les grands axes du nord du tarif
-// local — un Zanzibarite aurait payé 46 800 TZS sa place au lieu de 15 000.
+// local — un Zanzibarite aurait payé 46 800 TZS sa place au lieu de 16 000.
 const GRAND_AXE_PRIVE_MIN_USD = 40;
 
 function estGrandAxe(pickup, dropoff) {
