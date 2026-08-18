@@ -38,6 +38,7 @@ import {
   formaterPrix,
   moyensPaiement,
   reglementPaiement,
+  TAUX_USD_TZS,
   tauxRemboursement,
   type MoyenPaiement,
   type StatutTrajet,
@@ -172,8 +173,21 @@ export default function EcranTrajet() {
   const prixCourse = Number(champ(trajet, 'price') ?? 0);
   const deviseCourse = String(champ(trajet, 'currency') ?? 'USD');
   const moyensDisponibles = moyensPaiement(deviseCourse);
-  const parCarte = reglementPaiement(prixCourse, deviseCourse, 'carte');
-  const parMobile = reglementPaiement(prixCourse, deviseCourse, 'mobile');
+  // REMISE DE PARRAINAGE : le serveur annonce le crédit disponible du
+  // réservateur ; les montants affichés la déduisent AVANT le choix du
+  // moyen — le client voit son cadeau, pas une surprise sur le lien.
+  const creditParrainageUsd = Number(
+    champ(trajet, 'remise_parrainage_disponible_usd', 'remiseParrainageDisponibleUsd') ?? 0
+  );
+  const remiseCourse =
+    creditParrainageUsd > 0
+      ? deviseCourse === 'USD'
+        ? Math.min(creditParrainageUsd, prixCourse)
+        : Math.min(Math.round(creditParrainageUsd * TAUX_USD_TZS), prixCourse)
+      : 0;
+  const baseAPayer = Math.round((prixCourse - remiseCourse) * 100) / 100;
+  const parCarte = reglementPaiement(baseAPayer, deviseCourse, 'carte');
+  const parMobile = reglementPaiement(baseAPayer, deviseCourse, 'mobile');
   // Annulation par le réservateur : libre avant paiement. Course PAYÉE avec
   // départ planifié : barème 24/48 h — remboursement 100 % à +48 h, 50 %
   // entre 24 h et 48 h, refusée à moins de 24 h (même règle côté serveur).
@@ -534,6 +548,13 @@ export default function EcranTrajet() {
           + frais bancaires) et le portefeuille mobile (converti en shillings,
           sans frais). Un client facturé en shillings n'a que le portefeuille
           mobile — un seul bouton, comme avant. */}
+      {peutPayer && remiseCourse > 0 && (
+        <EncartInfo icone="gift-outline" ton="succes">
+          {t('parrainage_remise_info', {
+            montant: formaterMontant(remiseCourse, deviseCourse),
+          })}
+        </EncartInfo>
+      )}
       {peutPayer && moyensDisponibles.length > 1 ? (
         <Carte>
           <SousTitre>{t('paiement_choix_titre')}</SousTitre>
@@ -548,7 +569,7 @@ export default function EcranTrajet() {
           />
           <Text style={styles.detailMoyen}>
             {t('paiement_carte_detail', {
-              prix: formaterMontant(prixCourse, deviseCourse),
+              prix: formaterMontant(baseAPayer, deviseCourse),
               frais: formaterMontant(parCarte.surcharge, parCarte.devise),
             })}
           </Text>

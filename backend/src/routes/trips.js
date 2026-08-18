@@ -680,7 +680,21 @@ router.get(
       return res.json(vueChauffeur(rows[0]));
     }
 
-    res.json(avecAnnonceGroupe(trip, req));
+    // Le RÉSERVATEUR voit son crédit de parrainage disponible : l'écran de
+    // paiement peut alors annoncer la remise AVANT le choix du moyen, au
+    // lieu de la faire découvrir sur le lien.
+    let remiseDisponible = 0;
+    if (estReservateur && trip.user_id && ['requested', 'driver_confirmed'].includes(trip.status)) {
+      const { rows: porteur } = await query(
+        'SELECT credit_parrainage_usd FROM users WHERE id = $1',
+        [trip.user_id]
+      );
+      remiseDisponible = Number(porteur[0]?.credit_parrainage_usd ?? 0);
+    }
+    res.json({
+      ...avecAnnonceGroupe(trip, req),
+      remise_parrainage_disponible_usd: remiseDisponible,
+    });
   })
 );
 
@@ -882,12 +896,41 @@ router.post(
       return;
     }
 
+    // REMISE DE PARRAINAGE : si le compte porte un crédit (2e course du
+    // filleul terminée), il se déduit ICI, automatiquement — 5 USD sur une
+    // course en dollars, 13 000 TZS (le taux de la grille) sur une course
+    // locale. Le crédit n'est CONSOMMÉ qu'à la confirmation du paiement :
+    // un lien jamais payé ne coûte rien à personne.
+    let remiseParrainageUsd = 0;
+    let remiseCourse = 0;
+    if (trip.user_id) {
+      const { rows: porteur } = await query(
+        'SELECT credit_parrainage_usd FROM users WHERE id = $1',
+        [trip.user_id]
+      );
+      const credit = Number(porteur[0]?.credit_parrainage_usd ?? 0);
+      if (credit > 0) {
+        const prixUsd =
+          trip.currency === 'USD'
+            ? Number(trip.price)
+            : Number(trip.price) / config.usdToTzsRate;
+        remiseParrainageUsd = Math.min(credit, Math.round(prixUsd * 100) / 100);
+        remiseCourse =
+          trip.currency === 'USD'
+            ? remiseParrainageUsd
+            : Math.round(remiseParrainageUsd * config.usdToTzsRate);
+      }
+    }
+    const baseAPayer = Math.round((Number(trip.price) - remiseCourse) * 100) / 100;
+
     // CE QUE LE CLIENT RÈGLE, selon le moyen qu'il a choisi (voir
-    // services/moyenPaiement.js) : par carte, le prix plus les frais de la
-    // banque, en dollars ; par portefeuille mobile, le prix converti en
+    // services/moyenPaiement.js) : par carte, la base plus les frais de la
+    // banque, en dollars ; par portefeuille mobile, la base convertie en
     // shillings, sans un centime de frais. Le PRIX de la course et la
-    // commission du chauffeur ne bougent dans aucun des deux cas.
-    const regle = reglement(trip.price, trip.currency, method);
+    // commission du chauffeur ne bougent dans aucun des deux cas — les
+    // frais de carte se calculent sur ce que le client paie réellement
+    // (base remisée), et la remise sort de la marge zanziGo.
+    const regle = reglement(baseAPayer, trip.currency, method);
     const aRegler = regle.montant;
     const surcharge = regle.surcharge;
     const deviseReglement = regle.devise;
@@ -919,6 +962,9 @@ router.post(
             ...(surcharge > 0
               ? [`(dont ${surcharge} ${deviseReglement} de frais bancaires carte)`]
               : []),
+            ...(remiseCourse > 0
+              ? [`Remise parrainage déduite: −${remiseCourse} ${trip.currency}`]
+              : []),
             `Prix de la course: ${trip.price} ${trip.currency}`,
             'Bonjour, je souhaite régler cette course — merci de m\'envoyer le lien de paiement.',
           ].join('\n')
@@ -936,10 +982,19 @@ router.post(
 
     const { rows } = await query(
       `INSERT INTO payments (trip_id, amount, currency, pesapal_reference, payment_link,
-                             surcharge, method)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+                             surcharge, method, remise_parrainage_usd)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        RETURNING *`,
-      [trip.id, aRegler, deviseReglement, reference, paymentLink, surcharge, regle.moyen]
+      [
+        trip.id,
+        aRegler,
+        deviseReglement,
+        reference,
+        paymentLink,
+        surcharge,
+        regle.moyen,
+        remiseParrainageUsd,
+      ]
     );
 
     // Paiement que l'ÉQUIPE devra encaisser puis valider à la main : elle est
@@ -964,6 +1019,13 @@ router.post(
       devise_course: trip.currency,
       surcharge,
       mention_surcharge: regle.mention,
+      // La remise de parrainage, annoncée noir sur blanc.
+      remise_parrainage_usd: remiseParrainageUsd,
+      remise_parrainage: remiseCourse,
+      mention_parrainage:
+        remiseCourse > 0
+          ? `Remise parrainage : −${remiseCourse} ${trip.currency}`
+          : null,
       // Ce que l'app affiche : le moyen retenu et ceux qu'elle peut proposer.
       moyen: regle.moyen,
       moyens_disponibles: moyensPour(trip.currency),
@@ -1125,17 +1187,26 @@ router.patch(
     });
     // Parrainage : la récompense (5 $ chacun) est ACQUISE quand le filleul
     // termine sa 2e course — l'équipe est alors prévenue, une seule fois.
-    validerParrainageApresCourse(trip.user_id).catch(() => {});
+    // Attendu (et non lancé en l'air) : le crédit de parrainage doit être
+    // POSÉ quand la réponse part — sinon le client qui réserve sa course
+    // suivante dans la foulée ne verrait pas encore sa remise. Les erreurs
+    // restent avalées : un parrainage raté ne doit pas faire échouer la
+    // clôture d'une course.
+    await validerParrainageApresCourse(trip.user_id).catch(() => {});
     res.json(updated);
   })
 );
 
 // Vérifie si ce client est un filleul qui vient d'atteindre 2 courses
 // terminées : horodate la récompense (anti-doublon) et prévient l'équipe.
+// Ce que rapporte un parrainage validé, à CHACUN (filleul et parrain).
+const RECOMPENSE_PARRAINAGE_USD = 5;
+
 async function validerParrainageApresCourse(userId) {
   if (!userId) return;
   const { rows } = await query(
-    `SELECT u.full_name, u.phone, u.email, u.referral_rewarded_at, p.full_name AS parrain_nom
+    `SELECT u.full_name, u.phone, u.email, u.referral_rewarded_at,
+            p.id AS parrain_id, p.full_name AS parrain_nom
      FROM users u JOIN users p ON p.id = u.referred_by_user_id
      WHERE u.id = $1`,
     [userId]
@@ -1155,13 +1226,23 @@ async function validerParrainageApresCourse(userId) {
     [userId]
   );
   if (rowCount === 0) return;
+  // LA RÉCOMPENSE EST UN CRÉDIT, PAS UNE CONSIGNE. 5 $ posés automatiquement
+  // sur chaque compte : ils se déduiront tout seuls du paiement de leur
+  // prochaine course (5 USD, ou 13 000 TZS pour un compte local). Personne
+  // n'a de geste à faire — l'alerte équipe n'est plus qu'une information.
+  await query(
+    `UPDATE users SET credit_parrainage_usd = credit_parrainage_usd + ${RECOMPENSE_PARRAINAGE_USD}
+      WHERE id = ANY($1)`,
+    [[userId, filleul.parrain_id]]
+  );
   notifierEquipe(
     '🎁 Parrainage validé — zanziGo',
     [
       `${filleul.full_name} (${filleul.phone ?? filleul.email ?? 'sans contact'})`,
-      `vient de terminer sa 2e course : la récompense de parrainage est`,
-      `ACQUISE — 5 $ pour lui et 5 $ pour son parrain ${filleul.parrain_nom},`,
-      'à déduire de leur prochain paiement.',
+      `vient de terminer sa 2e course : ${RECOMPENSE_PARRAINAGE_USD} $ de crédit ont été`,
+      `posés AUTOMATIQUEMENT sur son compte et sur celui de son parrain`,
+      `${filleul.parrain_nom}. La remise se déduira toute seule de leur`,
+      'prochaine course — rien à faire.',
     ].join('\n')
   );
 }
@@ -1231,9 +1312,22 @@ router.post(
            -- des frais bancaires que nous ne récupérons jamais.
            SET refund_amount = ROUND((amount - surcharge) * $2, 2), refund_due_at = now()
            WHERE trip_id = $1 AND status = 'confirmed' AND refund_due_at IS NULL
-           RETURNING refund_amount, currency`,
+           RETURNING refund_amount, currency, remise_parrainage_usd`,
           [req.params.id, tauxPaye]
         );
+        // Le crédit de parrainage consommé sur cette course REVIENT au
+        // compte : la remise n'est pas de l'argent versé, elle ne se
+        // « rembourse » pas — elle se rend, pour la prochaine course.
+        const remiseARendre = paiements.reduce(
+          (somme, ligne) => somme + Number(ligne.remise_parrainage_usd ?? 0),
+          0
+        );
+        if (remiseARendre > 0 && trip.user_id) {
+          await client.query(
+            'UPDATE users SET credit_parrainage_usd = credit_parrainage_usd + $1 WHERE id = $2',
+            [remiseARendre, trip.user_id]
+          );
+        }
         if (paiements[0]) {
           refund = {
             amount: Number(paiements[0].refund_amount),

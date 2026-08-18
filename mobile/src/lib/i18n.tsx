@@ -2436,6 +2436,14 @@ const CHAINES = {
     fr: 'À vérifier', en: 'To review', sw: 'Za kukagua',
     it: 'Da verificare', de: 'Zu prüfen',
   },
+  // ----- Remise de parrainage automatique.
+  parrainage_remise_info: {
+    fr: '🎁 Parrainage : {montant} seront déduits automatiquement de votre paiement.',
+    en: '🎁 Referral reward: {montant} will be deducted from your payment automatically.',
+    sw: '🎁 Zawadi ya mwaliko: {montant} itapunguzwa kiotomatiki kwenye malipo yako.',
+    it: '🎁 Premio invito: {montant} saranno detratti automaticamente dal pagamento.',
+    de: '🎁 Empfehlungsprämie: {montant} werden automatisch vom Betrag abgezogen.',
+  },
   // ----- Choix du moyen de paiement (carte bancaire / portefeuille mobile).
   paiement_choix_titre: {
     fr: 'Comment souhaitez-vous payer ?',

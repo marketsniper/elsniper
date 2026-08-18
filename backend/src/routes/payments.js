@@ -215,7 +215,17 @@ router.post(
         [payment.trip_id]
       );
       if (!rows[0]) throw notFound('Course');
-      base = { montant: Number(rows[0].price), devise: rows[0].currency };
+      // La remise de parrainage FIGÉE sur ce paiement reste déduite, quel
+      // que soit le moyen choisi — changer d'avis ne la fait pas disparaître.
+      const remiseUsd = Number(payment.remise_parrainage_usd ?? 0);
+      const remiseCourse =
+        rows[0].currency === 'USD'
+          ? remiseUsd
+          : Math.round(remiseUsd * config.usdToTzsRate);
+      base = {
+        montant: Math.round((Number(rows[0].price) - remiseCourse) * 100) / 100,
+        devise: rows[0].currency,
+      };
       entete = [
         '💳 Paiement course zanziGo',
         `Trajet: ${rows[0].pickup_location} → ${rows[0].dropoff_location}`,
@@ -462,6 +472,18 @@ async function appliquerConfirmation(payment) {
             SET refund_amount = ROUND(amount - surcharge, 2), refund_due_at = now()
           WHERE id = $1 AND refund_due_at IS NULL`,
         [payment.id]
+      );
+    } else if (payment.trip_id && Number(payment.remise_parrainage_usd ?? 0) > 0) {
+      // Le paiement a abouti avec sa remise : le crédit de parrainage est
+      // CONSOMMÉ maintenant — pas à la création du lien, qu'un client peut
+      // abandonner sans conséquence. GREATEST(0, …) : au pire des pires (deux
+      // paiements concurrents portant la même remise), zanziGo offre 5 $ de
+      // trop plutôt que de produire un crédit négatif.
+      await client.query(
+        `UPDATE users
+            SET credit_parrainage_usd = GREATEST(0, credit_parrainage_usd - $1)
+          WHERE id = (SELECT user_id FROM trips WHERE id = $2)`,
+        [payment.remise_parrainage_usd, payment.trip_id]
       );
     }
 
