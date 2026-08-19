@@ -26,6 +26,7 @@ import {
   TexteErreur,
 } from '@/components/ui';
 import { api, ErreurApi, type StatsChauffeur } from '@/lib/api';
+import { activerAlertes, etatAlertes } from '@/lib/alertesPush';
 import { useAuth } from '@/lib/auth';
 import { effacerColisMasques, listerColisMasques, masquerColis } from '@/lib/colisLocal';
 import {
@@ -309,6 +310,23 @@ export default function EcranCourses() {
   );
 
 
+  // La bourse ne sert à rien si le téléphone ne sonne pas : tant que les
+  // alertes ne sont pas actives, une bannière impossible à rater propose de
+  // les allumer en un geste. (Sur l'app native ou dans Safari non installé,
+  // le message renvoyé explique quoi faire.)
+  const [etatPush, setEtatPush] = useState<string | null>(null);
+  const [messagePush, setMessagePush] = useState('');
+  useFocusEffect(
+    useCallback(() => {
+      etatAlertes().then(setEtatPush).catch(() => {});
+    }, [])
+  );
+  const activerPush = async () => {
+    const souci = await activerAlertes(t('alertes_nom_appareil'), 'chauffeur');
+    setMessagePush(souci ?? t('alertes_ok'));
+    setEtatPush(await etatAlertes());
+  };
+
   return (
     <Ecran fond="vagues" onRefresh={rafraichir}>
       {/* ------------------------------------------------------------------
@@ -337,6 +355,14 @@ export default function EcranCourses() {
       {/* Les échecs d'action (« trop tard, un autre l'a prise », « vous êtes
           en indisponible »…) s'affichent ici, en haut, impossibles à rater. */}
       <TexteErreur>{erreur}</TexteErreur>
+
+      {etatPush !== null && etatPush !== 'actif' && (
+        <Pressable style={styles.bandeauAlertes} onPress={activerPush}>
+          <Text style={styles.bandeauAlertesTexte}>{t('bourse_alertes_titre')}</Text>
+          <Text style={styles.bandeauAlertesBouton}>{t('bourse_alertes_bouton')}</Text>
+          {messagePush ? <Text style={styles.bandeauAlertesMsg}>{messagePush}</Text> : null}
+        </Pressable>
+      )}
 
       {partagePosition && (
         <EncartInfo icone="location-outline" ton="succes">
@@ -900,6 +926,30 @@ export default function EcranCourses() {
 }
 
 const styles = StyleSheet.create({
+  bandeauAlertes: {
+    backgroundColor: couleurs.primaire,
+    borderRadius: rayons.carte,
+    padding: espaces.m,
+    marginBottom: espaces.m,
+  },
+  bandeauAlertesTexte: {
+    color: couleurs.surPrimaire,
+    fontWeight: '700',
+    fontSize: 15,
+    lineHeight: 21,
+  },
+  bandeauAlertesBouton: {
+    color: couleurs.or,
+    fontWeight: '800',
+    fontSize: 15,
+    marginTop: 6,
+  },
+  bandeauAlertesMsg: {
+    color: couleurs.surPrimaire,
+    fontSize: 13,
+    marginTop: 6,
+    lineHeight: 18,
+  },
   // Bandeau des gains du jour : le gros chiffre qui accueille le chauffeur.
   bandeauJour: {
     backgroundColor: couleurs.nuit,

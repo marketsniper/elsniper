@@ -983,6 +983,16 @@ const CHAINES = {
     en: 'Send a test alert',
     sw: 'Tuma arifa ya majaribio',
   },
+  bourse_alertes_titre: {
+    fr: '🔔 Activez les alertes pour être prévenu des nouvelles courses à prendre',
+    en: '🔔 Turn on alerts to hear about new rides to grab',
+    sw: '🔔 Washa arifa upate habari za safari mpya za kuchukua',
+  },
+  bourse_alertes_bouton: {
+    fr: 'Activer maintenant',
+    en: 'Turn on now',
+    sw: 'Washa sasa',
+  },
   alertes_ok: {
     fr: '✓ Alertes activées. Faites un essai pour vérifier que le téléphone sonne.',
     en: '✓ Alerts on. Send a test to check the phone rings.',
