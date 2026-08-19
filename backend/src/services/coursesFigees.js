@@ -6,7 +6,7 @@
  * Ce silence-là ne se voit nulle part — jusqu'au coup de fil du client
  * depuis le hall de l'aéroport.
  *
- * Ce balayage rend la surveillance à l'équipe. Deux situations, une alerte :
+ * Ce balayage rend la surveillance à l'équipe. Quatre situations, une alerte :
  *
  *   1. LE DÉPART APPROCHE. Course prise, départ dans moins de deux heures,
  *      et rien n'a démarré. C'est le cas qui coûte un client.
@@ -14,6 +14,16 @@
  *   2. LE PAIEMENT TRAÎNE. Course prise il y a plus de six heures, toujours
  *      pas payée. Souvent un chauffeur qui a « réservé » une course et l'a
  *      oubliée : elle bloque la bourse pour les autres.
+ *
+ *   3. COURSE PAYÉE JAMAIS DÉMARRÉE. L'argent est encaissé, le départ est
+ *      passé — le pire des cas, le client attend sur le trottoir.
+ *
+ *   4. PERSONNE N'A PRIS LA COURSE. La demande est publiée et aucun
+ *      chauffeur n'a cliqué « Je prends » : un quart d'heure suffit à
+ *      s'inquiéter pour un départ immédiat ; pour un départ planifié, on
+ *      s'alarme quand l'horizon des deux heures est franchi. C'est LE
+ *      moment où l'humain doit reprendre la main : relancer le groupe
+ *      WhatsApp des chauffeurs ou assigner à la main.
  *
  * Une course n'est signalée QU'UNE FOIS (colonne alerte_figee_at), sans quoi
  * l'équipe recevrait le même message toutes les minutes. Le compteur repart
@@ -26,8 +36,21 @@ import { notifierEquipe } from './emailService.js';
 const HEURES_AVANT_DEPART = 2;
 /** Prise depuis si longtemps sans être payée : elle bloque la bourse. */
 const HEURES_SANS_PAIEMENT = 6;
+/** Demande immédiate sans chauffeur depuis ce temps : on lève la main. */
+const MINUTES_SANS_CHAUFFEUR = 15;
 
 function messageAlerte(course, raison) {
+  // Le conseil dépend du cas : sans chauffeur, il n'y a personne à appeler.
+  const conseil =
+    course.status === 'requested'
+      ? [
+          "Recollez l'annonce dans le groupe WhatsApp des chauffeurs, ou",
+          'assignez un chauffeur à la main depuis le tableau de bord.',
+        ]
+      : [
+          "Appelez le chauffeur. S'il ne répond pas, réassignez la course depuis le",
+          'tableau de bord — elle est réassignable même une fois prise.',
+        ];
   return [
     raison,
     '',
@@ -38,8 +61,7 @@ function messageAlerte(course, raison) {
     `Chauffeur : ${course.driver_name ?? '—'} (${course.driver_phone ?? '—'})`,
     `Prix : ${course.price} ${course.currency}`,
     '',
-    "Appelez le chauffeur. S'il ne répond pas, réassignez la course depuis le",
-    'tableau de bord — elle est réassignable même une fois prise.',
+    ...conseil,
     `Réf : ${course.id}`,
   ].join('\n');
 }
@@ -73,6 +95,18 @@ export async function signalerCoursesFigees() {
                   OR (status = 'paid'
                       AND scheduled_at IS NOT NULL
                       AND scheduled_at <= now() - interval '15 minutes')
+                  -- 4. demande publiée et AUCUN chauffeur n'a cliqué
+                  --    « Je prends » : départ immédiat, un quart d'heure
+                  --    suffit ; départ planifié, on s'alarme quand l'horizon
+                  --    des deux heures est franchi.
+                  OR (status = 'requested'
+                      AND driver_id IS NULL
+                      AND (
+                        (scheduled_at IS NULL
+                         AND created_at <= now() - ($3 || ' minutes')::interval)
+                        OR (scheduled_at IS NOT NULL
+                            AND scheduled_at <= now() + ($1 || ' hours')::interval)
+                      ))
                 )
               LIMIT 50
               FOR UPDATE SKIP LOCKED) figees
@@ -81,7 +115,7 @@ export async function signalerCoursesFigees() {
                 t.scheduled_at, t.created_at, t.price, t.currency, t.driver_id,
                 (t.scheduled_at IS NOT NULL
                  AND t.scheduled_at <= now() + ($1 || ' hours')::interval) AS depart_proche`,
-    [String(HEURES_AVANT_DEPART), String(HEURES_SANS_PAIEMENT)]
+    [String(HEURES_AVANT_DEPART), String(HEURES_SANS_PAIEMENT), String(MINUTES_SANS_CHAUFFEUR)]
   );
   if (rows.length === 0) return [];
 
@@ -97,11 +131,13 @@ export async function signalerCoursesFigees() {
     course.driver_name = chauffeur?.full_name ?? null;
     course.driver_phone = chauffeur?.phone ?? null;
     const raison =
-      course.status === 'paid'
-        ? '🚨 COURSE PAYÉE, DÉPART PASSÉ, JAMAIS DÉMARRÉE — le client attend.'
-        : course.depart_proche
-          ? `⏰ DÉPART DANS MOINS DE ${HEURES_AVANT_DEPART} H — la course n'a toujours pas démarré.`
-          : `💤 Course prise depuis plus de ${HEURES_SANS_PAIEMENT} h et toujours pas payée.`;
+      course.status === 'requested'
+        ? "🚨 AUCUN CHAUFFEUR n'a pris cette course — elle attend un humain."
+        : course.status === 'paid'
+          ? '🚨 COURSE PAYÉE, DÉPART PASSÉ, JAMAIS DÉMARRÉE — le client attend.'
+          : course.depart_proche
+            ? `⏰ DÉPART DANS MOINS DE ${HEURES_AVANT_DEPART} H — la course n'a toujours pas démarré.`
+            : `💤 Course prise depuis plus de ${HEURES_SANS_PAIEMENT} h et toujours pas payée.`;
     await notifierEquipe('⚠️ Course figée — zanziGo', messageAlerte(course, raison)).catch(
       () => {}
     );

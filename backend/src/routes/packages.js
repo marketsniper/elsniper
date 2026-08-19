@@ -299,6 +299,16 @@ router.post(
 
     const chauffeur = driverRows[0];
     const pkg = rows[0];
+    // L'équipe le voit passer sans que personne n'ait rien à envoyer.
+    notifierEquipe(
+      '📦 Colis pris par un chauffeur',
+      [
+        `Chauffeur : ${chauffeur.full_name} (${chauffeur.phone})`,
+        `Trajet : ${pkg.pickup_location} → ${pkg.dropoff_location}`,
+        `Taille : ${pkg.size} — ${pkg.price} ${pkg.currency}`,
+        `Réf : ${pkg.id}`,
+      ].join('\n')
+    );
     const whatsappLink = buildTeamNotificationLink(
       [
         '🚚 Livraison prise par un chauffeur zanziGo',
@@ -663,12 +673,15 @@ router.patch(
 
     // Le chauffeur du jeton par défaut ; l'équipe peut désigner un chauffeur.
     const driverId = req.auth.driverId ?? data.driverId ?? null;
+    let porteur = null;
     if (driverId) {
-      const { rows } = await query(
-        `SELECT id FROM drivers WHERE id = $1 AND verification_status = 'verified'`,
+      const { rows: chauffeurRows } = await query(
+        `SELECT id, full_name, phone FROM drivers WHERE id = $1 AND verification_status = 'verified'`,
         [driverId]
       );
-      if (!rows[0]) throw new HttpError(409, 'driver_not_verified', 'Chauffeur inconnu ou non validé');
+      if (!chauffeurRows[0])
+        throw new HttpError(409, 'driver_not_verified', 'Chauffeur inconnu ou non validé');
+      porteur = chauffeurRows[0];
     }
 
     const { rows } = await query(
@@ -677,6 +690,15 @@ router.patch(
            driver_id = COALESCE($2, driver_id)
        WHERE id = $3 RETURNING *`,
       [data.photoUrl, driverId, req.params.id]
+    );
+    // Étape visible pour la tour de contrôle : le colis est en route.
+    notifierEquipe(
+      '🚚 Colis ramassé — livraison en cours',
+      [
+        `Trajet : ${rows[0].pickup_location} → ${rows[0].dropoff_location}`,
+        `Chauffeur : ${porteur?.full_name ?? '—'} (${porteur?.phone ?? '—'})`,
+        `Réf : ${rows[0].id}`,
+      ].join('\n')
     );
     res.json(rows[0]);
   })
@@ -710,6 +732,15 @@ router.patch(
        SET status = 'delivered', delivery_photo_url = $1, delivered_at = now()
        WHERE id = $2 RETURNING *`,
       [data.photoUrl, req.params.id]
+    );
+    // La boucle est bouclée : preuve photo + scan QR enregistrés.
+    notifierEquipe(
+      '✅ Colis livré — preuve enregistrée',
+      [
+        `Trajet : ${rows[0].pickup_location} → ${rows[0].dropoff_location}`,
+        `Taille : ${rows[0].size} — ${rows[0].price} ${rows[0].currency}`,
+        `Réf : ${rows[0].id}`,
+      ].join('\n')
     );
     res.json(rows[0]);
   })

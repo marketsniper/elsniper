@@ -546,7 +546,8 @@ router.post(
       `UPDATE trips
           SET driver_id = $1,
               status = CASE WHEN paid_at IS NULL THEN 'driver_confirmed'::trip_status
-                            ELSE 'paid'::trip_status END
+                            ELSE 'paid'::trip_status END,
+              alerte_figee_at = NULL
         WHERE id = $2 AND status = 'requested' AND driver_id IS NULL AND trip_type = 'private'
         RETURNING *`,
       [req.auth.driverId, req.params.id]
@@ -1147,6 +1148,21 @@ router.patch(
       `UPDATE trips SET status = 'in_progress', started_at = now() WHERE id = $1 RETURNING *`,
       [req.params.id]
     );
+    // La tour de contrôle voit la course passer au vert — sans rien demander.
+    const demarree = rows[0];
+    query('SELECT full_name, phone FROM drivers WHERE id = $1', [demarree.driver_id])
+      .then(({ rows: ch }) =>
+        notifierEquipe(
+          '▶️ Course démarrée',
+          [
+            `Trajet : ${demarree.pickup_location} → ${demarree.dropoff_location}`,
+            `Chauffeur : ${ch[0]?.full_name ?? '—'} (${ch[0]?.phone ?? '—'})`,
+            `Prix : ${demarree.price} ${demarree.currency}`,
+            `Réf : ${demarree.id}`,
+          ].join('\n')
+        )
+      )
+      .catch(() => {});
     res.json(rows[0]);
   })
 );
@@ -1193,6 +1209,20 @@ router.patch(
     // restent avalées : un parrainage raté ne doit pas faire échouer la
     // clôture d'une course.
     await validerParrainageApresCourse(trip.user_id).catch(() => {});
+    // Fin de parcours : l'équipe voit la course se clore en direct.
+    query('SELECT full_name, phone FROM drivers WHERE id = $1', [updated.driver_id])
+      .then(({ rows: ch }) =>
+        notifierEquipe(
+          '✅ Course terminée',
+          [
+            `Trajet : ${updated.pickup_location} → ${updated.dropoff_location}`,
+            `Chauffeur : ${ch[0]?.full_name ?? '—'} (${ch[0]?.phone ?? '—'})`,
+            `Prix : ${updated.price} ${updated.currency}`,
+            `Réf : ${updated.id}`,
+          ].join('\n')
+        )
+      )
+      .catch(() => {});
     res.json(updated);
   })
 );

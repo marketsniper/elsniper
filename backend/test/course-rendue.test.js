@@ -229,7 +229,7 @@ describe('Course figée : l’équipe est prévenue toute seule', () => {
     assert.equal(apres[0].alerte_figee_at, null, 'une nouvelle prise doit pouvoir réalerter');
   });
 
-  it('ne signale pas une course payée ni une course sans chauffeur', async () => {
+  it('ne signale ni une course payée ni une demande dont le départ est loin', async () => {
     const { token, user } = await createTourist();
     const libre = await request(app)
       .post('/api/trips')
@@ -239,7 +239,8 @@ describe('Course figée : l’équipe est prévenue toute seule', () => {
         tripType: 'private',
         pickupLocation: 'Nungwi',
         dropoffLocation: 'Paje',
-        scheduledAt: new Date(Date.now() + 3600 * 1000).toISOString(),
+        // Départ dans 48 h : personne ne l'a prise, mais rien ne presse.
+        scheduledAt: new Date(Date.now() + 48 * 3600 * 1000).toISOString(),
       });
 
     const { id, jetonClient } = await coursePrise({ dansHeures: 1 });
@@ -256,8 +257,56 @@ describe('Course figée : l’équipe est prévenue toute seule', () => {
     assert.ok(!ids.includes(id), 'une course payée n’est pas figée');
     assert.ok(
       !ids.includes(libre.body.id),
-      'une course que personne n’a prise n’est pas « figée » — elle attend, c’est différent'
+      'une demande dont le départ est loin attend tranquillement — pas d’alerte'
     );
+  });
+
+  it("alerte une demande qu'AUCUN chauffeur n'a prise — et la prise réarme le compteur", async () => {
+    // Cas 1 : demande IMMÉDIATE. Fraîche, elle attend ; après un quart
+    // d'heure sans preneur, elle appelle un humain.
+    const { token, user } = await createTourist();
+    const immediate = await request(app).post('/api/trips').set(authHeaders(token)).send({
+      userId: user.id,
+      tripType: 'private',
+      pickupLocation: 'Stone Town',
+      dropoffLocation: 'Nungwi',
+    });
+    assert.equal(immediate.status, 201, JSON.stringify(immediate.body));
+    const id = immediate.body.id;
+    assert.ok(
+      !(await signalerCoursesFigees()).some((c) => c.id === id),
+      'une demande toute fraîche attend sans alerter'
+    );
+    await query("UPDATE trips SET created_at = now() - interval '20 minutes' WHERE id = $1", [id]);
+    const signalees = await signalerCoursesFigees();
+    assert.ok(
+      signalees.some((c) => c.id === id && c.status === 'requested'),
+      "20 minutes sans preneur : l'équipe doit le savoir"
+    );
+
+    // Cas 2 : demande PLANIFIÉE dont le départ approche (moins de 2 h).
+    const planifiee = await request(app)
+      .post('/api/trips')
+      .set(authHeaders(token))
+      .send({
+        userId: user.id,
+        tripType: 'private',
+        pickupLocation: 'Paje',
+        dropoffLocation: 'Kendwa',
+        scheduledAt: new Date(Date.now() + 3600 * 1000).toISOString(),
+      });
+    assert.ok(
+      (await signalerCoursesFigees()).some((c) => c.id === planifiee.body.id),
+      'départ dans 1 h et personne ne l’a prise : alerte'
+    );
+
+    // La prise par un chauffeur REMET LE COMPTEUR À ZÉRO : les alertes
+    // suivantes (départ proche, paiement qui traîne…) doivent pouvoir partir.
+    const { token: jetonChauffeur } = await createVerifiedDriver();
+    const prise = await request(app).post(`/api/trips/${id}/claim`).set(authHeaders(jetonChauffeur));
+    assert.equal(prise.status, 200, JSON.stringify(prise.body));
+    const { rows } = await query('SELECT alerte_figee_at FROM trips WHERE id = $1', [id]);
+    assert.equal(rows[0].alerte_figee_at, null, 'la prise doit réarmer le compteur d’alerte');
   });
 });
 

@@ -515,12 +515,68 @@ async function appliquerConfirmation(payment) {
           'La ligne est dans « Remboursements à verser ».',
         ].join('\n')
       );
-    } else if (payment.trip_id) {
-      // Course réglée : le chauffeur assigné apprend qu'il peut démarrer.
-      alerterCoursePayeeParId(payment.trip_id);
+    } else {
+      if (payment.trip_id) {
+        // Course réglée : le chauffeur assigné apprend qu'il peut démarrer.
+        alerterCoursePayeeParId(payment.trip_id);
+      }
+      // Et la tour de contrôle voit l'argent arriver, quel que soit le moyen.
+      notifierPaiementConfirme(confirme).catch(() => {});
     }
     return confirme;
   });
+}
+
+// L'ARGENT EST ARRIVÉ — l'événement que la tour de contrôle veut voir passer
+// en premier. Chaque paiement confirmé (course, colis ou place partagée)
+// part en notification avec le contexte qu'il faut pour comprendre d'un
+// coup d'œil, sans ouvrir le tableau de bord. Fire-and-forget.
+async function notifierPaiementConfirme(p) {
+  const lignes = [];
+  let sujet = '💰 Paiement confirmé';
+  if (p.trip_id) {
+    sujet = '💰 Paiement confirmé — course';
+    const { rows } = await query(
+      `SELECT t.pickup_location, t.dropoff_location, u.full_name
+         FROM trips t LEFT JOIN users u ON u.id = t.user_id
+        WHERE t.id = $1`,
+      [p.trip_id]
+    );
+    if (rows[0]) {
+      lignes.push(`Trajet : ${rows[0].pickup_location} → ${rows[0].dropoff_location}`);
+      lignes.push(`Client : ${rows[0].full_name ?? '—'}`);
+    }
+  } else if (p.package_id) {
+    sujet = '💰 Paiement confirmé — colis';
+    const { rows } = await query(
+      'SELECT pickup_location, dropoff_location, size FROM packages WHERE id = $1',
+      [p.package_id]
+    );
+    if (rows[0]) {
+      lignes.push(
+        `Colis : ${rows[0].pickup_location} → ${rows[0].dropoff_location} (${rows[0].size})`
+      );
+    }
+  } else if (p.ride_booking_id) {
+    sujet = '💰 Paiement confirmé — place partagée';
+    const { rows } = await query(
+      `SELECT b.seats, r.origin, r.destination, u.full_name
+         FROM ride_bookings b
+         JOIN rides r ON r.id = b.ride_id
+         LEFT JOIN users u ON u.id = b.user_id
+        WHERE b.id = $1`,
+      [p.ride_booking_id]
+    );
+    if (rows[0]) {
+      lignes.push(
+        `Trajet : ${rows[0].origin} → ${rows[0].destination} — ${rows[0].seats} place(s)`
+      );
+      lignes.push(`Client : ${rows[0].full_name ?? '—'}`);
+    }
+  }
+  lignes.push(`Montant : ${p.amount} ${p.currency} — ${libelleMoyen(p.method)}`);
+  lignes.push(`Réf paiement : ${p.id}`);
+  await notifierEquipe(sujet, lignes.join('\n'));
 }
 
 // POST /payments/pesapal-ipn — webhook Pesapal : appelé automatiquement par
