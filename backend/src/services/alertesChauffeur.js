@@ -86,3 +86,64 @@ export function alerterCompteValide(driver) {
     { url: '/web/courses', tag: 'compte' }
   );
 }
+
+/* ------------------------------------------------------------------ */
+/* LA BOURSE SONNE TOUTE SEULE.                                        */
+/* ------------------------------------------------------------------ */
+
+/** ~5 minutes de route : le rayon (en km) qui fait dire « près de vous ». */
+const RAYON_PROCHE_KM = 3;
+/** Une position plus vieille que ça ne prouve plus rien. */
+const FRAICHEUR_POSITION_MIN = 15;
+
+/**
+ * À la publication d'une course privée — et à chaque retour en bourse —
+ * TOUS les chauffeurs vérifiés et disponibles la reçoivent sur leur
+ * téléphone, sans groupe WhatsApp, sans copier-coller, sans humain. Ceux
+ * dont la position fraîche est à moins de RAYON_PROCHE_KM du client (quand
+ * il a partagé sa position) reçoivent un message prioritaire « PRÈS DE
+ * VOUS » avec la distance : le mieux placé a toutes les raisons de cliquer
+ * le premier. Premier arrivé, premier servi — le claim atomique fait foi.
+ *
+ * Renvoie la liste { id, distance_km } des chauffeurs prévenus (la
+ * distance est nulle quand la course n'a pas de position ou que celle du
+ * chauffeur est vieille) — la fonction ne lève jamais.
+ */
+export async function diffuserCourseAuxChauffeurs(trip, { sauf = null } = {}) {
+  if (!trip || trip.trip_type !== 'private') return [];
+  try {
+    const { rows } = await query(
+      `SELECT d.id,
+              CASE WHEN $2::double precision IS NOT NULL
+                    AND p.updated_at >= now() - ($4 || ' minutes')::interval
+                   THEN 2 * 6371 * asin(sqrt(
+                          power(sin(radians(($2 - p.lat) / 2)), 2)
+                          + cos(radians(p.lat)) * cos(radians($2::double precision))
+                          * power(sin(radians(($3 - p.lng) / 2)), 2)))
+                   ELSE NULL END AS distance_km
+         FROM drivers d
+         LEFT JOIN driver_positions p ON p.driver_id = d.id
+        WHERE d.verification_status = 'verified'
+          AND d.archived_at IS NULL
+          AND d.available
+          AND ($1::uuid IS NULL OR d.id <> $1::uuid)`,
+      [sauf, trip.pickup_lat ?? null, trip.pickup_lng ?? null, String(FRAICHEUR_POSITION_MIN)]
+    );
+    const depart = quand(trip.scheduled_at);
+    for (const d of rows) {
+      const proche = d.distance_km !== null && Number(d.distance_km) <= RAYON_PROCHE_KM;
+      envoyer(
+        d.id,
+        proche
+          ? `🚕 Course à prendre PRÈS DE VOUS (~${Number(d.distance_km).toFixed(1)} km)`
+          : '🚕 Course à prendre — premier arrivé, premier servi',
+        `${trajet(trip)}\nDépart : ${depart}\nPrix : ${trip.price} ${trip.currency}`,
+        { url: '/web/courses', tag: `bourse-${trip.id}` }
+      );
+    }
+    return rows;
+  } catch (err) {
+    console.error('[diffusion bourse] échec silencieux :', err?.message ?? err);
+    return [];
+  }
+}

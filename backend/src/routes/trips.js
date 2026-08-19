@@ -22,6 +22,7 @@ import {
   alerterCourseAnnulee,
   alerterCoursePayee,
   alerterNouvelleCourse,
+  diffuserCourseAuxChauffeurs,
 } from '../services/alertesChauffeur.js';
 import { CHAMPS_CLIENT_POUR_CHAUFFEUR, vueChauffeur } from '../services/vueChauffeur.js';
 import { libelleMoyen, moyensPour, reglement } from '../services/moyenPaiement.js';
@@ -352,6 +353,9 @@ router.post(
         ? `${resume}\n\n— — — À COLLER DANS LE GROUPE CHAUFFEURS — — —\n${messageGroupeChauffeurs(trip)}`
         : resume
     );
+    // Et la bourse sonne toute seule : chaque chauffeur disponible reçoit
+    // la course sur son téléphone, les plus proches du client en priorité.
+    diffuserCourseAuxChauffeurs(updated.rows[0]);
     res.status(201).json(updated.rows[0]);
   })
 );
@@ -624,6 +628,9 @@ router.post(
     if (!rows[0]) {
       throw new HttpError(409, 'course_non_liberable', 'La course a changé entre-temps');
     }
+    // La course revient en bourse : les autres chauffeurs sonnent aussitôt
+    // (pas celui qui vient de la rendre).
+    diffuserCourseAuxChauffeurs(rows[0], { sauf: req.auth.driverId });
 
     const { rows: chauffeurs } = await query(
       'SELECT full_name, phone FROM drivers WHERE id = $1',
