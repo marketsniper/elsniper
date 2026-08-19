@@ -19,11 +19,12 @@
  *      passé — le pire des cas, le client attend sur le trottoir.
  *
  *   4. PERSONNE N'A PRIS LA COURSE. La demande est publiée et aucun
- *      chauffeur n'a cliqué « Je prends » : un quart d'heure suffit à
- *      s'inquiéter pour un départ immédiat ; pour un départ planifié, on
- *      s'alarme quand l'horizon des deux heures est franchi. C'est LE
- *      moment où l'humain doit reprendre la main : relancer le groupe
- *      WhatsApp des chauffeurs ou assigner à la main.
+ *      chauffeur n'a cliqué « Je prends » : DEUX MINUTES suffisent à
+ *      s'inquiéter pour un départ immédiat (le balayage passant chaque
+ *      minute, l'alerte part entre 2 et 3 minutes) ; pour un départ
+ *      planifié, on s'alarme quand l'horizon des deux heures est franchi.
+ *      C'est LE moment où l'humain doit reprendre la main : relancer le
+ *      groupe WhatsApp des chauffeurs ou assigner à la main.
  *
  * Une course n'est signalée QU'UNE FOIS (colonne alerte_figee_at), sans quoi
  * l'équipe recevrait le même message toutes les minutes. Le compteur repart
@@ -37,7 +38,7 @@ const HEURES_AVANT_DEPART = 2;
 /** Prise depuis si longtemps sans être payée : elle bloque la bourse. */
 const HEURES_SANS_PAIEMENT = 6;
 /** Demande immédiate sans chauffeur depuis ce temps : on lève la main. */
-const MINUTES_SANS_CHAUFFEUR = 15;
+const MINUTES_SANS_CHAUFFEUR = 2;
 
 function messageAlerte(course, raison) {
   // Le conseil dépend du cas : sans chauffeur, il n'y a personne à appeler.
@@ -96,9 +97,9 @@ export async function signalerCoursesFigees() {
                       AND scheduled_at IS NOT NULL
                       AND scheduled_at <= now() - interval '15 minutes')
                   -- 4. demande publiée et AUCUN chauffeur n'a cliqué
-                  --    « Je prends » : départ immédiat, un quart d'heure
-                  --    suffit ; départ planifié, on s'alarme quand l'horizon
-                  --    des deux heures est franchi.
+                  --    « Je prends » : départ immédiat, deux minutes
+                  --    suffisent ; départ planifié, on s'alarme quand
+                  --    l'horizon des deux heures est franchi.
                   OR (status = 'requested'
                       AND driver_id IS NULL
                       AND (

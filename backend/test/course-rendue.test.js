@@ -262,8 +262,8 @@ describe('Course figée : l’équipe est prévenue toute seule', () => {
   });
 
   it("alerte une demande qu'AUCUN chauffeur n'a prise — et la prise réarme le compteur", async () => {
-    // Cas 1 : demande IMMÉDIATE. Fraîche, elle attend ; après un quart
-    // d'heure sans preneur, elle appelle un humain.
+    // Cas 1 : demande IMMÉDIATE. Fraîche, elle attend ; après deux minutes
+    // sans preneur, elle appelle un humain.
     const { token, user } = await createTourist();
     const immediate = await request(app).post('/api/trips').set(authHeaders(token)).send({
       userId: user.id,
@@ -277,11 +277,11 @@ describe('Course figée : l’équipe est prévenue toute seule', () => {
       !(await signalerCoursesFigees()).some((c) => c.id === id),
       'une demande toute fraîche attend sans alerter'
     );
-    await query("UPDATE trips SET created_at = now() - interval '20 minutes' WHERE id = $1", [id]);
+    await query("UPDATE trips SET created_at = now() - interval '3 minutes' WHERE id = $1", [id]);
     const signalees = await signalerCoursesFigees();
     assert.ok(
       signalees.some((c) => c.id === id && c.status === 'requested'),
-      "20 minutes sans preneur : l'équipe doit le savoir"
+      "3 minutes sans preneur : l'équipe doit le savoir"
     );
 
     // Cas 2 : demande PLANIFIÉE dont le départ approche (moins de 2 h).
