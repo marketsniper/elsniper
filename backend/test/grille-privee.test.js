@@ -45,6 +45,19 @@ describe('Grille privée au kilomètre', () => {
       ['Michamvi', 'Pwani Mchangani', 50],
       ['Michamvi', 'Matemwe', 63],
       ['Fumba', 'Kizimkazi', 34],
+      // Le couloir sud-est ↔ nord-est, par Tunguu.
+      ['Paje', 'Chwaka', 34],
+      ['Paje', 'Uroa', 42],
+      ['Paje', 'Pongwe', 42],
+      ['Bwejuu', 'Chwaka', 34],
+      ['Bwejuu', 'Uroa', 42],
+      ['Bwejuu', 'Pongwe', 42],
+      ['Jambiani', 'Chwaka', 34],
+      ['Jambiani', 'Uroa', 42],
+      ['Jambiani', 'Pongwe', 42],
+      ['Makunduchi', 'Chwaka', 42],
+      ['Makunduchi', 'Uroa', 50],
+      ['Makunduchi', 'Pongwe', 50],
     ];
     for (const [a, b, usd] of traversees) {
       assert.equal(privateUsdForRoute(a, b), usd, `${a} → ${b}`);

@@ -167,6 +167,22 @@ const SPECIAL_PRIVATE_ROUTES_USD = [
   // même illusion d'optique, la route remonte vers la ville avant de
   // redescendre la côte sud. Même remède.
   { a: 'Fumba', b: 'Kizimkazi', usd: 34 }, // ~45 km par la route
+  // LE COULOIR SUD-EST ↔ NORD-EST passe par Tunguu : de Paje à Uroa, la
+  // route remonte par Jozani jusqu'à Tunguu puis redescend sur Chwaka —
+  // ~55 km là où le vol d'oiseau en voit 30. Tout le bloc suit les
+  // kilomètres réels, croissants du nord au sud du départ.
+  { a: 'Bwejuu', b: 'Chwaka', usd: 34 }, // ~50 km par la route
+  { a: 'Paje', b: 'Chwaka', usd: 34 }, // ~45 km
+  { a: 'Jambiani', b: 'Chwaka', usd: 34 }, // ~51 km
+  { a: 'Makunduchi', b: 'Chwaka', usd: 42 }, // ~60 km
+  { a: 'Bwejuu', b: 'Uroa', usd: 42 }, // ~60 km
+  { a: 'Paje', b: 'Uroa', usd: 42 }, // ~55 km
+  { a: 'Jambiani', b: 'Uroa', usd: 42 }, // ~61 km
+  { a: 'Makunduchi', b: 'Uroa', usd: 50 }, // ~70 km
+  { a: 'Bwejuu', b: 'Pongwe', usd: 42 }, // ~65 km
+  { a: 'Paje', b: 'Pongwe', usd: 42 }, // ~60 km
+  { a: 'Jambiani', b: 'Pongwe', usd: 42 }, // ~66 km
+  { a: 'Makunduchi', b: 'Pongwe', usd: 50 }, // ~75 km
   // La pointe sud : Kizimkazi est sur l'autre versant, la route y descend
   // par l'intérieur au lieu de longer la côte. Prix de terrain.
   { a: 'Kizimkazi', b: 'Jambiani', usd: 18 },
