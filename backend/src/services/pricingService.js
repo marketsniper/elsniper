@@ -159,8 +159,8 @@ const SPECIAL_PRIVATE_ROUTES_USD = [
   // roulait à perte). Paliers appliqués aux kilomètres RÉELS :
   { a: 'Michamvi', b: 'Chwaka', usd: 34 }, // ~45 km par la route
   { a: 'Michamvi', b: 'Uroa', usd: 42 }, // ~55 km
-  { a: 'Michamvi', b: 'Pongwe', usd: 42 }, // ~60 km
-  { a: 'Michamvi', b: 'Kiwengwa', usd: 42 }, // ~65 km
+  { a: 'Michamvi', b: 'Pongwe', usd: 47 }, // ~60 km
+  { a: 'Michamvi', b: 'Kiwengwa', usd: 47 }, // ~65 km
   { a: 'Michamvi', b: 'Pwani Mchangani', usd: 50 }, // ~70 km
   { a: 'Michamvi', b: 'Matemwe', usd: 63 }, // ~78 km
   // LA PRESQU'ÎLE DE FUMBA regarde Kizimkazi par-dessus la baie de Menai :
@@ -170,18 +170,19 @@ const SPECIAL_PRIVATE_ROUTES_USD = [
   // LE COULOIR SUD-EST ↔ NORD-EST passe par Tunguu : de Paje à Uroa, la
   // route remonte par Jozani jusqu'à Tunguu puis redescend sur Chwaka —
   // ~55 km là où le vol d'oiseau en voit 30. Tout le bloc suit les
-  // kilomètres réels, croissants du nord au sud du départ.
+  // kilomètres réels ; au-delà de 55 km de route, 47 USD — aligné sur le
+  // transfert Stone Town ↔ Nungwi/Paje (décision commerciale du 20/08).
   { a: 'Bwejuu', b: 'Chwaka', usd: 34 }, // ~50 km par la route
   { a: 'Paje', b: 'Chwaka', usd: 34 }, // ~45 km
   { a: 'Jambiani', b: 'Chwaka', usd: 34 }, // ~51 km
-  { a: 'Makunduchi', b: 'Chwaka', usd: 42 }, // ~60 km
-  { a: 'Bwejuu', b: 'Uroa', usd: 42 }, // ~60 km
+  { a: 'Makunduchi', b: 'Chwaka', usd: 47 }, // ~60 km
+  { a: 'Bwejuu', b: 'Uroa', usd: 47 }, // ~60 km
   { a: 'Paje', b: 'Uroa', usd: 42 }, // ~55 km
-  { a: 'Jambiani', b: 'Uroa', usd: 42 }, // ~61 km
+  { a: 'Jambiani', b: 'Uroa', usd: 47 }, // ~61 km
   { a: 'Makunduchi', b: 'Uroa', usd: 50 }, // ~70 km
-  { a: 'Bwejuu', b: 'Pongwe', usd: 42 }, // ~65 km
-  { a: 'Paje', b: 'Pongwe', usd: 42 }, // ~60 km
-  { a: 'Jambiani', b: 'Pongwe', usd: 42 }, // ~66 km
+  { a: 'Bwejuu', b: 'Pongwe', usd: 47 }, // ~65 km
+  { a: 'Paje', b: 'Pongwe', usd: 47 }, // ~60 km
+  { a: 'Jambiani', b: 'Pongwe', usd: 47 }, // ~66 km
   { a: 'Makunduchi', b: 'Pongwe', usd: 50 }, // ~75 km
   // La pointe sud : Kizimkazi est sur l'autre versant, la route y descend
   // par l'intérieur au lieu de longer la côte. Prix de terrain.
