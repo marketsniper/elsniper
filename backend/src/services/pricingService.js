@@ -151,6 +151,22 @@ const SPECIAL_PRIVATE_ROUTES_USD = [
   // d'oiseau, sur laquelle les paliers se calculent. Prix de terrain.
   { a: 'Nungwi', b: 'Michamvi', usd: 68 },
   { a: 'Kendwa', b: 'Michamvi', usd: 68 },
+  // LA BAIE DE CHWAKA N'A PAS DE PONT — Michamvi fait face à Chwaka, Uroa,
+  // Pongwe et Kiwengwa à quelques kilomètres à vol d'oiseau, mais la route
+  // redescend toute la presqu'île (Bwejuu, Paje), repasse par Jozani et
+  // remonte l'autre rive. La formule, calée sur la distance directe, vendait
+  // Michamvi ↔ Uroa 13 USD pour ~55 km de route (0,24 USD/km — le chauffeur
+  // roulait à perte). Paliers appliqués aux kilomètres RÉELS :
+  { a: 'Michamvi', b: 'Chwaka', usd: 34 }, // ~45 km par la route
+  { a: 'Michamvi', b: 'Uroa', usd: 42 }, // ~55 km
+  { a: 'Michamvi', b: 'Pongwe', usd: 42 }, // ~60 km
+  { a: 'Michamvi', b: 'Kiwengwa', usd: 42 }, // ~65 km
+  { a: 'Michamvi', b: 'Pwani Mchangani', usd: 50 }, // ~70 km
+  { a: 'Michamvi', b: 'Matemwe', usd: 63 }, // ~78 km
+  // LA PRESQU'ÎLE DE FUMBA regarde Kizimkazi par-dessus la baie de Menai :
+  // même illusion d'optique, la route remonte vers la ville avant de
+  // redescendre la côte sud. Même remède.
+  { a: 'Fumba', b: 'Kizimkazi', usd: 34 }, // ~45 km par la route
   // La pointe sud : Kizimkazi est sur l'autre versant, la route y descend
   // par l'intérieur au lieu de longer la côte. Prix de terrain.
   { a: 'Kizimkazi', b: 'Jambiani', usd: 18 },

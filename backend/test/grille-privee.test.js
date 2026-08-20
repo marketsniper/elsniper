@@ -31,6 +31,27 @@ describe('Grille privée au kilomètre', () => {
     assert.equal(privateUsdForRoute('Kizimkazi', 'Nungwi'), 68);
   });
 
+  it('les baies sans pont se paient par la route, pas à vol d’oiseau', () => {
+    // Michamvi fait face à la côte nord-est par-dessus la baie de Chwaka
+    // (10 km à vol d'oiseau, 45 à 78 km de route) ; Fumba fait face à
+    // Kizimkazi par-dessus la baie de Menai. La formule au kilomètre
+    // vendait ces traversées à perte (Michamvi ↔ Uroa : 13 USD pour
+    // ~55 km) — les prix spéciaux suivent les kilomètres réels.
+    const traversees = [
+      ['Michamvi', 'Chwaka', 34],
+      ['Michamvi', 'Uroa', 42],
+      ['Michamvi', 'Pongwe', 42],
+      ['Michamvi', 'Kiwengwa', 42],
+      ['Michamvi', 'Pwani Mchangani', 50],
+      ['Michamvi', 'Matemwe', 63],
+      ['Fumba', 'Kizimkazi', 34],
+    ];
+    for (const [a, b, usd] of traversees) {
+      assert.equal(privateUsdForRoute(a, b), usd, `${a} → ${b}`);
+      assert.equal(privateUsdForRoute(b, a), usd, `${b} → ${a}`);
+    }
+  });
+
   it('la chaîne de la côte est : d’un village au suivant, 13 USD', () => {
     // Michamvi → Bwejuu → Paje → Jambiani → Makunduchi : chaque maillon
     // vaut 13 USD, dans les deux sens.
