@@ -46,12 +46,12 @@ function CarteProfil({
         <Ionicons
           name={icone}
           size={26}
-          color={sombre ? couleurs.primaireClair : couleurs.primaire}
+          color={sombre ? couleurs.surPrimaire : couleurs.primaire}
         />
       </View>
       <View style={styles.textes}>
-        <Text style={[styles.titreCarte, sombre && { color: couleurs.blanc }]}>{titre}</Text>
-        <Text style={[styles.sousTitreCarte, sombre && { color: couleurs.texteSecondaire }]}>
+        <Text style={[styles.titreCarte, sombre && { color: couleurs.surAccent }]}>{titre}</Text>
+        <Text style={[styles.sousTitreCarte, sombre && { color: couleurs.surAccentDoux }]}>
           {sousTitre}
         </Text>
         {!!mention && <Text style={styles.mention}>{mention}</Text>}
@@ -213,7 +213,7 @@ const styles = stylesReactifs(() => ({
     ...ombres.carte,
   },
   carteSombre: {
-    backgroundColor: couleurs.nuit,
+    backgroundColor: couleurs.accentFond,
   },
   bulleIcone: {
     width: 52,

@@ -952,7 +952,7 @@ const styles = stylesReactifs(() => ({
   },
   // Bandeau des gains du jour : le gros chiffre qui accueille le chauffeur.
   bandeauJour: {
-    backgroundColor: couleurs.nuit,
+    backgroundColor: couleurs.accentFond,
     borderRadius: rayons.carte,
     padding: espaces.l,
     alignItems: 'center',
@@ -966,12 +966,12 @@ const styles = stylesReactifs(() => ({
   },
   bandeauLabel: {
     fontSize: 13,
-    color: couleurs.voilePhotoClair,
+    color: couleurs.surAccentDoux,
   },
   bandeauMontant: {
     fontSize: 34,
     fontWeight: '900',
-    color: couleurs.surPrimaire,
+    color: couleurs.surAccent,
     letterSpacing: -0.5,
   },
   bandeauDetail: {

@@ -1,7 +1,7 @@
 // Mise en page racine : fournit la langue, le contexte d'auth et la pile de
 // navigation (titres traduits).
 import { Ionicons } from '@expo/vector-icons';
-import { Stack, usePathname, useRouter, type Href } from 'expo-router';
+import { Stack, useRouter, type Href } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect } from 'react';
 import { Pressable, Text } from 'react-native';
@@ -9,9 +9,9 @@ import { Pressable, Text } from 'react-native';
 import { FournisseurDialogues } from '@/components/BoiteDialogue';
 import { reparerAlertesWeb } from '@/lib/alerteWeb';
 import { reveillerServeur } from '@/lib/api';
-import { AuthProvider, useAuth } from '@/lib/auth';
+import { AuthProvider } from '@/lib/auth';
 import { LangueProvider, useT } from '@/lib/i18n';
-import { couleurs, FournisseurPeau } from '@/lib/theme';
+import { couleurs, FournisseurPeau, type NomPeau } from '@/lib/theme';
 
 // Flèche de retour GARANTIE sur chaque fiche : le retour natif disparaît
 // quand l'historique est vide (page web rechargée, PWA relancée…) et son
@@ -56,6 +56,10 @@ function PilesNavigation() {
         headerTitleStyle: { color: couleurs.encre, fontWeight: '700' },
         headerShadowVisible: false,
         contentStyle: { backgroundColor: couleurs.sable },
+        // La signature de « Nuit d'épices » : les pages glissent
+        // latéralement. Android ouvrait les fiches par le bas, l'iPhone par
+        // le côté — même geste partout, maintenant.
+        animation: 'slide_from_right',
       }}
     >
       <Stack.Screen name="index" options={{ headerShown: false }} />
@@ -78,34 +82,16 @@ function PilesNavigation() {
 }
 
 /**
- * Choisit la peau de l'application.
+ * LA PEAU DE L'APPLICATION.
  *
- * Un HÔTEL ne voit pas la même zanziGo qu'un voyageur : il travaille dans
- * « Nuit d'épices » — noir et or, l'ambiance d'une réception le soir. Tout le
- * reste (clients, chauffeurs, équipe) vit dans « Bento Zanzibar », crème et
- * corail, lisible en plein soleil.
+ * « Nuit d'épices » pour tout le monde — voyageurs, chauffeurs, hôtels,
+ * équipe : presque noir, filets d'or, l'or en couleur d'action. La nuit de
+ * Stone Town, les lampes des échoppes à girofle.
  *
- * On bascule aussi sur les DEUX écrans d'entrée hôtel, avant même la
- * connexion : un partenaire doit reconnaître son univers dès la porte.
+ * L'autre direction, « Bento Zanzibar », reste écrite dans le thème : tout
+ * basculer tient dans ce seul mot, au prochain démarrage de l'application.
  */
-function PeauSelonProfil({ children }: { children: React.ReactNode }) {
-  const { session } = useAuth();
-  const chemin = usePathname();
-  const hotel =
-    Boolean(session?.hotel) || chemin === '/hotel' || chemin === '/hotel-inscription';
-  const peau = hotel ? 'nuit' : 'bento';
-  return (
-    <FournisseurPeau nom={peau}>
-      <StatusBar style={hotel ? 'light' : 'dark'} />
-      {/* La clé remonte toute la navigation au changement de peau. Sans elle,
-          la barre d'onglets gardait les couleurs de la peau précédente : elle
-          est dessinée par le navigateur, qui ne se redessine pas juste parce
-          qu'un parent a changé. Cela n'arrive qu'à la connexion et à la
-          déconnexion — deux moments où la navigation repart de zéro. */}
-      <React.Fragment key={peau}>{children}</React.Fragment>
-    </FournisseurPeau>
-  );
-}
+const PEAU: NomPeau = 'nuit';
 
 // Sur le web, les boîtes de dialogue de React Native sont des fonctions
 // vides : on les rebranche AVANT le premier rendu, sinon des boutons comme
@@ -122,12 +108,13 @@ export default function LayoutRacine() {
   return (
     <LangueProvider>
       <AuthProvider>
-        <PeauSelonProfil>
+        <FournisseurPeau nom={PEAU}>
+          <StatusBar style="light" />
           {/* Les fenêtres de confirmation s'affichent par-dessus tout écran. */}
           <FournisseurDialogues>
             <PilesNavigation />
           </FournisseurDialogues>
-        </PeauSelonProfil>
+        </FournisseurPeau>
       </AuthProvider>
     </LangueProvider>
   );

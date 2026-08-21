@@ -209,18 +209,18 @@ const HTML_ATTENTE = `<!doctype html>
 <title>zanziGo</title>
 <style>
   html, body { height: 100%; margin: 0; }
-  body { background: #33222B; color: #FFE0D2; display: flex; align-items: center;
+  body { background: #100C14; color: #F0E7DC; display: flex; align-items: center;
          justify-content: center; text-align: center; padding: 24px;
          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
   .marque { font-size: 34px; font-weight: 800; letter-spacing: -0.5px; }
-  .marque span { color: #E4572E; }
+  .marque span { color: #F2B84B; }
   .rond { width: 34px; height: 34px; margin: 22px auto; border-radius: 50%;
-          border: 3px solid rgba(255,224,210,.25); border-top-color: #E4572E;
+          border: 3px solid rgba(242,184,75,.24); border-top-color: #F2B84B;
           animation: tourne 0.9s linear infinite; }
   @keyframes tourne { to { transform: rotate(360deg); } }
   p { margin: 6px 0; font-size: 15px; line-height: 1.45; }
   .discret { color: rgba(255,224,210,.6); font-size: 13px; }
-  button { margin-top: 22px; background: #E4572E; color: #fff; border: 0;
+  button { margin-top: 22px; background: #F2B84B; color: #150E06; border: 0;
            border-radius: 999px; padding: 13px 26px; font-size: 15px;
            font-weight: 600; cursor: pointer; }
 </style></head>

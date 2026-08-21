@@ -56,6 +56,12 @@ interface Palette {
   turquoise: string;
   /** Toujours blanc, quelle que soit la peau : QR, icônes sur pastille pleine. */
   surVoile: string;
+  /** Bloc de mise en avant, plus profond que les cartes (gains du jour, carte chauffeur). */
+  accentFond: string;
+  /** Texte principal posé sur `accentFond`. */
+  surAccent: string;
+  /** Texte secondaire posé sur `accentFond`. */
+  surAccentDoux: string;
 }
 
 // ─────────────────────────── 02 · BENTO ZANZIBAR ───────────────────────────
@@ -93,6 +99,9 @@ const BENTO: Palette = {
   surVertFeu: '#FFFFFF',
   turquoise: '#0E9AA7', // LE CLIENT sur une carte
   surVoile: '#FFFFFF',
+  accentFond: '#241017',
+  surAccent: '#FFF4E8',
+  surAccentDoux: 'rgba(255, 244, 232, 0.72)',
 };
 
 // ──────────────────────────── 03 · NUIT D'ÉPICES ───────────────────────────
@@ -133,6 +142,11 @@ const NUIT: Palette = {
   surVertFeu: '#FFFFFF',
   turquoise: '#2BB3B8',
   surVoile: '#FFFFFF',
+  // Un noir CHAUD, tiré vers l'or : c'est ce qui détache le bloc du fond
+  // violacé sans allumer une couleur de plus.
+  accentFond: '#221A10',
+  surAccent: '#F5EDE1',
+  surAccentDoux: 'rgba(245, 237, 225, 0.66)',
 };
 
 const PEAUX: Record<NomPeau, Palette> = { bento: BENTO, nuit: NUIT };
