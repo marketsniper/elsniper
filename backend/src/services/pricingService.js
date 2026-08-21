@@ -191,6 +191,20 @@ const SPECIAL_PRIVATE_ROUTES_USD = [
   { a: 'Michamvi', b: 'Paje', usd: 17 },
   { a: 'Bwejuu', b: 'Jambiani', usd: 17 },
   { a: 'Paje', b: 'Makunduchi', usd: 17 },
+  // LA PRESQU'ÎLE DE FUMBA ET LA POINTE SUD, DEPUIS LA CÔTE EST. Fumba est au
+  // bout d'une langue de terre : pour rejoindre la côte est il faut remonter
+  // jusqu'au carrefour de Tunguu et redescendre — 54 km de route pour Paje
+  // quand le vol d'oiseau en voit 38. Kizimkazi se gagne, lui, par la route
+  // côtière du sud via Makunduchi. Prix calés sur la route réelle.
+  { a: 'Fumba', b: 'Uroa', usd: 34 }, // ~41 km par Tunguu
+  { a: 'Fumba', b: 'Paje', usd: 42 }, // ~54 km
+  { a: 'Fumba', b: 'Bwejuu', usd: 42 }, // ~59 km
+  { a: 'Fumba', b: 'Jambiani', usd: 42 }, // ~63 km
+  { a: 'Fumba', b: 'Michamvi', usd: 50 }, // ~74 km
+  { a: 'Fumba', b: 'Makunduchi', usd: 63 }, // ~77 km, tout le tour de l'île
+  { a: 'Paje', b: 'Kizimkazi', usd: 26 }, // ~36 km par la côte sud
+  { a: 'Bwejuu', b: 'Kizimkazi', usd: 34 }, // ~40 km
+  { a: 'Michamvi', b: 'Kizimkazi', usd: 42 }, // ~55 km
 ];
 
 // Trajets spéciaux à prix fixe (TZS, place locale en taxi partagé), deux
@@ -331,21 +345,21 @@ const CITY_COORDS = {
   airport: [-6.221, 39.223],
   'stone town': [-6.162, 39.191],
   'stone town ferry': [-6.163, 39.19],
-  nungwi: [-5.727, 39.297],
-  kendwa: [-5.758, 39.29],
-  matemwe: [-5.869, 39.351],
-  'pwani mchangani': [-5.925, 39.37],
-  kiwengwa: [-5.986, 39.38],
-  pongwe: [-6.03, 39.395],
-  uroa: [-6.098, 39.418],
-  chwaka: [-6.16, 39.433],
-  michamvi: [-6.106, 39.496],
-  bwejuu: [-6.226, 39.538],
-  paje: [-6.266, 39.531],
-  jambiani: [-6.317, 39.541],
-  makunduchi: [-6.421, 39.457],
-  kizimkazi: [-6.437, 39.336],
-  fumba: [-6.322, 39.183],
+  nungwi: [-5.7272, 39.2992],
+  kendwa: [-5.7516, 39.2912],
+  matemwe: [-5.8422, 39.3582],
+  'pwani mchangani': [-5.9242, 39.3561],
+  kiwengwa: [-5.9901, 39.3761],
+  pongwe: [-6.0484, 39.4052],
+  uroa: [-6.093, 39.4237],
+  chwaka: [-6.1652, 39.4351],
+  michamvi: [-6.1445, 39.4955],
+  bwejuu: [-6.2372, 39.5323],
+  paje: [-6.2667, 39.5341],
+  jambiani: [-6.3219, 39.5468],
+  makunduchi: [-6.4127, 39.5534],
+  kizimkazi: [-6.4544, 39.4728],
+  fumba: [-6.3148, 39.2848],
 };
 const DETOUR_ROUTIER = 1.35; // les routes de l'île ne sont jamais directes
 const HUBS = new Set([

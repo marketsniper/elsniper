@@ -93,8 +93,11 @@ describe('Grille privée au kilomètre', () => {
       assert.equal(saut.commission, 2.89, `${a} → ${b} : commission 17 % (< 40 USD)`);
       assert.equal(saut.price - saut.commission, 14.11, `${a} → ${b} : gain chauffeur`);
     }
-    // Au-delà de deux villages, les paliers de distance reprennent.
-    assert.equal(privateUsdForRoute('Michamvi', 'Jambiani'), 26); // ≈ 32 km
+    // Au-delà de deux villages, les paliers de distance reprennent. Michamvi
+    // → Jambiani longe la côte par Bwejuu et Paje : 28 km, soit le palier des
+    // 30 km. (Cette valeur était de 26 USD tant que Michamvi était mal placé
+    // sur la carte — voir coordonnees-villes.test.js.)
+    assert.equal(privateUsdForRoute('Michamvi', 'Jambiani'), 22); // ≈ 28 km
   });
 
   it('sauts de village : 13 USD à 17 % (< 40 USD) — le chauffeur garde 10,79', () => {
