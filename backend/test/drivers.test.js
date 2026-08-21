@@ -239,8 +239,8 @@ describe('Chauffeur — compteur de gains', () => {
       .set(authHeaders(driverToken));
     assert.equal(stats.status, 200);
     assert.equal(stats.body.today.courses, 1);
-    // Kendwa : transfert 49 USD, forfait zanziGo 4 → net chauffeur 45 USD.
-    assert.equal(stats.body.today.gains.USD, 45);
+    // Kendwa : transfert 52 USD, commission 12 % → net chauffeur 45,76 USD.
+    assert.equal(stats.body.today.gains.USD, 45.76);
     assert.equal(stats.body.week.courses, 1);
     assert.equal(stats.body.month.courses, 1);
     assert.equal(stats.body.today.colis, 0);
@@ -256,8 +256,8 @@ describe('Chauffeur — compteur de gains', () => {
     const equipe = await request(app).get('/api/stats').set(adminHeaders());
     assert.equal(equipe.status, 200);
     assert.equal(equipe.body.revenue.today.courses, 1);
-    assert.equal(equipe.body.revenue.today.ca.USD, 50);
-    assert.equal(equipe.body.revenue.today.gains.USD, 5);
+    assert.equal(equipe.body.revenue.today.ca.USD, 52);
+    assert.equal(equipe.body.revenue.today.gains.USD, 6.24);
     assert.equal(equipe.body.revenue.month.courses, 1);
   });
 });

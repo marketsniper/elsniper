@@ -60,10 +60,10 @@ describe('Moyens de paiement : la règle', () => {
   });
 
   it('portefeuille mobile : le prix converti en shillings, sans un centime de frais', () => {
-    const r = reglement(50, 'USD', 'mobile');
+    const r = reglement(52, 'USD', 'mobile');
     assert.equal(r.devise, 'TZS');
     assert.equal(r.surcharge, 0, 'aucun frais sur le portefeuille mobile');
-    assert.equal(r.montant, 50 * config.usdToTzsRate); // 130 000
+    assert.equal(r.montant, 52 * config.usdToTzsRate); // 135 200
     assert.match(r.mention, /Portefeuille mobile/);
   });
 
@@ -93,18 +93,18 @@ describe('Moyens de paiement : sur une vraie course', () => {
     assert.equal(paiement.status, 201, JSON.stringify(paiement.body));
     assert.equal(paiement.body.method, 'carte');
     assert.equal(paiement.body.currency, 'USD');
-    assert.equal(Number(paiement.body.amount), 52);
-    assert.equal(Number(paiement.body.surcharge), 2);
-    assert.equal(Number(paiement.body.prix_course), 50);
+    assert.equal(Number(paiement.body.amount), 54.08);
+    assert.equal(Number(paiement.body.surcharge), 2.08);
+    assert.equal(Number(paiement.body.prix_course), 52);
     assert.deepEqual(paiement.body.moyens_disponibles, ['carte', 'mobile']);
 
     // Le prix et la commission du chauffeur, eux, n'ont pas bougé.
     const vue = await request(app).get(`/api/trips/${course.id}`).set(adminHeaders());
-    assert.equal(Number(vue.body.price), 50);
-    assert.equal(Number(vue.body.commission), 5);
+    assert.equal(Number(vue.body.price), 52);
+    assert.equal(Number(vue.body.commission), 6.24);
   });
 
-  it('touriste par PORTEFEUILLE MOBILE : 130 000 TZS, aucun frais, course toujours à 50 USD', async () => {
+  it('touriste par PORTEFEUILLE MOBILE : 135 200 TZS, aucun frais, course toujours à 52 USD', async () => {
     const { course, token } = await coursePrete();
     const paiement = await request(app)
       .post(`/api/trips/${course.id}/payment`)
@@ -113,18 +113,18 @@ describe('Moyens de paiement : sur une vraie course', () => {
     assert.equal(paiement.status, 201, JSON.stringify(paiement.body));
     assert.equal(paiement.body.method, 'mobile');
     assert.equal(paiement.body.currency, 'TZS');
-    assert.equal(Number(paiement.body.amount), 130000);
+    assert.equal(Number(paiement.body.amount), 135200);
     assert.equal(Number(paiement.body.surcharge), 0);
     // Le message à l'équipe annonce le bon moyen ET la bonne somme : c'est
     // ce qu'elle attend sur le compte Tigo.
     const message = decodeURIComponent(paiement.body.payment_link);
     assert.match(message, /Portefeuille mobile/);
-    assert.ok(message.includes('130000 TZS'));
+    assert.ok(message.includes('135200 TZS'));
 
     const vue = await request(app).get(`/api/trips/${course.id}`).set(adminHeaders());
-    assert.equal(Number(vue.body.price), 50, 'la course est facturée 50 USD, pas 130 000 TZS');
+    assert.equal(Number(vue.body.price), 52, 'la course est facturée 52 USD, pas 135 200 TZS');
     assert.equal(vue.body.currency, 'USD');
-    assert.equal(Number(vue.body.commission), 5, 'la commission ignore le moyen de paiement');
+    assert.equal(Number(vue.body.commission), 6.24, 'la commission ignore le moyen de paiement');
   });
 
   it('sans choix, un touriste part sur la carte (comportement historique)', async () => {
@@ -133,7 +133,7 @@ describe('Moyens de paiement : sur une vraie course', () => {
       .post(`/api/trips/${course.id}/payment`)
       .set(authHeaders(token));
     assert.equal(paiement.body.method, 'carte');
-    assert.equal(Number(paiement.body.amount), 52);
+    assert.equal(Number(paiement.body.amount), 54.08);
   });
 
   it('un LOCAL n\'a que le portefeuille mobile — la carte est refusée', async () => {
@@ -176,18 +176,18 @@ describe('Changer de moyen avant de payer', () => {
     assert.equal(versMobile.status, 200, JSON.stringify(versMobile.body));
     assert.equal(versMobile.body.method, 'mobile');
     assert.equal(versMobile.body.currency, 'TZS');
-    assert.equal(Number(versMobile.body.amount), 130000);
+    assert.equal(Number(versMobile.body.amount), 135200);
     assert.equal(Number(versMobile.body.surcharge), 0);
     // Le lien de paiement suit : il porterait sinon l'ancienne somme.
-    assert.ok(decodeURIComponent(versMobile.body.payment_link).includes('130000 TZS'));
+    assert.ok(decodeURIComponent(versMobile.body.payment_link).includes('135200 TZS'));
 
     const retourCarte = await request(app)
       .post(`/api/payments/${id}/moyen`)
       .set(authHeaders(token))
       .send({ moyen: 'carte' });
     assert.equal(retourCarte.status, 200);
-    assert.equal(Number(retourCarte.body.amount), 52, 'et pas 52 + 4 % de nouveau');
-    assert.equal(Number(retourCarte.body.surcharge), 2);
+    assert.equal(Number(retourCarte.body.amount), 54.08, 'et pas 54,08 + 4 % de nouveau');
+    assert.equal(Number(retourCarte.body.surcharge), 2.08);
   });
 
   it('un paiement déjà encaissé ne se rejoue pas', async () => {
@@ -242,7 +242,7 @@ describe('Places de taxi partagé : même choix', () => {
     // 2 places à 16 USD = 32 USD → 83 200 TZS, sans frais.
     assert.equal(resa.body.payment.method, 'mobile');
     assert.equal(resa.body.payment.currency, 'TZS');
-    assert.equal(Number(resa.body.payment.amount), 83200);
+    assert.equal(Number(resa.body.payment.amount), 88400);
     assert.equal(Number(resa.body.payment.surcharge), 0);
 
     // La fiche « ma place » montre les deux chiffres : le prix et ce qu'il y
@@ -250,9 +250,9 @@ describe('Places de taxi partagé : même choix', () => {
     const mesPlaces = await request(app)
       .get('/api/rides/reservations')
       .set(authHeaders(tokenTouriste));
-    assert.equal(Number(mesPlaces.body[0].amount), 32, 'le prix des 2 places');
+    assert.equal(Number(mesPlaces.body[0].amount), 34, 'le prix des 2 places');
     assert.equal(mesPlaces.body[0].currency, 'USD');
-    assert.equal(Number(mesPlaces.body[0].reglement_montant), 83200);
+    assert.equal(Number(mesPlaces.body[0].reglement_montant), 88400);
     assert.equal(mesPlaces.body[0].reglement_devise, 'TZS');
     assert.equal(mesPlaces.body[0].reglement_moyen, 'mobile');
   });
@@ -325,6 +325,6 @@ describe('Tableau de bord équipe', () => {
     assert.ok(ligne, 'paiement absent du tableau équipe');
     assert.equal(ligne.method, 'mobile');
     assert.equal(ligne.currency, 'TZS');
-    assert.equal(Number(ligne.amount), 130000);
+    assert.equal(Number(ligne.amount), 135200);
   });
 });

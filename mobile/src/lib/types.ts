@@ -470,22 +470,16 @@ const NET_TRANSFERT_USD = 45;
 /** L'aéroport et la ville sont à sept kilomètres : ce n'est pas un transfert,
  *  mais c'est la course la plus fréquente de l'île. */
 const NET_AEROPORT_VILLE_USD = 11;
-/** Trajets très empruntés : le forfait zanziGo double, le net ne bouge pas. */
-const FORFAIT_EMPRUNTE_USD = 8;
-const CORRIDOR_EMPRUNTE = ['paje', 'bwejuu', 'jambiani'];
+/**
+ * COMMISSION DES COURSES PRIVÉES, en pourcentage (miroir exact du serveur) :
+ * 12 % à partir de 40 USD de prix client, 15 % en dessous.
+ */
+const COMMISSION_PRIVE = { grand: 0.12, petit: 0.15 };
+const COMMISSION_PRIVE_SEUIL_USD = 40;
 
-/** Forfait de base, selon la taille du trajet. */
-function forfaitZanzigoUsd(netUsd: number): number {
-  if (netUsd < 25) return 2;
-  if (netUsd < 45) return 3;
-  return 4;
+export function tauxCommissionPrive(prixUsd: number): number {
+  return prixUsd >= COMMISSION_PRIVE_SEUIL_USD ? COMMISSION_PRIVE.grand : COMMISSION_PRIVE.petit;
 }
-
-/** Frais de portefeuille mobile : 2 % de plus sur chaque course. */
-const FRAIS_PORTEFEUILLE = 0.02;
-/** Petits trajets : zanziGo prend au moins 25 % du prix. */
-const PETIT_TRAJET_NET_MAX_USD = 20;
-const PART_MIN_PETIT_TRAJET = 0.25;
 
 /** Trajets spéciaux TZS : place locale en taxi partagé (deux sens). */
 export const TRAJETS_SPECIAUX_LOCAL_TZS: { villes: [string, string]; prix: number }[] = [
@@ -844,25 +838,16 @@ export function netChauffeurPriveUsd(depart: string, arrivee: string): number {
   return NET_TRANSFERT_USD;
 }
 
-/** Le forfait de base applicable à ce trajet (avant frais de portefeuille). */
-function forfaitBaseTrajetUsd(depart: string, arrivee: string, net: number): number {
-  const d = normaliserLieu(depart);
-  const a = normaliserLieu(arrivee);
-  const versCorridor =
-    (HUBS_TARIFAIRES.has(d) && CORRIDOR_EMPRUNTE.includes(a)) ||
-    (HUBS_TARIFAIRES.has(a) && CORRIDOR_EMPRUNTE.includes(d));
-  return versCorridor ? FORFAIT_EMPRUNTE_USD : forfaitZanzigoUsd(net);
-}
-
-/** Prix privé USD d'un itinéraire — miroir exact du serveur. */
+/**
+ * Prix privé USD d'un itinéraire — miroir exact du serveur : le premier dollar
+ * entier qui, commission prélevée, laisse au chauffeur son montant promis.
+ */
 export function tarifPriveItineraire(depart: string, arrivee: string): number {
   const net = netChauffeurPriveUsd(depart, arrivee);
-  if (net <= PETIT_TRAJET_NET_MAX_USD) {
-    let prix = Math.ceil(net / (1 - PART_MIN_PETIT_TRAJET));
-    while ((prix - net) / prix < PART_MIN_PETIT_TRAJET) prix += 1;
-    return prix;
+  for (let prix = Math.floor(net); prix <= net * 2 + 10; prix += 1) {
+    if (Math.round(prix * (1 - tauxCommissionPrive(prix)) * 100) / 100 >= net) return prix;
   }
-  return Math.round(net * (1 + FRAIS_PORTEFEUILLE) + forfaitBaseTrajetUsd(depart, arrivee, net));
+  return Math.ceil(net / (1 - COMMISSION_PRIVE.petit));
 }
 
 /** CE QUE ZANZIGO GARDE sur ce trajet : la différence, jamais recalculée. */

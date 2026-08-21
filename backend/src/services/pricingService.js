@@ -66,13 +66,12 @@ function sharedSeatUsd(priveUsd) {
 // 12 450 TZS la place). La place locale est donc passée à 16 000 TZS dans le
 // même mouvement : le chauffeur touche 13 280 TZS, plus qu'avant la hausse.
 // Les deux décisions se tiennent — toucher à l'une oblige à relire l'autre.
-// LA COURSE PRIVÉE N'EST PLUS ICI (21/08/2026) : sa commission est un forfait
-// en dollars, pas un taux — voir forfaitZanzigoUsd plus bas. Les places de
-// taxi partagé et les colis, eux, restent au pourcentage.
+// LA COURSE PRIVÉE N'EST PLUS ICI : son taux dépend du prix du trajet
+// (12 % dès 40 USD, 15 % en dessous) — voir COMMISSION_PRIVE plus bas.
 const COMMISSION_RATES = {
-  // TAXI PARTAGÉ : zanziGo prend au moins 20 % (21/08/2026). Côté touriste,
-  // 25 % : toutes les places se vendent sous les 20 USD, la règle des petits
-  // trajets s'y applique donc entièrement.
+  // TAXI PARTAGÉ : zanziGo prend au moins 20 % (21/08/2026), et 25 % côté
+  // touriste. Ces taux-là n'ont pas bougé quand la course privée est repassée
+  // au pourcentage : ce sont deux décisions séparées.
   shared: 0.25, // taxi partagé touriste (USD)
   local: 0.2, // taxi partagé local (TZS)
   package: 0.2, // colis : inchangé
@@ -119,39 +118,26 @@ const CITY_ZONES = {
 // La commission n'est donc plus un taux mais une somme en dollars, connue
 // d'avance, identique quel que soit le moyen de paiement.
 //
-// POURQUOI UN FORFAIT ET PAS UN POURCENTAGE. Sur les grandes traversées, 12 %
-// obligeaient à afficher 63 USD pour laisser 55 au chauffeur — hors marché sur
-// une île où la concurrence est en liquide. Le forfait colle le prix client au
-// plus près du net : 59 USD pour les mêmes 55. Là où le volume est fort, en
-// revanche, le forfait double (voir CORRIDOR_EMPRUNTE) : c'est le couloir des
-// plages du sud-est qui paie l'infrastructure, pas les traversées rares.
+// LA COMMISSION EST UN POURCENTAGE (voir COMMISSION_PRIVE plus bas) : 12 % à
+// partir de 40 USD de prix client, 15 % en dessous. Un forfait en dollars a
+// été essayé plus tôt le même jour puis abandonné — le pourcentage suit la
+// taille du trajet tout seul, sans palier à entretenir.
 
-/** Forfait de base, selon la taille du trajet. */
-function forfaitZanzigoUsd(netUsd) {
-  if (netUsd < 25) return 2;
-  if (netUsd < 45) return 3;
-  return 4;
+// COMMISSION DES COURSES PRIVÉES, EN POURCENTAGE (21/08/2026) : 12 % à partir
+// de 40 USD de prix client, 15 % en dessous. Elle remplace le forfait en
+// dollars essayé plus tôt dans la journée — un pourcentage suit la taille du
+// trajet tout seul, sans palier à entretenir.
+//
+// Le NET DU CHAUFFEUR reste le point de départ : le prix client est le premier
+// dollar entier qui, commission prélevée, lui laisse au moins le montant
+// promis. C'est pour ça que le seuil des 40 USD ne crée aucun trou — à 35 USD
+// de net, 39 USD de prix ne suffiraient pas (33,15) alors que 40 oui (35,20).
+const COMMISSION_PRIVE = { grand: 0.12, petit: 0.15 };
+const COMMISSION_PRIVE_SEUIL_USD = 40;
+
+function tauxCommissionPrive(prixUsd) {
+  return prixUsd >= COMMISSION_PRIVE_SEUIL_USD ? COMMISSION_PRIVE.grand : COMMISSION_PRIVE.petit;
 }
-
-// FRAIS DE PORTEFEUILLE MOBILE : 2 % de plus sur chaque course (21/08/2026).
-// Payer un chauffeur par mobile money coûte un pourcentage du virement à
-// zanziGo. Sans cette ligne, ces frais sortaient du forfait — sur un
-// transfert, ils en mangeaient près du quart.
-const FRAIS_PORTEFEUILLE = 0.02;
-
-// PETITS TRAJETS : zanziGo prend au moins 25 % du prix. Sur un saut de
-// village, un forfait de 2 USD ne couvrait ni le virement au chauffeur, ni le
-// SMS, ni le support — et un trajet à 15 USD net rapportait plus qu'un trajet
-// à 20 net, ce qu'aucun client n'aurait compris.
-const PETIT_TRAJET_NET_MAX_USD = 20;
-const PART_MIN_PETIT_TRAJET = 0.25;
-
-// TRAJETS TRÈS EMPRUNTÉS : le forfait double. Stone Town et l'aéroport vers
-// Paje, Bwejuu et Jambiani, c'est la liaison la plus demandée de l'île. Le
-// chauffeur y touche exactement la même chose qu'ailleurs (45 USD) ; ce sont
-// les 4 USD supplémentaires du client qui financent le reste.
-const FORFAIT_EMPRUNTE_USD = 8;
-const CORRIDOR_EMPRUNTE = new Set(['paje', 'bwejuu', 'jambiani']);
 
 // Transfert depuis/vers un hub (Stone Town, terminal ferry, aéroport) : prix
 // unique vers toute l'île, quelle que soit la plage.
@@ -226,6 +212,15 @@ const PACKAGE_FARES = {
 };
 
 const round2 = (n) => Math.round(n * 100) / 100;
+
+/**
+ * Commission d'une course privée : le pourcentage du prix, MAIS jamais au
+ * point d'entamer le net promis au chauffeur. Sur une course remisée, c'est
+ * donc zanziGo qui absorbe la remise — quitte à ne rien gagner.
+ */
+function commissionPrive(prix, net, taux) {
+  return round2(Math.max(0, Math.min(prix * taux, prix - net)));
+}
 
 // « Ville (précision) » → « ville » ; insensible à la casse.
 const normCity = (s) => (s || '').replace(/\s*\(.*\)\s*$/, '').trim().toLowerCase();
@@ -322,15 +317,6 @@ export function netChauffeurPriveUsd(pickup, dropoff) {
   // Lieu inconnu : on ne descend jamais sous le prix d'un transfert, sinon une
   // faute de frappe dans un nom de village ferait rouler un chauffeur à perte.
   return NET_TRANSFERT_USD;
-}
-
-/** Le forfait de base applicable à ce trajet (avant frais de portefeuille). */
-function forfaitBaseTrajetUsd(pickup, dropoff, net) {
-  const p = normCity(pickup);
-  const d = normCity(dropoff);
-  const versCorridor =
-    (HUBS.has(p) && CORRIDOR_EMPRUNTE.has(d)) || (HUBS.has(d) && CORRIDOR_EMPRUNTE.has(p));
-  return versCorridor ? FORFAIT_EMPRUNTE_USD : forfaitZanzigoUsd(net);
 }
 
 /**
@@ -450,13 +436,13 @@ export function kmEntreVilles(a, b) {
 // villes connues, zone en dernier recours.
 export function privateUsdForRoute(pickup, dropoff) {
   const net = netChauffeurPriveUsd(pickup, dropoff);
-  if (net <= PETIT_TRAJET_NET_MAX_USD) {
-    // Le premier dollar entier qui laisse au moins 25 % à zanziGo.
-    let prix = Math.ceil(net / (1 - PART_MIN_PETIT_TRAJET));
-    while ((prix - net) / prix < PART_MIN_PETIT_TRAJET) prix += 1;
-    return prix;
+  // Le premier dollar entier qui laisse au chauffeur son montant promis une
+  // fois la commission prélevée. On part du net lui-même : en dessous, aucun
+  // prix ne peut convenir.
+  for (let prix = Math.floor(net); prix <= net * 2 + 10; prix += 1) {
+    if (round2(prix * (1 - tauxCommissionPrive(prix))) >= net) return prix;
   }
-  return Math.round(net * (1 + FRAIS_PORTEFEUILLE) + forfaitBaseTrajetUsd(pickup, dropoff, net));
+  return Math.ceil(net / (1 - COMMISSION_PRIVE.petit));
 }
 
 // Prix touriste (USD) d'une place en trajet partagé selon l'itinéraire —
@@ -517,9 +503,10 @@ export function priceTrip(tripType, audience, route = {}) {
     // ville ↔ ville incluse), converti en shillings — commission privée
     // selon le prix (12 % dès 40 USD, 17 % en dessous).
     if (tripType === 'private') {
-      const price = Math.round(privateUsdForRoute(route.pickup, route.dropoff) * config.usdToTzsRate);
+      const usd = privateUsdForRoute(route.pickup, route.dropoff);
+      const price = Math.round(usd * config.usdToTzsRate);
       const net = Math.round(netChauffeurPriveUsd(route.pickup, route.dropoff) * config.usdToTzsRate);
-      return { price, commission: round2(price - net), currency: 'TZS' };
+      return { price, commission: commissionPrive(price, net, tauxCommissionPrive(usd)), currency: 'TZS' };
     }
     // Taxi partagé local : tarif unifié (trajets spéciaux inclus) SUR LES
     // GRANDS AXES uniquement ; ailleurs, prix touriste converti en TZS —
@@ -532,6 +519,7 @@ export function priceTrip(tripType, audience, route = {}) {
   let taux;
   if (tripType === 'private') {
     usd = privateUsdForRoute(route.pickup, route.dropoff);
+    taux = tauxCommissionPrive(usd); // 12 % dès 40 USD, 15 % en dessous
   } else if (tripType === 'shared_tourist' || tripType === 'posted_return') {
     usd = sharedSeatUsdForRoute(route.pickup, route.dropoff);
     taux = COMMISSION_RATES.shared; // 22 % — le chauffeur reçoit 78 %
@@ -555,13 +543,13 @@ export function priceTrip(tripType, audience, route = {}) {
 
   if (tripType === 'private') {
     // LA REMISE SORT DE LA POCHE DE ZANZIGO, JAMAIS DE CELLE DU CHAUFFEUR.
-    // Sa part est un montant promis, pas un pourcentage : un arrangement
-    // commercial passé avec un hôtel ou un résident ne le regarde pas. Le prix
-    // ne descend donc jamais sous ce net — au pire zanziGo ne gagne rien sur
-    // cette course-là (voir le test « la remise ne mord pas sur le chauffeur »).
+    // Le net est un montant promis : un arrangement commercial passé avec un
+    // hôtel ou un résident ne le regarde pas. Le prix ne descend donc jamais
+    // sous ce net, et la commission ne peut pas mordre dedans — au pire
+    // zanziGo ne gagne rien sur cette course-là.
     const net = netChauffeurPriveUsd(route.pickup, route.dropoff);
     const price = Math.max(net, remise);
-    return { price, commission: round2(price - net), currency: 'USD' };
+    return { price, commission: commissionPrive(price, net, taux), currency: 'USD' };
   }
   return { price: remise, commission: round2(remise * taux), currency: 'USD' };
 }

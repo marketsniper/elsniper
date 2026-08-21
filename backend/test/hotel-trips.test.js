@@ -42,7 +42,7 @@ describe('Hôtel — réservation de taxi pour un client', () => {
     assert.equal(res.body.client_phone, '+33612345678');
     assert.equal(res.body.currency, 'USD');
     // Zone Nord (Nungwi) : privé 50 USD → 47,50 USD pour l'hôtel (−5 %).
-    assert.equal(Number(res.body.price), 47.5);
+    assert.equal(Number(res.body.price), 49.4);
     assert.equal(res.body.status, 'requested');
     assert.ok(res.body.whatsapp_link.includes('wa.me'));
   });
