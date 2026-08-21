@@ -141,12 +141,12 @@ describe('Courses taxi (trips)', () => {
       pickupLocation: 'Nungwi',
       dropoffLocation: 'Paje',
     });
-    assert.equal(Number(special.price), 57);
+    assert.equal(Number(special.price), 58);
     const specialResident = await createTrip(residentToken, resident.id, {
       pickupLocation: 'Paje',
       dropoffLocation: 'Nungwi',
     });
-    assert.equal(Number(specialResident.price), 51.3);
+    assert.equal(Number(specialResident.price), 52.2);
 
     // Résident vérifié : remise de 10 % sur le tarif touriste, en USD.
     const privateResident = await createTrip(residentToken, resident.id);

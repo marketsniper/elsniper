@@ -491,6 +491,19 @@ const COMMISSION_CORRIDOR = 0.15;
  */
 const COMMISSION_AEROPORT_VILLE_USD = 4.5;
 
+/**
+ * SUPPLÉMENT DE 1 USD ENTRE VILLAGES : une course qui ne part ni de Stone Town
+ * ni de l'aéroport coûte un dollar de plus, et ce dollar va entièrement à
+ * zanziGo. Le chauffeur touche exactement ce qu'il touchait avant.
+ */
+const SUPPLEMENT_VILLAGE_USD = 1;
+
+function supplementUsd(depart: string, arrivee: string): number {
+  const d = normaliserLieu(depart);
+  const a = normaliserLieu(arrivee);
+  return !HUBS_TARIFAIRES.has(d) && !HUBS_TARIFAIRES.has(a) ? SUPPLEMENT_VILLAGE_USD : 0;
+}
+
 function estAeroportVille(depart: string, arrivee: string): boolean {
   const d = normaliserLieu(depart);
   const a = normaliserLieu(arrivee);
@@ -880,7 +893,7 @@ export function netChauffeurPriveUsd(depart: string, arrivee: string): number {
  * Prix privé USD d'un itinéraire — miroir exact du serveur : le premier dollar
  * entier qui, commission prélevée, laisse au chauffeur son montant promis.
  */
-export function tarifPriveItineraire(depart: string, arrivee: string): number {
+function baseUsdItineraire(depart: string, arrivee: string): number {
   const net = netChauffeurPriveUsd(depart, arrivee);
   // Commission fixée en dollars : le prix est la somme, pas une division.
   if (estAeroportVille(depart, arrivee)) return net + COMMISSION_AEROPORT_VILLE_USD;
@@ -890,6 +903,10 @@ export function tarifPriveItineraire(depart: string, arrivee: string): number {
     }
   }
   return Math.ceil(net / (1 - COMMISSION_PRIVE.petit));
+}
+
+export function tarifPriveItineraire(depart: string, arrivee: string): number {
+  return baseUsdItineraire(depart, arrivee) + supplementUsd(depart, arrivee);
 }
 
 /** CE QUE ZANZIGO GARDE sur ce trajet : la différence, jamais recalculée. */

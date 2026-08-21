@@ -152,6 +152,20 @@ const COMMISSION_CORRIDOR = 0.15;
 // garde ses 11 USD comme prévu.
 const COMMISSION_AEROPORT_VILLE_USD = 4.5;
 
+// SUPPLÉMENT DE 1 USD ENTRE VILLAGES (21/08/2026). Une course qui ne part ni
+// de Stone Town ni de l'aéroport coûte un dollar de plus, et ce dollar va
+// ENTIÈREMENT à zanziGo. Le chauffeur touche exactement ce qu'il touchait
+// avant : c'est le client qui met le supplément, pas lui.
+//
+// Pourquoi seulement entre villages : ce sont les courses les plus dispersées
+// de l'île, celles où il faut le plus de coups de fil pour trouver une voiture
+// — et celles dont la commission en pourcentage rapportait le moins.
+const SUPPLEMENT_VILLAGE_USD = 1;
+
+function estEntreVillages(pickup, dropoff) {
+  return !HUBS.has(normCity(pickup)) && !HUBS.has(normCity(dropoff));
+}
+
 function estAeroportVille(pickup, dropoff) {
   const p = normCity(pickup);
   const d = normCity(dropoff);
@@ -248,12 +262,15 @@ const PACKAGE_FARES = {
 const round2 = (n) => Math.round(n * 100) / 100;
 
 /**
- * Commission d'une course privée : le pourcentage du prix, MAIS jamais au
- * point d'entamer le net promis au chauffeur. Sur une course remisée, c'est
- * donc zanziGo qui absorbe la remise — quitte à ne rien gagner.
+ * COMMISSION D'UNE COURSE PRIVÉE : le pourcentage appliqué au prix de base,
+ * PLUS le supplément entre villages en entier — ce dollar-là ne se partage
+ * pas. Et jamais au point d'entamer le net promis au chauffeur : sur une
+ * course remisée, c'est zanziGo qui absorbe la remise, quitte à ne rien
+ * gagner sur cette course.
  */
-function commissionPrive(prix, net, taux) {
-  return round2(Math.max(0, Math.min(prix * taux, prix - net)));
+function commissionPrive(prix, net, taux, supplement = 0) {
+  const base = prix - supplement;
+  return round2(Math.max(0, Math.min(base * taux + supplement, prix - net)));
 }
 
 // « Ville (précision) » → « ville » ; insensible à la casse.
@@ -357,7 +374,7 @@ export function netChauffeurPriveUsd(pickup, dropoff) {
  * Taux de commission appliqué à ce trajet précis : 0,12 ou 0,15.
  */
 export function tauxCommissionTrajet(pickup, dropoff) {
-  return tauxCommissionPrive(privateUsdForRoute(pickup, dropoff), pickup, dropoff);
+  return tauxCommissionPrive(baseUsdForRoute(pickup, dropoff), pickup, dropoff);
 }
 
 /**
@@ -475,17 +492,28 @@ export function kmEntreVilles(a, b) {
 // grille par zone pour les liaisons depuis/vers les hubs (tarifs
 // historiques inchangés), formule au kilomètre pour toute autre paire de
 // villes connues, zone en dernier recours.
-export function privateUsdForRoute(pickup, dropoff) {
+/**
+ * Prix client AVANT le supplément entre villages : le premier dollar entier
+ * qui laisse au chauffeur son montant promis une fois la commission prélevée.
+ * On part du net lui-même — en dessous, aucun prix ne peut convenir.
+ */
+function baseUsdForRoute(pickup, dropoff) {
   const net = netChauffeurPriveUsd(pickup, dropoff);
   // Commission fixée en dollars : le prix est la somme, pas une division.
   if (estAeroportVille(pickup, dropoff)) return net + COMMISSION_AEROPORT_VILLE_USD;
-  // Le premier dollar entier qui laisse au chauffeur son montant promis une
-  // fois la commission prélevée. On part du net lui-même : en dessous, aucun
-  // prix ne peut convenir.
   for (let prix = Math.floor(net); prix <= net * 2 + 10; prix += 1) {
     if (round2(prix * (1 - tauxCommissionPrive(prix, pickup, dropoff))) >= net) return prix;
   }
   return Math.ceil(net / (1 - COMMISSION_PRIVE.petit));
+}
+
+/** Le dollar de supplément, s'il s'applique à ce trajet. */
+function supplementUsd(pickup, dropoff) {
+  return estEntreVillages(pickup, dropoff) ? SUPPLEMENT_VILLAGE_USD : 0;
+}
+
+export function privateUsdForRoute(pickup, dropoff) {
+  return baseUsdForRoute(pickup, dropoff) + supplementUsd(pickup, dropoff);
 }
 
 // Prix touriste (USD) d'une place en trajet partagé selon l'itinéraire —
@@ -549,8 +577,14 @@ export function priceTrip(tripType, audience, route = {}) {
       const usd = privateUsdForRoute(route.pickup, route.dropoff);
       const price = Math.round(usd * config.usdToTzsRate);
       const net = Math.round(netChauffeurPriveUsd(route.pickup, route.dropoff) * config.usdToTzsRate);
-      const taux = tauxCommissionPrive(usd, route.pickup, route.dropoff);
-      return { price, commission: commissionPrive(price, net, taux), currency: 'TZS' };
+      const supp = supplementUsd(route.pickup, route.dropoff);
+      const taux = tauxCommissionPrive(usd - supp, route.pickup, route.dropoff);
+      const suppTzs = Math.round(supp * config.usdToTzsRate);
+      return {
+        price,
+        commission: commissionPrive(price, net, taux, suppTzs),
+        currency: 'TZS',
+      };
     }
     // Taxi partagé local : tarif unifié (trajets spéciaux inclus) SUR LES
     // GRANDS AXES uniquement ; ailleurs, prix touriste converti en TZS —
@@ -564,7 +598,9 @@ export function priceTrip(tripType, audience, route = {}) {
   if (tripType === 'private') {
     usd = privateUsdForRoute(route.pickup, route.dropoff);
     // 12 % dès 40 USD, 15 % en dessous — et 15 % sur le couloir du sud-est.
-    taux = tauxCommissionPrive(usd, route.pickup, route.dropoff);
+    // Le taux porte sur le prix HORS supplément : le dollar entre villages
+    // n'est pas une course plus chère, c'est une part zanziGo de plus.
+    taux = tauxCommissionPrive(usd - supplementUsd(route.pickup, route.dropoff), route.pickup, route.dropoff);
   } else if (tripType === 'shared_tourist' || tripType === 'posted_return') {
     usd = sharedSeatUsdForRoute(route.pickup, route.dropoff);
     taux = COMMISSION_RATES.shared; // 22 % — le chauffeur reçoit 78 %
@@ -594,7 +630,8 @@ export function priceTrip(tripType, audience, route = {}) {
     // zanziGo ne gagne rien sur cette course-là.
     const net = netChauffeurPriveUsd(route.pickup, route.dropoff);
     const price = Math.max(net, remise);
-    return { price, commission: commissionPrive(price, net, taux), currency: 'USD' };
+    const supp = supplementUsd(route.pickup, route.dropoff);
+    return { price, commission: commissionPrive(price, net, taux, supp), currency: 'USD' };
   }
   return { price: remise, commission: round2(remise * taux), currency: 'USD' };
 }

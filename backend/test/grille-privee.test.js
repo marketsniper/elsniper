@@ -24,6 +24,10 @@ useTestDb();
 
 const HUBS = ['Stone Town', 'Aéroport international Abeid Amani Karume'];
 
+/** Une course entre deux villages porte 1 USD de supplément, tout pour zanziGo. */
+const estEntreVillages = (a, b) =>
+  !HUBS.includes(a) && !HUBS.includes(b) && a !== 'Stone Town Ferry' && b !== 'Stone Town Ferry';
+
 /**
  * Vérifie un trajet dans les DEUX sens : le montant promis au chauffeur, le
  * prix client, et le fait que la commission tombe bien sur 12 ou 15 % sans
@@ -37,7 +41,10 @@ function verifier(depart, arrivee, net, prixClient) {
     assert.equal(netChauffeurPriveUsd(a, b), net, `net promis ${a} → ${b}`);
     assert.equal(privateUsdForRoute(a, b), prixClient, `prix client ${a} → ${b}`);
     const course = priceTrip('private', 'tourist', { pickup: a, dropoff: b });
-    const taux = course.commission / course.price;
+    // Le SUPPLÉMENT de 1 USD entre villages va entier à zanziGo : le taux ne
+    // porte donc que sur le reste du prix.
+    const supplement = estEntreVillages(a, b) ? 1 : 0;
+    const taux = (course.commission - supplement) / (course.price - supplement);
     assert.ok(
       Math.abs(taux - 0.12) < 0.0005 || Math.abs(taux - 0.15) < 0.0005,
       `${a} → ${b} : commission de ${(taux * 100).toFixed(2)} %, attendu 12 ou 15`
@@ -117,35 +124,35 @@ describe('Grille privée : le net du chauffeur décide, le forfait s’ajoute', 
     }
   });
 
-  it('les traversées du nord vers le sud : 55 USD au chauffeur, 63 au client', () => {
+  it('les traversées du nord vers le sud : 55 USD au chauffeur, 64 au client', () => {
     for (const nord of ['Nungwi', 'Kendwa']) {
       for (const sud of ['Makunduchi', 'Kizimkazi', 'Mtende', 'Michamvi', 'Dongwe']) {
-        verifier(nord, sud, 55, 63);
+        verifier(nord, sud, 55, 64);
       }
     }
   });
 
   it('depuis le nord, par paliers : 25, 35 puis 50 USD', () => {
     for (const nord of ['Nungwi', 'Kendwa']) {
-      for (const ville of ['Matemwe', 'Pwani Mchangani']) verifier(nord, ville, 25, 30);
-      for (const ville of ['Kiwengwa', 'Uroa', 'Chwaka']) verifier(nord, ville, 35, 40);
-      for (const ville of ['Paje', 'Bwejuu', 'Jambiani']) verifier(nord, ville, 50, 57);
+      for (const ville of ['Matemwe', 'Pwani Mchangani']) verifier(nord, ville, 25, 31);
+      for (const ville of ['Kiwengwa', 'Uroa', 'Chwaka']) verifier(nord, ville, 35, 41);
+      for (const ville of ['Paje', 'Bwejuu', 'Jambiani']) verifier(nord, ville, 50, 58);
     }
     // Nungwi et Kendwa sont voisins : la règle du nord ne s'applique pas entre eux.
-    verifier('Nungwi', 'Kendwa', 10, 12);
+    verifier('Nungwi', 'Kendwa', 10, 13);
   });
 
   it('sauts de village de la côte est : 10, 15 ou 20 USD', () => {
-    verifier('Paje', 'Jambiani', 10, 12);
-    verifier('Paje', 'Bwejuu', 10, 12);
-    verifier('Paje', 'Makunduchi', 15, 18);
-    verifier('Kizimkazi', 'Makunduchi', 15, 18);
-    verifier('Makunduchi', 'Mtende', 15, 18);
+    verifier('Paje', 'Jambiani', 10, 13);
+    verifier('Paje', 'Bwejuu', 10, 13);
+    verifier('Paje', 'Makunduchi', 15, 19);
+    verifier('Kizimkazi', 'Makunduchi', 15, 19);
+    verifier('Makunduchi', 'Mtende', 15, 19);
     // Michamvi et Dongwe sont au bout de la presqu'île : le chauffeur en
     // revient à vide. Plus cher que Makunduchi, pourtant plus loin.
-    verifier('Paje', 'Michamvi', 20, 24);
-    verifier('Paje', 'Dongwe', 20, 24);
-    verifier('Paje', 'Kizimkazi', 20, 24);
+    verifier('Paje', 'Michamvi', 20, 25);
+    verifier('Paje', 'Dongwe', 20, 25);
+    verifier('Paje', 'Kizimkazi', 20, 25);
     assert.ok(
       netChauffeurPriveUsd('Paje', 'Michamvi') > netChauffeurPriveUsd('Paje', 'Makunduchi'),
       'la presqu’île sans issue doit rester au-dessus du village plus lointain'
@@ -154,9 +161,9 @@ describe('Grille privée : le net du chauffeur décide, le forfait s’ajoute', 
 
   it('la côte sud-est vers la côte nord-est passe par Tunguu : 45, 47 ou 50', () => {
     for (const sudEst of ['Paje', 'Bwejuu', 'Jambiani']) {
-      for (const nordEst of ['Chwaka', 'Uroa', 'Pongwe']) verifier(sudEst, nordEst, 45, 52);
+      for (const nordEst of ['Chwaka', 'Uroa', 'Pongwe']) verifier(sudEst, nordEst, 45, 53);
       for (const nordEst of ['Kiwengwa', 'Pwani Mchangani', 'Matemwe']) {
-        verifier(sudEst, nordEst, 47, 54);
+        verifier(sudEst, nordEst, 47, 55);
       }
     }
     for (const sud of ['Makunduchi', 'Michamvi', 'Dongwe', 'Kizimkazi', 'Mtende']) {
@@ -168,16 +175,16 @@ describe('Grille privée : le net du chauffeur décide, le forfait s’ajoute', 
         'Pwani Mchangani',
         'Matemwe',
       ]) {
-        verifier(sud, nordEst, 50, 57);
+        verifier(sud, nordEst, 50, 58);
       }
     }
   });
 
   it('ce que la liste ne couvre pas retombe sur les kilomètres', () => {
     // Villages voisins de la côte nord-est : aucun groupe ne les nomme.
-    verifier('Uroa', 'Pongwe', 10, 12); // ≈ 7 km
-    verifier('Matemwe', 'Kiwengwa', 15, 18); // ≈ 22 km
-    verifier('Kiwengwa', 'Chwaka', 20, 24); // ≈ 27 km
+    verifier('Uroa', 'Pongwe', 10, 13); // ≈ 7 km
+    verifier('Matemwe', 'Kiwengwa', 15, 19); // ≈ 22 km
+    verifier('Kiwengwa', 'Chwaka', 20, 25); // ≈ 27 km
   });
 
   it('la côte est se compte en VILLAGES traversés, pas en kilomètres', () => {
@@ -185,12 +192,12 @@ describe('Grille privée : le net du chauffeur décide, le forfait s’ajoute', 
     // Kizimkazi se suivent sur une seule route. Un voisin immédiat vaut 10,
     // quel que soit le kilométrage : Jambiani ↔ Makunduchi fait 14 km et
     // Michamvi ↔ Dongwe 9, les deux se paient pareil.
-    verifier('Jambiani', 'Makunduchi', 10, 12);
-    verifier('Michamvi', 'Dongwe', 10, 12);
-    verifier('Mtende', 'Kizimkazi', 10, 12);
-    verifier('Bwejuu', 'Jambiani', 15, 18); // un village entre les deux
-    verifier('Jambiani', 'Kizimkazi', 20, 24); // trois villages et plus
-    verifier('Michamvi', 'Makunduchi', 20, 24);
+    verifier('Jambiani', 'Makunduchi', 10, 13);
+    verifier('Michamvi', 'Dongwe', 10, 13);
+    verifier('Mtende', 'Kizimkazi', 10, 13);
+    verifier('Bwejuu', 'Jambiani', 15, 19); // un village entre les deux
+    verifier('Jambiani', 'Kizimkazi', 20, 25); // trois villages et plus
+    verifier('Michamvi', 'Makunduchi', 20, 25);
     // Un voisin ne peut jamais coûter plus cher qu'un village plus lointain
     // sur la même route — c'est ce que les paliers au kilomètre faisaient.
     assert.ok(
