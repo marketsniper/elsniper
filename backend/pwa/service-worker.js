@@ -4,17 +4,41 @@
 //  - les assets hachés (_expo/, assets/) sont servis cache d'abord — leurs
 //    noms changent à chaque build, donc jamais de contenu périmé ;
 //  - les pages (/web/…) sont servies réseau d'abord, avec repli sur la
-//    dernière version en cache quand le réseau est coupé.
-const CACHE = 'zanzigo-web-v2';
+//    dernière version en cache quand le réseau est coupé, et en tout dernier
+//    recours sur un écran d'attente maison : JAMAIS « Ce site est
+//    inaccessible » du navigateur, qui laisse l'utilisateur devant un mur.
+const CACHE = 'zanzigo-web-v3';
+const COQUILLE = '/web/';
 
 // Y avait-il déjà une version installée ? Si oui, les fenêtres ouvertes
 // affichent l'ANCIENNE application : il faudra les recharger.
 let remplaceUneVersion = false;
 
-self.addEventListener('install', () => {
+self.addEventListener('install', (evenement) => {
   remplaceUneVersion = !!self.registration.active;
+  // La coquille de page est mise de côté DÈS l'installation. Sans elle, une
+  // coupure réseau au mauvais moment — le serveur gratuit qui redémarre juste
+  // après une mise en ligne, par exemple — ne laissait rien à servir.
+  evenement.waitUntil(precharger());
   self.skipWaiting();
 });
+
+/** Coquille de page + fichier de l'application : de quoi démarrer hors ligne. */
+async function precharger() {
+  try {
+    const cache = await caches.open(CACHE);
+    await cache.add(new Request(COQUILLE, { cache: 'reload' }));
+    // version.json annonce le nom du fichier de l'application (il change à
+    // chaque version) : sans lui, la coquille seule afficherait un écran vide.
+    const carte = await fetch('/web/version.json', { cache: 'no-store' });
+    const version = carte.ok ? await carte.json() : null;
+    if (version && version.entree) {
+      await cache.add('/web/_expo/static/js/web/' + version.entree);
+    }
+  } catch (e) {
+    // Hors ligne à l'installation : on repassera par le réseau, c'est tout.
+  }
+}
 
 self.addEventListener('activate', (evenement) => {
   evenement.waitUntil(
@@ -121,21 +145,99 @@ self.addEventListener('fetch', (evenement) => {
     return;
   }
 
-  // Pages /web : réseau d'abord, repli hors-ligne sur la coquille en cache.
+  // Pages /web : réseau d'abord, puis les filets de sécurité (voir plus bas).
   if (url.pathname === '/web' || url.pathname.startsWith('/web/')) {
-    evenement.respondWith(
-      fetch(requete)
-        .then((reponse) => {
-          if (reponse.ok && requete.mode === 'navigate') {
-            const copie = reponse.clone();
-            caches.open(CACHE).then((cache) => cache.put('/web/', copie));
-          }
-          return reponse;
-        })
-        .catch(async () => {
-          const secours = await caches.match(requete.mode === 'navigate' ? '/web/' : requete);
-          return secours ?? Response.error();
-        })
-    );
+    evenement.respondWith(reponsePage(requete));
   }
 });
+
+/**
+ * Une page /web, avec trois filets sous le réseau :
+ *   1. seconde tentative — l'hébergement gratuit s'endort, et le tout premier
+ *      appel après le réveil est parfois refusé net (connexion réinitialisée) ;
+ *   2. la dernière version en cache — l'application marche hors ligne ;
+ *   3. un écran d'attente maison qui réessaie tout seul.
+ *
+ * Le troisième filet existe pour une raison précise : rendre `Response.error()`
+ * fait afficher au navigateur son propre écran « Ce site est inaccessible »,
+ * qui ne réessaie jamais et donne l'impression que zanziGo est mort.
+ */
+async function reponsePage(requete) {
+  const navigation = requete.mode === 'navigate';
+  try {
+    return await reseau(requete, navigation);
+  } catch (premierEchec) {
+    if (navigation) {
+      try {
+        await new Promise((suite) => setTimeout(suite, 1500));
+        return await reseau(requete, navigation);
+      } catch (secondEchec) {
+        // Les deux tentatives ont échoué : on descend dans les filets.
+      }
+    }
+    const secours = await caches.match(navigation ? COQUILLE : requete);
+    if (secours) return secours;
+    return navigation ? ecranAttente() : Response.error();
+  }
+}
+
+/** Un aller-retour réseau, en gardant la page servie pour le mode hors ligne. */
+async function reseau(requete, navigation) {
+  const reponse = await fetch(requete);
+  if (reponse.ok && navigation) {
+    const copie = reponse.clone();
+    caches.open(CACHE).then((cache) => cache.put(COQUILLE, copie)).catch(() => {});
+  }
+  return reponse;
+}
+
+/**
+ * Écran d'attente servi en 200 : le navigateur l'affiche comme une page
+ * normale, et cette page se recharge toute seule jusqu'au retour du serveur,
+ * en espaçant les tentatives pour ne pas tourner en boucle serrée.
+ */
+function ecranAttente() {
+  return new Response(HTML_ATTENTE, {
+    status: 200,
+    headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' },
+  });
+}
+
+const HTML_ATTENTE = `<!doctype html>
+<html lang="fr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>zanziGo</title>
+<style>
+  html, body { height: 100%; margin: 0; }
+  body { background: #33222B; color: #FFE0D2; display: flex; align-items: center;
+         justify-content: center; text-align: center; padding: 24px;
+         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+  .marque { font-size: 34px; font-weight: 800; letter-spacing: -0.5px; }
+  .marque span { color: #E4572E; }
+  .rond { width: 34px; height: 34px; margin: 22px auto; border-radius: 50%;
+          border: 3px solid rgba(255,224,210,.25); border-top-color: #E4572E;
+          animation: tourne 0.9s linear infinite; }
+  @keyframes tourne { to { transform: rotate(360deg); } }
+  p { margin: 6px 0; font-size: 15px; line-height: 1.45; }
+  .discret { color: rgba(255,224,210,.6); font-size: 13px; }
+  button { margin-top: 22px; background: #E4572E; color: #fff; border: 0;
+           border-radius: 999px; padding: 13px 26px; font-size: 15px;
+           font-weight: 600; cursor: pointer; }
+</style></head>
+<body><div>
+  <div class="marque">zanzi<span>Go</span></div>
+  <div class="rond"></div>
+  <p>Le serveur se réveille, un instant…</p>
+  <p class="discret">The server is waking up · Seva inaamka</p>
+  <button onclick="location.reload()">Réessayer</button>
+</div>
+<script>
+  // Le serveur gratuit met jusqu'à une minute à se relever. On réessaie en
+  // espaçant : 4 s, 8 s, 12 s… plafonné à 30 s, pour ne pas le harceler.
+  var n = 0;
+  try { n = parseInt(sessionStorage.getItem('zanzigo-attente') || '0', 10) || 0; } catch (e) {}
+  n = n + 1;
+  try { sessionStorage.setItem('zanzigo-attente', String(n)); } catch (e) {}
+  setTimeout(function () { location.reload(); }, Math.min(4000 * n, 30000));
+</script>
+</body></html>`;

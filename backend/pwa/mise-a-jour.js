@@ -7,6 +7,15 @@
 // qui l'appelle, elle, est vérifiée à chaque ouverture. Il arrive donc
 // partout dès la première visite, même sur un appareil resté en arrière.
 
+// L'application s'est chargée : on efface le compteur de l'écran d'attente
+// du service worker, pour que la prochaine panne réessaie vite (4 s) au lieu
+// de repartir avec l'espacement de la panne précédente.
+try {
+  window.sessionStorage.removeItem('zanzigo-attente');
+} catch (e) {
+  // Navigation privée : sans mémoire, le compteur repart de zéro tout seul.
+}
+
 // ----- Une nouvelle version prend la main ---------------------------------
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.ready
