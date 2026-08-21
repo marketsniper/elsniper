@@ -9,6 +9,7 @@ import {
   Pressable,
   RefreshControl,
   ScrollView,
+  StyleSheet,
   Text,
   TextInput,
   View,
@@ -30,10 +31,32 @@ import {
   rayons,
   stylesReactifs,
   tailles,
+  usePeau,
 } from '@/lib/theme';
 import type { StatutColis, StatutTrajet } from '@/lib/types';
 
 type NomIonicons = React.ComponentProps<typeof Ionicons>['name'];
+
+// LE VRAI FLOU, sur téléphone. `expo-blur` est un module NATIF : les
+// binaires installés avant son arrivée ne l'ont pas, et un import direct les
+// ferait planter dès l'ouverture — la mise à jour à distance pousse le
+// JavaScript, jamais le natif. On le demande donc poliment : s'il n'est pas
+// dans le binaire, on garde le voile translucide et personne ne plante.
+type ComposantFlou = React.ComponentType<{
+  intensity?: number;
+  tint?: string;
+  experimentalBlurMethod?: string;
+  style?: StyleProp<ViewStyle>;
+}>;
+let VueFloue: ComposantFlou | null = null;
+if (Platform.OS !== 'web') {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    VueFloue = require('expo-blur').BlurView as ComposantFlou;
+  } catch {
+    VueFloue = null; // binaire d'avant le flou : voile translucide
+  }
+}
 
 /**
  * Conteneur d'écran : photo de plage en fond (voile blanc de lisibilité),
@@ -66,8 +89,23 @@ export function Ecran({
   const rang = React.useRef(0);
   const compteur = React.useMemo(() => ({ suivant: () => rang.current++ }), []);
 
+  // « L'entrant se rassemble » : l'écran arrive un souffle trop grand et
+  // légèrement effacé, puis se pose. Les cartes remontent ensuite en décalé.
+  // Le lagon, lui, ne bouge pas : il est peint sous la navigation.
+  const arrivee = React.useRef(new Animated.Value(0)).current;
+  React.useEffect(() => {
+    Animated.timing(arrivee, { toValue: 1, duration: 380, useNativeDriver: true }).start();
+  }, [arrivee]);
+
   return (
     <RangDesCartes.Provider value={compteur}>
+    <Animated.View
+      style={{
+        flex: 1,
+        opacity: arrivee,
+        transform: [{ scale: arrivee.interpolate({ inputRange: [0, 1], outputRange: [1.045, 1] }) }],
+      }}
+    >
     <FondPlage fond={fond} voile="clair">
       <SafeAreaView style={styles.ecran} edges={['top', 'left', 'right']}>
         <KeyboardAvoidingView
@@ -100,6 +138,7 @@ export function Ecran({
         {onRefresh && <BoutonRafraichir onPress={rafraichir} enCours={rafraichit} />}
       </SafeAreaView>
     </FondPlage>
+    </Animated.View>
     </RangDesCartes.Provider>
   );
 }
@@ -214,6 +253,10 @@ export function Carte({
     }).start();
   }, [entree, rang]);
 
+  // Le calque de flou vit DANS la carte, découpé à son arrondi. Le mettre
+  // sur la carte elle-même exigerait overflow:hidden, qui tue l'ombre iOS.
+  const verre = usePeau() === 'verre' && VueFloue;
+
   return (
     <Animated.View
       style={[
@@ -227,6 +270,18 @@ export function Carte({
         style,
       ]}
     >
+      {verre && VueFloue && (
+        <View style={styles.calqueFlou} pointerEvents="none">
+          <VueFloue
+            intensity={26}
+            tint="dark"
+            // Sans cette méthode, Android ne floute pas : il pose un simple
+            // voile — autant garder le nôtre.
+            experimentalBlurMethod="dimezisBlurView"
+            style={StyleSheet.absoluteFill}
+          />
+        </View>
+      )}
       {children}
     </Animated.View>
   );
@@ -537,6 +592,13 @@ const styles = stylesReactifs(() => ({
     padding: espaces.l,
     gap: espaces.s,
     ...ombres.carte,
+  },
+  // Le flou, découpé à l'arrondi de la carte. `overflow` est ici et pas sur
+  // la carte : masquer la carte masquerait aussi son ombre (iOS).
+  calqueFlou: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: rayons.carte,
+    overflow: 'hidden',
   },
   titre: {
     fontSize: 25,
