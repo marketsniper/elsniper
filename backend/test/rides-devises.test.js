@@ -33,7 +33,7 @@ describe('Devises taxi partagé (parcours local complet)', () => {
     const liste = await request(app).get('/api/rides').set(authHeaders(tokenLocal));
     const ride = liste.body[0];
     assert.equal(ride.currency, 'TZS');
-    assert.equal(Number(ride.price_per_seat), 16000);
+    assert.equal(Number(ride.price_per_seat), 17000);
     assert.equal(ride.price_per_seat_usd, undefined);
 
     // Réservation par le local : la réponse reste en TZS.
@@ -43,23 +43,23 @@ describe('Devises taxi partagé (parcours local complet)', () => {
       .send({ seats: 2 });
     assert.equal(resa.status, 201);
     assert.equal(resa.body.currency, 'TZS');
-    assert.equal(Number(resa.body.price_per_seat), 16000);
+    assert.equal(Number(resa.body.price_per_seat), 17000);
     assert.equal(resa.body.price_per_seat_usd, undefined);
 
     // Fiche chauffeur : la réservation du local est étiquetée local + TZS,
     // et l'annonce elle-même porte les deux prix (TZS locaux, USD touristes).
     const mine = await request(app).get('/api/rides/mine').set(authHeaders(tokenChauffeur));
     const annonce = mine.body[0];
-    assert.equal(Number(annonce.price_per_seat), 16000);
+    assert.equal(Number(annonce.price_per_seat), 17000);
     assert.equal(Number(annonce.price_per_seat_usd), 16);
     const booking = annonce.bookings[0];
     assert.equal(booking.client_type, 'local');
     assert.equal(booking.currency, 'TZS');
-    assert.equal(Number(booking.price_per_seat), 16000);
+    assert.equal(Number(booking.price_per_seat), 17000);
     // Commission partagé local 17 % : le chauffeur touche 83 % de 16 000,
     // soit PLUS que les 12 750 d'avant (15 % de 15 000) — la hausse de la
     // place a été décidée pour ça.
-    assert.equal(Number(booking.net_per_seat), 13280);
+    assert.equal(Number(booking.net_per_seat), 13600);
   });
 
   it('téléphone équipe : l\'identité CLIENT prime sur la clé admin (touriste = USD)', async () => {
@@ -123,14 +123,14 @@ describe('Devises taxi partagé (parcours local complet)', () => {
       .set(authHeaders(tokenChauffeur))
       .send({ origin: 'Nungwi', destination: 'Paje', departureAt: depart, seatsTotal: 4 });
     assert.equal(aller.status, 201);
-    assert.equal(Number(aller.body.price_per_seat), 21000);
+    assert.equal(Number(aller.body.price_per_seat), 22000);
 
     const retour = await request(app)
       .post('/api/rides')
       .set(authHeaders(tokenChauffeur))
       .send({ origin: 'Paje', destination: 'Nungwi', departureAt: depart, seatsTotal: 4 });
     assert.equal(retour.status, 201);
-    assert.equal(Number(retour.body.price_per_seat), 21000);
+    assert.equal(Number(retour.body.price_per_seat), 22000);
 
     // Les autres liaisons restent au tarif unifié 16 000 TZS.
     const standard = await request(app)
@@ -138,7 +138,7 @@ describe('Devises taxi partagé (parcours local complet)', () => {
       .set(authHeaders(tokenChauffeur))
       .send({ origin: 'Stone Town Ferry', destination: 'Jambiani', departureAt: depart, seatsTotal: 4 });
     assert.equal(standard.status, 201);
-    assert.equal(Number(standard.body.price_per_seat), 16000);
+    assert.equal(Number(standard.body.price_per_seat), 17000);
   });
 
   it('trajet court (privé < 35 USD) : pas de taxi partagé du tout', async () => {
@@ -163,7 +163,7 @@ describe('Devises taxi partagé (parcours local complet)', () => {
       .set(authHeaders(tokenChauffeur))
       .send({ origin: 'Kiwengwa', destination: 'Jambiani', departureAt: depart, seatsTotal: 4 });
     assert.equal(moyen.status, 201, JSON.stringify(moyen.body));
-    assert.equal(Number(moyen.body.price_per_seat), 16000);
+    assert.equal(Number(moyen.body.price_per_seat), 17000);
     // Sous le seuil (Uroa → Chwaka, saut de village) : pas de taxi partagé
     // du tout — la course privée est la seule option. (Pongwe → Paje, qui
     // servait d'exemple ici, est passé à 42 USD : la route réelle repasse
@@ -180,7 +180,7 @@ describe('Devises taxi partagé (parcours local complet)', () => {
       .set(authHeaders(tokenChauffeur))
       .send({ origin: 'Matemwe', destination: 'Paje', departureAt: depart, seatsTotal: 4 });
     assert.equal(grand.status, 201);
-    assert.equal(Number(grand.body.price_per_seat), 16000);
+    assert.equal(Number(grand.body.price_per_seat), 17000);
     // Les grands axes du NORD gardent leur place à 16 000 malgré la baisse
     // du transfert à 40 USD : c'est tout l'intérêt du seuil abaissé.
     const nord = await request(app)
@@ -188,7 +188,7 @@ describe('Devises taxi partagé (parcours local complet)', () => {
       .set(authHeaders(tokenChauffeur))
       .send({ origin: 'Stone Town', destination: 'Nungwi', departureAt: depart, seatsTotal: 4 });
     assert.equal(nord.status, 201, JSON.stringify(nord.body));
-    assert.equal(Number(nord.body.price_per_seat), 16000);
+    assert.equal(Number(nord.body.price_per_seat), 17000);
   });
 
   it('départ passé de +10 min : annonce automatiquement CLÔTURÉE (pas annulée), invisible, non réservable', async () => {
@@ -266,7 +266,7 @@ describe('Paiement des places de taxi partagé', () => {
       .send({ seats: 2 });
     assert.equal(resa.status, 201);
     assert.ok(resa.body.payment, 'le paiement doit accompagner la réservation');
-    assert.equal(Number(resa.body.payment.amount), 32000);
+    assert.equal(Number(resa.body.payment.amount), 34000);
     assert.equal(resa.body.payment.currency, 'TZS');
     assert.equal(resa.body.payment.status, 'pending');
 
@@ -293,9 +293,9 @@ describe('Paiement des places de taxi partagé', () => {
     // équipe (CA + net zanziGo) et chauffeur (net), sans attendre le départ.
     const statsEquipe = await request(app).get('/api/stats').set(adminHeaders());
     assert.equal(statsEquipe.body.revenue.today.places, 2);
-    assert.equal(Number(statsEquipe.body.revenue.today.ca.TZS), 32000);
+    assert.equal(Number(statsEquipe.body.revenue.today.ca.TZS), 34000);
     // Commission 17 % sur le partagé local : 5 440 TZS pour zanziGo.
-    assert.equal(Number(statsEquipe.body.revenue.today.gains.TZS), 5440);
+    assert.equal(Number(statsEquipe.body.revenue.today.gains.TZS), 6800);
 
     const statsChauffeur = await request(app)
       .get(`/api/drivers/${driver.id}/stats`)
@@ -303,7 +303,7 @@ describe('Paiement des places de taxi partagé', () => {
     assert.equal(statsChauffeur.body.today.places, 2);
     // Net chauffeur : 83 % de 32 000 = 26 560 TZS — plus que les 25 500
     // d'avant (85 % de 30 000). Les deux compteurs disent la même chose.
-    assert.equal(Number(statsChauffeur.body.today.gains.TZS), 26560);
+    assert.equal(Number(statsChauffeur.body.today.gains.TZS), 27200);
   });
 });
 

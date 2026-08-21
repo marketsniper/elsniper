@@ -134,10 +134,10 @@ describe('Parrainage : le crédit se pose et se déduit tout seul', () => {
       .send({ method: 'carte' });
     assert.equal(paiement.status, 201, JSON.stringify(paiement.body));
     assert.equal(Number(paiement.body.remise_parrainage), 5);
-    assert.equal(Number(paiement.body.amount), 45.76);
-    assert.equal(Number(paiement.body.surcharge), 1.76);
+    assert.equal(Number(paiement.body.amount), 46.8);
+    assert.equal(Number(paiement.body.surcharge), 1.8);
     assert.match(paiement.body.mention_parrainage, /Remise parrainage/);
-    assert.equal(Number(paiement.body.prix_course), 49, 'le PRIX ne bouge pas');
+    assert.equal(Number(paiement.body.prix_course), 50, 'le PRIX ne bouge pas');
 
     // Le crédit n'est PAS consommé tant que rien n'est payé…
     assert.equal(await creditDe(filleul.id), 5);
@@ -148,8 +148,8 @@ describe('Parrainage : le crédit se pose et se déduit tout seul', () => {
     // La COMMISSION du chauffeur est calculée sur 47, pas sur 42 : la
     // remise est le geste commercial de zanziGo, pas celui du chauffeur.
     const vue = await request(app).get(`/api/trips/${troisieme.body.id}`).set(adminHeaders());
-    assert.equal(Number(vue.body.price), 49);
-    assert.equal(Number(vue.body.commission), 4);
+    assert.equal(Number(vue.body.price), 50);
+    assert.equal(Number(vue.body.commission), 5);
 
     // Le PARRAIN, lui aussi, voit sa remise sur sa prochaine course —
     // en portefeuille mobile : (47 − 5) × 2 600 = 109 200 TZS.
@@ -171,7 +171,7 @@ describe('Parrainage : le crédit se pose et se déduit tout seul', () => {
       .post(`/api/trips/${courseParrain.body.id}/payment`)
       .set(authHeaders(tokenParrain))
       .send({ method: 'mobile' });
-    assert.equal(Number(paiementParrain.body.amount), 114400);
+    assert.equal(Number(paiementParrain.body.amount), 117000);
     assert.equal(Number(paiementParrain.body.remise_parrainage), 5);
   });
 
@@ -199,7 +199,7 @@ describe('Parrainage : le crédit se pose et se déduit tout seul', () => {
       .post(`/api/trips/${course.body.id}/payment`)
       .set(authHeaders(token))
       .send({ method: 'carte' });
-    assert.equal(Number(paiement.body.amount), 45.76);
+    assert.equal(Number(paiement.body.amount), 46.8);
 
     const bascule = await request(app)
       .post(`/api/payments/${paiement.body.id}/moyen`)
@@ -207,7 +207,7 @@ describe('Parrainage : le crédit se pose et se déduit tout seul', () => {
       .send({ moyen: 'mobile' });
     assert.equal(bascule.status, 200, JSON.stringify(bascule.body));
     // (47 − 5) × 2 600 : la base reste remisée après la bascule.
-    assert.equal(Number(bascule.body.amount), 114400);
+    assert.equal(Number(bascule.body.amount), 117000);
   });
 
   it('course annulée après paiement : l\'argent est remboursé ET le crédit revient', async () => {
@@ -245,7 +245,7 @@ describe('Parrainage : le crédit se pose et se déduit tout seul', () => {
     assert.equal(annulation.status, 200, JSON.stringify(annulation.body));
     // Remboursé en argent : ce qu'il a réellement payé, hors frais carte —
     // 43,68 − 1,68 = 42,00 (la remise n'était pas de l'argent versé).
-    assert.equal(Number(annulation.body.refund.amount), 44);
+    assert.equal(Number(annulation.body.refund.amount), 45);
     // Et le crédit revient, prêt pour la prochaine course.
     assert.equal(await creditDe(filleul.id), 5, 'le crédit est rendu');
   });

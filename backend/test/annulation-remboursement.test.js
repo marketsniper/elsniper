@@ -64,14 +64,14 @@ describe('Annulation des places de taxi partagé (barème 24/48 h)', () => {
     assert.equal(place.cancellable, true);
     assert.equal(place.refund_rate, 1);
     assert.equal(place.currency, 'TZS');
-    assert.equal(Number(place.amount), 32000);
+    assert.equal(Number(place.amount), 34000);
 
     const annulation = await request(app)
       .post(`/api/rides/reservations/${place.id}/cancel`)
       .set(authHeaders(tokenLocal));
     assert.equal(annulation.status, 200, JSON.stringify(annulation.body));
     assert.equal(annulation.body.refund.rate, 1);
-    assert.equal(Number(annulation.body.refund.amount), 32000);
+    assert.equal(Number(annulation.body.refund.amount), 34000);
     assert.equal(annulation.body.refund.currency, 'TZS');
     assert.ok(annulation.body.whatsapp_link.includes('wa.me'));
 
@@ -83,7 +83,7 @@ describe('Annulation des places de taxi partagé (barème 24/48 h)', () => {
     const dus = await request(app).get('/api/payments/remboursements').set(adminHeaders());
     assert.equal(dus.status, 200);
     assert.equal(dus.body.length, 1);
-    assert.equal(Number(dus.body[0].refund_amount), 32000);
+    assert.equal(Number(dus.body[0].refund_amount), 34000);
     assert.equal(dus.body[0].ride_origin, 'Aéroport (AAKIA)');
 
     // …et se solde d'un bouton (une seule fois).
@@ -115,7 +115,7 @@ describe('Annulation des places de taxi partagé (barème 24/48 h)', () => {
       .set(authHeaders(tokenLocal));
     assert.equal(annulation.status, 200);
     assert.equal(annulation.body.refund.rate, 0.5);
-    assert.equal(Number(annulation.body.refund.amount), 16000);
+    assert.equal(Number(annulation.body.refund.amount), 17000);
   });
 
   it('à moins de 24 h : annulation refusée, la place reste due', async () => {

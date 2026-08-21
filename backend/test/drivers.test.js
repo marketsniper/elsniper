@@ -256,8 +256,8 @@ describe('Chauffeur — compteur de gains', () => {
     const equipe = await request(app).get('/api/stats').set(adminHeaders());
     assert.equal(equipe.status, 200);
     assert.equal(equipe.body.revenue.today.courses, 1);
-    assert.equal(equipe.body.revenue.today.ca.USD, 49);
-    assert.equal(equipe.body.revenue.today.gains.USD, 4);
+    assert.equal(equipe.body.revenue.today.ca.USD, 50);
+    assert.equal(equipe.body.revenue.today.gains.USD, 5);
     assert.equal(equipe.body.revenue.month.courses, 1);
   });
 });

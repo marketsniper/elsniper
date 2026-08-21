@@ -11,7 +11,7 @@ import { config } from '../config.js';
 //               (config.hotelDiscountRate, 5 %).
 //
 // Zones (depuis/vers la ville ou l'aéroport) :
-// Tarif local UNIFIÉ : 16 000 TZS la place partout (sauf trajets spéciaux
+// Tarif local UNIFIÉ : 17 000 TZS la place partout (sauf trajets spéciaux
 // ci-dessous) — plus simple à retenir pour les clients et les chauffeurs.
 // HAUSSE DE 5 % SUR LES PRIX TOURISTES (17/08/2026), arrondie au dollar.
 // Décision commerciale : les transferts touristes avaient de la marge par
@@ -25,12 +25,12 @@ import { config } from '../config.js';
 // gagne PLUS qu'avant, comme sur tous les autres services. Ce sont les
 // 1 000 TZS d'écart, côté client local, qui financent les deux.
 const ZONE_TIERS = {
-  nord: { privateUsd: 47, localTzs: 16000 }, // Nungwi / Kendwa       (45 → 47)
-  nordEst: { privateUsd: 42, localTzs: 16000 }, // Matemwe / Kiwengwa (40 → 42)
-  est: { privateUsd: 47, localTzs: 16000 }, // Paje / Bwejuu          (45 → 47)
-  estSud: { privateUsd: 53, localTzs: 16000 }, // Jambiani            (50 → 53)
-  estPointe: { privateUsd: 53, localTzs: 16000 }, // Michamvi         (50 → 53)
-  sud: { privateUsd: 47, localTzs: 16000 }, // Kizimkazi / Makunduchi (45 → 47)
+  nord: { privateUsd: 47, localTzs: 17000 }, // Nungwi / Kendwa       (45 → 47)
+  nordEst: { privateUsd: 42, localTzs: 17000 }, // Matemwe / Kiwengwa (40 → 42)
+  est: { privateUsd: 47, localTzs: 17000 }, // Paje / Bwejuu          (45 → 47)
+  estSud: { privateUsd: 53, localTzs: 17000 }, // Jambiani            (50 → 53)
+  estPointe: { privateUsd: 53, localTzs: 17000 }, // Michamvi         (50 → 53)
+  sud: { privateUsd: 47, localTzs: 17000 }, // Kizimkazi / Makunduchi (45 → 47)
 };
 
 // PRIX D'UNE PLACE EN TAXI PARTAGÉ : le TIERS du prix de la course privée du
@@ -50,7 +50,7 @@ function sharedSeatUsd(priveUsd) {
 //      40 USD et plus  → 12 % (grand axe, le chauffeur roule longtemps : 88 %) ;
 //      moins de 40 USD → 17 % (petit trajet : transfert aéroport, saut de
 //      village, liaison courte — proportionnellement plus de frais fixes) ;
-//  - taxi partagé TOURISTE (USD) : 22 % ;
+//  - taxi partagé TOURISTE (USD) : 25 % ;
 //  - taxi partagé LOCAL (TZS) : 17 % ;
 //  - colis 20 % — INCHANGÉ (« sur tous les voyages » : les colis ne sont pas
 //    des voyages, et leur barème avait déjà été mis à part).
@@ -70,8 +70,11 @@ function sharedSeatUsd(priveUsd) {
 // en dollars, pas un taux — voir forfaitZanzigoUsd plus bas. Les places de
 // taxi partagé et les colis, eux, restent au pourcentage.
 const COMMISSION_RATES = {
-  shared: 0.22, // taxi partagé touriste (USD)
-  local: 0.17, // taxi partagé local (TZS)
+  // TAXI PARTAGÉ : zanziGo prend au moins 20 % (21/08/2026). Côté touriste,
+  // 25 % : toutes les places se vendent sous les 20 USD, la règle des petits
+  // trajets s'y applique donc entièrement.
+  shared: 0.25, // taxi partagé touriste (USD)
+  local: 0.2, // taxi partagé local (TZS)
   package: 0.2, // colis : inchangé
 };
 
@@ -80,8 +83,8 @@ const COMMISSION_RATES = {
 // parce qu'ils l'avaient été : la hausse de 2 points ne s'appliquait qu'ici,
 // et les places de taxi partagé étaient restées à l'ancien barème. Une seule
 // source pour la commission, sinon elle diverge en silence.
-export const TAUX_PLACE_LOCALE = COMMISSION_RATES.local; // 17 % (place en TZS)
-export const TAUX_PLACE_USD = COMMISSION_RATES.shared; // 22 % (touriste, résident, hôtel)
+export const TAUX_PLACE_LOCALE = COMMISSION_RATES.local; // 20 % (place en TZS)
+export const TAUX_PLACE_USD = COMMISSION_RATES.shared; // 25 % (touriste, résident, hôtel)
 
 // Rattachement des villes aux zones. Les villes de la côte centre-est et
 // Fumba sont assimilées aux zones voisines (ajustable sur demande).
@@ -123,12 +126,25 @@ const CITY_ZONES = {
 // revanche, le forfait double (voir CORRIDOR_EMPRUNTE) : c'est le couloir des
 // plages du sud-est qui paie l'infrastructure, pas les traversées rares.
 
-/** Ce que zanziGo garde sur une course privée, selon la taille du trajet. */
+/** Forfait de base, selon la taille du trajet. */
 function forfaitZanzigoUsd(netUsd) {
   if (netUsd < 25) return 2;
   if (netUsd < 45) return 3;
   return 4;
 }
+
+// FRAIS DE PORTEFEUILLE MOBILE : 2 % de plus sur chaque course (21/08/2026).
+// Payer un chauffeur par mobile money coûte un pourcentage du virement à
+// zanziGo. Sans cette ligne, ces frais sortaient du forfait — sur un
+// transfert, ils en mangeaient près du quart.
+const FRAIS_PORTEFEUILLE = 0.02;
+
+// PETITS TRAJETS : zanziGo prend au moins 25 % du prix. Sur un saut de
+// village, un forfait de 2 USD ne couvrait ni le virement au chauffeur, ni le
+// SMS, ni le support — et un trajet à 15 USD net rapportait plus qu'un trajet
+// à 20 net, ce qu'aucun client n'aurait compris.
+const PETIT_TRAJET_NET_MAX_USD = 20;
+const PART_MIN_PETIT_TRAJET = 0.25;
 
 // TRAJETS TRÈS EMPRUNTÉS : le forfait double. Stone Town et l'aéroport vers
 // Paje, Bwejuu et Jambiani, c'est la liaison la plus demandée de l'île. Le
@@ -141,8 +157,9 @@ const CORRIDOR_EMPRUNTE = new Set(['paje', 'bwejuu', 'jambiani']);
 // unique vers toute l'île, quelle que soit la plage.
 const NET_TRANSFERT_USD = 45;
 // L'aéroport et la ville sont à sept kilomètres : ce n'est pas un transfert de
-// plage, et son prix n'a rien à voir.
-const NET_AEROPORT_VILLE_USD = 10;
+// plage, et son prix n'a rien à voir. C'est en revanche la course la plus
+// fréquente de l'île — d'où les 11 USD au chauffeur pour sept kilomètres.
+const NET_AEROPORT_VILLE_USD = 11;
 
 // NETS CHAUFFEUR VILLE ↔ VILLE, par groupes. Le premier groupe qui contient la
 // paire l'emporte : l'ordre va donc du plus précis au plus large. Ce que la
@@ -190,10 +207,15 @@ const GROUPES_NET_USD = [
 
 // Trajets spéciaux à prix fixe (TZS, place locale en taxi partagé), deux
 // sens : la traversée Nungwi ↔ Paje est plus longue que les liaisons
-// standard, la place locale y vaut 21 000 TZS au lieu de 16 000. Elle suit la
+// standard, la place locale y vaut 22 000 TZS au lieu de 17 000. Elle suit la
 // place ordinaire (20 000 → 21 000) pour la même raison : à prix figé, le
 // chauffeur aurait perdu 400 TZS sur la plus longue traversée de l'île.
-const SPECIAL_LOCAL_ROUTES_TZS = [{ a: 'Nungwi', b: 'Paje', tzs: 21000 }];
+// La place LOCALE passe de 16 000 à 17 000 TZS (et de 21 000 à 22 000 sur la
+// grande traversée) le 21/08/2026 : la commission des places partagées est
+// montée à 20 %, et sans cette hausse les 3 points seraient sortis de la poche
+// du chauffeur. À 17 000 il touche 13 600 au lieu de 13 280 — il gagne PLUS
+// qu'avant, comme la dernière fois qu'on a bougé les deux ensemble.
+const SPECIAL_LOCAL_ROUTES_TZS = [{ a: 'Nungwi', b: 'Paje', tzs: 22000 }];
 
 // Colis : forfait par taille (Stone Town → n'importe quelle plage),
 // payé en ligne à 100 % par l'expéditeur.
@@ -302,15 +324,22 @@ export function netChauffeurPriveUsd(pickup, dropoff) {
   return NET_TRANSFERT_USD;
 }
 
-/** Ce que zanziGo garde sur ce trajet précis, en dollars. */
-export function forfaitZanzigoTrajetUsd(pickup, dropoff) {
+/** Le forfait de base applicable à ce trajet (avant frais de portefeuille). */
+function forfaitBaseTrajetUsd(pickup, dropoff, net) {
   const p = normCity(pickup);
   const d = normCity(dropoff);
   const versCorridor =
     (HUBS.has(p) && CORRIDOR_EMPRUNTE.has(d)) || (HUBS.has(d) && CORRIDOR_EMPRUNTE.has(p));
-  return versCorridor
-    ? FORFAIT_EMPRUNTE_USD
-    : forfaitZanzigoUsd(netChauffeurPriveUsd(pickup, dropoff));
+  return versCorridor ? FORFAIT_EMPRUNTE_USD : forfaitZanzigoUsd(net);
+}
+
+/**
+ * CE QUE ZANZIGO GARDE sur ce trajet, en dollars — la différence entre le prix
+ * client et le net du chauffeur. Une seule source : si le prix change, la part
+ * suit, elle n'est jamais recalculée à part.
+ */
+export function forfaitZanzigoTrajetUsd(pickup, dropoff) {
+  return privateUsdForRoute(pickup, dropoff) - netChauffeurPriveUsd(pickup, dropoff);
 }
 
 function specialLocalRouteTzs(pickup, dropoff) {
@@ -420,7 +449,14 @@ export function kmEntreVilles(a, b) {
 // historiques inchangés), formule au kilomètre pour toute autre paire de
 // villes connues, zone en dernier recours.
 export function privateUsdForRoute(pickup, dropoff) {
-  return netChauffeurPriveUsd(pickup, dropoff) + forfaitZanzigoTrajetUsd(pickup, dropoff);
+  const net = netChauffeurPriveUsd(pickup, dropoff);
+  if (net <= PETIT_TRAJET_NET_MAX_USD) {
+    // Le premier dollar entier qui laisse au moins 25 % à zanziGo.
+    let prix = Math.ceil(net / (1 - PART_MIN_PETIT_TRAJET));
+    while ((prix - net) / prix < PART_MIN_PETIT_TRAJET) prix += 1;
+    return prix;
+  }
+  return Math.round(net * (1 + FRAIS_PORTEFEUILLE) + forfaitBaseTrajetUsd(pickup, dropoff, net));
 }
 
 // Prix touriste (USD) d'une place en trajet partagé selon l'itinéraire —

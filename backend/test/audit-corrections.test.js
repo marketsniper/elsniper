@@ -136,7 +136,7 @@ describe('paid_at : la trace qui survit à tout', () => {
     assert.ok(annulation.body.refund, 'le remboursement doit être tracé');
     assert.equal(annulation.body.refund.rate, 1);
     // Prix 47 — la surcharge carte (1,88) reste hors du remboursement.
-    assert.equal(Number(annulation.body.refund.amount), 49);
+    assert.equal(Number(annulation.body.refund.amount), 50);
 
     const dus = await request(app).get('/api/payments/remboursements').set(adminHeaders());
     assert.equal(dus.body.length, 1, 'la ligne est dans « Remboursements à verser »');

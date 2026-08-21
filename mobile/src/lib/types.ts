@@ -297,7 +297,7 @@ export function residentVerifie(utilisateur: Utilisateur | null | undefined): bo
   );
 }
 
-/** Vrai si le compte est local (carte tanzanienne) ET vérifié (tarif 16 000 TZS). */
+/** Vrai si le compte est local (carte tanzanienne) ET vérifié (tarif 17 000 TZS). */
 export function localVerifie(utilisateur: Utilisateur | null | undefined): boolean {
   return (
     champ<TypeCompte>(utilisateur, 'account_type', 'accountType') === 'local' &&
@@ -396,7 +396,7 @@ export function formaterDate(iso: unknown): string {
 // Le prix officiel est TOUJOURS calculé et FIGÉ côté serveur à la création ;
 // cette grille sert uniquement à afficher le prix avant de réserver.
 // Segmentation : touriste USD plein tarif ; résident USD (−10 % une fois
-// vérifié) ; local (carte tanzanienne) 16 000 TZS partout une fois vérifié ;
+// vérifié) ; local (carte tanzanienne) 17 000 TZS partout une fois vérifié ;
 // hôtel TZS (grille dédiée). Un touriste/résident ne voit JAMAIS de TZS,
 // un local ne voit JAMAIS d'USD.
 // ---------------------------------------------------------------------------
@@ -467,22 +467,29 @@ const GROUPES_NET_USD: { a: string[]; b: string[]; net: number }[] = [
 
 /** Transfert depuis/vers un hub : prix unique vers toute l'île. */
 const NET_TRANSFERT_USD = 45;
-/** L'aéroport et la ville sont à sept kilomètres : ce n'est pas un transfert. */
-const NET_AEROPORT_VILLE_USD = 10;
+/** L'aéroport et la ville sont à sept kilomètres : ce n'est pas un transfert,
+ *  mais c'est la course la plus fréquente de l'île. */
+const NET_AEROPORT_VILLE_USD = 11;
 /** Trajets très empruntés : le forfait zanziGo double, le net ne bouge pas. */
 const FORFAIT_EMPRUNTE_USD = 8;
 const CORRIDOR_EMPRUNTE = ['paje', 'bwejuu', 'jambiani'];
 
-/** Ce que zanziGo garde sur une course privée, selon la taille du trajet. */
+/** Forfait de base, selon la taille du trajet. */
 function forfaitZanzigoUsd(netUsd: number): number {
   if (netUsd < 25) return 2;
   if (netUsd < 45) return 3;
   return 4;
 }
 
+/** Frais de portefeuille mobile : 2 % de plus sur chaque course. */
+const FRAIS_PORTEFEUILLE = 0.02;
+/** Petits trajets : zanziGo prend au moins 25 % du prix. */
+const PETIT_TRAJET_NET_MAX_USD = 20;
+const PART_MIN_PETIT_TRAJET = 0.25;
+
 /** Trajets spéciaux TZS : place locale en taxi partagé (deux sens). */
 export const TRAJETS_SPECIAUX_LOCAL_TZS: { villes: [string, string]; prix: number }[] = [
-  { villes: ['Nungwi', 'Paje'], prix: 21000 },
+  { villes: ['Nungwi', 'Paje'], prix: 22000 },
 ];
 
 /** « Ville (précision) » → « ville », comme normCity côté serveur. */
@@ -570,14 +577,14 @@ export function reglementPaiement(
 }
 
 /** Tarif local par défaut (zone inconnue) — affiché aussi sur l'accueil. */
-export const TARIF_LOCAL_TZS = 16000;
+export const TARIF_LOCAL_TZS = 17000;
 
 // ---------------------------------------------------------------------------
 // Grille PAR ZONE — courses depuis/vers la ville ou l'aéroport. La zone est
 // déterminée par la ville zonée de l'itinéraire (les hubs et Stone Town ne
 // sont pas zonés) ; si les deux bouts sont zonés : zone au privé le plus
 // cher. « Ville (précision) » est normalisé. Défaut sans ville zonée :
-// privé 50 USD · partagé 18 USD · local 16 000 TZS.
+// privé 50 USD · partagé 18 USD · local 17 000 TZS.
 // ---------------------------------------------------------------------------
 
 export type ZoneTarifaire = 'nord' | 'nord_est' | 'est' | 'est_sud' | 'est_pointe' | 'sud';
@@ -598,17 +605,17 @@ export function tarifPlacePartagee(priveUsd: number): number {
   return Math.floor(priveUsd / 3);
 }
 
-// Tarif local UNIFIÉ : 16 000 TZS la place partout (sauf trajets spéciaux,
+// Tarif local UNIFIÉ : 17 000 TZS la place partout (sauf trajets spéciaux,
 // ex. Nungwi ↔ Paje 21 000) — miroir de la grille serveur. La place locale a
 // pris 1 000 TZS le jour où la commission a pris 2 points, pour que la hausse
 // ne sorte pas de la poche du chauffeur (voir pricingService.js).
 export const TARIFS_ZONE: Record<ZoneTarifaire, TarifsZone> = {
-  nord: { priveUsd: 47, localTzs: 16000 }, // Nungwi, Kendwa
-  nord_est: { priveUsd: 42, localTzs: 16000 }, // Matemwe → Chwaka
-  est: { priveUsd: 47, localTzs: 16000 }, // Paje, Bwejuu
-  est_sud: { priveUsd: 53, localTzs: 16000 }, // Jambiani
-  est_pointe: { priveUsd: 53, localTzs: 16000 }, // Michamvi
-  sud: { priveUsd: 47, localTzs: 16000 }, // Kizimkazi, Makunduchi, Fumba
+  nord: { priveUsd: 47, localTzs: 17000 }, // Nungwi, Kendwa
+  nord_est: { priveUsd: 42, localTzs: 17000 }, // Matemwe → Chwaka
+  est: { priveUsd: 47, localTzs: 17000 }, // Paje, Bwejuu
+  est_sud: { priveUsd: 53, localTzs: 17000 }, // Jambiani
+  est_pointe: { priveUsd: 53, localTzs: 17000 }, // Michamvi
+  sud: { priveUsd: 47, localTzs: 17000 }, // Kizimkazi, Makunduchi, Fumba
 };
 
 /** Tarifs appliqués quand aucune ville zonée n'apparaît dans l'itinéraire. */
@@ -659,7 +666,7 @@ export function zoneItineraire(depart: string, arrivee: string): ZoneTarifaire |
   return TARIFS_ZONE[zones[0]].priveUsd >= TARIFS_ZONE[zones[1]].priveUsd ? zones[0] : zones[1];
 }
 
-/** Tarifs de zone d'un itinéraire (défaut 53 USD, 16 000 TZS). */
+/** Tarifs de zone d'un itinéraire (défaut 53 USD, 17 000 TZS). */
 export function tarifsZoneItineraire(depart: string, arrivee: string): TarifsZone {
   const zone = zoneItineraire(depart, arrivee);
   return zone ? TARIFS_ZONE[zone] : TARIFS_ZONE_DEFAUT;
@@ -837,21 +844,30 @@ export function netChauffeurPriveUsd(depart: string, arrivee: string): number {
   return NET_TRANSFERT_USD;
 }
 
-/** Ce que zanziGo garde sur ce trajet précis, en dollars. */
-export function forfaitZanzigoTrajetUsd(depart: string, arrivee: string): number {
+/** Le forfait de base applicable à ce trajet (avant frais de portefeuille). */
+function forfaitBaseTrajetUsd(depart: string, arrivee: string, net: number): number {
   const d = normaliserLieu(depart);
   const a = normaliserLieu(arrivee);
   const versCorridor =
     (HUBS_TARIFAIRES.has(d) && CORRIDOR_EMPRUNTE.includes(a)) ||
     (HUBS_TARIFAIRES.has(a) && CORRIDOR_EMPRUNTE.includes(d));
-  return versCorridor
-    ? FORFAIT_EMPRUNTE_USD
-    : forfaitZanzigoUsd(netChauffeurPriveUsd(depart, arrivee));
+  return versCorridor ? FORFAIT_EMPRUNTE_USD : forfaitZanzigoUsd(net);
 }
 
-/** Prix privé USD d'un itinéraire : net du chauffeur + forfait zanziGo. */
+/** Prix privé USD d'un itinéraire — miroir exact du serveur. */
 export function tarifPriveItineraire(depart: string, arrivee: string): number {
-  return netChauffeurPriveUsd(depart, arrivee) + forfaitZanzigoTrajetUsd(depart, arrivee);
+  const net = netChauffeurPriveUsd(depart, arrivee);
+  if (net <= PETIT_TRAJET_NET_MAX_USD) {
+    let prix = Math.ceil(net / (1 - PART_MIN_PETIT_TRAJET));
+    while ((prix - net) / prix < PART_MIN_PETIT_TRAJET) prix += 1;
+    return prix;
+  }
+  return Math.round(net * (1 + FRAIS_PORTEFEUILLE) + forfaitBaseTrajetUsd(depart, arrivee, net));
+}
+
+/** CE QUE ZANZIGO GARDE sur ce trajet : la différence, jamais recalculée. */
+export function forfaitZanzigoTrajetUsd(depart: string, arrivee: string): number {
+  return tarifPriveItineraire(depart, arrivee) - netChauffeurPriveUsd(depart, arrivee);
 }
 
 // Hôtel partenaire : même grille USD que les touristes avec −5 %
@@ -889,7 +905,7 @@ export function tarifTrajetProfil(
         : zone.priveUsd;
       return { montant: Math.round(usd * TAUX_USD_TZS), devise: 'TZS' };
     }
-    // Place en taxi partagé : le tarif local (16 000, spéciaux inclus) ne
+    // Place en taxi partagé : le tarif local (17 000, spéciaux inclus) ne
     // vaut que sur les GRANDS AXES — privé du même trajet à 40 USD minimum.
     // Ailleurs, la place se paie au prix touriste converti en shillings.
     if (itineraire && tarifPriveItineraire(itineraire.depart, itineraire.arrivee) < 40) {

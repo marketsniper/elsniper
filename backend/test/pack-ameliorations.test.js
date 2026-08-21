@@ -37,7 +37,7 @@ describe('Pack améliorations', () => {
     assert.equal(creation.body.baby_seat, true);
     assert.equal(creation.body.bulky_luggage, true);
     assert.equal(creation.body.round_trip, false);
-    assert.equal(Number(creation.body.price), 49); // aller simple : prix normal
+    assert.equal(Number(creation.body.price), 50); // aller simple : prix normal
   });
 
   it('aller-retour avec attente : prix et commission ×1,8 (privé uniquement)', async () => {
@@ -54,8 +54,8 @@ describe('Pack améliorations', () => {
       });
     assert.equal(ar.status, 201, JSON.stringify(ar.body));
     assert.equal(ar.body.round_trip, true);
-    assert.equal(Number(ar.body.price), 88.2); // 49 × 1,8
-    assert.equal(Number(ar.body.commission), 7.2); // le forfait suit : 4 × 1,8
+    assert.equal(Number(ar.body.price), 90); // 49 × 1,8
+    assert.equal(Number(ar.body.commission), 9); // le forfait suit : 4 × 1,8
 
     // Sur un partagé, le drapeau est ignoré (pas d'aller-retour partagé).
     const partage = await request(app)
@@ -110,8 +110,8 @@ describe('Pack améliorations', () => {
           dropoffLocation: arrivee,
         });
       assert.equal(transfert.status, 201, `${depart} → ${arrivee} : ${JSON.stringify(transfert.body)}`);
-      assert.equal(Number(transfert.body.price), 12, `${depart} → ${arrivee}`);
-      assert.equal(Number(transfert.body.commission), 2, `${depart} → ${arrivee}`);
+      assert.equal(Number(transfert.body.price), 15, `${depart} → ${arrivee}`);
+      assert.equal(Number(transfert.body.commission), 4, `${depart} → ${arrivee}`);
     }
 
     // Trop court pour un taxi partagé : l'annonce reste refusée.
@@ -138,7 +138,7 @@ describe('Pack améliorations', () => {
         dropoffLocation: 'Nungwi',
       });
     assert.equal(ok.status, 201, JSON.stringify(ok.body));
-    assert.equal(Number(ok.body.price), 49);
+    assert.equal(Number(ok.body.price), 50);
   });
 
   it('parrainage client : code ZG- attribué, filleul relié, code invalide refusé', async () => {
@@ -248,9 +248,9 @@ describe('Pack améliorations', () => {
   it('aéroport : le nom officiel complet est affiché, les anciens libellés restent acceptés', async () => {
     const { privateUsdForRoute } = await import('../src/services/pricingService.js');
     // Grille hub inchangée sous tous les libellés.
-    assert.equal(privateUsdForRoute('Aéroport international Abeid Amani Karume', 'Nungwi'), 49);
-    assert.equal(privateUsdForRoute('Aéroport Abeid Amani Karume', 'Nungwi'), 49);
-    assert.equal(privateUsdForRoute('Aéroport (AAKIA)', 'Nungwi'), 49);
+    assert.equal(privateUsdForRoute('Aéroport international Abeid Amani Karume', 'Nungwi'), 50);
+    assert.equal(privateUsdForRoute('Aéroport Abeid Amani Karume', 'Nungwi'), 50);
+    assert.equal(privateUsdForRoute('Aéroport (AAKIA)', 'Nungwi'), 50);
 
     // Les annonces partagées acceptent nouveau ET anciens libellés de départ.
     const { token: tokenChauffeur } = await createVerifiedDriver();
