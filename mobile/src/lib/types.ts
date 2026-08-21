@@ -439,6 +439,32 @@ export const TRAJETS_SPECIAUX_PRIVE_USD: { villes: [string, string]; prix: numbe
   { villes: ['Michamvi', 'Paje'], prix: 17 },
   { villes: ['Bwejuu', 'Jambiani'], prix: 17 },
   { villes: ['Paje', 'Makunduchi'], prix: 17 },
+  // LES BAIES SANS PONT — Michamvi fait face à la côte nord-est par-dessus la
+  // baie de Chwaka, Fumba à Kizimkazi par-dessus la baie de Menai : quelques
+  // kilomètres à vol d'oiseau, mais la route fait tout le tour. Le prix suit
+  // les kilomètres RÉELS. Miroir exact du serveur (pricingService.js).
+  { villes: ['Michamvi', 'Chwaka'], prix: 34 },
+  { villes: ['Michamvi', 'Uroa'], prix: 42 },
+  { villes: ['Michamvi', 'Pongwe'], prix: 47 },
+  { villes: ['Michamvi', 'Kiwengwa'], prix: 47 },
+  { villes: ['Michamvi', 'Pwani Mchangani'], prix: 50 },
+  { villes: ['Michamvi', 'Matemwe'], prix: 63 },
+  { villes: ['Fumba', 'Kizimkazi'], prix: 34 },
+  // LE COULOIR SUD-EST ↔ NORD-EST passe par Tunguu : de Paje à Uroa, la route
+  // remonte par Jozani puis redescend sur Chwaka. Au-delà de 55 km de route,
+  // 47 USD — aligné sur le transfert Stone Town ↔ Nungwi/Paje.
+  { villes: ['Bwejuu', 'Chwaka'], prix: 34 },
+  { villes: ['Paje', 'Chwaka'], prix: 34 },
+  { villes: ['Jambiani', 'Chwaka'], prix: 34 },
+  { villes: ['Makunduchi', 'Chwaka'], prix: 47 },
+  { villes: ['Paje', 'Uroa'], prix: 42 },
+  { villes: ['Bwejuu', 'Uroa'], prix: 47 },
+  { villes: ['Jambiani', 'Uroa'], prix: 47 },
+  { villes: ['Makunduchi', 'Uroa'], prix: 50 },
+  { villes: ['Bwejuu', 'Pongwe'], prix: 47 },
+  { villes: ['Paje', 'Pongwe'], prix: 47 },
+  { villes: ['Jambiani', 'Pongwe'], prix: 47 },
+  { villes: ['Makunduchi', 'Pongwe'], prix: 50 },
 ];
 
 /** Trajets spéciaux TZS : place locale en taxi partagé (deux sens). */
@@ -692,6 +718,46 @@ export function kmEntreVilles(depart: string, arrivee: string): number | null {
     Math.sin(dLat / 2) ** 2 +
     Math.cos(a[0] * rad) * Math.cos(b[0] * rad) * Math.sin(dLng / 2) ** 2;
   return 2 * 6371 * Math.asin(Math.sqrt(h)) * DETOUR_ROUTIER;
+}
+
+/**
+ * MA POSITION → LA VILLE LA PLUS PROCHE.
+ *
+ * Le client appuie sur « Ma position » : son GPS donne un point, mais la
+ * grille tarifaire, elle, ne connaît que des villes. On cherche donc la ville
+ * de la liste dont il est le plus près — c'est le nom qui part au serveur, et
+ * ses coordonnées exactes suivent séparément (pickup_lat/lng) pour que le
+ * chauffeur vienne le chercher au bon endroit, pas au centre du village.
+ *
+ * Deux lieux sont écartés de la détection : l'aéroport et le terminal ferry.
+ * Ce sont des points d'embarquement précis — le ferry est à cent mètres du
+ * centre de Stone Town et sortirait devant lui — et un client qui s'y trouve
+ * les choisit lui-même dans la liste. À plus de 25 km de toute ville connue
+ * (en mer, ou hors de Zanzibar), on renvoie null plutôt qu'un village au
+ * hasard : mieux vaut demander au client de choisir.
+ */
+const RAYON_VILLE_MAX_KM = 25;
+
+export function villeLaPlusProche(lat: number, lng: number): string | null {
+  let meilleure: string | null = null;
+  let meilleureDistance = Infinity;
+  for (const ville of ORIGINES_RIDES) {
+    const coord = COORDONNEES_VILLES[normaliserLieu(ville)];
+    if (!coord) continue;
+    if (/a[ée]roport|airport/i.test(ville) || ville === 'Stone Town Ferry') continue;
+    const rad = Math.PI / 180;
+    const dLat = (coord[0] - lat) * rad;
+    const dLng = (coord[1] - lng) * rad;
+    const h =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos(lat * rad) * Math.cos(coord[0] * rad) * Math.sin(dLng / 2) ** 2;
+    const km = 2 * 6371 * Math.asin(Math.sqrt(h));
+    if (km < meilleureDistance) {
+      meilleureDistance = km;
+      meilleure = ville;
+    }
+  }
+  return meilleureDistance <= RAYON_VILLE_MAX_KM ? meilleure : null;
 }
 
 /** Prix privé USD d'un itinéraire — spéciaux > hubs par zone > formule km. */

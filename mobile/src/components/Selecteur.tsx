@@ -12,12 +12,19 @@ export function Selecteur({
   valeur,
   options,
   placeholder,
+  libelleOption,
   onChange,
 }: {
   label: string;
   valeur: string;
   options: string[];
   placeholder?: string;
+  /**
+   * Texte affiché pour une option, quand il diffère de la valeur envoyée.
+   * Sert aux options qui ne sont pas des lieux — « Ma position », par
+   * exemple, dont le choix déclenche le GPS.
+   */
+  libelleOption?: (option: string) => string;
   onChange: (valeur: string) => void;
 }) {
   const { t } = useT();
@@ -69,7 +76,7 @@ export function Selecteur({
                     ]}
                   >
                     <Text style={[styles.texteChoix, choisi && styles.texteChoixActif]}>
-                      {option}
+                      {libelleOption ? libelleOption(option) : option}
                     </Text>
                     {choisi && (
                       <Ionicons name="checkmark" size={20} color={couleurs.primaire} />

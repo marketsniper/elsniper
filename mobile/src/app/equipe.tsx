@@ -431,8 +431,31 @@ export default function EcranEquipe() {
   const coursesATraiter = courses.filter(
     (c) => champ<StatutTrajet>(c, 'status', 'statut') === 'requested' && !trajetExpire(c)
   );
+  // COURSES À VENIR : un départ programmé dans le futur n'est pas de
+  // l'historique. Sans cette séparation, une course confirmée pour jeudi se
+  // rangeait avec les courses terminées — invisible au moment où elle compte,
+  // c'est-à-dire AVANT le départ. Les demandes encore sans chauffeur restent
+  // en haut (« à traiter ») : elles appellent une action tout de suite.
+  const maintenant = Date.now();
+  const departFutur = (c: Trajet) => {
+    const prevu = champ<string>(c, 'scheduled_at', 'scheduledAt');
+    return !!prevu && new Date(prevu).getTime() > maintenant;
+  };
+  // Le planning est COMPLET : une demande programmée jeudi sans chauffeur y
+  // figure aussi, avec son badge « en attente ». Elle reste par ailleurs en
+  // haut dans « à traiter » — l'une est la liste de tâches, l'autre l'agenda,
+  // et un agenda qui cache un rendez-vous ne sert à rien.
+  const coursesAVenir = [...courses]
+    .filter(
+      (c) =>
+        departFutur(c) &&
+        !['completed', 'cancelled'].includes(champ<StatutTrajet>(c, 'status', 'statut') ?? '')
+    )
+    // Chronologique CROISSANT : le prochain départ en tête, c'est celui qui
+    // arrive le premier sur la route.
+    .sort((a, b) => dateCourse(a).localeCompare(dateCourse(b)));
   const coursesPassees = [...courses]
-    .filter((c) => !coursesATraiter.includes(c))
+    .filter((c) => !coursesATraiter.includes(c) && !coursesAVenir.includes(c))
     .sort((a, b) => dateCourse(b).localeCompare(dateCourse(a)));
   const localeDate = langue === 'fr' ? 'fr-FR' : langue === 'sw' ? 'sw-TZ' : 'en-GB';
   // Clé stable AAAA-MM-JJ du jour (heure de Zanzibar).
@@ -443,14 +466,26 @@ export default function EcranEquipe() {
     const hier = new Date(Date.now() - 86400000).toLocaleDateString('fr-CA', {
       timeZone: 'Africa/Dar_es_Salaam',
     });
+    const demain = new Date(Date.now() + 86400000).toLocaleDateString('fr-CA', {
+      timeZone: 'Africa/Dar_es_Salaam',
+    });
     if (jour === aujourdHui) return t('sel_aujourdhui');
     if (jour === hier) return t('equipe_hier');
+    if (jour === demain) return t('equipe_demain');
     return new Date(`${jour}T12:00:00`).toLocaleDateString(localeDate, {
       weekday: 'long',
       day: 'numeric',
       month: 'long',
     });
   };
+  const groupesAVenir: { jour: string; liste: Trajet[] }[] = [];
+  for (const course of coursesAVenir) {
+    const jour = cleJour(course);
+    const dernier = groupesAVenir[groupesAVenir.length - 1];
+    if (dernier && dernier.jour === jour) dernier.liste.push(course);
+    else groupesAVenir.push({ jour, liste: [course] });
+  }
+
   const groupesPasses: { jour: string; liste: Trajet[] }[] = [];
   for (const course of coursesPassees) {
     const jour = cleJour(course);
@@ -933,6 +968,55 @@ export default function EcranEquipe() {
           </Carte>
         );
       })}
+
+      {/* COURSES À VENIR : les départs déjà programmés, du plus proche au plus
+          lointain. Dépliées d'office, contrairement à l'historique : ce sont
+          elles qu'on regarde le matin pour préparer la journée. */}
+      {groupesAVenir.length > 0 && (
+        <>
+          <Text style={styles.titreSection}>
+            📅 {t('equipe_courses_a_venir')} ({coursesAVenir.length})
+          </Text>
+          {groupesAVenir.map((groupe) => (
+            <View key={`avenir-${groupe.jour}`}>
+              <View style={styles.enTeteJourAVenir}>
+                <Ionicons name="calendar-outline" size={16} color={couleurs.primaireFonce} />
+                <Text style={styles.texteJour}>{libelleJour(groupe.jour)}</Text>
+                <Text style={styles.compteJour}>
+                  {t('equipe_jour_compte', { n: groupe.liste.length })}
+                </Text>
+              </View>
+              {groupe.liste.map((course) => {
+                const statut = champ<StatutTrajet>(course, 'status', 'statut');
+                const heure = new Date(dateCourse(course)).toLocaleTimeString(localeDate, {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  timeZone: 'Africa/Dar_es_Salaam',
+                });
+                const chauffeurCourse = champ<string>(course, 'driver_name', 'driverName');
+                return (
+                  <View key={course.id} style={styles.ligneAVenir}>
+                    <View style={styles.entetePassee}>
+                      <Text style={styles.itineraire} numberOfLines={1}>
+                        {String(champ(course, 'pickup_location', 'pickupLocation') ?? '?')} →{' '}
+                        {String(champ(course, 'dropoff_location', 'dropoffLocation') ?? '?')}
+                      </Text>
+                      <Text style={styles.prixPassee}>{formaterPrix(course)}</Text>
+                    </View>
+                    <View style={styles.piedPassee}>
+                      <Text style={styles.heureAVenir}>
+                        🕒 {heure}
+                        {chauffeurCourse ? ` · 🚕 ${chauffeurCourse}` : ''}
+                      </Text>
+                      {statut && <BadgeStatutTrajet statut={statut} />}
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          ))}
+        </>
+      )}
 
       {/* Courses PASSÉES : rangées par jour, repliées par défaut — on
           touche une date pour voir le détail du jour. */}
@@ -1774,6 +1858,30 @@ const styles = StyleSheet.create({
     padding: espaces.m,
     marginBottom: espaces.s,
     gap: 4,
+  },
+  // Courses à venir : même gabarit que l'historique, mais un filet corail à
+  // gauche et une heure en évidence — ce sont des rendez-vous, pas des
+  // archives, et l'œil doit les distinguer d'un coup.
+  enTeteJourAVenir: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: espaces.s,
+    paddingVertical: espaces.m,
+    paddingHorizontal: espaces.s,
+  },
+  ligneAVenir: {
+    backgroundColor: couleurs.surface,
+    borderRadius: rayons.bouton,
+    borderLeftWidth: 3,
+    borderLeftColor: couleurs.primaire,
+    padding: espaces.m,
+    marginBottom: espaces.s,
+    gap: 4,
+  },
+  heureAVenir: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: couleurs.primaireFonce,
   },
   entetePassee: {
     flexDirection: 'row',

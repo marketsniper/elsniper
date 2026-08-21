@@ -30,6 +30,7 @@ import {
   libelleTypeTrajet,
   useT,
 } from '@/lib/i18n';
+import { positionActuelle } from '@/lib/position';
 import { couleurs, espaces, ombres, rayons } from '@/lib/theme';
 import {
   champ,
@@ -41,12 +42,17 @@ import {
   tarifPriveItineraire,
   tarifSpecialPrive,
   tarifTrajetProfil,
+  villeLaPlusProche,
   type ProfilTarifaire,
   type TypeCompte,
   type TypeTrajet,
 } from '@/lib/types';
 
 type ModeCourse = 'prive' | 'partage';
+
+// Repère de l'option « Ma position » dans la liste de départ. Ce n'est pas un
+// lieu : le choix déclenche le GPS, qui pose ensuite une vraie ville.
+const OPTION_MA_POSITION = '__ma_position__';
 
 export default function EcranReserver() {
   const router = useRouter();
@@ -82,6 +88,12 @@ export default function EcranReserver() {
   const [charge, setCharge] = useState(false);
   // Lieux proposés : hubs + villes (serveur), repli sur la liste locale.
   const [lieux, setLieux] = useState<string[]>(ORIGINES_RIDES);
+  // « Ma position » : coordonnées exactes du client, transmises au chauffeur
+  // après la réservation (pickup_lat/lng) pour qu'il vienne au bon endroit et
+  // pas au centre du village. Effacées dès que le départ change à la main.
+  const [positionDepart, setPositionDepart] = useState<{ lat: number; lng: number } | null>(null);
+  const [messagePosition, setMessagePosition] = useState('');
+  const [chercheposition, setChercheposition] = useState(false);
 
   const chargerLieux = useCallback(async () => {
     try {
@@ -97,6 +109,37 @@ export default function EcranReserver() {
       chargerLieux();
     }, [chargerLieux])
   );
+
+  // OPTION « MA POSITION ». Le GPS donne un point ; la grille tarifaire, elle,
+  // ne connaît que des villes. On retient donc la ville la plus proche pour le
+  // prix, et on garde les coordonnées exactes pour les envoyer au chauffeur
+  // une fois la course créée. Un refus de localisation n'est pas une erreur :
+  // on le dit, et le client choisit dans la liste comme avant.
+  const choisirDepart = async (choix: string) => {
+    if (choix !== OPTION_MA_POSITION) {
+      setPositionDepart(null);
+      setMessagePosition('');
+      setDepart(choix);
+      return;
+    }
+    setChercheposition(true);
+    setMessagePosition(t('position_recherche'));
+    const { position, souci } = await positionActuelle();
+    setChercheposition(false);
+    if (!position) {
+      setMessagePosition(souci ?? '');
+      return;
+    }
+    const ville = villeLaPlusProche(position.lat, position.lng);
+    if (!ville) {
+      setPositionDepart(null);
+      setMessagePosition(t('position_hors_zone'));
+      return;
+    }
+    setDepart(ville);
+    setPositionDepart(position);
+    setMessagePosition(t('position_trouvee', { ville }));
+  };
 
   // « Partagé » = navette locale pour un local vérifié, navette touristes sinon.
   const typePartage: TypeTrajet = estLocalVerifie ? 'shared_local' : 'shared_tourist';
@@ -218,9 +261,20 @@ export default function EcranReserver() {
             scheduledAt,
             ...extras,
           });
+      // Le client est parti de « Ma position » : on pose son point EXACT sur
+      // la course pour que le chauffeur vienne le chercher là où il est, et
+      // pas au centre du village. Un échec ici ne gâche pas la réservation —
+      // le nom de la ville suffit à faire rouler la course.
+      if (positionDepart) {
+        api
+          .partagerPointRendezVous(trajet.id, positionDepart.lat, positionDepart.lng)
+          .catch(() => {});
+      }
       setDepart('');
       setArrivee('');
       setPrecision('');
+      setPositionDepart(null);
+      setMessagePosition('');
       setDateChoisie('');
       setHeureProgramme('');
       setCalendrierOuvert(false);
@@ -278,9 +332,17 @@ export default function EcranReserver() {
       <Selecteur
         label={t('commun_depart')}
         valeur={depart}
-        options={lieux}
-        onChange={setDepart}
+        options={[OPTION_MA_POSITION, ...lieux]}
+        libelleOption={(option) =>
+          option === OPTION_MA_POSITION ? t('position_option') : option
+        }
+        onChange={choisirDepart}
       />
+      {!!messagePosition && (
+        <Text style={[styles.messagePosition, positionDepart && styles.messagePositionOk]}>
+          {chercheposition ? t('position_recherche') : messagePosition}
+        </Text>
+      )}
       <Selecteur
         label={t('commun_arrivee')}
         valeur={arrivee}
@@ -566,6 +628,18 @@ export default function EcranReserver() {
 }
 
 const styles = StyleSheet.create({
+  // Retour de la géolocalisation, sous le champ Départ : gris pendant la
+  // recherche ou en cas de refus, vert quand la ville est trouvée.
+  messagePosition: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: couleurs.texteSecondaire,
+    marginTop: -espaces.xs,
+  },
+  messagePositionOk: {
+    color: couleurs.succes,
+    fontWeight: '600',
+  },
   titreSection: {
     fontSize: 15,
     fontWeight: '700',

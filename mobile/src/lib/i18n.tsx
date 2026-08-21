@@ -83,6 +83,36 @@ const CHAINES = {
   commun_telephone: { fr: 'Téléphone', en: 'Phone', sw: 'Simu' , it: 'Telefono', de: 'Telefon' },
   commun_email: { fr: 'E-mail', en: 'Email', sw: 'Barua pepe' , it: 'E-mail', de: 'E-Mail' },
   commun_depart: { fr: 'Départ', en: 'Pickup', sw: 'Kuondoka' , it: 'Partenza', de: 'Abholung' },
+  // « Ma position » en tête de la liste de départ : le GPS trouve la ville,
+  // le client n'a rien à chercher. La position exacte suit jusqu'au chauffeur.
+  position_option: {
+    fr: '📍 Ma position actuelle',
+    en: '📍 My current location',
+    sw: '📍 Nilipo sasa',
+    it: '📍 La mia posizione',
+    de: '📍 Mein Standort',
+  },
+  position_recherche: {
+    fr: 'Recherche de votre position…',
+    en: 'Finding your location…',
+    sw: 'Tunatafuta ulipo…',
+    it: 'Ricerca della posizione…',
+    de: 'Standort wird gesucht…',
+  },
+  position_trouvee: {
+    fr: 'Vous êtes près de {ville} — le chauffeur viendra à votre point exact.',
+    en: "You're near {ville} — your driver will come to your exact spot.",
+    sw: 'Uko karibu na {ville} — dereva atakuja mahali ulipo hasa.',
+    it: 'Sei vicino a {ville} — l\'autista verrà nel punto esatto.',
+    de: 'Du bist in der Nähe von {ville} — der Fahrer kommt genau dorthin.',
+  },
+  position_hors_zone: {
+    fr: "Vous semblez hors de Zanzibar : choisissez votre lieu de départ dans la liste.",
+    en: 'You seem to be outside Zanzibar: please pick your pickup point from the list.',
+    sw: 'Inaonekana uko nje ya Zanzibar: chagua mahali pa kuondoka kwenye orodha.',
+    it: 'Sembri fuori da Zanzibar: scegli il punto di partenza dalla lista.',
+    de: 'Du scheinst außerhalb Sansibars zu sein: bitte wähle den Abholort aus der Liste.',
+  },
   commun_arrivee: { fr: 'Arrivée', en: 'Drop-off', sw: 'Kufika' , it: 'Arrivo', de: 'Ziel' },
   commun_zone: { fr: 'Zone', en: 'Zone', sw: 'Eneo' , it: 'Zona', de: 'Zone' },
   commun_type: { fr: 'Type', en: 'Type', sw: 'Aina' , it: 'Tipo', de: 'Art' },
@@ -2117,6 +2147,18 @@ const CHAINES = {
     sw: 'Safari zilizopita',
   },
   equipe_hier: { fr: 'Hier', en: 'Yesterday', sw: 'Jana' },
+  equipe_demain: { fr: 'Demain', en: 'Tomorrow', sw: 'Kesho' },
+  // Section « À venir » du tableau de bord : les départs déjà programmés.
+  equipe_courses_a_venir: {
+    fr: 'Courses à venir',
+    en: 'Upcoming rides',
+    sw: 'Safari zijazo',
+  },
+  equipe_a_venir_vide: {
+    fr: 'Aucun départ programmé pour les prochains jours.',
+    en: 'No departures scheduled for the coming days.',
+    sw: 'Hakuna safari iliyopangwa kwa siku zijazo.',
+  },
   equipe_jour_compte: {
     fr: '{n} course·s',
     en: '{n} ride·s',
