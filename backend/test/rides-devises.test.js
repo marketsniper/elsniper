@@ -51,7 +51,7 @@ describe('Devises taxi partagé (parcours local complet)', () => {
     const mine = await request(app).get('/api/rides/mine').set(authHeaders(tokenChauffeur));
     const annonce = mine.body[0];
     assert.equal(Number(annonce.price_per_seat), 16000);
-    assert.equal(Number(annonce.price_per_seat_usd), 15);
+    assert.equal(Number(annonce.price_per_seat_usd), 16);
     const booking = annonce.bookings[0];
     assert.equal(booking.client_type, 'local');
     assert.equal(booking.currency, 'TZS');
@@ -81,7 +81,7 @@ describe('Devises taxi partagé (parcours local complet)', () => {
       .set(authHeaders(tokenTouriste))
       .set(adminHeaders());
     assert.equal(liste.body[0].currency, 'USD');
-    assert.equal(Number(liste.body[0].price_per_seat_usd), 15);
+    assert.equal(Number(liste.body[0].price_per_seat_usd), 16);
     assert.equal(liste.body[0].price_per_seat, undefined);
 
     const resa = await request(app)
@@ -91,11 +91,11 @@ describe('Devises taxi partagé (parcours local complet)', () => {
       .send({ seats: 1 });
     assert.equal(resa.status, 201);
     assert.equal(resa.body.payment.currency, 'USD');
-    // La place vaut 15 USD ; réglée par carte (le choix par défaut d'un
+    // La place vaut 16 USD ; réglée par carte (le choix par défaut d'un
     // client facturé en dollars), elle se débite 15,60 — les 4 % de frais
     // bancaires, à la charge du payeur comme sur les courses et les colis.
-    assert.equal(Number(resa.body.payment.amount), 15.6);
-    assert.equal(Number(resa.body.payment.surcharge), 0.6);
+    assert.equal(Number(resa.body.payment.amount), 16.64);
+    assert.equal(Number(resa.body.payment.surcharge), 0.64);
     assert.equal(resa.body.payment.method, 'carte');
 
     // « Mes places » du touriste : USD aussi, même avec la clé embarquée.
@@ -104,9 +104,9 @@ describe('Devises taxi partagé (parcours local complet)', () => {
       .set(authHeaders(tokenTouriste))
       .set(adminHeaders());
     assert.equal(mesPlaces.body[0].currency, 'USD');
-    assert.equal(Number(mesPlaces.body[0].amount), 15, 'le PRIX de la place');
+    assert.equal(Number(mesPlaces.body[0].amount), 16, 'le PRIX de la place');
     // …et, à côté, ce qu'il y a réellement à régler avec le moyen choisi.
-    assert.equal(Number(mesPlaces.body[0].reglement_montant), 15.6);
+    assert.equal(Number(mesPlaces.body[0].reglement_montant), 16.64);
     assert.equal(mesPlaces.body[0].reglement_devise, 'USD');
     assert.equal(mesPlaces.body[0].reglement_moyen, 'carte');
     assert.deepEqual(mesPlaces.body[0].moyens_disponibles, ['carte', 'mobile']);

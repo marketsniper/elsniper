@@ -40,7 +40,7 @@ import {
   POINTS_STONE_TOWN,
   profilTarifaireUtilisateur,
   tarifPriveItineraire,
-  tarifSpecialPrive,
+  estTarifDeTerrain,
   tarifTrajetProfil,
   villeLaPlusProche,
   type ProfilTarifaire,
@@ -149,7 +149,7 @@ export default function EcranReserver() {
   // défaut » serait trompeur.
   const itineraireChoisi = depart !== '' && arrivee !== '';
   // Trajet spécial (privé uniquement) : villes exactes, deux sens.
-  const estSpecial = mode === 'prive' && tarifSpecialPrive(depart, arrivee) !== null;
+  const estSpecial = mode === 'prive' && estTarifDeTerrain(depart, arrivee);
   const tarifCourant = itineraireChoisi ? tarifTrajetProfil('private', profil, itineraire) : null;
   // Pas de taxi partagé sur les trajets courts : course privée du même
   // trajet à 35 USD minimum (même règle côté serveur).

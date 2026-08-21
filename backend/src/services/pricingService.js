@@ -33,37 +33,16 @@ const ZONE_TIERS = {
   sud: { privateUsd: 47, localTzs: 16000 }, // Kizimkazi / Makunduchi (45 → 47)
 };
 
-// PRIX D'UNE PLACE EN TAXI PARTAGÉ — déduit du prix de la course PRIVÉE du
-// même trajet, jamais fixé à part. Une seule grille à tenir : quand un
-// transfert bouge, sa place suit toute seule.
+// PRIX D'UNE PLACE EN TAXI PARTAGÉ : le TIERS du prix de la course privée du
+// même trajet (arrondi au dollar inférieur), jamais fixé à part. Règle voulue
+// simple pour qu'un client la vérifie de tête : « à trois, c'est le prix du
+// taxi ». À partir de la quatrième place, la voiture rapporte plus au
+// chauffeur qu'une course privée — et elle en tient six.
 //
-//   privé 42 USD        → place 12
-//   privé 47 USD        → place 15
-//   privé 53 USD        → place 16
-//   privé 63 USD et +   → place 18
-//
-// Les SEUILS montent avec les prix (hausse de 5 %) : sans ça, un transfert
-// passé de 45 à 47 USD aurait sauté une tranche et sa place aurait bondi.
-//
-// BAISSE DE 1 USD SUR TOUTES LES PLACES (18/08/2026). Décision commerciale :
-// le taxi partagé est le produit d'appel — c'est par lui qu'un visiteur essaie
-// zanziGo, et un dollar de moins le rend plus attirant qu'un transfert privé
-// partagé entre amis. Les places retrouvent exactement leur prix d'avant la
-// hausse de 5 % (18 / 16 / 15 / 12) ; les transferts PRIVÉS, eux, la gardent.
-//
-// En dessous de 40 USD la question ne se pose pas : le taxi partagé n'existe
-// pas sur les trajets courts (voir PARTAGE_PRIVE_MIN_USD).
+// En dessous de PARTAGE_PRIVE_MIN_USD la question ne se pose pas : le taxi
+// partagé n'existe pas sur les trajets courts.
 function sharedSeatUsd(priveUsd) {
-  // Seuil à 57 et non 63 : les grandes traversées nord ↔ sud ont vu leur prix
-  // privé ramené à 57 USD (décision commerciale), mais la route, elle, fait
-  // toujours 85 à 112 km. Laisser le seuil à 63 aurait fait tomber la place
-  // de 18 à 16 USD — une baisse prise sur le chauffeur, qui n'a rien demandé
-  // et qui roule exactement autant. Aucun autre trajet ne se situe entre 53
-  // et 63 USD : ce seuil ne déplace que ces traversées-là.
-  if (priveUsd >= 57) return 18;
-  if (priveUsd >= 53) return 16;
-  if (priveUsd >= 47) return 15;
-  return 12;
+  return Math.floor(priveUsd / 3);
 }
 
 // Commissions zanziGo par service (grille « Chauffeur reçoit ») :
@@ -87,9 +66,10 @@ function sharedSeatUsd(priveUsd) {
 // 12 450 TZS la place). La place locale est donc passée à 16 000 TZS dans le
 // même mouvement : le chauffeur touche 13 280 TZS, plus qu'avant la hausse.
 // Les deux décisions se tiennent — toucher à l'une oblige à relire l'autre.
+// LA COURSE PRIVÉE N'EST PLUS ICI (21/08/2026) : sa commission est un forfait
+// en dollars, pas un taux — voir forfaitZanzigoUsd plus bas. Les places de
+// taxi partagé et les colis, eux, restent au pourcentage.
 const COMMISSION_RATES = {
-  private: 0.12, // grands trajets privés, 40 USD et plus
-  privateCourt: 0.17, // petits trajets privés, moins de 40 USD
   shared: 0.22, // taxi partagé touriste (USD)
   local: 0.17, // taxi partagé local (TZS)
   package: 0.2, // colis : inchangé
@@ -102,12 +82,6 @@ const COMMISSION_RATES = {
 // source pour la commission, sinon elle diverge en silence.
 export const TAUX_PLACE_LOCALE = COMMISSION_RATES.local; // 17 % (place en TZS)
 export const TAUX_PLACE_USD = COMMISSION_RATES.shared; // 22 % (touriste, résident, hôtel)
-
-// Seuil de bascule de la commission privée : à 40 USD pile, on est déjà sur
-// le grand tarif (12 %). En dessous, 17 %. Ce seuil coïncide avec celui du
-// tarif local (GRAND_AXE_PRIVE_MIN_USD) : un « grand axe » et un « grand
-// trajet » sont la même chose, ce qui garde la grille cohérente.
-const COMMISSION_PRIVE_SEUIL_USD = 40;
 
 // Rattachement des villes aux zones. Les villes de la côte centre-est et
 // Fumba sont assimilées aux zones voisines (ajustable sur demande).
@@ -124,114 +98,94 @@ const CITY_ZONES = {
   bwejuu: 'est',
   jambiani: 'estSud',
   michamvi: 'estPointe',
+  dongwe: 'estPointe',
   kizimkazi: 'sud',
   makunduchi: 'sud',
+  mtende: 'sud',
   fumba: 'sud',
 };
 
-// Trajets spéciaux à prix fixe (USD, courses privées), deux sens — le prix
-// spécial est prioritaire sur la formule au kilomètre ET sur le minimum.
+// ---------------------------------------------------------------------------
+// LA GRILLE PRIVÉE PART DE CE QUE TOUCHE LE CHAUFFEUR
+// ---------------------------------------------------------------------------
 //
-// LA CHAÎNE DE LA CÔTE EST — Michamvi, Bwejuu, Paje, Jambiani, Makunduchi
-// se suivent le long de la même route. Une règle, deux prix :
-//   village voisin        → 13 USD
-//   un village d'écart    → 17 USD
-// Ces prix sont sous les 40 USD : la commission privée y est de 17 % (comme
-// tout petit trajet). Au-delà de deux villages, la grille au kilomètre reprend.
-const SPECIAL_PRIVATE_ROUTES_USD = [
-  // Transfert aéroport : sept kilomètres, très demandé (18 USD, sous les
-  // 40 USD → commission 17 %, le chauffeur garde 14,94).
-  { a: 'Aéroport international Abeid Amani Karume', b: 'Stone Town', usd: 18 },
-  { a: 'Aéroport international Abeid Amani Karume', b: 'Stone Town Ferry', usd: 18 },
-  { a: 'Aéroport (AAKIA)', b: 'Stone Town', usd: 18 },
-  { a: 'Aéroport (AAKIA)', b: 'Stone Town Ferry', usd: 18 },
-  { a: 'Aéroport', b: 'Stone Town', usd: 18 },
-  { a: 'Aéroport', b: 'Stone Town Ferry', usd: 18 },
-  // Voisins immédiats.
-  { a: 'Michamvi', b: 'Bwejuu', usd: 13 },
-  { a: 'Bwejuu', b: 'Paje', usd: 13 },
-  { a: 'Paje', b: 'Jambiani', usd: 13 },
-  { a: 'Jambiani', b: 'Makunduchi', usd: 13 },
-  // MICHAMVI DEPUIS LE NORD — la pointe se gagne en contournant toute la
-  // baie de Chwaka : la route est bien plus longue que la distance à vol
-  // d'oiseau, sur laquelle les paliers se calculent. Prix de terrain.
-  { a: 'Nungwi', b: 'Michamvi', usd: 68 },
-  { a: 'Kendwa', b: 'Michamvi', usd: 68 },
-  // LA BAIE DE CHWAKA N'A PAS DE PONT — Michamvi fait face à Chwaka, Uroa,
-  // Pongwe et Kiwengwa à quelques kilomètres à vol d'oiseau, mais la route
-  // redescend toute la presqu'île (Bwejuu, Paje), repasse par Jozani et
-  // remonte l'autre rive. La formule, calée sur la distance directe, vendait
-  // Michamvi ↔ Uroa 13 USD pour ~55 km de route (0,24 USD/km — le chauffeur
-  // roulait à perte). Paliers appliqués aux kilomètres RÉELS :
-  { a: 'Michamvi', b: 'Chwaka', usd: 34 }, // ~45 km par la route
-  { a: 'Michamvi', b: 'Uroa', usd: 42 }, // ~55 km
-  { a: 'Michamvi', b: 'Pongwe', usd: 47 }, // ~60 km
-  { a: 'Michamvi', b: 'Kiwengwa', usd: 47 }, // ~65 km
-  { a: 'Michamvi', b: 'Pwani Mchangani', usd: 50 }, // ~70 km
-  { a: 'Michamvi', b: 'Matemwe', usd: 63 }, // ~78 km
-  // LA PRESQU'ÎLE DE FUMBA regarde Kizimkazi par-dessus la baie de Menai :
-  // même illusion d'optique, la route remonte vers la ville avant de
-  // redescendre la côte sud. Même remède.
-  { a: 'Fumba', b: 'Kizimkazi', usd: 34 }, // ~45 km par la route
-  // LE COULOIR SUD-EST ↔ NORD-EST passe par Tunguu : de Paje à Uroa, la
-  // route remonte par Jozani jusqu'à Tunguu puis redescend sur Chwaka —
-  // ~55 km là où le vol d'oiseau en voit 30. Tout le bloc suit les
-  // kilomètres réels ; au-delà de 55 km de route, 47 USD — aligné sur le
-  // transfert Stone Town ↔ Nungwi/Paje (décision commerciale du 20/08).
-  { a: 'Bwejuu', b: 'Chwaka', usd: 34 }, // ~50 km par la route
-  { a: 'Paje', b: 'Chwaka', usd: 34 }, // ~45 km
-  { a: 'Jambiani', b: 'Chwaka', usd: 34 }, // ~51 km
-  { a: 'Makunduchi', b: 'Chwaka', usd: 47 }, // ~60 km
-  { a: 'Bwejuu', b: 'Uroa', usd: 47 }, // ~60 km
-  { a: 'Paje', b: 'Uroa', usd: 42 }, // ~55 km
-  { a: 'Jambiani', b: 'Uroa', usd: 47 }, // ~61 km
-  { a: 'Makunduchi', b: 'Uroa', usd: 50 }, // ~70 km
-  { a: 'Bwejuu', b: 'Pongwe', usd: 47 }, // ~65 km
-  { a: 'Paje', b: 'Pongwe', usd: 47 }, // ~60 km
-  { a: 'Jambiani', b: 'Pongwe', usd: 47 }, // ~66 km
-  { a: 'Makunduchi', b: 'Pongwe', usd: 50 }, // ~75 km
-  // La pointe sud : Kizimkazi est sur l'autre versant, la route y descend
-  // par l'intérieur au lieu de longer la côte. Prix de terrain.
-  { a: 'Kizimkazi', b: 'Jambiani', usd: 18 },
-  // Un village sauté.
-  { a: 'Michamvi', b: 'Paje', usd: 17 },
-  { a: 'Bwejuu', b: 'Jambiani', usd: 17 },
-  { a: 'Paje', b: 'Makunduchi', usd: 17 },
-  // LA PRESQU'ÎLE DE FUMBA ET LA POINTE SUD, DEPUIS LA CÔTE EST. Fumba est au
-  // bout d'une langue de terre : pour rejoindre la côte est il faut remonter
-  // jusqu'au carrefour de Tunguu et redescendre — 54 km de route pour Paje
-  // quand le vol d'oiseau en voit 38. Kizimkazi se gagne, lui, par la route
-  // côtière du sud via Makunduchi. Prix calés sur la route réelle.
-  { a: 'Fumba', b: 'Uroa', usd: 34 }, // ~41 km par Tunguu
-  { a: 'Fumba', b: 'Paje', usd: 42 }, // ~54 km
-  { a: 'Fumba', b: 'Bwejuu', usd: 42 }, // ~59 km
-  { a: 'Fumba', b: 'Jambiani', usd: 42 }, // ~63 km
-  { a: 'Fumba', b: 'Michamvi', usd: 50 }, // ~74 km
-  { a: 'Fumba', b: 'Makunduchi', usd: 63 }, // ~77 km, tout le tour de l'île
-  { a: 'Paje', b: 'Kizimkazi', usd: 26 }, // ~36 km par la côte sud
-  { a: 'Bwejuu', b: 'Kizimkazi', usd: 34 }, // ~40 km
-  { a: 'Michamvi', b: 'Kizimkazi', usd: 42 }, // ~55 km
-  // LES GRANDES TRAVERSÉES NORD ↔ SUD, PLAFONNÉES À 57 USD (21/08/2026).
-  //
-  // Elles montaient à 63 (côte est) et 68 USD (pointe sud) : les paliers au
-  // kilomètre continuaient de grimper alors que le marché, lui, ne suit plus.
-  // Le prix est ramené au plancher qui laisse 50 USD au chauffeur —
-  // 50 ÷ 0,88 = 56,82, arrondi au-dessus. À 56 USD il n'en resterait que
-  // 49,28 : 57 est le prix le plus bas possible sans entamer les 50 USD.
-  //
-  // Bwejuu est du lot sans avoir été demandé : le village est ENTRE Paje et
-  // Jambiani, sur la même route. L'y laisser à 63 aurait fait payer plus cher
-  // l'arrêt du milieu que les deux villages qui l'encadrent.
-  { a: 'Nungwi', b: 'Paje', usd: 57 }, // ~88 km
-  { a: 'Nungwi', b: 'Bwejuu', usd: 57 }, // ~84 km
-  { a: 'Nungwi', b: 'Jambiani', usd: 57 }, // ~97 km
-  { a: 'Nungwi', b: 'Makunduchi', usd: 57 }, // ~110 km
-  { a: 'Nungwi', b: 'Kizimkazi', usd: 57 }, // ~112 km
-  { a: 'Kendwa', b: 'Paje', usd: 57 }, // ~85 km
-  { a: 'Kendwa', b: 'Bwejuu', usd: 57 }, // ~81 km
-  { a: 'Kendwa', b: 'Jambiani', usd: 57 }, // ~94 km
-  { a: 'Kendwa', b: 'Makunduchi', usd: 57 }, // ~107 km
-  { a: 'Kendwa', b: 'Kizimkazi', usd: 57 }, // ~109 km
+// Renversement du 21/08/2026. Jusqu'ici on posait un prix client et la
+// commission en prélevait un pourcentage : le chauffeur découvrait sa part à
+// l'arrivée. Désormais c'est l'inverse. Chaque trajet porte un NET CHAUFFEUR
+// décidé sur le terrain, et le prix client est ce net PLUS le forfait zanziGo.
+// La commission n'est donc plus un taux mais une somme en dollars, connue
+// d'avance, identique quel que soit le moyen de paiement.
+//
+// POURQUOI UN FORFAIT ET PAS UN POURCENTAGE. Sur les grandes traversées, 12 %
+// obligeaient à afficher 63 USD pour laisser 55 au chauffeur — hors marché sur
+// une île où la concurrence est en liquide. Le forfait colle le prix client au
+// plus près du net : 59 USD pour les mêmes 55. Là où le volume est fort, en
+// revanche, le forfait double (voir CORRIDOR_EMPRUNTE) : c'est le couloir des
+// plages du sud-est qui paie l'infrastructure, pas les traversées rares.
+
+/** Ce que zanziGo garde sur une course privée, selon la taille du trajet. */
+function forfaitZanzigoUsd(netUsd) {
+  if (netUsd < 25) return 2;
+  if (netUsd < 45) return 3;
+  return 4;
+}
+
+// TRAJETS TRÈS EMPRUNTÉS : le forfait double. Stone Town et l'aéroport vers
+// Paje, Bwejuu et Jambiani, c'est la liaison la plus demandée de l'île. Le
+// chauffeur y touche exactement la même chose qu'ailleurs (45 USD) ; ce sont
+// les 4 USD supplémentaires du client qui financent le reste.
+const FORFAIT_EMPRUNTE_USD = 8;
+const CORRIDOR_EMPRUNTE = new Set(['paje', 'bwejuu', 'jambiani']);
+
+// Transfert depuis/vers un hub (Stone Town, terminal ferry, aéroport) : prix
+// unique vers toute l'île, quelle que soit la plage.
+const NET_TRANSFERT_USD = 45;
+// L'aéroport et la ville sont à sept kilomètres : ce n'est pas un transfert de
+// plage, et son prix n'a rien à voir.
+const NET_AEROPORT_VILLE_USD = 10;
+
+// NETS CHAUFFEUR VILLE ↔ VILLE, par groupes. Le premier groupe qui contient la
+// paire l'emporte : l'ordre va donc du plus précis au plus large. Ce que la
+// liste ne couvre pas retombe sur la table au kilomètre (PALIERS_KM_NET_USD).
+const GROUPES_NET_USD = [
+  // Sauts de village de la côte est — prix de terrain, donnés un par un.
+  { a: ['paje'], b: ['jambiani', 'bwejuu'], net: 10 },
+  { a: ['nungwi'], b: ['kendwa'], net: 10 },
+  { a: ['paje'], b: ['makunduchi'], net: 15 },
+  { a: ['kizimkazi'], b: ['makunduchi'], net: 15 },
+  { a: ['makunduchi'], b: ['mtende'], net: 15 },
+  // Michamvi et Dongwe sont au bout de la presqu'île : le chauffeur en revient
+  // à vide. Ils se paient plus cher que Makunduchi, pourtant plus loin.
+  { a: ['paje'], b: ['michamvi', 'dongwe', 'kizimkazi'], net: 20 },
+  // Depuis le nord. Kendwa suit Nungwi partout : cinq kilomètres les séparent.
+  { a: ['nungwi', 'kendwa'], b: ['matemwe', 'pwani mchangani'], net: 25 },
+  { a: ['nungwi', 'kendwa'], b: ['kiwengwa', 'uroa', 'chwaka'], net: 35 },
+  { a: ['nungwi', 'kendwa'], b: ['paje', 'bwejuu', 'jambiani'], net: 50 },
+  {
+    a: ['nungwi', 'kendwa'],
+    b: ['makunduchi', 'michamvi', 'dongwe', 'kizimkazi', 'mtende'],
+    net: 55,
+  },
+  // La côte sud-est vers la côte nord-est : pas de route côtière continue, il
+  // faut remonter par le carrefour de Tunguu et redescendre.
+  { a: ['paje', 'bwejuu', 'jambiani'], b: ['chwaka', 'uroa', 'pongwe'], net: 45 },
+  { a: ['paje', 'bwejuu', 'jambiani'], b: ['kiwengwa', 'pwani mchangani', 'matemwe'], net: 47 },
+  {
+    a: ['makunduchi', 'michamvi', 'dongwe', 'kizimkazi', 'mtende'],
+    b: ['uroa', 'pongwe', 'chwaka', 'kiwengwa', 'pwani mchangani', 'matemwe'],
+    net: 50,
+  },
+  // Fumba est au bout de sa presqu'île : pour rejoindre l'est il repasse par
+  // Tunguu, exactement comme depuis Stone Town — donc au prix du transfert.
+  {
+    a: ['fumba'],
+    b: [
+      'paje', 'bwejuu', 'jambiani', 'michamvi', 'dongwe', 'makunduchi', 'mtende',
+      'kizimkazi', 'chwaka', 'uroa', 'pongwe', 'kiwengwa', 'pwani mchangani', 'matemwe',
+    ],
+    net: 45,
+  },
+  { a: ['fumba'], b: ['nungwi', 'kendwa'], net: 50 },
 ];
 
 // Trajets spéciaux à prix fixe (TZS, place locale en taxi partagé), deux
@@ -288,30 +242,75 @@ function tierForRoute(pickup, dropoff) {
   return z1 ?? z2 ?? fallback;
 }
 
-function specialPrivateRoute(pickup, dropoff) {
+
+// LA CHAÎNE DE LA CÔTE EST : les villages se suivent sur une seule et même
+// route. Le prix s'y compte en VILLAGES TRAVERSÉS, pas en kilomètres — c'est
+// ainsi que les chauffeurs l'annoncent, et deux voisins peuvent être à 7 comme
+// à 14 km sans que la course change de prix. Les paliers au kilomètre s'y
+// trompaient : Jambiani ↔ Makunduchi, voisins immédiats, tombaient au prix
+// d'un village d'écart pour un kilomètre de trop.
+const CHAINE_COTE_EST = [
+  'michamvi',
+  'dongwe',
+  'bwejuu',
+  'paje',
+  'jambiani',
+  'makunduchi',
+  'mtende',
+  'kizimkazi',
+];
+// Écart de 1 village → 10 USD, de 2 → 15, de 3 et plus → 20.
+const NETS_CHAINE_USD = [0, 10, 15, 20];
+
+function netChaineCoteEst(p, d) {
+  const i = CHAINE_COTE_EST.indexOf(p);
+  const j = CHAINE_COTE_EST.indexOf(d);
+  if (i < 0 || j < 0 || i === j) return undefined;
+  return NETS_CHAINE_USD[Math.min(Math.abs(i - j), 3)];
+}
+
+/** La paire (p, d) tombe-t-elle dans ce groupe, dans un sens ou dans l'autre ? */
+function dansLeGroupe(groupe, p, d) {
+  return (
+    (groupe.a.includes(p) && groupe.b.includes(d)) ||
+    (groupe.b.includes(p) && groupe.a.includes(d))
+  );
+}
+
+/**
+ * CE QUE LE CHAUFFEUR GARDE sur une course privée, en dollars.
+ *
+ * C'est le chiffre de référence de toute la grille : le prix client s'en
+ * déduit, jamais l'inverse. Une remise commerciale ne l'entame donc jamais.
+ */
+export function netChauffeurPriveUsd(pickup, dropoff) {
   const p = normCity(pickup);
   const d = normCity(dropoff);
-  return SPECIAL_PRIVATE_ROUTES_USD.find((r) => {
-    const a = r.a.toLowerCase();
-    const b = r.b.toLowerCase();
-    return (p === a && d === b) || (p === b && d === a);
-  });
+  // Aéroport ↔ ville : sept kilomètres, ce n'est pas un transfert de plage.
+  if ((HUBS.has(p) && HUBS_VILLE.has(d)) || (HUBS_VILLE.has(p) && HUBS.has(d))) {
+    return NET_AEROPORT_VILLE_USD;
+  }
+  if (HUBS.has(p) || HUBS.has(d)) return NET_TRANSFERT_USD;
+  const groupe = GROUPES_NET_USD.find((g) => dansLeGroupe(g, p, d));
+  if (groupe) return groupe.net;
+  const chaine = netChaineCoteEst(p, d);
+  if (chaine !== undefined) return chaine;
+  const km = kmEntreVilles(pickup, dropoff);
+  if (km !== null) return PALIERS_KM_NET_USD.find((palier) => km <= palier.maxKm).net;
+  // Lieu inconnu : on ne descend jamais sous le prix d'un transfert, sinon une
+  // faute de frappe dans un nom de village ferait rouler un chauffeur à perte.
+  return NET_TRANSFERT_USD;
 }
 
-function specialPrivateRouteUsd(pickup, dropoff) {
-  return specialPrivateRoute(pickup, dropoff)?.usd;
-}
-
-// Taux de commission d'une course privée, décidé par le PRIX du trajet :
-// 12 % à partir de 40 USD, 17 % en dessous. Le prix privé de référence est
-// toujours le tarif USD de la grille (avant remise résident/hôtel et avant
-// conversion en TZS) : c'est la « taille » du trajet qui compte, pas
-// l'arrangement du client.
-function privateCommissionRate(pickup, dropoff) {
-  const usd = privateUsdForRoute(pickup, dropoff);
-  return usd >= COMMISSION_PRIVE_SEUIL_USD
-    ? COMMISSION_RATES.private
-    : COMMISSION_RATES.privateCourt;
+/** Ce que zanziGo garde sur ce trajet précis, en dollars. */
+export function forfaitZanzigoTrajetUsd(pickup, dropoff) {
+  const p = normCity(pickup);
+  const d = normCity(dropoff);
+  const versCorridor =
+    (HUBS.has(p) && CORRIDOR_EMPRUNTE.has(d)) || (HUBS.has(d) && CORRIDOR_EMPRUNTE.has(p));
+  return versCorridor
+    ? FORFAIT_EMPRUNTE_USD
+    : forfaitZanzigoUsd(netChauffeurPriveUsd(pickup, dropoff));
 }
 
 function specialLocalRouteTzs(pickup, dropoff) {
@@ -349,21 +348,16 @@ function specialLocalRouteTzs(pickup, dropoff) {
 // kilomètre que le village d'à côté — le chauffeur y perdait sa journée.
 // Les paliers du milieu font donc 8 à 15 km, jamais 20 : le prix au kilomètre
 // reste entre 0,65 et 1,00 sur toute la gamme, au lieu de tomber à 0,50.
-const PALIERS_KM_USD = [
-  { maxKm: 12, usd: 13 }, // village voisin — Nungwi ↔ Kendwa, Paje ↔ Jambiani
-  { maxKm: 24, usd: 17 }, // un village d'écart — Nungwi ↔ Matemwe
-  { maxKm: 30, usd: 22 }, // deux villages — Kiwengwa ↔ Chwaka, Paje ↔ Michamvi
-  { maxKm: 40, usd: 26 }, // Paje ↔ Uroa
-  { maxKm: 50, usd: 34 }, // Paje ↔ Kiwengwa, Nungwi ↔ Kiwengwa
-  { maxKm: 65, usd: 42 }, // Kiwengwa ↔ Jambiani
-  { maxKm: 75, usd: 50 }, // Paje ↔ Matemwe, Nungwi ↔ Chwaka
-  { maxKm: 100, usd: 63 }, // Nungwi ↔ Paje, ↔ Jambiani — d'une côte à l'autre
-  { maxKm: Infinity, usd: 68 }, // du nord au sud — Nungwi ↔ Makunduchi
+const PALIERS_KM_NET_USD = [
+  { maxKm: 12, net: 10 }, // village voisin — Nungwi ↔ Kendwa, Paje ↔ Jambiani
+  { maxKm: 25, net: 15 }, // un village d'écart — Bwejuu ↔ Jambiani
+  { maxKm: 35, net: 20 }, // deux villages — Kiwengwa ↔ Chwaka
+  { maxKm: 45, net: 25 },
+  { maxKm: 60, net: 35 },
+  { maxKm: 80, net: 45 },
+  { maxKm: 100, net: 50 },
+  { maxKm: Infinity, net: 55 }, // du nord au sud
 ];
-
-function palierUsd(km) {
-  return PALIERS_KM_USD.find((p) => km <= p.maxKm).usd;
-}
 const CITY_COORDS = {
   'aéroport (aakia)': [-6.221, 39.223],
   'aéroport abeid amani karume': [-6.221, 39.223],
@@ -385,6 +379,8 @@ const CITY_COORDS = {
   paje: [-6.2667, 39.5341],
   jambiani: [-6.3219, 39.5468],
   makunduchi: [-6.4127, 39.5534],
+  mtende: [-6.4547, 39.5276],
+  dongwe: [-6.1912, 39.5317],
   kizimkazi: [-6.4544, 39.4728],
   fumba: [-6.3148, 39.2848],
 };
@@ -424,15 +420,7 @@ export function kmEntreVilles(a, b) {
 // historiques inchangés), formule au kilomètre pour toute autre paire de
 // villes connues, zone en dernier recours.
 export function privateUsdForRoute(pickup, dropoff) {
-  const special = specialPrivateRouteUsd(pickup, dropoff);
-  if (special !== undefined) return special;
-  const p = normCity(pickup);
-  const d = normCity(dropoff);
-  if (!HUBS.has(p) && !HUBS.has(d)) {
-    const km = kmEntreVilles(pickup, dropoff);
-    if (km !== null) return palierUsd(km);
-  }
-  return tierForRoute(pickup, dropoff).privateUsd;
+  return netChauffeurPriveUsd(pickup, dropoff) + forfaitZanzigoTrajetUsd(pickup, dropoff);
 }
 
 // Prix touriste (USD) d'une place en trajet partagé selon l'itinéraire —
@@ -493,10 +481,9 @@ export function priceTrip(tripType, audience, route = {}) {
     // ville ↔ ville incluse), converti en shillings — commission privée
     // selon le prix (12 % dès 40 USD, 17 % en dessous).
     if (tripType === 'private') {
-      const usd = privateUsdForRoute(route.pickup, route.dropoff);
-      const price = Math.round(usd * config.usdToTzsRate);
-      const taux = privateCommissionRate(route.pickup, route.dropoff);
-      return { price, commission: round2(price * taux), currency: 'TZS' };
+      const price = Math.round(privateUsdForRoute(route.pickup, route.dropoff) * config.usdToTzsRate);
+      const net = Math.round(netChauffeurPriveUsd(route.pickup, route.dropoff) * config.usdToTzsRate);
+      return { price, commission: round2(price - net), currency: 'TZS' };
     }
     // Taxi partagé local : tarif unifié (trajets spéciaux inclus) SUR LES
     // GRANDS AXES uniquement ; ailleurs, prix touriste converti en TZS —
@@ -509,8 +496,6 @@ export function priceTrip(tripType, audience, route = {}) {
   let taux;
   if (tripType === 'private') {
     usd = privateUsdForRoute(route.pickup, route.dropoff);
-    // 12 % dès 40 USD (chauffeur 88 %), 17 % sous 40 USD (chauffeur 83 %).
-    taux = privateCommissionRate(route.pickup, route.dropoff);
   } else if (tripType === 'shared_tourist' || tripType === 'posted_return') {
     usd = sharedSeatUsdForRoute(route.pickup, route.dropoff);
     taux = COMMISSION_RATES.shared; // 22 % — le chauffeur reçoit 78 %
@@ -530,8 +515,19 @@ export function priceTrip(tripType, audience, route = {}) {
       : remiseHotelApplicable
         ? config.hotelDiscountRate
         : 0;
-  const price = tauxRemise ? round2(usd * (1 - tauxRemise)) : usd;
-  return { price, commission: round2(price * taux), currency: 'USD' };
+  const remise = tauxRemise ? round2(usd * (1 - tauxRemise)) : usd;
+
+  if (tripType === 'private') {
+    // LA REMISE SORT DE LA POCHE DE ZANZIGO, JAMAIS DE CELLE DU CHAUFFEUR.
+    // Sa part est un montant promis, pas un pourcentage : un arrangement
+    // commercial passé avec un hôtel ou un résident ne le regarde pas. Le prix
+    // ne descend donc jamais sous ce net — au pire zanziGo ne gagne rien sur
+    // cette course-là (voir le test « la remise ne mord pas sur le chauffeur »).
+    const net = netChauffeurPriveUsd(route.pickup, route.dropoff);
+    const price = Math.max(net, remise);
+    return { price, commission: round2(price - net), currency: 'USD' };
+  }
+  return { price: remise, commission: round2(remise * taux), currency: 'USD' };
 }
 
 // size : 'small' | 'medium' | 'large' ; remise : ex. 0.05 pour un hôtel

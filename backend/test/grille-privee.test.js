@@ -1,214 +1,261 @@
-// Grille privée VILLE ↔ VILLE au kilomètre : les trajets connus (hubs,
-// spéciaux) gardent leurs prix, les autres paires sont facturées à la
-// distance — 0,85 USD/km de route, arrondi aux 5 USD, minimum 20 USD.
+// LA GRILLE PRIVÉE PART DU NET CHAUFFEUR (21/08/2026).
+//
+// Renversement du modèle : chaque trajet porte un montant décidé sur le
+// terrain — ce que le chauffeur garde — et le prix client est ce net PLUS le
+// forfait zanziGo. La commission n'est donc plus un pourcentage.
+//
+// Ces tests verrouillent les deux bouts : les nets annoncés aux chauffeurs
+// (c'est un engagement, ils recrutent dessus) et le forfait qui s'y ajoute.
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import request from 'supertest';
 import {
   privateUsdForRoute,
+  netChauffeurPriveUsd,
+  forfaitZanzigoTrajetUsd,
   priceTrip,
   sharedSeatUsdForRoute,
+  sharedAllowedForRoute,
 } from '../src/services/pricingService.js';
 import { app, authHeaders, createTourist, useTestDb } from './setup.js';
 
 useTestDb();
 
-describe('Grille privée au kilomètre', () => {
-  it('ancrages : les trajets connus gardent leurs prix', () => {
-    // Hubs → zone : grille alignée sur le marché des transferts.
-    assert.equal(privateUsdForRoute('Stone Town', 'Nungwi'), 47);
-    assert.equal(privateUsdForRoute('Stone Town', 'Kendwa'), 47);
-    assert.equal(privateUsdForRoute('Stone Town Ferry', 'Matemwe'), 42);
-    assert.equal(privateUsdForRoute('Aéroport (AAKIA)', 'Paje'), 47);
-    assert.equal(privateUsdForRoute('Stone Town', 'Bwejuu'), 47);
-    assert.equal(privateUsdForRoute('Stone Town', 'Jambiani'), 53);
-    assert.equal(privateUsdForRoute('Stone Town', 'Michamvi'), 53);
-    assert.equal(privateUsdForRoute('Stone Town', 'Kizimkazi'), 47);
-    assert.equal(privateUsdForRoute('Stone Town', 'Makunduchi'), 47);
-    // Trajets spéciaux : prioritaires sur la formule (et sur le minimum de
-    // 20 USD pour les sauts de village de la côte est à 12 USD).
-    // Les grandes traversées nord ↔ sud sont plafonnées à 57 USD, dans les
-    // deux sens (voir le test du plancher chauffeur plus bas).
-    assert.equal(privateUsdForRoute('Nungwi', 'Paje'), 57);
-    assert.equal(privateUsdForRoute('Paje', 'Nungwi'), 57);
-    assert.equal(privateUsdForRoute('Nungwi', 'Kizimkazi'), 57);
-    assert.equal(privateUsdForRoute('Kizimkazi', 'Nungwi'), 57);
-  });
+const HUBS = ['Stone Town', 'Aéroport international Abeid Amani Karume'];
 
-  it('les baies sans pont se paient par la route, pas à vol d’oiseau', () => {
-    // Michamvi fait face à la côte nord-est par-dessus la baie de Chwaka
-    // (10 km à vol d'oiseau, 45 à 78 km de route) ; Fumba fait face à
-    // Kizimkazi par-dessus la baie de Menai. La formule au kilomètre
-    // vendait ces traversées à perte (Michamvi ↔ Uroa : 13 USD pour
-    // ~55 km) — les prix spéciaux suivent les kilomètres réels.
-    const traversees = [
-      ['Michamvi', 'Chwaka', 34],
-      ['Michamvi', 'Uroa', 42],
-      ['Michamvi', 'Pongwe', 47],
-      ['Michamvi', 'Kiwengwa', 47],
-      ['Michamvi', 'Pwani Mchangani', 50],
-      ['Michamvi', 'Matemwe', 63],
-      ['Fumba', 'Kizimkazi', 34],
-      // Le couloir sud-est ↔ nord-est, par Tunguu.
-      ['Paje', 'Chwaka', 34],
-      ['Paje', 'Uroa', 42],
-      ['Paje', 'Pongwe', 47],
-      ['Bwejuu', 'Chwaka', 34],
-      ['Bwejuu', 'Uroa', 47],
-      ['Bwejuu', 'Pongwe', 47],
-      ['Jambiani', 'Chwaka', 34],
-      ['Jambiani', 'Uroa', 47],
-      ['Jambiani', 'Pongwe', 47],
-      ['Makunduchi', 'Chwaka', 47],
-      ['Makunduchi', 'Uroa', 50],
-      ['Makunduchi', 'Pongwe', 50],
-    ];
-    for (const [a, b, usd] of traversees) {
-      assert.equal(privateUsdForRoute(a, b), usd, `${a} → ${b}`);
-      assert.equal(privateUsdForRoute(b, a), usd, `${b} → ${a}`);
+/** Vérifie un trajet dans les DEUX sens : net, forfait, prix client. */
+function verifier(depart, arrivee, net, forfait) {
+  for (const [a, b] of [
+    [depart, arrivee],
+    [arrivee, depart],
+  ]) {
+    assert.equal(netChauffeurPriveUsd(a, b), net, `net ${a} → ${b}`);
+    assert.equal(forfaitZanzigoTrajetUsd(a, b), forfait, `forfait ${a} → ${b}`);
+    assert.equal(privateUsdForRoute(a, b), net + forfait, `prix client ${a} → ${b}`);
+  }
+}
+
+describe('Grille privée : le net du chauffeur décide, le forfait s’ajoute', () => {
+  it('transfert depuis un hub : 45 USD au chauffeur vers toute l’île', () => {
+    // Prix unique quelle que soit la plage — décision de terrain, assumée :
+    // un transfert court paie autant qu'un long.
+    for (const hub of HUBS) {
+      for (const plage of [
+        'Nungwi',
+        'Kendwa',
+        'Matemwe',
+        'Pwani Mchangani',
+        'Kiwengwa',
+        'Pongwe',
+        'Uroa',
+        'Chwaka',
+        'Michamvi',
+        'Dongwe',
+        'Makunduchi',
+        'Mtende',
+        'Kizimkazi',
+        'Fumba',
+      ]) {
+        verifier(hub, plage, 45, 4); // client 49 USD
+      }
     }
   });
 
-  it('la chaîne de la côte est : d’un village au suivant, 13 USD', () => {
-    // Michamvi → Bwejuu → Paje → Jambiani → Makunduchi : chaque maillon
-    // vaut 13 USD, dans les deux sens.
-    const maillons = [
-      ['Michamvi', 'Bwejuu'],
-      ['Bwejuu', 'Paje'],
-      ['Paje', 'Jambiani'],
-      ['Jambiani', 'Makunduchi'],
-    ];
-    for (const [a, b] of maillons) {
-      assert.equal(privateUsdForRoute(a, b), 13, `${a} → ${b}`);
-      assert.equal(privateUsdForRoute(b, a), 13, `${b} → ${a}`);
+  it('couloir très emprunté : le forfait double, le chauffeur touche pareil', () => {
+    // Stone Town et l'aéroport vers les plages du sud-est : la liaison la plus
+    // demandée de l'île. C'est le VOLUME qui finance zanziGo, pas le chauffeur
+    // — son net ne bouge pas d'un dollar.
+    for (const hub of HUBS) {
+      for (const plage of ['Paje', 'Bwejuu', 'Jambiani']) {
+        verifier(hub, plage, 45, 8); // client 53 USD
+      }
     }
-  });
-
-  it('un village d’écart : 17 USD, sur les trois paires concernées', () => {
-    const ecarts = [
-      ['Michamvi', 'Paje'], // par-dessus Bwejuu
-      ['Bwejuu', 'Jambiani'], // par-dessus Paje
-      ['Paje', 'Makunduchi'], // par-dessus Jambiani
-    ];
-    for (const [a, b] of ecarts) {
-      assert.equal(privateUsdForRoute(a, b), 17, `${a} → ${b}`);
-      assert.equal(privateUsdForRoute(b, a), 17, `${b} → ${a}`);
-      const saut = priceTrip('private', 'tourist', { pickup: a, dropoff: b });
-      assert.equal(saut.commission, 2.89, `${a} → ${b} : commission 17 % (< 40 USD)`);
-      assert.equal(saut.price - saut.commission, 14.11, `${a} → ${b} : gain chauffeur`);
-    }
-    // Au-delà de deux villages, les paliers de distance reprennent. Michamvi
-    // → Jambiani longe la côte par Bwejuu et Paje : 28 km, soit le palier des
-    // 30 km. (Cette valeur était de 26 USD tant que Michamvi était mal placé
-    // sur la carte — voir coordonnees-villes.test.js.)
-    assert.equal(privateUsdForRoute('Michamvi', 'Jambiani'), 22); // ≈ 28 km
-  });
-
-  it('sauts de village : 13 USD à 17 % (< 40 USD) — le chauffeur garde 10,79', () => {
-    const saut = priceTrip('private', 'tourist', { pickup: 'Paje', dropoff: 'Jambiani' });
-    assert.equal(saut.price, 13);
-    assert.equal(saut.commission, 2.21);
-    assert.equal(saut.price - saut.commission, 10.79, 'le gain chauffeur');
-    // Local sur le même trajet : prix ET commission convertis (×2600, 15 %).
-    const local = priceTrip('private', 'local', { pickup: 'Paje', dropoff: 'Jambiani' });
-    assert.equal(local.price, 13 * 2600);
-    assert.equal(local.commission, 13 * 2600 * 0.17);
-    // Un transfert plus long bascule à 12 % dès 40 USD (Matemwe → Paje, 65 km,
-    // 48 USD depuis le rééquilibrage des paliers → commission 4,80).
-    const normal = priceTrip('private', 'tourist', { pickup: 'Matemwe', dropoff: 'Paje' });
-    assert.equal(normal.commission, 6);
-  });
-
-  it('paliers de distance : du village voisin à la traversée du nord au sud', () => {
-    // La même logique que la côte est, prolongée à toute l'île.
-    assert.equal(privateUsdForRoute('Nungwi', 'Kendwa'), 13); // ≈ 5 km, voisins
-    assert.equal(privateUsdForRoute('Nungwi', 'Matemwe'), 17); // ≈ 23 km
-    assert.equal(privateUsdForRoute('Kiwengwa', 'Chwaka'), 22); // ≈ 27 km
-    assert.equal(privateUsdForRoute('Nungwi', 'Kiwengwa'), 34); // ≈ 41 km
-    assert.equal(privateUsdForRoute('Nungwi', 'Chwaka'), 50); // ≈ 68 km
-    assert.equal(privateUsdForRoute('Matemwe', 'Paje'), 50); // ≈ 65 km
-    // Au-delà de 75 km, le palier ne décide plus : les traversées nord ↔ sud
-    // sont plafonnées à 57 USD par un trajet spécial.
-    assert.equal(privateUsdForRoute('Nungwi', 'Paje'), 57); // ≈ 88 km, côte à côte
-    assert.equal(privateUsdForRoute('Kendwa', 'Kizimkazi'), 57); // ≈ 109 km, nord → sud
-    assert.equal(privateUsdForRoute('Nungwi', 'Makunduchi'), 57); // ≈ 110 km
-    // Le palier lui-même n'a pas bougé : il sert encore ailleurs (Matemwe et
-    // Pwani Mchangani vers la pointe sud, Nungwi ↔ Fumba).
-    assert.equal(privateUsdForRoute('Matemwe', 'Makunduchi'), 63); // ≈ 90 km
-    // Symétrie : même prix dans les deux sens.
+    // Et le net est bien le même que vers une plage ordinaire.
     assert.equal(
-      privateUsdForRoute('Kiwengwa', 'Jambiani'),
-      privateUsdForRoute('Jambiani', 'Kiwengwa')
+      netChauffeurPriveUsd('Stone Town', 'Paje'),
+      netChauffeurPriveUsd('Stone Town', 'Nungwi')
     );
   });
 
-  it('Kizimkazi ↔ Jambiani : 18 USD, la route passe par l’intérieur', () => {
-    // 35 km à vol d'oiseau (palier 26 USD), mais Kizimkazi est sur l'autre
-    // versant : on ne longe pas la côte, on redescend par l'intérieur.
-    assert.equal(privateUsdForRoute('Kizimkazi', 'Jambiani'), 18);
-    assert.equal(privateUsdForRoute('Jambiani', 'Kizimkazi'), 18);
-    const t = priceTrip('private', 'tourist', { pickup: 'Kizimkazi', dropoff: 'Jambiani' });
-    assert.equal(t.commission, 3.06, 'commission privée 15 % (< 40 USD)');
-    assert.equal(t.price - t.commission, 14.94, 'gain chauffeur');
-  });
-
-  it('Michamvi depuis le nord : 68 USD, la route contourne la baie', () => {
-    // Les paliers se calculent à vol d'oiseau (64 km → 42 USD). La route,
-    // elle, fait tout le tour de la baie de Chwaka : le prix de terrain
-    // prime, dans les deux sens et depuis Kendwa comme depuis Nungwi.
-    for (const nord of ['Nungwi', 'Kendwa']) {
-      assert.equal(privateUsdForRoute(nord, 'Michamvi'), 68, `${nord} → Michamvi`);
-      assert.equal(privateUsdForRoute('Michamvi', nord), 68, `Michamvi → ${nord}`);
+  it('aéroport ↔ Stone Town : sept kilomètres, ce n’est pas un transfert', () => {
+    for (const ville of ['Stone Town', 'Stone Town Ferry']) {
+      verifier('Aéroport international Abeid Amani Karume', ville, 10, 2); // client 12 USD
     }
-    const traversee = priceTrip('private', 'tourist', { pickup: 'Nungwi', dropoff: 'Michamvi' });
-    assert.equal(traversee.commission, 8.16, 'commission privée 10 % (≥ 40 USD)');
-    assert.equal(traversee.price - traversee.commission, 59.84, 'gain chauffeur');
-    // Depuis Stone Town, Michamvi garde sa grille de zone : 53 USD.
-    assert.equal(privateUsdForRoute('Stone Town', 'Michamvi'), 53);
   });
 
-  it('ville inconnue : retombe sur la grille par zone (jamais d\'erreur)', () => {
-    assert.equal(privateUsdForRoute('Hôtel Mystère', 'Nungwi'), 47);
-    assert.equal(privateUsdForRoute('Quelque part', 'Ailleurs'), 53);
+  it('les traversées du nord vers le sud : 55 USD au chauffeur, 59 au client', () => {
+    for (const nord of ['Nungwi', 'Kendwa']) {
+      for (const sud of ['Makunduchi', 'Kizimkazi', 'Mtende', 'Michamvi', 'Dongwe']) {
+        verifier(nord, sud, 55, 4);
+      }
+    }
   });
 
-  it('priceTrip applique les paliers (touriste USD, local en TZS ×2600)', () => {
-    const touriste = priceTrip('private', 'tourist', { pickup: 'Matemwe', dropoff: 'Paje' });
-    assert.equal(touriste.price, 50); // 65 km — palier 65-75
-    assert.equal(touriste.currency, 'USD');
-    const local = priceTrip('private', 'local', { pickup: 'Matemwe', dropoff: 'Paje' });
-    assert.equal(local.price, 50 * 2600);
-    assert.equal(local.currency, 'TZS');
+  it('depuis le nord, par paliers : 25, 35 puis 50 USD', () => {
+    for (const nord of ['Nungwi', 'Kendwa']) {
+      for (const ville of ['Matemwe', 'Pwani Mchangani']) verifier(nord, ville, 25, 3);
+      for (const ville of ['Kiwengwa', 'Uroa', 'Chwaka']) verifier(nord, ville, 35, 3);
+      for (const ville of ['Paje', 'Bwejuu', 'Jambiani']) verifier(nord, ville, 50, 4);
+    }
+    // Nungwi et Kendwa sont voisins : la règle du nord ne s'applique pas entre eux.
+    verifier('Nungwi', 'Kendwa', 10, 2);
   });
 
-  it('trajet court : la demande de course PARTAGÉE est refusée, la privée passe', async () => {
-    const { token, user } = await createTourist();
-    const partage = await request(app)
-      .post('/api/trips')
-      .set(authHeaders(token))
-      .send({
-        userId: user.id,
-        tripType: 'shared_tourist',
-        pickupLocation: 'Paje',
-        dropoffLocation: 'Jambiani',
-      });
-    assert.equal(partage.status, 422);
-    assert.equal(partage.body.error.code, 'no_shared_route');
-
-    const prive = await request(app)
-      .post('/api/trips')
-      .set(authHeaders(token))
-      .send({
-        userId: user.id,
-        tripType: 'private',
-        pickupLocation: 'Paje',
-        dropoffLocation: 'Jambiani',
-      });
-    assert.equal(prive.status, 201, JSON.stringify(prive.body));
-    assert.equal(Number(prive.body.price), 13);
+  it('sauts de village de la côte est : 10, 15 ou 20 USD', () => {
+    verifier('Paje', 'Jambiani', 10, 2);
+    verifier('Paje', 'Bwejuu', 10, 2);
+    verifier('Paje', 'Makunduchi', 15, 2);
+    verifier('Kizimkazi', 'Makunduchi', 15, 2);
+    verifier('Makunduchi', 'Mtende', 15, 2);
+    // Michamvi et Dongwe sont au bout de la presqu'île : le chauffeur en
+    // revient à vide. Plus cher que Makunduchi, pourtant plus loin.
+    verifier('Paje', 'Michamvi', 20, 2);
+    verifier('Paje', 'Dongwe', 20, 2);
+    verifier('Paje', 'Kizimkazi', 20, 2);
+    assert.ok(
+      netChauffeurPriveUsd('Paje', 'Michamvi') > netChauffeurPriveUsd('Paje', 'Makunduchi'),
+      'la presqu’île sans issue doit rester au-dessus du village plus lointain'
+    );
   });
 
-  it('bout en bout : une course privée Matemwe → Paje est créée à 50 USD', async () => {
+  it('la côte sud-est vers la côte nord-est passe par Tunguu : 45, 47 ou 50', () => {
+    for (const sudEst of ['Paje', 'Bwejuu', 'Jambiani']) {
+      for (const nordEst of ['Chwaka', 'Uroa', 'Pongwe']) verifier(sudEst, nordEst, 45, 4);
+      for (const nordEst of ['Kiwengwa', 'Pwani Mchangani', 'Matemwe']) {
+        verifier(sudEst, nordEst, 47, 4);
+      }
+    }
+    for (const sud of ['Makunduchi', 'Michamvi', 'Dongwe', 'Kizimkazi', 'Mtende']) {
+      for (const nordEst of [
+        'Uroa',
+        'Pongwe',
+        'Chwaka',
+        'Kiwengwa',
+        'Pwani Mchangani',
+        'Matemwe',
+      ]) {
+        verifier(sud, nordEst, 50, 4);
+      }
+    }
+  });
+
+  it('ce que la liste ne couvre pas retombe sur les kilomètres', () => {
+    // Villages voisins de la côte nord-est : aucun groupe ne les nomme.
+    verifier('Uroa', 'Pongwe', 10, 2); // ≈ 7 km
+    verifier('Matemwe', 'Kiwengwa', 15, 2); // ≈ 22 km
+    verifier('Kiwengwa', 'Chwaka', 20, 2); // ≈ 27 km
+  });
+
+  it('la côte est se compte en VILLAGES traversés, pas en kilomètres', () => {
+    // Michamvi — Dongwe — Bwejuu — Paje — Jambiani — Makunduchi — Mtende —
+    // Kizimkazi se suivent sur une seule route. Un voisin immédiat vaut 10,
+    // quel que soit le kilométrage : Jambiani ↔ Makunduchi fait 14 km et
+    // Michamvi ↔ Dongwe 9, les deux se paient pareil.
+    verifier('Jambiani', 'Makunduchi', 10, 2);
+    verifier('Michamvi', 'Dongwe', 10, 2);
+    verifier('Mtende', 'Kizimkazi', 10, 2);
+    verifier('Bwejuu', 'Jambiani', 15, 2); // un village entre les deux
+    verifier('Jambiani', 'Kizimkazi', 20, 2); // trois villages et plus
+    verifier('Michamvi', 'Makunduchi', 20, 2);
+    // Un voisin ne peut jamais coûter plus cher qu'un village plus lointain
+    // sur la même route — c'est ce que les paliers au kilomètre faisaient.
+    assert.ok(
+      netChauffeurPriveUsd('Jambiani', 'Makunduchi') <=
+        netChauffeurPriveUsd('Paje', 'Makunduchi'),
+      'le village voisin dépasse le village d’écart'
+    );
+  });
+
+  it('la commission est une soustraction, pas un pourcentage', () => {
+    const transfert = priceTrip('private', 'tourist', {
+      pickup: 'Stone Town',
+      dropoff: 'Nungwi',
+    });
+    assert.equal(transfert.price, 49);
+    assert.equal(transfert.commission, 4);
+    assert.equal(transfert.price - transfert.commission, 45, 'le net promis au chauffeur');
+
+    const emprunte = priceTrip('private', 'tourist', { pickup: 'Stone Town', dropoff: 'Paje' });
+    assert.equal(emprunte.price, 53);
+    assert.equal(emprunte.commission, 8, 'zanziGo double sa part sur le couloir chargé');
+    assert.equal(emprunte.price - emprunte.commission, 45, 'le chauffeur touche la même chose');
+  });
+
+  it('la remise ne mord JAMAIS sur la part du chauffeur', () => {
+    // Le net est un montant promis, pas un pourcentage : un arrangement passé
+    // avec un hôtel ou un résident ne le regarde pas. C'est zanziGo qui paie
+    // la remise, quitte à ne rien gagner sur cette course-là.
+    for (const audience of ['resident', 'hotel']) {
+      for (const [depart, arrivee] of [
+        ['Stone Town', 'Nungwi'],
+        ['Stone Town', 'Paje'],
+        ['Nungwi', 'Makunduchi'],
+        ['Paje', 'Jambiani'],
+      ]) {
+        const course = priceTrip('private', audience, { pickup: depart, dropoff: arrivee });
+        const net = netChauffeurPriveUsd(depart, arrivee);
+        assert.equal(
+          course.price - course.commission,
+          net,
+          `${audience} ${depart} → ${arrivee} : le chauffeur doit garder ${net}`
+        );
+        assert.ok(course.commission >= 0, 'zanziGo ne peut pas payer pour rouler');
+        assert.ok(course.price <= privateUsdForRoute(depart, arrivee), 'la remise doit baisser');
+      }
+    }
+  });
+
+  it('la place en taxi partagé vaut le tiers du privé', () => {
+    for (const [depart, arrivee] of [
+      ['Stone Town', 'Nungwi'],
+      ['Stone Town', 'Paje'],
+      ['Nungwi', 'Makunduchi'],
+      ['Paje', 'Chwaka'],
+      ['Nungwi', 'Kiwengwa'],
+    ]) {
+      const prive = privateUsdForRoute(depart, arrivee);
+      assert.equal(sharedSeatUsdForRoute(depart, arrivee), Math.floor(prive / 3));
+      assert.ok(
+        sharedSeatUsdForRoute(depart, arrivee) * 3 <= prive,
+        'trois places ne doivent jamais coûter plus cher que la voiture entière'
+      );
+    }
+    // Pas de taxi partagé sur les petits trajets.
+    assert.equal(sharedAllowedForRoute('Paje', 'Jambiani'), false);
+    assert.equal(sharedAllowedForRoute('Stone Town', 'Nungwi'), true);
+  });
+
+  it('la voiture pleine rapporte plus que la course privée', () => {
+    // C'est l'argument de recrutement : quatre places suffisent à dépasser le
+    // privé, et la voiture en tient six. S'il tombe, la fiche chauffeur ment.
+    for (const [depart, arrivee] of [
+      ['Stone Town', 'Nungwi'],
+      ['Stone Town', 'Paje'],
+      ['Nungwi', 'Makunduchi'],
+    ]) {
+      const place = priceTrip('shared_tourist', 'tourist', { pickup: depart, dropoff: arrivee });
+      const gainPlace = place.price - place.commission;
+      const netPrive = netChauffeurPriveUsd(depart, arrivee);
+      assert.ok(
+        gainPlace * 4 > netPrive,
+        `${depart} → ${arrivee} : 4 places (${(gainPlace * 4).toFixed(2)}) doivent battre le privé (${netPrive})`
+      );
+    }
+  });
+
+  it('aucun trajet ne coûte plus cher qu’un trajet plus long sur la même route', () => {
+    // Un client compare. Matemwe est entre Nungwi et la pointe sud : sa course
+    // ne peut pas dépasser celle qui va jusqu'au bout.
+    const nordSud = privateUsdForRoute('Nungwi', 'Makunduchi');
+    for (const etape of ['Matemwe', 'Kiwengwa', 'Paje', 'Jambiani']) {
+      assert.ok(
+        privateUsdForRoute('Nungwi', etape) <= nordSud,
+        `Nungwi → ${etape} dépasse Nungwi → Makunduchi`
+      );
+    }
+  });
+
+  it('bout en bout : une course privée Stone Town → Nungwi est créée à 49 USD', async () => {
     const { token, user } = await createTourist();
     const creation = await request(app)
       .post('/api/trips')
@@ -216,71 +263,12 @@ describe('Grille privée au kilomètre', () => {
       .send({
         userId: user.id,
         tripType: 'private',
-        pickupLocation: 'Matemwe',
-        dropoffLocation: 'Paje',
+        pickupLocation: 'Stone Town',
+        dropoffLocation: 'Nungwi',
       });
     assert.equal(creation.status, 201, JSON.stringify(creation.body));
-    assert.equal(Number(creation.body.price), 50);
+    assert.equal(Number(creation.body.price), 49);
     assert.equal(creation.body.currency, 'USD');
-    // Commission privée 10 % (au-dessus du seuil de 40 USD).
-    assert.equal(Number(creation.body.commission), 6);
-  });
-
-  // ----- LE PLANCHER DE 50 USD POUR LE CHAUFFEUR --------------------------
-  //
-  // Décision du 21/08/2026 : les grandes traversées nord ↔ sud étaient trop
-  // chères pour le marché (63 et 68 USD). Elles baissent, MAIS pas en dessous
-  // du prix qui laisse 50 USD au chauffeur. Avec 12 % de commission, ce prix
-  // est 50 ÷ 0,88 = 56,82 → 57 USD (à 56, il ne resterait que 49,28).
-  //
-  // Ce test est le garde-fou de cette règle : toute baisse ultérieure d'une
-  // de ces traversées le fera échouer.
-  it('les traversées nord ↔ sud laissent au moins 50 USD au chauffeur', () => {
-    const traversees = [
-      ['Nungwi', 'Paje'],
-      ['Nungwi', 'Bwejuu'],
-      ['Nungwi', 'Jambiani'],
-      ['Nungwi', 'Makunduchi'],
-      ['Nungwi', 'Kizimkazi'],
-      ['Kendwa', 'Paje'],
-      ['Kendwa', 'Bwejuu'],
-      ['Kendwa', 'Jambiani'],
-      ['Kendwa', 'Makunduchi'],
-      ['Kendwa', 'Kizimkazi'],
-    ];
-    for (const [a, b] of traversees) {
-      for (const [depart, arrivee] of [
-        [a, b],
-        [b, a],
-      ]) {
-        assert.equal(privateUsdForRoute(depart, arrivee), 57, `${depart} → ${arrivee}`);
-        const course = priceTrip('private', 'tourist', { pickup: depart, dropoff: arrivee });
-        const chauffeur = course.price - course.commission;
-        assert.ok(
-          chauffeur >= 50,
-          `${depart} → ${arrivee} : le chauffeur ne garde que ${chauffeur} USD`
-        );
-        assert.equal(chauffeur, 50.16, `${depart} → ${arrivee}`);
-      }
-    }
-  });
-
-  it('la place en taxi partagé ne suit pas la baisse : 18 USD maintenus', () => {
-    // La route fait toujours 85 à 112 km. Si le seuil du barème des places
-    // était resté à 63 USD, la place serait tombée de 18 à 16 — une baisse
-    // prise sur le chauffeur, qui roule pourtant exactement autant.
-    for (const [a, b] of [
-      ['Nungwi', 'Paje'],
-      ['Kendwa', 'Makunduchi'],
-      ['Nungwi', 'Kizimkazi'],
-    ]) {
-      assert.equal(sharedSeatUsdForRoute(a, b), 18, `${a} → ${b}`);
-      assert.equal(sharedSeatUsdForRoute(b, a), 18, `${b} → ${a}`);
-    }
-    // Et le seuil abaissé ne déplace rien d'autre : aucun trajet ne se situe
-    // entre 53 et 57 USD, les barèmes du dessous sont donc intacts.
-    assert.equal(sharedSeatUsdForRoute('Stone Town', 'Jambiani'), 16); // privé 53
-    assert.equal(sharedSeatUsdForRoute('Stone Town', 'Nungwi'), 15); // privé 47
-    assert.equal(sharedSeatUsdForRoute('Stone Town', 'Chwaka'), 12); // privé 42
+    assert.equal(Number(creation.body.commission), 4);
   });
 });

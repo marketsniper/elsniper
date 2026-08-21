@@ -202,14 +202,15 @@ describe('Crédit prépayé hôtels', () => {
     assert.equal(paiement.body.payment_method, 'credit');
     // L'équipe est alertée : lien WhatsApp avec le solde restant.
     assert.ok(paiement.body.whatsapp_link.includes('wa.me'));
-    assert.ok(decodeURIComponent(paiement.body.whatsapp_link).includes('Solde crédit restant: 49.65 USD'));
+    assert.ok(decodeURIComponent(paiement.body.whatsapp_link).includes('Solde crédit restant: 53.45 USD'));
 
     const apres = await request(app).get(`/api/trips/${trip.body.id}`).set(authHeaders(token));
     assert.equal(apres.body.status, 'paid');
 
-    // 100 − 50,35 = 49,65 restants.
+    // 100 − 46,55 = 53,45 restants. Le transfert vaut 49 USD ; l'hôtel a ses
+    // −5 %, pris sur la part zanziGo — le chauffeur garde bien ses 45 USD.
     const etat = await request(app).get(`/api/hotels/${hotel.id}/credit`).set(authHeaders(token));
-    assert.equal(etat.body.balance, 49.65);
+    assert.equal(etat.body.balance, 53.45);
   });
 
   it('crédit insuffisant pour une course → 409, rien n\'est débité', async () => {
