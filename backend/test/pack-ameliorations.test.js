@@ -110,7 +110,7 @@ describe('Pack améliorations', () => {
           dropoffLocation: arrivee,
         });
       assert.equal(transfert.status, 201, `${depart} → ${arrivee} : ${JSON.stringify(transfert.body)}`);
-      assert.equal(Number(transfert.body.price), 15.5, `${depart} → ${arrivee}`);
+      assert.equal(Number(transfert.body.price), 14.5, `${depart} → ${arrivee}`);
       assert.equal(Number(transfert.body.commission), 4.5, `${depart} → ${arrivee}`);
     }
 

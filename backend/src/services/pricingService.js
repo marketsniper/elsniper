@@ -192,8 +192,8 @@ function tauxCommissionPrive(prixUsd, pickup, dropoff) {
 const NET_TRANSFERT_USD = 45;
 // L'aéroport et la ville sont à sept kilomètres : ce n'est pas un transfert de
 // plage, et son prix n'a rien à voir. C'est en revanche la course la plus
-// fréquente de l'île — d'où les 11 USD au chauffeur pour sept kilomètres.
-const NET_AEROPORT_VILLE_USD = 11;
+// fréquente de l'île : 10 USD au chauffeur, 4,50 à zanziGo, 14,50 au client.
+const NET_AEROPORT_VILLE_USD = 10;
 
 // NETS CHAUFFEUR VILLE ↔ VILLE, par groupes. Le premier groupe qui contient la
 // paire l'emporte : l'ordre va donc du plus précis au plus large. Ce que la

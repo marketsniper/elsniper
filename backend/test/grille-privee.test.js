@@ -106,7 +106,7 @@ describe('Grille privée : le net du chauffeur décide, le forfait s’ajoute', 
     );
   });
 
-  it('aéroport ↔ Stone Town : commission fixée à 4,50 USD, pas un pourcentage', () => {
+  it('aéroport ↔ Stone Town : 10 USD au chauffeur, 4,50 fixes à zanziGo', () => {
     // Sept kilomètres, mais la course la plus fréquente de l'île — celle qui
     // tourne toute la journée. Un pourcentage y rapportait 1,95 USD, moins que
     // le coût du service : la commission est donc posée en dollars.
@@ -115,11 +115,11 @@ describe('Grille privée : le net du chauffeur décide, le forfait s’ajoute', 
         ['Aéroport international Abeid Amani Karume', ville],
         [ville, 'Aéroport international Abeid Amani Karume'],
       ]) {
-        assert.equal(netChauffeurPriveUsd(a, b), 11, `net ${a} → ${b}`);
-        assert.equal(privateUsdForRoute(a, b), 15.5, `prix client ${a} → ${b}`);
+        assert.equal(netChauffeurPriveUsd(a, b), 10, `net ${a} → ${b}`);
+        assert.equal(privateUsdForRoute(a, b), 14.5, `prix client ${a} → ${b}`);
         const course = priceTrip('private', 'tourist', { pickup: a, dropoff: b });
         assert.equal(course.commission, 4.5, `${a} → ${b} : commission fixe`);
-        assert.equal(course.price - course.commission, 11, 'le chauffeur garde ses 11 USD');
+        assert.equal(course.price - course.commission, 10, 'le chauffeur garde ses 10 USD');
       }
     }
   });

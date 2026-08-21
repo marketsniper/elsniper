@@ -469,7 +469,7 @@ const GROUPES_NET_USD: { a: string[]; b: string[]; net: number }[] = [
 const NET_TRANSFERT_USD = 45;
 /** L'aéroport et la ville sont à sept kilomètres : ce n'est pas un transfert,
  *  mais c'est la course la plus fréquente de l'île. */
-const NET_AEROPORT_VILLE_USD = 11;
+const NET_AEROPORT_VILLE_USD = 10;
 /**
  * COMMISSION DES COURSES PRIVÉES, en pourcentage (miroir exact du serveur) :
  * 12 % à partir de 40 USD de prix client, 15 % en dessous.
