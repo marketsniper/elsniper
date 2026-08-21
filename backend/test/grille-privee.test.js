@@ -75,22 +75,28 @@ describe('Grille privée : le net du chauffeur décide, le forfait s’ajoute', 
     }
   });
 
-  it('le couloir du sud-est se paie comme le reste : la commission est un taux', () => {
-    // Un supplément avait été posé sur Stone Town/aéroport ↔ Paje, Bwejuu et
-    // Jambiani — la liaison la plus demandée de l'île. La commission en
-    // pourcentage l'a remplacé : 12 % partout au-dessus de 40 USD. Ce test
-    // garde la trace de la décision, et échouera si un supplément revient
-    // sans qu'on l'ait voulu.
+  it('le couloir du sud-est : 15 % pour zanziGo, le chauffeur touche pareil', () => {
+    // Stone Town et l'aéroport vers Paje, Bwejuu et Jambiani : la liaison la
+    // plus demandée de l'île. zanziGo y prend 15 % au lieu de 12 — c'est le
+    // volume qui finance l'infrastructure. Le chauffeur, lui, garde ses 45 USD
+    // comme sur n'importe quel autre transfert : c'est le CLIENT qui met la
+    // différence, pas lui.
     for (const hub of HUBS) {
       for (const plage of ['Paje', 'Bwejuu', 'Jambiani']) {
-        verifier(hub, plage, 45, 52);
-        assert.equal(
-          privateUsdForRoute(hub, plage),
-          privateUsdForRoute(hub, 'Nungwi'),
-          `${hub} → ${plage} doit coûter comme ${hub} → Nungwi`
+        verifier(hub, plage, 45, 53);
+        const course = priceTrip('private', 'tourist', { pickup: hub, dropoff: plage });
+        assert.equal(course.commission, 7.95, `${hub} → ${plage} : 15 % de 53`);
+        assert.ok(
+          privateUsdForRoute(hub, plage) > privateUsdForRoute(hub, 'Nungwi'),
+          `${hub} → ${plage} doit coûter plus cher que ${hub} → Nungwi`
         );
       }
     }
+    // Le net promis ne bouge pas d'un cent entre les deux.
+    assert.equal(
+      netChauffeurPriveUsd('Stone Town', 'Paje'),
+      netChauffeurPriveUsd('Stone Town', 'Nungwi')
+    );
   });
 
   it('aéroport ↔ Stone Town : 11 USD au chauffeur, 13 au client', () => {
@@ -192,9 +198,9 @@ describe('Grille privée : le net du chauffeur décide, le forfait s’ajoute', 
     assert.equal(transfert.price - transfert.commission, 45.76, 'le net promis au chauffeur');
 
     const emprunte = priceTrip('private', 'tourist', { pickup: 'Stone Town', dropoff: 'Paje' });
-    assert.equal(emprunte.price, 52);
-    assert.equal(emprunte.commission, 6.24, 'zanziGo double sa part sur le couloir chargé');
-    assert.equal(emprunte.price - emprunte.commission, 45.76, 'le chauffeur touche la même chose');
+    assert.equal(emprunte.price, 53);
+    assert.equal(emprunte.commission, 7.95, '15 % sur le couloir du sud-est');
+    assert.ok(emprunte.price - emprunte.commission >= 45, 'les 45 USD promis sont tenus');
   });
 
   it('la remise ne mord JAMAIS sur la part du chauffeur', () => {

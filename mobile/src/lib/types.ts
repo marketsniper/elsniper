@@ -477,7 +477,28 @@ const NET_AEROPORT_VILLE_USD = 11;
 const COMMISSION_PRIVE = { grand: 0.12, petit: 0.15 };
 const COMMISSION_PRIVE_SEUIL_USD = 40;
 
-export function tauxCommissionPrive(prixUsd: number): number {
+/**
+ * LE COULOIR DU SUD-EST : Stone Town et l'aéroport vers Paje, Bwejuu et
+ * Jambiani — la liaison la plus demandée de l'île. zanziGo y prend 15 % au
+ * lieu de 12 ; le chauffeur, lui, touche la même chose qu'ailleurs.
+ */
+const CORRIDOR_SUD_EST = ['paje', 'bwejuu', 'jambiani'];
+const COMMISSION_CORRIDOR = 0.15;
+
+function versCorridorSudEst(depart: string, arrivee: string): boolean {
+  const d = normaliserLieu(depart);
+  const a = normaliserLieu(arrivee);
+  return (
+    (HUBS_TARIFAIRES.has(d) && CORRIDOR_SUD_EST.includes(a)) ||
+    (HUBS_TARIFAIRES.has(a) && CORRIDOR_SUD_EST.includes(d))
+  );
+}
+
+/** Taux de commission d'une course privée, selon le prix ET l'itinéraire. */
+export function tauxCommissionPrive(prixUsd: number, depart?: string, arrivee?: string): number {
+  if (depart !== undefined && arrivee !== undefined && versCorridorSudEst(depart, arrivee)) {
+    return COMMISSION_CORRIDOR;
+  }
   return prixUsd >= COMMISSION_PRIVE_SEUIL_USD ? COMMISSION_PRIVE.grand : COMMISSION_PRIVE.petit;
 }
 
@@ -845,7 +866,9 @@ export function netChauffeurPriveUsd(depart: string, arrivee: string): number {
 export function tarifPriveItineraire(depart: string, arrivee: string): number {
   const net = netChauffeurPriveUsd(depart, arrivee);
   for (let prix = Math.floor(net); prix <= net * 2 + 10; prix += 1) {
-    if (Math.round(prix * (1 - tauxCommissionPrive(prix)) * 100) / 100 >= net) return prix;
+    if (Math.round(prix * (1 - tauxCommissionPrive(prix, depart, arrivee)) * 100) / 100 >= net) {
+      return prix;
+    }
   }
   return Math.ceil(net / (1 - COMMISSION_PRIVE.petit));
 }

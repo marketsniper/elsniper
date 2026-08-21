@@ -135,7 +135,25 @@ const CITY_ZONES = {
 const COMMISSION_PRIVE = { grand: 0.12, petit: 0.15 };
 const COMMISSION_PRIVE_SEUIL_USD = 40;
 
-function tauxCommissionPrive(prixUsd) {
+// LE COULOIR DU SUD-EST : Stone Town et l'aéroport vers Paje, Bwejuu et
+// Jambiani, la liaison la plus demandée de l'île. zanziGo y prend 15 % au lieu
+// de 12 — c'est le volume qui finance l'infrastructure. Le chauffeur, lui,
+// touche exactement la même chose que sur n'importe quel autre transfert.
+//
+// Bwejuu suit Paje et Jambiani sans avoir été nommé : le village est ENTRE les
+// deux, sur la même route et souvent dans la même voiture.
+const CORRIDOR_SUD_EST = new Set(['paje', 'bwejuu', 'jambiani']);
+const COMMISSION_CORRIDOR = 0.15;
+
+function versCorridorSudEst(pickup, dropoff) {
+  const p = normCity(pickup);
+  const d = normCity(dropoff);
+  return (HUBS.has(p) && CORRIDOR_SUD_EST.has(d)) || (HUBS.has(d) && CORRIDOR_SUD_EST.has(p));
+}
+
+/** Taux de commission d'une course privée, selon le prix ET l'itinéraire. */
+function tauxCommissionPrive(prixUsd, pickup, dropoff) {
+  if (pickup !== undefined && versCorridorSudEst(pickup, dropoff)) return COMMISSION_CORRIDOR;
   return prixUsd >= COMMISSION_PRIVE_SEUIL_USD ? COMMISSION_PRIVE.grand : COMMISSION_PRIVE.petit;
 }
 
@@ -320,6 +338,13 @@ export function netChauffeurPriveUsd(pickup, dropoff) {
 }
 
 /**
+ * Taux de commission appliqué à ce trajet précis : 0,12 ou 0,15.
+ */
+export function tauxCommissionTrajet(pickup, dropoff) {
+  return tauxCommissionPrive(privateUsdForRoute(pickup, dropoff), pickup, dropoff);
+}
+
+/**
  * CE QUE ZANZIGO GARDE sur ce trajet, en dollars — la différence entre le prix
  * client et le net du chauffeur. Une seule source : si le prix change, la part
  * suit, elle n'est jamais recalculée à part.
@@ -440,7 +465,7 @@ export function privateUsdForRoute(pickup, dropoff) {
   // fois la commission prélevée. On part du net lui-même : en dessous, aucun
   // prix ne peut convenir.
   for (let prix = Math.floor(net); prix <= net * 2 + 10; prix += 1) {
-    if (round2(prix * (1 - tauxCommissionPrive(prix))) >= net) return prix;
+    if (round2(prix * (1 - tauxCommissionPrive(prix, pickup, dropoff))) >= net) return prix;
   }
   return Math.ceil(net / (1 - COMMISSION_PRIVE.petit));
 }
@@ -506,7 +531,8 @@ export function priceTrip(tripType, audience, route = {}) {
       const usd = privateUsdForRoute(route.pickup, route.dropoff);
       const price = Math.round(usd * config.usdToTzsRate);
       const net = Math.round(netChauffeurPriveUsd(route.pickup, route.dropoff) * config.usdToTzsRate);
-      return { price, commission: commissionPrive(price, net, tauxCommissionPrive(usd)), currency: 'TZS' };
+      const taux = tauxCommissionPrive(usd, route.pickup, route.dropoff);
+      return { price, commission: commissionPrive(price, net, taux), currency: 'TZS' };
     }
     // Taxi partagé local : tarif unifié (trajets spéciaux inclus) SUR LES
     // GRANDS AXES uniquement ; ailleurs, prix touriste converti en TZS —
@@ -519,7 +545,8 @@ export function priceTrip(tripType, audience, route = {}) {
   let taux;
   if (tripType === 'private') {
     usd = privateUsdForRoute(route.pickup, route.dropoff);
-    taux = tauxCommissionPrive(usd); // 12 % dès 40 USD, 15 % en dessous
+    // 12 % dès 40 USD, 15 % en dessous — et 15 % sur le couloir du sud-est.
+    taux = tauxCommissionPrive(usd, route.pickup, route.dropoff);
   } else if (tripType === 'shared_tourist' || tripType === 'posted_return') {
     usd = sharedSeatUsdForRoute(route.pickup, route.dropoff);
     taux = COMMISSION_RATES.shared; // 22 % — le chauffeur reçoit 78 %
