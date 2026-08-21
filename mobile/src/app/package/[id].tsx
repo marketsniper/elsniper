@@ -2,7 +2,7 @@
 // Créé → Payé → Ramassé → Livré, paiement quand le colis vient d'être créé.
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
-import { Alert, Linking, Share, StyleSheet, Text, View } from 'react-native';
+import { Alert, Linking, Share, Text, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 
 import { TimelineStatut } from '@/components/TimelineStatut';
@@ -23,7 +23,7 @@ import { useAuth } from '@/lib/auth';
 import { useRafraichissementAuto } from '@/lib/rafraichissementAuto';
 import { formaterDateRelativeI18n, libelleStatutColis, libelleTailleColis, useT } from '@/lib/i18n';
 
-import { couleurs, espaces, ombres, rayons } from '@/lib/theme';
+import { couleurs, espaces, ombres, rayons, stylesReactifs } from '@/lib/theme';
 import {
   champ,
   ETAPES_COLIS,
@@ -245,7 +245,7 @@ export default function EcranDetailColis() {
               value={codeQr}
               size={180}
               color={couleurs.encre}
-              backgroundColor={couleurs.blanc}
+              backgroundColor={couleurs.surVoile}
             />
             <Text style={styles.codeTexte}>{codeQr}</Text>
           </View>
@@ -428,7 +428,7 @@ export default function EcranDetailColis() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = stylesReactifs(() => ({
   // Ligne d'explication sous chaque bouton de paiement (frais, sans frais).
   detailMoyen: {
     color: couleurs.texteSecondaire,
@@ -470,4 +470,4 @@ const styles = StyleSheet.create({
     color: couleurs.encre,
     marginBottom: espaces.s,
   },
-});
+}));

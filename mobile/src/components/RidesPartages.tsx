@@ -17,7 +17,6 @@ import {
   ActivityIndicator,
   Pressable,
   ScrollView,
-  StyleSheet,
   Text,
   View,
 } from 'react-native';
@@ -25,7 +24,7 @@ import {
 import { api, ErreurApi } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useT, type FonctionT, type Langue } from '@/lib/i18n';
-import { couleurs, espaces, ombres, rayons } from '@/lib/theme';
+import { couleurs, espaces, ombres, rayons, stylesReactifs } from '@/lib/theme';
 import { champ, DESTINATIONS_RIDES, formaterMontant, type Ride, type TypeCompte } from '@/lib/types';
 
 const LOCALES: Record<Langue, string> = {
@@ -390,7 +389,7 @@ export function RidesPartages() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = stylesReactifs(() => ({
   section: {
     gap: espaces.m,
   },
@@ -633,4 +632,4 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
   },
-});
+}));

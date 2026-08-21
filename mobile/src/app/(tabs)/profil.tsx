@@ -5,7 +5,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
-import { Alert, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Linking, Pressable, Text, View } from 'react-native';
 
 import {
   Badge,
@@ -21,7 +21,7 @@ import { CarteVersion } from '@/components/Version';
 import { api, type CreditHotel, type FideliteHotel } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useT } from '@/lib/i18n';
-import { couleurs, espaces, rayons, tailles } from '@/lib/theme';
+import { couleurs, espaces, rayons, stylesReactifs, tailles } from '@/lib/theme';
 import {
   TAUX_USD_TZS,
   champ,
@@ -419,7 +419,7 @@ export default function EcranProfil() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = stylesReactifs(() => ({
   carteIdentite: {
     alignItems: 'center',
     gap: espaces.s,
@@ -545,4 +545,4 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: couleurs.danger,
   },
-});
+}));

@@ -2,10 +2,10 @@
 // étape courante mise en avant, étapes à venir estompées.
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import { useT } from '@/lib/i18n';
-import { couleurs, espaces } from '@/lib/theme';
+import { couleurs, espaces, stylesReactifs } from '@/lib/theme';
 
 export interface EtapeTimeline {
   cle: string;
@@ -69,7 +69,7 @@ export function TimelineStatut({
         <View style={styles.ligne}>
           <View style={styles.colonnePoints}>
             <View style={[styles.point, styles.pointAnnule]}>
-              <Ionicons name="close" size={12} color={couleurs.blanc} />
+              <Ionicons name="close" size={12} color={couleurs.surVoile} />
             </View>
           </View>
           <Text style={[styles.label, styles.labelAnnule]}>{t('timeline_annule')}</Text>
@@ -79,7 +79,7 @@ export function TimelineStatut({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = stylesReactifs(() => ({
   ligne: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -142,4 +142,4 @@ const styles = StyleSheet.create({
     color: couleurs.danger,
     fontWeight: '700',
   },
-});
+}));

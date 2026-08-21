@@ -4,7 +4,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FondPlage } from '@/components/FondPlage';
@@ -12,7 +12,7 @@ import { EtiquetteVersion } from '@/components/Version';
 import { SelecteurLangue } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { useT } from '@/lib/i18n';
-import { couleurs, espaces, ombres, rayons } from '@/lib/theme';
+import { couleurs, espaces, ombres, rayons, stylesReactifs } from '@/lib/theme';
 import { formaterMontant, TARIF_LOCAL_TZS, TARIFS_TRAJET_USD } from '@/lib/types';
 
 type ProfilAccueil = 'visitor' | 'local' | 'hotel' | 'driver';
@@ -146,7 +146,7 @@ export default function EcranAccueil() {
           />
 
           <View style={styles.ligneConfiance}>
-            <Ionicons name="shield-checkmark" size={18} color={couleurs.primaireClair} />
+            <Ionicons name="shield-checkmark" size={18} color={couleurs.primaire} />
             <Text style={styles.texteConfiance}>{t('accueil_confiance')}</Text>
           </View>
 
@@ -157,7 +157,7 @@ export default function EcranAccueil() {
             accessibilityRole="button"
             style={({ pressed }) => [styles.lienEquipe, pressed && { opacity: 0.7 }]}
           >
-            <Ionicons name="key-outline" size={13} color="rgba(255,255,255,0.75)" />
+            <Ionicons name="key-outline" size={13} color={couleurs.texteSecondaire} />
             <Text style={styles.texteLienEquipe}>{t('equipe_lien_accueil')}</Text>
           </Pressable>
           <EtiquetteVersion />
@@ -167,7 +167,7 @@ export default function EcranAccueil() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = stylesReactifs(() => ({
   zone: {
     flex: 1,
   },
@@ -192,20 +192,15 @@ const styles = StyleSheet.create({
   tagline: {
     fontSize: 16,
     fontWeight: '600',
-    color: couleurs.blanc,
+    color: couleurs.texteSecondaire,
     textAlign: 'center',
-    textShadowColor: 'rgba(0, 0, 0, 0.4)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 4,
   },
   question: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: couleurs.blanc,
+    fontSize: 20,
+    fontWeight: '800',
+    color: couleurs.encre,
     marginBottom: espaces.xs,
-    textShadowColor: 'rgba(0, 0, 0, 0.4)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 4,
+    letterSpacing: -0.3,
   },
   carte: {
     flexDirection: 'row',
@@ -262,12 +257,9 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     fontSize: 13,
     fontWeight: '600',
-    color: couleurs.blanc,
+    color: couleurs.texteSecondaire,
     textAlign: 'center',
     lineHeight: 18,
-    textShadowColor: 'rgba(0, 0, 0, 0.4)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 4,
   },
   lienEquipe: {
     flexDirection: 'row',
@@ -280,16 +272,13 @@ const styles = StyleSheet.create({
   texteLienEquipe: {
     fontSize: 12,
     fontWeight: '600',
-    color: 'rgba(255,255,255,0.75)',
+    color: couleurs.texteSecondaire,
   },
   pied: {
     fontSize: 13,
-    color: couleurs.blanc,
+    color: couleurs.texteSecondaire,
     textAlign: 'center',
     marginTop: espaces.s,
     lineHeight: 18,
-    textShadowColor: 'rgba(0, 0, 0, 0.4)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 4,
   },
-});
+}));

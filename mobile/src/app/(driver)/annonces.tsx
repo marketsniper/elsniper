@@ -12,14 +12,14 @@
 // chauffeur. Ici, une seule chose à faire — d'où un formulaire, et c'est tout.
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import { Selecteur } from '@/components/Selecteur';
 import { Bouton, Carte, Champ, Ecran, EncartInfo, TexteErreur, Titre } from '@/components/ui';
 import { api, ErreurApi } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { HEURES_CHOIX, isoDepuisChoix, libellesDates, useT } from '@/lib/i18n';
-import { couleurs, espaces } from '@/lib/theme';
+import { couleurs, espaces, stylesReactifs } from '@/lib/theme';
 import {
   champ,
   DESTINATIONS_RIDES,
@@ -250,7 +250,7 @@ export default function EcranAnnonces() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = stylesReactifs(() => ({
   explication: {
     fontSize: 14,
     color: couleurs.texteSecondaire,
@@ -263,4 +263,4 @@ const styles = StyleSheet.create({
   demiChamp: {
     flex: 1,
   },
-});
+}));

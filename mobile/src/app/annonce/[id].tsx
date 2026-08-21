@@ -9,7 +9,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, Text, View } from 'react-native';
 
 import {
   Badge,
@@ -24,7 +24,7 @@ import {
 } from '@/components/ui';
 import { api, ErreurApi } from '@/lib/api';
 import { libelleStatutRide, useT } from '@/lib/i18n';
-import { couleurs, espaces, rayons } from '@/lib/theme';
+import { couleurs, espaces, rayons, stylesReactifs } from '@/lib/theme';
 import {
   champ,
   formaterDate,
@@ -272,7 +272,7 @@ export default function EcranAnnonce() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = stylesReactifs(() => ({
   enTete: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -357,4 +357,4 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: couleurs.texteSecondaire,
   },
-});
+}));

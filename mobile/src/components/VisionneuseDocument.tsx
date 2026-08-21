@@ -23,7 +23,7 @@ import {
 
 import { Bouton } from '@/components/ui';
 import { useT } from '@/lib/i18n';
-import { couleurs, espaces, rayons } from '@/lib/theme';
+import { couleurs, espaces, rayons, stylesReactifs } from '@/lib/theme';
 
 export function VisionneuseDocument({
   url,
@@ -112,7 +112,7 @@ export function VisionneuseDocument({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = stylesReactifs(() => ({
   fond: {
     flex: 1,
     backgroundColor: 'rgba(20, 12, 16, 0.94)',
@@ -169,4 +169,4 @@ const styles = StyleSheet.create({
   piedPage: {
     gap: espaces.s,
   },
-});
+}));

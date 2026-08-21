@@ -4,7 +4,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
 import {
   Bouton,
@@ -20,7 +20,7 @@ import { api, ErreurApi } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useT } from '@/lib/i18n';
 import { champ, type Hotel } from '@/lib/types';
-import { couleurs, espaces } from '@/lib/theme';
+import { couleurs, espaces, stylesReactifs } from '@/lib/theme';
 
 export default function EcranHotelConnexion() {
   const router = useRouter();
@@ -111,7 +111,7 @@ export default function EcranHotelConnexion() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = stylesReactifs(() => ({
   entete: {
     alignItems: 'center',
     paddingVertical: espaces.xl,
@@ -133,4 +133,4 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: couleurs.primaire,
   },
-});
+}));

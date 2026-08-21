@@ -22,7 +22,7 @@ import {
 import { ChoixDocument } from '@/components/ChoixDocument';
 import { api, ErreurApi, prochaineActionColis } from '@/lib/api';
 import { libelleTailleColis, useT } from '@/lib/i18n';
-import { couleurs, espaces, rayons } from '@/lib/theme';
+import { couleurs, espaces, rayons, stylesReactifs } from '@/lib/theme';
 import { champ, type Colis, type StatutColis, type TailleColis } from '@/lib/types';
 
 /** Vrai si la chaîne scannée ressemble à un QR de colis zanziGo (PKG-…). */
@@ -285,7 +285,7 @@ export default function EcranScanner() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = stylesReactifs(() => ({
   conteneur: {
     flex: 1,
     backgroundColor: couleurs.encre,
@@ -363,7 +363,7 @@ const styles = StyleSheet.create({
     gap: espaces.xs,
   },
   titreBandeau: {
-    color: couleurs.blanc,
+    color: couleurs.surVoile,
     fontSize: 16,
     fontWeight: '700',
     textAlign: 'center',
@@ -391,4 +391,4 @@ const styles = StyleSheet.create({
     borderRadius: rayons.bouton,
     padding: espaces.m,
   },
-});
+}));

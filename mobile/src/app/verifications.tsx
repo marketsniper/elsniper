@@ -16,7 +16,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
-import { Image, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Linking, Pressable, Text, View } from 'react-native';
 
 import { VisionneuseDocument } from '@/components/VisionneuseDocument';
 import {
@@ -32,7 +32,7 @@ import {
 import { api, definirCleEquipe, ErreurApi, type DossierVerification } from '@/lib/api';
 import { useT } from '@/lib/i18n';
 import { lireStockage } from '@/lib/stockage';
-import { couleurs, espaces, rayons } from '@/lib/theme';
+import { couleurs, espaces, rayons, stylesReactifs } from '@/lib/theme';
 import { formaterDate } from '@/lib/types';
 
 const CLE_STOCKAGE = 'zanzigo.cle_equipe';
@@ -232,7 +232,7 @@ export default function EcranVerifications() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = stylesReactifs(() => ({
   retour: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -270,4 +270,4 @@ const styles = StyleSheet.create({
     marginTop: espaces.xs,
     textAlign: 'center',
   },
-});
+}));

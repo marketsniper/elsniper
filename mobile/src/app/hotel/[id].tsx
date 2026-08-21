@@ -6,7 +6,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useState } from 'react';
-import { Linking, StyleSheet, Text, View } from 'react-native';
+import { Linking, Text, View } from 'react-native';
 
 import {
   Badge,
@@ -25,7 +25,7 @@ import {
 import { api, definirCleEquipe, ErreurApi, type CreditHotel, type FideliteHotel } from '@/lib/api';
 import { useT } from '@/lib/i18n';
 import { lireStockage } from '@/lib/stockage';
-import { couleurs, espaces } from '@/lib/theme';
+import { couleurs, espaces, stylesReactifs } from '@/lib/theme';
 import { champ, formaterDate, formaterMontant, type Colis, type Hotel, type Trajet } from '@/lib/types';
 
 const CLE_STOCKAGE = 'zanzigo.cle_equipe';
@@ -353,7 +353,7 @@ export default function EcranHotelEquipe() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = stylesReactifs(() => ({
   enTete: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -445,4 +445,4 @@ const styles = StyleSheet.create({
     color: couleurs.texteSecondaire,
     paddingVertical: espaces.xs,
   },
-});
+}));

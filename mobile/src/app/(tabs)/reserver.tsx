@@ -14,7 +14,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
-import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, Text, View } from 'react-native';
 
 import { CalendrierDate } from '@/components/CalendrierDate';
 import { RidesPartages } from '@/components/RidesPartages';
@@ -31,7 +31,7 @@ import {
   useT,
 } from '@/lib/i18n';
 import { positionActuelle } from '@/lib/position';
-import { couleurs, espaces, ombres, rayons } from '@/lib/theme';
+import { couleurs, espaces, ombres, rayons, stylesReactifs } from '@/lib/theme';
 import {
   champ,
   formaterMontant,
@@ -627,7 +627,7 @@ export default function EcranReserver() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = stylesReactifs(() => ({
   // Retour de la géolocalisation, sous le champ Départ : gris pendant la
   // recherche ou en cas de refus, vert quand la ville est trouvée.
   messagePosition: {
@@ -657,8 +657,8 @@ const styles = StyleSheet.create({
     padding: espaces.l,
     gap: espaces.xs,
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: 'transparent',
+    // Le relief pose déjà le trait ; la case choisie n'en change que la
+    // couleur, sans décaler d'un pixel le contenu.
     ...ombres.carte,
   },
   carteModeActive: {
@@ -670,12 +670,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: espaces.m,
+    ...ombres.carte,
     backgroundColor: couleurs.carteTranslucide,
     borderRadius: rayons.bouton,
     paddingHorizontal: espaces.l,
     paddingVertical: espaces.m,
-    borderWidth: 1.5,
-    borderColor: 'transparent',
   },
   ligneOptionActive: {
     borderColor: couleurs.primaire,
@@ -748,9 +747,8 @@ const styles = StyleSheet.create({
     borderRadius: rayons.carte,
     padding: espaces.l,
     gap: espaces.s,
-    borderWidth: 2,
-    borderColor: couleurs.primaire,
     ...ombres.douce,
+    borderColor: couleurs.primaire, // le prix, c'est corail
   },
   // Prix CENTRÉ sous son libellé : les montants en shillings (6 chiffres)
   // débordaient de l'écran en rangée côte à côte.
@@ -815,4 +813,4 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: couleurs.primaireFonce,
   },
-});
+}));

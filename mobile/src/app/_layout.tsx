@@ -1,7 +1,7 @@
 // Mise en page racine : fournit la langue, le contexte d'auth et la pile de
 // navigation (titres traduits).
 import { Ionicons } from '@expo/vector-icons';
-import { Stack, useRouter, type Href } from 'expo-router';
+import { Stack, usePathname, useRouter, type Href } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect } from 'react';
 import { Pressable, Text } from 'react-native';
@@ -9,9 +9,9 @@ import { Pressable, Text } from 'react-native';
 import { FournisseurDialogues } from '@/components/BoiteDialogue';
 import { reparerAlertesWeb } from '@/lib/alerteWeb';
 import { reveillerServeur } from '@/lib/api';
-import { AuthProvider } from '@/lib/auth';
+import { AuthProvider, useAuth } from '@/lib/auth';
 import { LangueProvider, useT } from '@/lib/i18n';
-import { couleurs } from '@/lib/theme';
+import { couleurs, FournisseurPeau } from '@/lib/theme';
 
 // Flèche de retour GARANTIE sur chaque fiche : le retour natif disparaît
 // quand l'historique est vide (page web rechargée, PWA relancée…) et son
@@ -77,6 +77,36 @@ function PilesNavigation() {
   );
 }
 
+/**
+ * Choisit la peau de l'application.
+ *
+ * Un HÔTEL ne voit pas la même zanziGo qu'un voyageur : il travaille dans
+ * « Nuit d'épices » — noir et or, l'ambiance d'une réception le soir. Tout le
+ * reste (clients, chauffeurs, équipe) vit dans « Bento Zanzibar », crème et
+ * corail, lisible en plein soleil.
+ *
+ * On bascule aussi sur les DEUX écrans d'entrée hôtel, avant même la
+ * connexion : un partenaire doit reconnaître son univers dès la porte.
+ */
+function PeauSelonProfil({ children }: { children: React.ReactNode }) {
+  const { session } = useAuth();
+  const chemin = usePathname();
+  const hotel =
+    Boolean(session?.hotel) || chemin === '/hotel' || chemin === '/hotel-inscription';
+  const peau = hotel ? 'nuit' : 'bento';
+  return (
+    <FournisseurPeau nom={peau}>
+      <StatusBar style={hotel ? 'light' : 'dark'} />
+      {/* La clé remonte toute la navigation au changement de peau. Sans elle,
+          la barre d'onglets gardait les couleurs de la peau précédente : elle
+          est dessinée par le navigateur, qui ne se redessine pas juste parce
+          qu'un parent a changé. Cela n'arrive qu'à la connexion et à la
+          déconnexion — deux moments où la navigation repart de zéro. */}
+      <React.Fragment key={peau}>{children}</React.Fragment>
+    </FournisseurPeau>
+  );
+}
+
 // Sur le web, les boîtes de dialogue de React Native sont des fonctions
 // vides : on les rebranche AVANT le premier rendu, sinon des boutons comme
 // « Démarrer la course » resteraient sans effet.
@@ -92,11 +122,12 @@ export default function LayoutRacine() {
   return (
     <LangueProvider>
       <AuthProvider>
-        <StatusBar style="dark" />
-        {/* Les fenêtres de confirmation s'affichent par-dessus tout écran. */}
-        <FournisseurDialogues>
-          <PilesNavigation />
-        </FournisseurDialogues>
+        <PeauSelonProfil>
+          {/* Les fenêtres de confirmation s'affichent par-dessus tout écran. */}
+          <FournisseurDialogues>
+            <PilesNavigation />
+          </FournisseurDialogues>
+        </PeauSelonProfil>
       </AuthProvider>
     </LangueProvider>
   );

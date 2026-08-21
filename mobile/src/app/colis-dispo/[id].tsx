@@ -6,7 +6,7 @@
 // livraison au chauffeur.
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
-import { Alert, Linking, StyleSheet, Text, View } from 'react-native';
+import { Alert, Linking, Text, View } from 'react-native';
 
 import {
   Bouton,
@@ -22,7 +22,7 @@ import { api, ErreurApi } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { masquerColis } from '@/lib/colisLocal';
 import { formaterDateRelativeI18n, libelleTailleColis, useT } from '@/lib/i18n';
-import { couleurs, espaces } from '@/lib/theme';
+import { couleurs, espaces, stylesReactifs } from '@/lib/theme';
 import { champ, formaterDate, formaterMontant, type Colis, type TailleColis } from '@/lib/types';
 
 export default function EcranColisDispo() {
@@ -198,7 +198,7 @@ export default function EcranColisDispo() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = stylesReactifs(() => ({
   ligneNet: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -218,4 +218,4 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: couleurs.primaire,
   },
-});
+}));

@@ -5,7 +5,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
-import { Alert, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Linking, Pressable, Text, View } from 'react-native';
 
 import { CartePosition } from '@/components/CartePosition';
 import { Etoiles } from '@/components/Etoiles';
@@ -29,7 +29,7 @@ import { useAuth } from '@/lib/auth';
 import { useRafraichissementAuto } from '@/lib/rafraichissementAuto';
 import { lireStockage } from '@/lib/stockage';
 import { formaterDateRelativeI18n, libelleStatutTrajet, libelleTypeTrajet, useT } from '@/lib/i18n';
-import { couleurs, espaces } from '@/lib/theme';
+import { couleurs, espaces, stylesReactifs } from '@/lib/theme';
 import {
   champ,
   ETAPES_TRAJET,
@@ -684,7 +684,7 @@ export default function EcranTrajet() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = stylesReactifs(() => ({
   // Ligne d'explication sous chaque bouton de paiement (frais, sans frais).
   detailMoyen: {
     color: couleurs.texteSecondaire,
@@ -777,4 +777,4 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: espaces.s,
   },
-});
+}));

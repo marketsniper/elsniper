@@ -9,7 +9,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
 import { ChoixDocument } from '@/components/ChoixDocument';
 import {
@@ -25,7 +25,7 @@ import {
 import { api, ErreurApi } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useT } from '@/lib/i18n';
-import { couleurs, espaces, rayons } from '@/lib/theme';
+import { couleurs, espaces, rayons, stylesReactifs } from '@/lib/theme';
 import { formaterMontant, TARIF_LOCAL_TZS, type TypeCompte } from '@/lib/types';
 
 export default function EcranClient() {
@@ -249,7 +249,7 @@ export default function EcranClient() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = stylesReactifs(() => ({
   lienMauvaisNumero: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -305,4 +305,4 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: couleurs.primaire,
   },
-});
+}));

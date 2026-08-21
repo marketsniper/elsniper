@@ -16,7 +16,7 @@ import { Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-nati
 import { Bouton } from '@/components/ui';
 import { useT } from '@/lib/i18n';
 import { lienNavigation } from '@/lib/position';
-import { couleurs, espaces, ombres, rayons } from '@/lib/theme';
+import { couleurs, espaces, ombres, rayons, stylesReactifs } from '@/lib/theme';
 
 /** Fenêtre affichée autour du point : ~1,1 km de côté, l'échelle du village. */
 const MARGE_DEGRES = 0.01;
@@ -154,7 +154,7 @@ export function CartePosition({
               <Ionicons
                 name={estClient ? 'person' : 'car-sport'}
                 size={estClient ? 20 : 22}
-                color={couleurs.blanc}
+                color={couleurs.surVoile}
               />
             </View>
           </View>
@@ -177,7 +177,7 @@ export function CartePosition({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = stylesReactifs(() => ({
   bloc: {
     gap: espaces.xs,
   },
@@ -224,10 +224,10 @@ const styles = StyleSheet.create({
     backgroundColor: couleurs.primaire,
     alignItems: 'center',
     justifyContent: 'center',
+    ...ombres.carte,
     // Liseré blanc : la pastille reste lisible sur une route, un toit ou la mer.
     borderWidth: 3,
-    borderColor: couleurs.blanc,
-    ...ombres.carte,
+    borderColor: couleurs.surVoile,
   },
   pastilleClient: {
     backgroundColor: couleurs.turquoise,
@@ -244,4 +244,4 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: couleurs.texteSecondaire,
   },
-});
+}));

@@ -6,7 +6,7 @@ import type { ColorValue } from 'react-native';
 
 import { useRetourSiDeconnecte } from '@/lib/auth';
 import { useT } from '@/lib/i18n';
-import { couleurs } from '@/lib/theme';
+import { couleurs, usePeau } from '@/lib/theme';
 
 function icone(nom: React.ComponentProps<typeof Ionicons>['name']) {
   return ({ color, size }: { color: ColorValue; size: number }) => (
@@ -17,6 +17,9 @@ function icone(nom: React.ComponentProps<typeof Ionicons>['name']) {
 export default function LayoutOnglets() {
   useRetourSiDeconnecte();
   const { t } = useT();
+  // S'abonner à la peau : la barre d'onglets doit se redessiner quand un
+  // hôtel se connecte (crème et corail → noir et or).
+  usePeau();
   return (
     <Tabs
       initialRouteName="reserver"

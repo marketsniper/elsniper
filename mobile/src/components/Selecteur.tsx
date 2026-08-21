@@ -2,10 +2,10 @@
 // scrollable de choix. Style aligné sur le composant Champ.
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
 
 import { useT } from '@/lib/i18n';
-import { couleurs, espaces, rayons, tailles } from '@/lib/theme';
+import { couleurs, espaces, ombres, rayons, stylesReactifs, tailles } from '@/lib/theme';
 
 export function Selecteur({
   label,
@@ -92,7 +92,7 @@ export function Selecteur({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = stylesReactifs(() => ({
   conteneur: {
     gap: espaces.xs,
   },
@@ -106,9 +106,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: espaces.s,
+    ...ombres.carte,
     backgroundColor: couleurs.surface,
-    borderWidth: 1,
-    borderColor: couleurs.bordure,
     borderRadius: rayons.bouton,
     paddingHorizontal: espaces.m,
     minHeight: tailles.champ,
@@ -173,4 +172,4 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: couleurs.primaireFonce,
   },
-});
+}));

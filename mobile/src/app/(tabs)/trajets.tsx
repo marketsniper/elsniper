@@ -6,7 +6,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
-import { Alert, FlatList, Linking, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { Alert, FlatList, Linking, Pressable, RefreshControl, Text, View } from 'react-native';
 
 import { Etoiles } from '@/components/Etoiles';
 import { FondPlage } from '@/components/FondPlage';
@@ -16,7 +16,7 @@ import { useAuth } from '@/lib/auth';
 import { formaterDateRelativeI18n, libelleTypeTrajet, useT } from '@/lib/i18n';
 import { estBalaye, lireCoupDeBalai, passerCoupDeBalai } from '@/lib/menageLocal';
 import { useRafraichissementAuto } from '@/lib/rafraichissementAuto';
-import { couleurs, espaces, ombres, rayons } from '@/lib/theme';
+import { couleurs, espaces, ombres, rayons, stylesReactifs } from '@/lib/theme';
 import {
   champ,
   formaterMontant,
@@ -325,7 +325,7 @@ export default function EcranTrajets() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = stylesReactifs(() => ({
   liste: {
     padding: espaces.l,
     gap: espaces.m,
@@ -472,4 +472,4 @@ const styles = StyleSheet.create({
   boutonMenage: {
     marginTop: espaces.m,
   },
-});
+}));

@@ -5,7 +5,7 @@
 // preuve de terrain — elle ne dépend pas de ce départ/arrivée.
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
-import { Alert, Linking, Pressable, StyleSheet, Text } from 'react-native';
+import { Alert, Linking, Pressable, Text } from 'react-native';
 
 import { CartePosition } from '@/components/CartePosition';
 import { TimelineStatut } from '@/components/TimelineStatut';
@@ -23,7 +23,7 @@ import {
 } from '@/components/ui';
 import { api, ErreurApi } from '@/lib/api';
 import { libelleStatutTrajet, libelleTypeTrajet, useT } from '@/lib/i18n';
-import { couleurs, espaces } from '@/lib/theme';
+import { couleurs, espaces, stylesReactifs } from '@/lib/theme';
 import {
   champ,
   ETAPES_TRAJET,
@@ -307,7 +307,7 @@ export default function EcranDetailCourse() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = stylesReactifs(() => ({
   // Le numéro du client se touche pour appeler : cible large, texte lisible
   // au volant.
   ligneAppel: {
@@ -318,4 +318,4 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: couleurs.primaireFonce,
   },
-});
+}));

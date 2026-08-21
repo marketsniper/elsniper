@@ -22,7 +22,7 @@ import {
 } from '@/lib/alertesPush';
 import { ecrireStockage, lireStockage, supprimerStockage } from '@/lib/stockage';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Linking, Platform, Pressable, Text, View } from 'react-native';
 
 import { Selecteur } from '@/components/Selecteur';
 import { VisionneuseDocument } from '@/components/VisionneuseDocument';
@@ -49,7 +49,7 @@ import {
 } from '@/lib/api';
 import { formaterDateRelativeI18n, libelleTypeTrajet, useT } from '@/lib/i18n';
 import { useRafraichissementAuto } from '@/lib/rafraichissementAuto';
-import { couleurs, espaces, ombres, rayons } from '@/lib/theme';
+import { couleurs, espaces, ombres, rayons, stylesReactifs } from '@/lib/theme';
 import {
   champ,
   formaterDate,
@@ -1950,7 +1950,7 @@ export default function EcranEquipe() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = stylesReactifs(() => ({
   explication: {
     fontSize: 14,
     color: couleurs.texteSecondaire,
@@ -2429,4 +2429,4 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: couleurs.bordure,
   },
-});
+}));

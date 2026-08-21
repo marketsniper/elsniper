@@ -8,7 +8,6 @@ import {
   Pressable,
   RefreshControl,
   ScrollView,
-  StyleSheet,
   Text,
   TextInput,
   View,
@@ -28,6 +27,7 @@ import {
   espaces,
   ombres,
   rayons,
+  stylesReactifs,
   tailles,
 } from '@/lib/theme';
 import type { StatutColis, StatutTrajet } from '@/lib/types';
@@ -413,7 +413,7 @@ export function ChargementCentre({ message }: { message?: string }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = stylesReactifs(() => ({
   ecran: {
     flex: 1,
     backgroundColor: 'transparent',
@@ -446,14 +446,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: espaces.m,
     paddingVertical: espaces.s,
     backgroundColor: couleurs.carteTranslucide,
-    borderWidth: 1,
-    borderColor: couleurs.bordure,
+    // Cerné comme tout le reste — sans l'ombre portée : cinq pastilles
+    // posées sur leur ombre feraient un tapis de relief pour rien.
+    borderWidth: 2,
+    borderColor: couleurs.encre,
     minWidth: 44,
     alignItems: 'center',
   },
   pillLangueActive: {
     backgroundColor: couleurs.primaire,
-    borderColor: couleurs.primaire,
   },
   textePillLangue: {
     fontSize: 13,
@@ -485,8 +486,9 @@ const styles = StyleSheet.create({
     ...ombres.carte,
   },
   titre: {
-    fontSize: 24,
-    fontWeight: '700',
+    fontSize: 25,
+    fontWeight: '800',
+    letterSpacing: -0.4,
     color: couleurs.encre,
   },
   sousTitre: {
@@ -506,14 +508,16 @@ const styles = StyleSheet.create({
     minHeight: tailles.bouton,
   },
   boutonPrimaire: {
+    ...ombres.carte,
     backgroundColor: couleurs.primaire,
   },
   boutonSecondaire: {
+    ...ombres.carte,
     backgroundColor: couleurs.surface,
-    borderWidth: 1.5,
     borderColor: couleurs.primaire,
   },
   boutonDanger: {
+    ...ombres.carte,
     backgroundColor: couleurs.danger,
   },
   contenuBouton: {
@@ -523,7 +527,7 @@ const styles = StyleSheet.create({
   },
   texteBouton: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   champConteneur: {
     gap: espaces.xs,
@@ -534,9 +538,8 @@ const styles = StyleSheet.create({
     color: couleurs.texteSecondaire,
   },
   champSaisie: {
+    ...ombres.carte,
     backgroundColor: couleurs.surface,
-    borderWidth: 1,
-    borderColor: couleurs.bordure,
     borderRadius: rayons.bouton,
     paddingHorizontal: espaces.m,
     paddingVertical: 14,
@@ -635,4 +638,4 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: couleurs.texteSecondaire,
   },
-});
+}));

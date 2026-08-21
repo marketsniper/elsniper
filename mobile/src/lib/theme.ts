@@ -1,56 +1,194 @@
-// Palette « Coucher de soleil » de zanziGo : corail chaud, crème dorée, prune.
-// (Direction B choisie par l'équipe — le ciel de Zanzibar à 18 h 30.)
+// ══════════════════════════════════════════════════════════════════════════
+// LE THÈME zanziGo — DEUX PEAUX.
+//
+//  · « bento » — Bento Zanzibar. Crème, encre noire, corail. Des blocs
+//    cernés d'un trait épais, chacun posé sur son ombre franche. Aucun
+//    dégradé, aucune photo : tout se lit en plein soleil, à bout de bras.
+//    C'est la peau de l'application — clients, chauffeurs, équipe.
+//
+//  · « nuit » — Nuit d'épices. Presque noir, filets d'or, corail.
+//    La nuit de Stone Town. C'est la peau des HÔTELS : un partenaire
+//    professionnel n'ouvre pas la même application que le voyageur.
+//
+// Les deux peaux exposent EXACTEMENT les mêmes noms de couleurs. Aucun écran
+// n'a besoin de savoir laquelle est active : `couleurs.encre` donne l'encre
+// de la peau du moment. La bascule se fait dans FournisseurPeau, plus bas.
+// ══════════════════════════════════════════════════════════════════════════
+import React from 'react';
+import { StyleSheet, type TextStyle } from 'react-native';
+
 import type { StatutColis, StatutTrajet } from './types';
 
-export const couleurs = {
-  primaire: '#E4572E', // corail couchant
+export type NomPeau = 'bento' | 'nuit';
+
+interface Palette {
+  primaire: string;
+  primaireFonce: string;
+  primaireClair: string;
+  sable: string;
+  blanc: string;
+  encre: string;
+  texteSecondaire: string;
+  bordure: string;
+  danger: string;
+  dangerFonce: string;
+  dangerFond: string;
+  dangerBordure: string;
+  succes: string;
+  succesFond: string;
+  attente: string;
+  attenteFond: string;
+  orange: string;
+  orangeFond: string;
+  etoile: string;
+  voile: string;
+  succesClair: string;
+  dangerClair: string;
+  voilePhotoClair: string;
+  voilePhotoSombre: string;
+  carteTranslucide: string;
+  surface: string;
+  surPrimaire: string;
+  or: string;
+  nuit: string;
+  vertFeu: string;
+  surVertFeu: string;
+  turquoise: string;
+  /** Toujours blanc, quelle que soit la peau : QR, icônes sur pastille pleine. */
+  surVoile: string;
+}
+
+// ─────────────────────────── 02 · BENTO ZANZIBAR ───────────────────────────
+const BENTO: Palette = {
+  primaire: '#E4572E', // corail — la couleur d'action
   primaireFonce: '#B93C1B', // corail profond (textes sur fonds rosés)
-  primaireClair: '#FFE0D2', // rosé (pastilles, encarts info)
-  sable: '#FBF0E4', // fond principal — crème dorée (nom historique conservé)
+  primaireClair: '#FFE7D8', // rosé pâle (pastilles, encarts info)
+  sable: '#FFF4E8', // fond principal — crème (nom historique conservé)
   blanc: '#FFFFFF',
-  encre: '#33222B', // texte principal — prune
-  texteSecondaire: '#8A7168',
-  bordure: '#F0DFD2',
-  danger: '#DC2626',
-  dangerFonce: '#B91C1C', // texte des encarts d'erreur
-  dangerFond: '#FEF2F2', // fond rouge très clair (bandeaux d'erreur)
-  dangerBordure: '#FECACA',
-  succes: '#5A7D2A',
-  succesFond: '#E5EFD8',
-  attente: '#B77A12',
-  attenteFond: '#FCE9C4',
-  orange: '#EA580C', // orange franc (statut « Chauffeur confirmé »)
-  orangeFond: '#FFEDD5',
-  etoile: '#F2B84B', // étoiles de notation — doré
-  voile: 'rgba(30, 15, 22, 0.68)', // voile sombre du scanner (prune translucide)
-  succesClair: '#6EE7B7', // texte succès sur fond sombre (scanner)
-  dangerClair: '#FCA5A5', // texte erreur sur fond sombre (scanner)
-  // Photos de plage en fond, voilées de crème chaude pour la lisibilité.
-  voilePhotoClair: 'rgba(255, 247, 238, 0.86)', // voile crème sur les écrans formulaires/listes
-  voilePhotoSombre: 'rgba(30, 15, 22, 0.55)', // assombrissement bas des écrans d'accueil
-  carteTranslucide: 'rgba(255, 253, 250, 0.94)', // cartes blanc chaud semi-opaques
-  // Rôles introduits avec les directions B/D
-  surface: '#FFFDFA', // surfaces pleines : champs de saisie, menus, barre d'onglets
-  surPrimaire: '#FFF8F2', // texte/icônes posés SUR le corail (boutons)
-  or: '#F2B84B', // accent doré : étoiles, touches premium
-  nuit: '#33222B', // fonds les plus profonds (carte Chauffeur de l'accueil)
-  // FEU VERT — « l'argent est arrivé, tu peux y aller ». Volontairement plus
-  // vif que le vert olive `succes` : c'est un repère qu'un chauffeur doit
-  // reconnaître d'un coup d'œil, au soleil, sans lire. Réservé au statut
-  // PAYÉE — celui qui lui ouvre les coordonnées du client.
-  vertFeu: '#15A34A',
+  encre: '#241017', // texte principal ET trait des cartes
+  texteSecondaire: '#7A5A50',
+  bordure: '#F0DFCB', // filet doux : séparateurs, pastilles neutres
+  danger: '#D62828',
+  dangerFonce: '#8F1616',
+  dangerFond: '#FDEAEA',
+  dangerBordure: '#F6C8C8',
+  succes: '#1F7A3D',
+  succesFond: '#DDF0E1',
+  attente: '#9A6511',
+  attenteFond: '#FCEBC8',
+  orange: '#EA580C',
+  orangeFond: '#FFE7D0',
+  etoile: '#F2B84B',
+  voile: 'rgba(36, 16, 23, 0.72)', // voile sombre du scanner
+  succesClair: '#7BE3A3', // texte succès sur fond sombre (scanner)
+  dangerClair: '#FCA5A5',
+  voilePhotoClair: '#FFF4E8', // plus de photo : le fond est plein
+  voilePhotoSombre: 'rgba(36, 16, 23, 0.55)',
+  carteTranslucide: '#FFFFFF', // les cartes sont BLANCHES et opaques
+  surface: '#FFFFFF', // champs de saisie, menus, barre d'onglets
+  surPrimaire: '#FFF4E8', // texte/icônes posés SUR le corail
+  or: '#F2B84B',
+  nuit: '#241017',
+  vertFeu: '#15A34A', // « l'argent est arrivé, tu peux y aller »
   surVertFeu: '#FFFFFF',
-  // LE CLIENT sur une carte — turquoise lagon. Complémentaire du corail :
-  // posées côte à côte, les deux pastilles ne se confondent jamais, et le
-  // ton reste chaleureux (c'est un invité qu'on attend, pas une alerte).
-  turquoise: '#0E9AA7',
+  turquoise: '#0E9AA7', // LE CLIENT sur une carte
+  surVoile: '#FFFFFF',
 };
 
-export const rayons = {
-  carte: 16,
-  bouton: 12,
-  pastille: 999,
+// ──────────────────────────── 03 · NUIT D'ÉPICES ───────────────────────────
+const NUIT: Palette = {
+  // Dans « Nuit d'épices », l'accent n'est pas le corail mais L'OR : sur du
+  // presque-noir, c'est lui qui porte le nom, les boutons et les montants.
+  // Le corail reste présent en alerte et en orange.
+  primaire: '#F2B84B',
+  primaireFonce: '#F7CE7E', // or clair : textes et flèches sur fond noir
+  primaireClair: 'rgba(242, 184, 75, 0.16)',
+  sable: '#100C14', // fond principal — noir violacé
+  blanc: '#191320', // « blanc » = la surface la plus claire de la peau
+  encre: '#F0E7DC', // texte principal — crème
+  texteSecondaire: '#A2918C',
+  bordure: 'rgba(242, 184, 75, 0.32)', // filet d'or
+  danger: '#E5484D',
+  dangerFonce: '#FF9EA1',
+  dangerFond: 'rgba(229, 72, 77, 0.14)',
+  dangerBordure: 'rgba(229, 72, 77, 0.36)',
+  succes: '#5FD08A',
+  succesFond: 'rgba(95, 208, 138, 0.14)',
+  attente: '#F2B84B',
+  attenteFond: 'rgba(242, 184, 75, 0.16)',
+  orange: '#FF8A5B',
+  orangeFond: 'rgba(255, 138, 91, 0.16)',
+  etoile: '#F2B84B',
+  voile: 'rgba(8, 5, 11, 0.82)',
+  succesClair: '#7BE3A3',
+  dangerClair: '#FCA5A5',
+  voilePhotoClair: '#100C14',
+  voilePhotoSombre: 'rgba(8, 5, 11, 0.6)',
+  carteTranslucide: '#191320',
+  surface: '#1F1726',
+  surPrimaire: '#150E06', // texte posé SUR l'or : encre chaude, très lisible
+  or: '#F2B84B',
+  nuit: '#0A070D',
+  vertFeu: '#15A34A',
+  surVertFeu: '#FFFFFF',
+  turquoise: '#2BB3B8',
+  surVoile: '#FFFFFF',
 };
+
+const PEAUX: Record<NomPeau, Palette> = { bento: BENTO, nuit: NUIT };
+
+// La peau active. Volontairement une variable de module : les feuilles de
+// style sont construites hors composant, elles doivent pouvoir la consulter
+// sans passer par React.
+let peauActive: NomPeau = 'bento';
+
+export function peauCourante(): NomPeau {
+  return peauActive;
+}
+
+/**
+ * Bascule la peau. Renvoie true si elle a changé — les feuilles réactives
+ * se reconstruiront alors au prochain accès.
+ */
+export function appliquerPeau(nom: NomPeau): boolean {
+  if (peauActive === nom) return false;
+  peauActive = nom;
+  return true;
+}
+
+/** Miroir vers la palette de la peau active : `couleurs.encre` suit la peau. */
+export const couleurs = new Proxy({} as Palette, {
+  get: (_cible, cle) => PEAUX[peauActive][cle as keyof Palette],
+  has: (_cible, cle) => cle in BENTO,
+  ownKeys: () => Reflect.ownKeys(BENTO),
+  getOwnPropertyDescriptor: (_cible, cle) => ({
+    value: PEAUX[peauActive][cle as keyof Palette],
+    enumerable: true,
+    configurable: true,
+  }),
+}) as Palette;
+
+// ─────────────────────────────── LES FORMES ────────────────────────────────
+interface Rayons {
+  carte: number;
+  bouton: number;
+  pastille: number;
+}
+const RAYONS: Record<NomPeau, Rayons> = {
+  bento: { carte: 13, bouton: 12, pastille: 999 },
+  nuit: { carte: 12, bouton: 12, pastille: 999 },
+};
+
+export const rayons = new Proxy({} as Rayons, {
+  get: (_cible, cle) => RAYONS[peauActive][cle as keyof Rayons],
+  has: (_cible, cle) => cle in RAYONS.bento,
+  ownKeys: () => Reflect.ownKeys(RAYONS.bento),
+  getOwnPropertyDescriptor: (_cible, cle) => ({
+    value: RAYONS[peauActive][cle as keyof Rayons],
+    enumerable: true,
+    configurable: true,
+  }),
+}) as Rayons;
 
 export const espaces = {
   xs: 4,
@@ -68,44 +206,197 @@ export const tailles = {
   avatar: 76,
 };
 
-/** Ombres douces réutilisables (iOS + elevation Android). */
-export const ombres = {
-  carte: {
-    shadowColor: '#5C3A2E',
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
+// ─────────────────────── LA SIGNATURE D'UNE CARTE ──────────────────────────
+// `ombres.carte` ne porte plus seulement une ombre : c'est TOUT ce qui fait
+// qu'un bloc est un bloc. En Bento, c'est un trait d'encre épais posé sur une
+// ombre franche, sans flou — l'effet « papier découpé » de la direction. En
+// Nuit d'épices, c'est un filet d'or et une ombre profonde.
+// Volontairement plus étroit qu'un ViewStyle : ces propriétés-là existent
+// aussi sur une Image, et le relief se pose parfois sur un logo.
+interface Relief {
+  borderWidth: number;
+  borderColor: string;
+  shadowColor: string;
+  shadowOpacity: number;
+  shadowRadius: number;
+  shadowOffset: { width: number; height: number };
+  elevation: number;
+}
+interface Ombres {
+  carte: Relief;
+  douce: Relief;
+}
+const OMBRES: Record<NomPeau, Ombres> = {
+  bento: {
+    carte: {
+      borderWidth: 2,
+      borderColor: BENTO.encre,
+      shadowColor: BENTO.encre,
+      shadowOpacity: 1,
+      shadowRadius: 0,
+      shadowOffset: { width: 3, height: 3 },
+      elevation: 0,
+    },
+    douce: {
+      borderWidth: 2,
+      borderColor: BENTO.encre,
+      shadowColor: BENTO.encre,
+      shadowOpacity: 1,
+      shadowRadius: 0,
+      shadowOffset: { width: 4, height: 4 },
+      elevation: 0,
+    },
   },
-  douce: {
-    shadowColor: '#E4572E',
-    shadowOpacity: 0.14,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 4,
+  nuit: {
+    carte: {
+      borderWidth: 1,
+      borderColor: 'rgba(242, 184, 75, 0.32)',
+      shadowColor: '#000000',
+      shadowOpacity: 0.5,
+      shadowRadius: 12,
+      shadowOffset: { width: 0, height: 6 },
+      elevation: 3,
+    },
+    douce: {
+      borderWidth: 1,
+      borderColor: 'rgba(242, 184, 75, 0.42)',
+      shadowColor: '#000000',
+      shadowOpacity: 0.6,
+      shadowRadius: 18,
+      shadowOffset: { width: 0, height: 10 },
+      elevation: 5,
+    },
   },
-} as const;
+};
+
+export const ombres = new Proxy({} as Ombres, {
+  get: (_cible, cle) => OMBRES[peauActive][cle as keyof Ombres],
+  has: (_cible, cle) => cle in OMBRES.bento,
+  ownKeys: () => Reflect.ownKeys(OMBRES.bento),
+  getOwnPropertyDescriptor: (_cible, cle) => ({
+    value: OMBRES[peauActive][cle as keyof Ombres],
+    enumerable: true,
+    configurable: true,
+  }),
+}) as Ombres;
+
+// ───────────────────────── LES FEUILLES RÉACTIVES ──────────────────────────
+/**
+ * Comme StyleSheet.create, mais la feuille est (re)construite pour CHAQUE
+ * peau, à la demande, puis gardée en mémoire.
+ *
+ * Une feuille ordinaire fige ses couleurs au chargement du module — bien
+ * avant qu'on sache si l'utilisateur est un voyageur ou un hôtel. Ici,
+ * `styles.carte` va chercher la feuille de la peau du moment : la bascule
+ * est immédiate, sans recharger l'application.
+ */
+export function stylesReactifs<
+  T extends StyleSheet.NamedStyles<T> | StyleSheet.NamedStyles<Record<string, unknown>>,
+>(fabrique: () => T & StyleSheet.NamedStyles<Record<string, unknown>>): T {
+  const feuilles = new Map<NomPeau, T>();
+  const feuille = (): Record<string | symbol, unknown> => {
+    let f = feuilles.get(peauActive);
+    if (!f) {
+      f = StyleSheet.create(fabrique());
+      feuilles.set(peauActive, f);
+    }
+    return f as Record<string | symbol, unknown>;
+  };
+  return new Proxy({} as T, {
+    get: (_cible, cle) => feuille()[cle],
+    has: (_cible, cle) => cle in feuille(),
+    ownKeys: () => Reflect.ownKeys(feuille()),
+    getOwnPropertyDescriptor: (_cible, cle) => ({
+      value: feuille()[cle],
+      enumerable: true,
+      configurable: true,
+    }),
+  });
+}
+
+// ──────────────────────── LES PASTILLES DE STATUT ──────────────────────────
+type Ton = { fond: string; texte: string };
+
+function tonsTrajet(p: Palette): Record<StatutTrajet, Ton> {
+  return {
+    requested: { fond: p.attenteFond, texte: p.attente },
+    driver_confirmed: { fond: p.orangeFond, texte: p.orange },
+    // PAYÉE = feu vert plein. C'est le repère du chauffeur : tant qu'il n'est
+    // pas allumé, il n'a ni le nom ni le numéro du client.
+    paid: { fond: p.vertFeu, texte: p.surVertFeu },
+    in_progress: { fond: p.primaire, texte: p.surPrimaire },
+    completed: { fond: p.succesFond, texte: p.succes },
+    cancelled: { fond: p.bordure, texte: p.texteSecondaire },
+  };
+}
+
+function tonsColis(p: Palette): Record<StatutColis, Ton> {
+  return {
+    created: { fond: p.attenteFond, texte: p.attente },
+    paid: { fond: p.vertFeu, texte: p.surVertFeu },
+    picked_up: { fond: p.primaire, texte: p.surPrimaire },
+    delivered: { fond: p.succesFond, texte: p.succes },
+    cancelled: { fond: p.bordure, texte: p.texteSecondaire },
+  };
+}
+
+const TONS_TRAJET: Record<NomPeau, Record<StatutTrajet, Ton>> = {
+  bento: tonsTrajet(BENTO),
+  nuit: tonsTrajet(NUIT),
+};
+const TONS_COLIS: Record<NomPeau, Record<StatutColis, Ton>> = {
+  bento: tonsColis(BENTO),
+  nuit: tonsColis(NUIT),
+};
 
 /** Couleurs de pastille par statut de trajet (fond doux + texte lisible). */
-export const couleursStatutTrajet: Record<StatutTrajet, { fond: string; texte: string }> = {
-  requested: { fond: couleurs.attenteFond, texte: couleurs.attente }, // orange doux
-  driver_confirmed: { fond: couleurs.orangeFond, texte: couleurs.orange }, // orange
-  // PAYÉE = feu vert plein. C'est le repère du chauffeur : tant qu'il n'est
-  // pas allumé, il n'a ni le nom ni le numéro du client (vueChauffeur, côté
-  // serveur). Vert plein pour qu'il saute aux yeux ; « Terminée » garde le
-  // vert doux, une course finie n'appelle plus rien.
-  paid: { fond: couleurs.vertFeu, texte: couleurs.surVertFeu },
-  in_progress: { fond: couleurs.primaire, texte: couleurs.surPrimaire }, // corail
-  completed: { fond: couleurs.succesFond, texte: couleurs.succes }, // vert doux
-  cancelled: { fond: couleurs.bordure, texte: couleurs.texteSecondaire }, // gris
-};
+export const couleursStatutTrajet = new Proxy({} as Record<StatutTrajet, Ton>, {
+  get: (_cible, cle) => TONS_TRAJET[peauActive][cle as StatutTrajet],
+  has: (_cible, cle) => cle in TONS_TRAJET.bento,
+  ownKeys: () => Reflect.ownKeys(TONS_TRAJET.bento),
+  getOwnPropertyDescriptor: (_cible, cle) => ({
+    value: TONS_TRAJET[peauActive][cle as StatutTrajet],
+    enumerable: true,
+    configurable: true,
+  }),
+}) as Record<StatutTrajet, Ton>;
 
 /** Couleurs de pastille par statut de colis. */
-export const couleursStatutColis: Record<StatutColis, { fond: string; texte: string }> = {
-  created: { fond: couleurs.attenteFond, texte: couleurs.attente },
-  // Même repère que pour les courses : payé = feu vert, à prendre.
-  paid: { fond: couleurs.vertFeu, texte: couleurs.surVertFeu },
-  picked_up: { fond: couleurs.primaire, texte: couleurs.surPrimaire },
-  delivered: { fond: couleurs.succesFond, texte: couleurs.succes },
-  cancelled: { fond: couleurs.bordure, texte: couleurs.texteSecondaire }, // gris
-};
+export const couleursStatutColis = new Proxy({} as Record<StatutColis, Ton>, {
+  get: (_cible, cle) => TONS_COLIS[peauActive][cle as StatutColis],
+  has: (_cible, cle) => cle in TONS_COLIS.bento,
+  ownKeys: () => Reflect.ownKeys(TONS_COLIS.bento),
+  getOwnPropertyDescriptor: (_cible, cle) => ({
+    value: TONS_COLIS[peauActive][cle as StatutColis],
+    enumerable: true,
+    configurable: true,
+  }),
+}) as Record<StatutColis, Ton>;
+
+// ──────────────────────── LA BASCULE, CÔTÉ REACT ───────────────────────────
+const ContextePeau = React.createContext<NomPeau>('bento');
+
+/** La peau active, pour les rares écrans qui veulent s'y adapter. */
+export function usePeau(): NomPeau {
+  return React.useContext(ContextePeau);
+}
+
+/**
+ * Applique une peau à tout ce qui est en dessous.
+ *
+ * La variable de module est posée PENDANT le rendu, avant celui des enfants :
+ * quand un hôtel se connecte, ses écrans se dessinent déjà en Nuit d'épices,
+ * sans une image de la peau précédente.
+ */
+export function FournisseurPeau({
+  nom,
+  children,
+}: {
+  nom: NomPeau;
+  children: React.ReactNode;
+}) {
+  appliquerPeau(nom);
+  return React.createElement(ContextePeau.Provider, { value: nom }, children);
+}
+
+export type { Palette, TextStyle };

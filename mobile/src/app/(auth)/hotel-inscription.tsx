@@ -7,7 +7,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
 import {
   Bouton,
@@ -22,7 +22,7 @@ import {
 import { api, ErreurApi } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useT } from '@/lib/i18n';
-import { couleurs, espaces, rayons } from '@/lib/theme';
+import { couleurs, espaces, rayons, stylesReactifs } from '@/lib/theme';
 import { champ, type Hotel, type TypePartenaire } from '@/lib/types';
 
 export default function EcranHotelInscription() {
@@ -191,7 +191,7 @@ export default function EcranHotelInscription() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = stylesReactifs(() => ({
   labelType: {
     fontSize: 13,
     fontWeight: '600',
@@ -226,4 +226,4 @@ const styles = StyleSheet.create({
   titreActif: {
     color: couleurs.primaireFonce,
   },
-});
+}));

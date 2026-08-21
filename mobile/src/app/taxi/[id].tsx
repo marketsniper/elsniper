@@ -7,7 +7,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
-import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, Text, View } from 'react-native';
 
 import { VisionneuseDocument } from '@/components/VisionneuseDocument';
 import {
@@ -27,7 +27,7 @@ import { CartePosition } from '@/components/CartePosition';
 import { api, definirCleEquipe, ErreurApi, type StatsChauffeur } from '@/lib/api';
 import { useT } from '@/lib/i18n';
 import { lireStockage } from '@/lib/stockage';
-import { couleurs, espaces, rayons } from '@/lib/theme';
+import { couleurs, espaces, rayons, stylesReactifs } from '@/lib/theme';
 import {
   champ,
   formaterDate,
@@ -425,7 +425,7 @@ export default function EcranTaxiEquipe() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = stylesReactifs(() => ({
   enTete: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -505,4 +505,4 @@ const styles = StyleSheet.create({
     color: couleurs.danger,
     lineHeight: 20,
   },
-});
+}));

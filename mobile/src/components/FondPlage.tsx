@@ -1,69 +1,42 @@
-// Fond tropical réutilisable : photo de plage plein écran + voile de
-// lisibilité. Voile 'clair' (blanc léger) pour les écrans formulaires/listes,
-// voile 'sombre' (faux dégradé vers le bas, sans dépendance) pour l'accueil.
+// Le fond d'écran de zanziGo.
+//
+// Il a longtemps porté une photo de plage sous un voile de lisibilité. La
+// direction « Bento Zanzibar » a tranché : plus de photo. Un aplat crème,
+// des blocs cernés d'encre posés dessus — tout se lit à bout de bras, en
+// plein soleil, et rien ne concurrence le contenu. En peau « Nuit d'épices »
+// (les hôtels), le même aplat devient noir violacé.
+//
+// Le composant garde son nom et ses props : trente écrans les passent, et
+// le jour où une photo revient sur un écran précis, elle se rebranche ici.
 import React from 'react';
-import { ImageBackground, StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 
-import { couleurs } from '@/lib/theme';
+import { couleurs, stylesReactifs } from '@/lib/theme';
 
 export type NomFond = 'coucherSoleil' | 'palmiers' | 'lagon' | 'vagues';
 
-const IMAGES: Record<NomFond, ReturnType<typeof require>> = {
-  coucherSoleil: require('../../assets/images/fond/coucher-soleil.jpg'),
-  palmiers: require('../../assets/images/fond/palmiers.jpg'),
-  lagon: require('../../assets/images/fond/lagon.jpg'),
-  vagues: require('../../assets/images/fond/vagues.jpg'),
-};
-
-// Bandes empilées simulant un dégradé sombre vers le bas (aucune lib).
-const OPACITES_DEGRADE = [0, 0.08, 0.18, 0.3, 0.42, 0.55];
-
 export function FondPlage({
-  fond,
   voile = 'clair',
   children,
 }: {
-  fond: NomFond;
+  /** Conservé pour la compatibilité : sans effet depuis le passage en aplat. */
+  fond?: NomFond;
   voile?: 'clair' | 'sombre';
   children: React.ReactNode;
 }) {
-  return (
-    <ImageBackground source={IMAGES[fond]} style={styles.image} resizeMode="cover">
-      {voile === 'clair' ? (
-        <View style={styles.voileClair}>{children}</View>
-      ) : (
-        <View style={styles.conteneurSombre}>
-          <View style={StyleSheet.absoluteFill} pointerEvents="none">
-            {OPACITES_DEGRADE.map((opacite, index) => (
-              <View
-                key={index}
-                style={[styles.bandeDegrade, { backgroundColor: `rgba(15, 23, 42, ${opacite})` }]}
-              />
-            ))}
-          </View>
-          {children}
-        </View>
-      )}
-    </ImageBackground>
-  );
+  return <View style={voile === 'sombre' ? styles.fondAccent : styles.fond}>{children}</View>;
 }
 
-const styles = StyleSheet.create({
-  image: {
+const styles = stylesReactifs(() => ({
+  fond: {
     flex: 1,
-    // Sur le web, la photo de fond est posée à sa taille d'origine
-    // (1200 px de large) : sans découpe, la page se laissait tirer sur le
-    // côté au doigt et découvrait la plage à droite du contenu.
-    overflow: 'hidden',
+    backgroundColor: couleurs.sable,
   },
-  voileClair: {
+  // La variante « sombre » servait à assombrir une photo. Sans photo, elle
+  // n'a plus lieu d'être : le crème est le même partout, c'est le sol de la
+  // direction.
+  fondAccent: {
     flex: 1,
-    backgroundColor: couleurs.voilePhotoClair,
+    backgroundColor: couleurs.sable,
   },
-  conteneurSombre: {
-    flex: 1,
-  },
-  bandeDegrade: {
-    flex: 1,
-  },
-});
+}));

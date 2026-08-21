@@ -5,7 +5,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
-import { Alert, Linking, StyleSheet, Text, View } from 'react-native';
+import { Alert, Linking, Text, View } from 'react-native';
 
 import { TimelineStatut } from '@/components/TimelineStatut';
 import {
@@ -22,7 +22,7 @@ import {
 import { api, ErreurApi } from '@/lib/api';
 import { useRafraichissementAuto } from '@/lib/rafraichissementAuto';
 import { useT } from '@/lib/i18n';
-import { couleurs, espaces, rayons } from '@/lib/theme';
+import { couleurs, espaces, rayons, stylesReactifs } from '@/lib/theme';
 import {
   formaterDate,
   formaterMontant,
@@ -313,7 +313,7 @@ export default function EcranPlace() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = stylesReactifs(() => ({
   titreMoyens: {
     color: couleurs.encre,
     fontWeight: '700',
@@ -396,4 +396,4 @@ const styles = StyleSheet.create({
     color: couleurs.texteSecondaire,
     lineHeight: 18,
   },
-});
+}));

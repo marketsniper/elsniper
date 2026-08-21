@@ -6,11 +6,11 @@
 // discrètement en bas de l'accueil ; un appui dessus vide tout ce que le
 // navigateur garde en mémoire et recharge la dernière version.
 import React, { useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, Text, View } from 'react-native';
 
 import { Bouton, Carte, SousTitre } from '@/components/ui';
 import { useT } from '@/lib/i18n';
-import { couleurs, espaces } from '@/lib/theme';
+import { couleurs, espaces, stylesReactifs } from '@/lib/theme';
 
 export const VERSION_APP = process.env.EXPO_PUBLIC_VERSION ?? 'dev';
 
@@ -49,7 +49,10 @@ export function CarteVersion() {
   );
 }
 
-export function EtiquetteVersion({ couleur = 'rgba(255,255,255,0.55)' }: { couleur?: string }) {
+export function EtiquetteVersion({ couleur }: { couleur?: string }) {
+  // Sans consigne, l'étiquette prend le gris de la peau : elle était blanche,
+  // héritage du temps où l'accueil était une photo de plage.
+  const teinte = couleur ?? couleurs.texteSecondaire;
   const { t } = useT();
   const [confirme, setConfirme] = useState(false);
 
@@ -60,14 +63,14 @@ export function EtiquetteVersion({ couleur = 'rgba(255,255,255,0.55)' }: { coule
       hitSlop={10}
       style={({ pressed }) => [styles.zone, pressed && { opacity: 0.6 }]}
     >
-      <Text style={[styles.texte, { color: couleur }]}>
+      <Text style={[styles.texte, { color: teinte }]}>
         {confirme ? t('version_forcer') : t('version_etiquette', { version: VERSION_APP })}
       </Text>
     </Pressable>
   );
 }
 
-const styles = StyleSheet.create({
+const styles = stylesReactifs(() => ({
   explication: {
     fontSize: 14,
     lineHeight: 20,
@@ -85,4 +88,4 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textAlign: 'center',
   },
-});
+}));

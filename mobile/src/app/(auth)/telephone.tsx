@@ -12,7 +12,7 @@
 // Chauffeurs : numéro + mot de passe (leur numéro EST leur identité pro).
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
 import {
   Bouton,
@@ -28,7 +28,7 @@ import { api, ErreurApi } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useT, type CleChaine } from '@/lib/i18n';
 import { champ, type StatutVerification } from '@/lib/types';
-import { couleurs, espaces, rayons } from '@/lib/theme';
+import { couleurs, espaces, rayons, stylesReactifs } from '@/lib/theme';
 
 /** Clé i18n du libellé de chaque profil proposé sur la page d'accueil. */
 const CLES_PROFIL: Record<string, CleChaine> = {
@@ -297,7 +297,7 @@ export default function EcranTelephone() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = stylesReactifs(() => ({
   entete: {
     alignItems: 'center',
     paddingVertical: espaces.xxl,
@@ -378,4 +378,4 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingVertical: espaces.s,
   },
-});
+}));

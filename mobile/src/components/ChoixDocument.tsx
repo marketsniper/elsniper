@@ -18,12 +18,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Platform, Pressable, Text, View } from 'react-native';
 
 import { Bouton } from '@/components/ui';
 import { api, ErreurApi } from '@/lib/api';
 import { useT } from '@/lib/i18n';
-import { couleurs, espaces, rayons } from '@/lib/theme';
+import { couleurs, espaces, rayons, stylesReactifs } from '@/lib/theme';
 
 /**
  * Prévient la page qu'un envoi est en cours : la mise à jour automatique de
@@ -480,7 +480,7 @@ export function ChoixDocument({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = stylesReactifs(() => ({
   bloc: {
     gap: espaces.s,
   },
@@ -556,4 +556,4 @@ const styles = StyleSheet.create({
     color: couleurs.danger,
     lineHeight: 19,
   },
-});
+}));

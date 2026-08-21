@@ -8,7 +8,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, Text, View } from 'react-native';
 
 import { Selecteur } from '@/components/Selecteur';
 import {
@@ -31,7 +31,7 @@ import {
   useT,
   type CleChaine,
 } from '@/lib/i18n';
-import { couleurs, espaces, rayons } from '@/lib/theme';
+import { couleurs, espaces, rayons, stylesReactifs } from '@/lib/theme';
 import {
   champ,
   deviseUtilisateur,
@@ -313,7 +313,7 @@ export default function EcranNouveauColis() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = stylesReactifs(() => ({
   titreSection: {
     fontSize: 14,
     fontWeight: '700',
@@ -429,4 +429,4 @@ const styles = StyleSheet.create({
     lineHeight: 17,
     opacity: 0.8,
   },
-});
+}));

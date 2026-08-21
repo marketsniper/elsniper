@@ -8,7 +8,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 
 import { useRafraichissementAuto } from '@/lib/rafraichissementAuto';
 import React, { useCallback, useState } from 'react';
-import { Alert, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { Alert, FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
 
 import { FondPlage } from '@/components/FondPlage';
 import { BadgeStatutColis, Bouton, EtatVide, BoutonRafraichir } from '@/components/ui';
@@ -17,7 +17,7 @@ import { useAuth } from '@/lib/auth';
 import { listerColisLocaux } from '@/lib/colisLocal';
 import { libelleTailleColis, useT } from '@/lib/i18n';
 import { estBalaye, lireCoupDeBalai, passerCoupDeBalai } from '@/lib/menageLocal';
-import { couleurs, espaces, ombres, rayons } from '@/lib/theme';
+import { couleurs, espaces, ombres, rayons, stylesReactifs } from '@/lib/theme';
 import {
   champ,
   colisExpire,
@@ -166,7 +166,7 @@ export default function EcranColis() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = stylesReactifs(() => ({
   liste: {
     padding: espaces.l,
     gap: espaces.m,
@@ -222,4 +222,4 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: couleurs.primaire,
   },
-});
+}));

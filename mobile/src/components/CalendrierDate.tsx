@@ -6,10 +6,10 @@
 // flèches de mois se désactivent aux extrémités. Semaine commençant le lundi.
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
 import type { Langue } from '@/lib/i18n';
-import { couleurs, espaces, rayons } from '@/lib/theme';
+import { couleurs, espaces, rayons, stylesReactifs } from '@/lib/theme';
 
 const LOCALES: Record<Langue, string> = {
   fr: 'fr-FR',
@@ -147,7 +147,7 @@ export function CalendrierDate({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = stylesReactifs(() => ({
   cadre: {
     backgroundColor: couleurs.surface,
     borderRadius: rayons.carte,
@@ -218,4 +218,4 @@ const styles = StyleSheet.create({
   jourDesactive: {
     color: couleurs.bordure,
   },
-});
+}));

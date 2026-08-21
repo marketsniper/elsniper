@@ -9,11 +9,11 @@
 // écrans continuent d'appeler `Alert.alert` comme avant.
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, View, type AlertButton } from 'react-native';
+import { Modal, Pressable, Text, View, type AlertButton } from 'react-native';
 
 import { Bouton } from '@/components/ui';
 import { sabonnerAuxDialogues, type DemandeDialogue } from '@/lib/dialogue';
-import { couleurs, espaces, rayons } from '@/lib/theme';
+import { couleurs, espaces, ombres, rayons, stylesReactifs } from '@/lib/theme';
 
 export function FournisseurDialogues({ children }: { children: React.ReactNode }) {
   const [demande, setDemande] = useState<DemandeDialogue | null>(null);
@@ -95,7 +95,7 @@ export function FournisseurDialogues({ children }: { children: React.ReactNode }
   );
 }
 
-const styles = StyleSheet.create({
+const styles = stylesReactifs(() => ({
   voile: {
     flex: 1,
     backgroundColor: couleurs.voile,
@@ -111,12 +111,9 @@ const styles = StyleSheet.create({
     padding: espaces.l,
     gap: espaces.m,
     alignItems: 'center',
-    // Ombre portée douce, pour détacher la fenêtre du fond.
-    shadowColor: '#33222B',
-    shadowOpacity: 0.25,
-    shadowRadius: 24,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 12,
+    // Le relief de la peau, en plus marqué : la fenêtre doit se décoller
+    // franchement de l'écran qu'elle recouvre.
+    ...ombres.douce,
   },
   pastille: {
     width: 56,
@@ -153,4 +150,4 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: couleurs.texteSecondaire,
   },
-});
+}));

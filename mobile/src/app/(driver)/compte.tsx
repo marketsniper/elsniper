@@ -2,7 +2,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
 import {
   Badge,
@@ -17,7 +17,7 @@ import { CarteVersion } from '@/components/Version';
 import { api, type StatsChauffeur } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useT } from '@/lib/i18n';
-import { couleurs, espaces, rayons, tailles } from '@/lib/theme';
+import { couleurs, espaces, rayons, stylesReactifs, tailles } from '@/lib/theme';
 import { champ, formaterMontant, totalEnTzs, type StatutVerification } from '@/lib/types';
 
 /** Initiales (2 lettres max) d'un nom complet. */
@@ -190,7 +190,7 @@ export default function EcranCompteChauffeur() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = stylesReactifs(() => ({
   titreGains: {
     fontSize: 15,
     fontWeight: '700',
@@ -300,4 +300,4 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: couleurs.danger,
   },
-});
+}));

@@ -3,7 +3,7 @@
 // oriente vers le bon formulaire si le compte n'a pas encore de profil.
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, Text, TextInput, View } from 'react-native';
 
 import {
   Bouton,
@@ -16,7 +16,7 @@ import {
 import { api, ErreurApi } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useT } from '@/lib/i18n';
-import { couleurs, espaces, rayons } from '@/lib/theme';
+import { couleurs, espaces, rayons, stylesReactifs } from '@/lib/theme';
 import { champ, type ReponseVerifieOtp, type StatutVerification } from '@/lib/types';
 
 const LONGUEUR_CODE = 6;
@@ -189,7 +189,7 @@ export default function EcranOtp() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = stylesReactifs(() => ({
   encartPilote: {
     backgroundColor: couleurs.attenteFond,
     borderRadius: rayons.bouton,
@@ -248,4 +248,4 @@ const styles = StyleSheet.create({
     height: 1,
     width: 1,
   },
-});
+}));

@@ -1,9 +1,9 @@
 // Notation 1 à 5 étoiles (affichage et saisie).
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
-import { couleurs, espaces } from '@/lib/theme';
+import { couleurs, espaces, stylesReactifs } from '@/lib/theme';
 
 export function Etoiles({
   note,
@@ -34,9 +34,9 @@ export function Etoiles({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = stylesReactifs(() => ({
   rangee: {
     flexDirection: 'row',
     gap: espaces.s,
   },
-});
+}));

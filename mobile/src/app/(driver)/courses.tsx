@@ -14,7 +14,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
-import { Alert, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Linking, Pressable, Text, View } from 'react-native';
 
 import {
   Badge,
@@ -37,7 +37,7 @@ import {
   useT,
 } from '@/lib/i18n';
 import { estBalaye, lireCoupDeBalai, passerCoupDeBalai } from '@/lib/menageLocal';
-import { couleurs, espaces, ombres, rayons } from '@/lib/theme';
+import { couleurs, espaces, ombres, rayons, stylesReactifs } from '@/lib/theme';
 import {
   champ,
   formaterDate,
@@ -925,7 +925,7 @@ export default function EcranCourses() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = stylesReactifs(() => ({
   bandeauAlertes: {
     backgroundColor: couleurs.primaire,
     borderRadius: rayons.carte,
@@ -1242,4 +1242,4 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: couleurs.primaireFonce,
   },
-});
+}));

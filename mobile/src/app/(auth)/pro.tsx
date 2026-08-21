@@ -7,7 +7,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, Text, View } from 'react-native';
 
 import { ChoixDocument } from '@/components/ChoixDocument';
 import {
@@ -23,7 +23,7 @@ import {
 import { api, ErreurApi } from '@/lib/api';
 import { useAuth, useRetourSiDeconnecte } from '@/lib/auth';
 import { useT } from '@/lib/i18n';
-import { couleurs, espaces } from '@/lib/theme';
+import { couleurs, espaces, stylesReactifs } from '@/lib/theme';
 import { champ, type StatutVerification } from '@/lib/types';
 
 // Numéro WhatsApp de l'équipe zanziGo (placeholder MVP).
@@ -266,7 +266,7 @@ export default function EcranPro() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = stylesReactifs(() => ({
   lienMauvaisNumero: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -295,4 +295,4 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: couleurs.primaire,
   },
-});
+}));
