@@ -83,28 +83,26 @@ describe('Grille privée : le net du chauffeur décide, le forfait s’ajoute', 
     }
   });
 
-  it('le couloir du sud-est : 15 % pour zanziGo, le chauffeur touche pareil', () => {
+  it('le couloir du sud-est : 105 000 TZS ronds au chauffeur, 17 % à zanziGo', () => {
     // Stone Town et l'aéroport vers Paje, Bwejuu et Jambiani : la liaison la
-    // plus demandée de l'île. zanziGo y prend 15 % au lieu de 12 — c'est le
-    // volume qui finance l'infrastructure. Le chauffeur, lui, garde ses 45 USD
-    // comme sur n'importe quel autre transfert : c'est le CLIENT qui met la
-    // différence, pas lui.
+    // plus demandée de l'île, et la plus courte des transferts. Le chauffeur y
+    // touche 105 000 TZS tout rond ; zanziGo prend 17 % — c'est le volume qui
+    // finance l'infrastructure. Client : 49 USD, sous le transfert ordinaire.
     for (const hub of HUBS) {
       for (const plage of ['Paje', 'Bwejuu', 'Jambiani']) {
-        verifier(hub, plage, 45, 53);
+        assert.equal(privateUsdForRoute(hub, plage), 49, `prix ${hub} → ${plage}`);
         const course = priceTrip('private', 'tourist', { pickup: hub, dropoff: plage });
-        assert.equal(course.commission, 7.95, `${hub} → ${plage} : 15 % de 53`);
+        assert.equal(course.commission, 8.33, `${hub} → ${plage} : 17 % de 49`);
+        // La promesse en shillings, à la lettre : une course locale rend
+        // exactement 105 000 au chauffeur.
+        const locale = priceTrip('private', 'local', { pickup: hub, dropoff: plage });
+        assert.equal(locale.price - locale.commission, 105000, `${hub} → ${plage} en TZS`);
         assert.ok(
-          privateUsdForRoute(hub, plage) > privateUsdForRoute(hub, 'Nungwi'),
-          `${hub} → ${plage} doit coûter plus cher que ${hub} → Nungwi`
+          privateUsdForRoute(hub, plage) < privateUsdForRoute(hub, 'Nungwi'),
+          `${hub} → ${plage} doit coûter moins cher que ${hub} → Nungwi`
         );
       }
     }
-    // Le net promis ne bouge pas d'un cent entre les deux.
-    assert.equal(
-      netChauffeurPriveUsd('Stone Town', 'Paje'),
-      netChauffeurPriveUsd('Stone Town', 'Nungwi')
-    );
   });
 
   it('aéroport ↔ Stone Town : 10 USD au chauffeur, 4,50 fixes à zanziGo', () => {
@@ -218,9 +216,10 @@ describe('Grille privée : le net du chauffeur décide, le forfait s’ajoute', 
     assert.equal(transfert.price - transfert.commission, 45.76, 'le net promis au chauffeur');
 
     const emprunte = priceTrip('private', 'tourist', { pickup: 'Stone Town', dropoff: 'Paje' });
-    assert.equal(emprunte.price, 53);
-    assert.equal(emprunte.commission, 7.95, '15 % sur le couloir du sud-est');
-    assert.ok(emprunte.price - emprunte.commission >= 45, 'les 45 USD promis sont tenus');
+    assert.equal(emprunte.price, 49);
+    assert.equal(emprunte.commission, 8.33, '17 % sur le couloir du sud-est');
+    // La promesse du couloir est 105 000 TZS (40,3846 USD) : tenue, arrondie.
+    assert.ok(emprunte.price - emprunte.commission >= 105000 / 2600, 'promesse tenue');
   });
 
   it('la remise ne mord JAMAIS sur la part du chauffeur', () => {
@@ -236,11 +235,11 @@ describe('Grille privée : le net du chauffeur décide, le forfait s’ajoute', 
       ]) {
         const course = priceTrip('private', audience, { pickup: depart, dropoff: arrivee });
         const net = netChauffeurPriveUsd(depart, arrivee);
-        assert.equal(
-          course.price - course.commission,
-          net,
-          `${audience} ${depart} → ${arrivee} : le chauffeur doit garder ${net}`
-        );
+        const garde = course.price - course.commission;
+        // Au moins la promesse — et pas plus d'un centime au-dessus : le
+        // centime d'arrondi reste chez le chauffeur, jamais chez zanziGo.
+        assert.ok(garde >= net - 1e-9, `${audience} ${depart} → ${arrivee} : ${garde} < ${net}`);
+        assert.ok(garde <= net + 0.01 + 1e-9, `${audience} ${depart} → ${arrivee} : ${garde} > ${net}`);
         assert.ok(course.commission >= 0, 'zanziGo ne peut pas payer pour rouler');
         assert.ok(course.price <= privateUsdForRoute(depart, arrivee), 'la remise doit baisser');
       }

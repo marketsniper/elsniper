@@ -136,14 +136,17 @@ const COMMISSION_PRIVE = { grand: 0.12, petit: 0.15 };
 const COMMISSION_PRIVE_SEUIL_USD = 40;
 
 // LE COULOIR DU SUD-EST : Stone Town et l'aéroport vers Paje, Bwejuu et
-// Jambiani, la liaison la plus demandée de l'île. zanziGo y prend 15 % au lieu
-// de 12 — c'est le volume qui finance l'infrastructure. Le chauffeur, lui,
-// touche exactement la même chose que sur n'importe quel autre transfert.
+// Jambiani, la liaison la plus demandée de l'île. Décision du 21/08/2026 :
+// le chauffeur y touche 105 000 TZS tout rond — moins que le transfert
+// ordinaire, c'est le trajet le plus court et le plus roulé — et zanziGo y
+// prend 17 % : c'est le volume qui finance l'infrastructure.
 //
 // Bwejuu suit Paje et Jambiani sans avoir été nommé : le village est ENTRE les
 // deux, sur la même route et souvent dans la même voiture.
 const CORRIDOR_SUD_EST = new Set(['paje', 'bwejuu', 'jambiani']);
-const COMMISSION_CORRIDOR = 0.15;
+const COMMISSION_CORRIDOR = 0.17;
+const NET_CORRIDOR_TZS = 105000;
+const NET_CORRIDOR_USD = NET_CORRIDOR_TZS / config.usdToTzsRate; // ≈ 40,38
 
 // AÉROPORT ↔ STONE TOWN : commission fixée en DOLLARS, pas en pourcentage.
 // Sept kilomètres seulement, mais la course la plus fréquente de l'île — celle
@@ -278,7 +281,11 @@ export function arrondiMillierTzs(montant) {
  */
 function commissionPrive(prix, net, taux, supplement = 0) {
   const base = prix - supplement;
-  return round2(Math.max(0, Math.min(base * taux + supplement, prix - net)));
+  const brute = Math.min(base * taux + supplement, prix - net);
+  // Arrondi au CENTIME INFÉRIEUR : arrondir au plus proche pouvait faire
+  // passer le chauffeur un cheveu SOUS sa promesse quand elle n'est pas un
+  // dollar rond (le couloir promet 105 000 TZS, soit 40,3846 USD).
+  return Math.max(0, Math.floor(brute * 100) / 100);
 }
 
 // « Ville (précision) » → « ville » ; insensible à la casse.
@@ -366,7 +373,9 @@ export function netChauffeurPriveUsd(pickup, dropoff) {
   if ((HUBS.has(p) && HUBS_VILLE.has(d)) || (HUBS_VILLE.has(p) && HUBS.has(d))) {
     return NET_AEROPORT_VILLE_USD;
   }
-  if (HUBS.has(p) || HUBS.has(d)) return NET_TRANSFERT_USD;
+  if (HUBS.has(p) || HUBS.has(d)) {
+    return versCorridorSudEst(pickup, dropoff) ? NET_CORRIDOR_USD : NET_TRANSFERT_USD;
+  }
   const groupe = GROUPES_NET_USD.find((g) => dansLeGroupe(g, p, d));
   if (groupe) return groupe.net;
   const chaine = netChaineCoteEst(p, d);

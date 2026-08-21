@@ -483,7 +483,10 @@ const COMMISSION_PRIVE_SEUIL_USD = 40;
  * lieu de 12 ; le chauffeur, lui, touche la même chose qu'ailleurs.
  */
 const CORRIDOR_SUD_EST = ['paje', 'bwejuu', 'jambiani'];
-const COMMISSION_CORRIDOR = 0.15;
+const COMMISSION_CORRIDOR = 0.17;
+/** Le couloir paie le chauffeur 105 000 TZS tout rond — miroir du serveur.
+ *  (Divisé à l'appel : TAUX_USD_TZS est déclaré plus bas dans le fichier.) */
+const NET_CORRIDOR_TZS = 105000;
 
 /**
  * AÉROPORT ↔ STONE TOWN : commission fixée en DOLLARS, pas en pourcentage.
@@ -877,7 +880,9 @@ export function netChauffeurPriveUsd(depart: string, arrivee: string): number {
   ) {
     return NET_AEROPORT_VILLE_USD;
   }
-  if (HUBS_TARIFAIRES.has(d) || HUBS_TARIFAIRES.has(a)) return NET_TRANSFERT_USD;
+  if (HUBS_TARIFAIRES.has(d) || HUBS_TARIFAIRES.has(a)) {
+    return versCorridorSudEst(depart, arrivee) ? NET_CORRIDOR_TZS / TAUX_USD_TZS : NET_TRANSFERT_USD;
+  }
   const groupe = GROUPES_NET_USD.find((g) => dansLeGroupe(g, d, a));
   if (groupe) return groupe.net;
   const chaine = netChaineCoteEst(d, a);
