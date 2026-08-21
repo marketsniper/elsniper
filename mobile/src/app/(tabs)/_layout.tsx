@@ -21,13 +21,19 @@ export default function LayoutOnglets() {
     <Tabs
       initialRouteName="reserver"
       screenOptions={{
-        headerStyle: { backgroundColor: couleurs.sable },
+        // Transparents : le lagon posé à la racine traverse l'en-tête et la
+        // scène. Seule la barre d'onglets garde un voile, pour que le contenu
+        // qui défile dessous ne rende pas les libellés illisibles.
+        headerStyle: { backgroundColor: 'transparent' },
         headerTitleStyle: { color: couleurs.encre, fontWeight: '700' },
         headerShadowVisible: false,
         tabBarActiveTintColor: couleurs.primaire,
         tabBarInactiveTintColor: couleurs.texteSecondaire,
-        tabBarStyle: { backgroundColor: couleurs.surface, borderTopColor: couleurs.bordure },
-        sceneStyle: { backgroundColor: couleurs.sable },
+        tabBarStyle: {
+          backgroundColor: couleurs.voilePhotoSombre,
+          borderTopColor: couleurs.bordure,
+        },
+        sceneStyle: { backgroundColor: 'transparent' },
       }}
     >
       <Tabs.Screen

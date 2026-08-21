@@ -1,17 +1,19 @@
 // Mise en page racine : fournit la langue, le contexte d'auth et la pile de
 // navigation (titres traduits).
 import { Ionicons } from '@expo/vector-icons';
+import { DarkTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack, useRouter, type Href } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect } from 'react';
-import { Pressable, Text } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
 import { FournisseurDialogues } from '@/components/BoiteDialogue';
+import { LagonDeVerre } from '@/components/FondPlage';
 import { reparerAlertesWeb } from '@/lib/alerteWeb';
 import { reveillerServeur } from '@/lib/api';
 import { AuthProvider } from '@/lib/auth';
 import { LangueProvider, useT } from '@/lib/i18n';
-import { couleurs, FournisseurPeau, type NomPeau } from '@/lib/theme';
+import { couleurs, FournisseurPeau, PEAU_PAR_DEFAUT } from '@/lib/theme';
 
 // Flèche de retour GARANTIE sur chaque fiche : le retour natif disparaît
 // quand l'historique est vide (page web rechargée, PWA relancée…) et son
@@ -51,11 +53,14 @@ function PilesNavigation() {
   return (
     <Stack
       screenOptions={{
-        headerStyle: { backgroundColor: couleurs.sable },
+        // Transparents : le lagon est posé une fois derrière toute la
+        // navigation (voir LayoutRacine). Un fond opaque ici rendrait une
+        // barre pleine en haut de chaque écran.
+        headerStyle: { backgroundColor: 'transparent' },
         headerTintColor: couleurs.primaireFonce,
         headerTitleStyle: { color: couleurs.encre, fontWeight: '700' },
         headerShadowVisible: false,
-        contentStyle: { backgroundColor: couleurs.sable },
+        contentStyle: { backgroundColor: 'transparent' },
         // La signature de « Nuit d'épices » : les pages glissent
         // latéralement. Android ouvrait les fiches par le bas, l'iPhone par
         // le côté — même geste partout, maintenant.
@@ -81,17 +86,10 @@ function PilesNavigation() {
   );
 }
 
-/**
- * LA PEAU DE L'APPLICATION.
- *
- * « Nuit d'épices » pour tout le monde — voyageurs, chauffeurs, hôtels,
- * équipe : presque noir, filets d'or, l'or en couleur d'action. La nuit de
- * Stone Town, les lampes des échoppes à girofle.
- *
- * L'autre direction, « Bento Zanzibar », reste écrite dans le thème : tout
- * basculer tient dans ce seul mot, au prochain démarrage de l'application.
- */
-const PEAU: NomPeau = 'nuit';
+const THEME_TRANSPARENT = {
+  ...DarkTheme,
+  colors: { ...DarkTheme.colors, background: 'transparent', card: 'transparent' },
+};
 
 // Sur le web, les boîtes de dialogue de React Native sont des fonctions
 // vides : on les rebranche AVANT le premier rendu, sinon des boutons comme
@@ -108,12 +106,20 @@ export default function LayoutRacine() {
   return (
     <LangueProvider>
       <AuthProvider>
-        <FournisseurPeau nom={PEAU}>
+        <FournisseurPeau nom={PEAU_PAR_DEFAUT}>
           <StatusBar style="light" />
-          {/* Les fenêtres de confirmation s'affichent par-dessus tout écran. */}
-          <FournisseurDialogues>
-            <PilesNavigation />
-          </FournisseurDialogues>
+          <View style={{ flex: 1, backgroundColor: couleurs.sable }}>
+            {PEAU_PAR_DEFAUT === 'verre' && <LagonDeVerre />}
+            {/* Le thème de navigation peint SON fond derrière chaque
+                navigateur — blanc par défaut, il recouvrait le lagon sur tous
+                les écrans à onglets. Transparent, il le laisse passer. */}
+            <ThemeProvider value={THEME_TRANSPARENT}>
+              {/* Les fenêtres de confirmation s'affichent par-dessus tout écran. */}
+              <FournisseurDialogues>
+                <PilesNavigation />
+              </FournisseurDialogues>
+            </ThemeProvider>
+          </View>
         </FournisseurPeau>
       </AuthProvider>
     </LangueProvider>

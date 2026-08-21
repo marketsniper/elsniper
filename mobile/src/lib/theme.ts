@@ -7,8 +7,13 @@
 //    C'est la peau de l'application — clients, chauffeurs, équipe.
 //
 //  · « nuit » — Nuit d'épices. Presque noir, filets d'or, corail.
-//    La nuit de Stone Town. C'est la peau des HÔTELS : un partenaire
-//    professionnel n'ouvre pas la même application que le voyageur.
+//    La nuit de Stone Town.
+//
+//  · « verre » — Lagon de verre. Des panneaux translucides posés sur un
+//    lagon : turquoise en haut à gauche, corail à droite, violet en bas.
+//    Le fond ne bouge pas, les cartes flottent au-dessus — c'est la
+//    profondeur qui donne la hiérarchie, pas les traits. C'est la peau de
+//    l'application (21/08/2026).
 //
 // Les deux peaux exposent EXACTEMENT les mêmes noms de couleurs. Aucun écran
 // n'a besoin de savoir laquelle est active : `couleurs.encre` donne l'encre
@@ -19,7 +24,7 @@ import { StyleSheet, type TextStyle } from 'react-native';
 
 import type { StatutColis, StatutTrajet } from './types';
 
-export type NomPeau = 'bento' | 'nuit';
+export type NomPeau = 'bento' | 'nuit' | 'verre';
 
 interface Palette {
   primaire: string;
@@ -149,12 +154,67 @@ const NUIT: Palette = {
   surAccentDoux: 'rgba(245, 237, 225, 0.66)',
 };
 
-const PEAUX: Record<NomPeau, Palette> = { bento: BENTO, nuit: NUIT };
+// ─────────────────────────── 01 · LAGON DE VERRE ───────────────────────────
+// Rien n'est opaque : les surfaces sont des voiles blancs posés sur le
+// dégradé, cernés d'un filet clair. La couleur d'action est le BLANC —
+// c'est lui qui ressort d'un fond déjà coloré, pas un accent de plus.
+const VERRE: Palette = {
+  primaire: '#F4FBFC', // le verre le plus clair : boutons, onglet actif
+  primaireFonce: '#FFD9C9', // rosé : liens, flèches d'en-tête
+  primaireClair: 'rgba(255, 255, 255, 0.18)', // bulles d'icônes, encarts
+  sable: '#0E2733', // le lagon profond, sous le dégradé
+  blanc: '#123240', // panneaux OPAQUES : fenêtres de confirmation
+  encre: '#F4FBFC',
+  texteSecondaire: 'rgba(244, 251, 252, 0.68)',
+  bordure: 'rgba(255, 255, 255, 0.26)',
+  danger: '#FF6B6B',
+  dangerFonce: '#FFC9C9',
+  dangerFond: 'rgba(255, 107, 107, 0.18)',
+  dangerBordure: 'rgba(255, 107, 107, 0.42)',
+  succes: '#5EE6B5',
+  succesFond: 'rgba(94, 230, 181, 0.18)',
+  attente: '#FFD08A',
+  attenteFond: 'rgba(255, 208, 138, 0.18)',
+  orange: '#FF9E7A',
+  orangeFond: 'rgba(255, 158, 122, 0.18)',
+  etoile: '#F2B84B',
+  voile: 'rgba(6, 20, 27, 0.82)',
+  succesClair: '#7BE3A3',
+  dangerClair: '#FCA5A5',
+  voilePhotoClair: '#0E2733',
+  voilePhotoSombre: 'rgba(6, 20, 27, 0.55)',
+  carteTranslucide: 'rgba(255, 255, 255, 0.13)',
+  surface: 'rgba(255, 255, 255, 0.14)',
+  surPrimaire: '#0E2733', // l'encre posée SUR le verre blanc
+  or: '#F2B84B',
+  nuit: '#0A1A22',
+  vertFeu: '#15A34A',
+  surVertFeu: '#FFFFFF',
+  turquoise: '#37C4C9',
+  surVoile: '#FFFFFF',
+  accentFond: 'rgba(255, 255, 255, 0.2)',
+  surAccent: '#F4FBFC',
+  surAccentDoux: 'rgba(244, 251, 252, 0.7)',
+};
+
+const PEAUX: Record<NomPeau, Palette> = { bento: BENTO, nuit: NUIT, verre: VERRE };
+
+/**
+ * LA PEAU DE L'APPLICATION — « Lagon de verre » (21/08/2026).
+ *
+ * C'est ici, et nulle part ailleurs, qu'on en change : le layout racine la
+ * lit, et la variable de module démarre déjà dessus. Le jour où elle était
+ * choisie dans le layout, les styles écrits DIRECTEMENT dans le JSX de la
+ * racine — évalués avant le rendu du fournisseur — prenaient encore les
+ * couleurs de la peau précédente : l'application s'ouvrait sur un fond crème
+ * sous un dégradé de lagon.
+ */
+export const PEAU_PAR_DEFAUT: NomPeau = 'verre';
 
 // La peau active. Volontairement une variable de module : les feuilles de
 // style sont construites hors composant, elles doivent pouvoir la consulter
 // sans passer par React.
-let peauActive: NomPeau = 'bento';
+let peauActive: NomPeau = PEAU_PAR_DEFAUT;
 
 export function peauCourante(): NomPeau {
   return peauActive;
@@ -191,6 +251,8 @@ interface Rayons {
 const RAYONS: Record<NomPeau, Rayons> = {
   bento: { carte: 13, bouton: 12, pastille: 999 },
   nuit: { carte: 12, bouton: 12, pastille: 999 },
+  // Le verre est généreux : des angles serrés casseraient l'effet de panneau.
+  verre: { carte: 18, bouton: 16, pastille: 999 },
 };
 
 export const rayons = new Proxy({} as Rayons, {
@@ -281,6 +343,28 @@ const OMBRES: Record<NomPeau, Ombres> = {
       elevation: 5,
     },
   },
+  // Le verre : un filet clair, et une ombre profonde mais LARGE — c'est elle
+  // qui décolle le panneau du lagon et donne l'impression d'épaisseur.
+  verre: {
+    carte: {
+      borderWidth: 1,
+      borderColor: 'rgba(255, 255, 255, 0.24)',
+      shadowColor: '#02141C',
+      shadowOpacity: 0.42,
+      shadowRadius: 26,
+      shadowOffset: { width: 0, height: 8 },
+      elevation: 4,
+    },
+    douce: {
+      borderWidth: 1,
+      borderColor: 'rgba(255, 255, 255, 0.38)',
+      shadowColor: '#02141C',
+      shadowOpacity: 0.5,
+      shadowRadius: 34,
+      shadowOffset: { width: 0, height: 14 },
+      elevation: 6,
+    },
+  },
 };
 
 export const ombres = new Proxy({} as Ombres, {
@@ -357,10 +441,12 @@ function tonsColis(p: Palette): Record<StatutColis, Ton> {
 const TONS_TRAJET: Record<NomPeau, Record<StatutTrajet, Ton>> = {
   bento: tonsTrajet(BENTO),
   nuit: tonsTrajet(NUIT),
+  verre: tonsTrajet(VERRE),
 };
 const TONS_COLIS: Record<NomPeau, Record<StatutColis, Ton>> = {
   bento: tonsColis(BENTO),
   nuit: tonsColis(NUIT),
+  verre: tonsColis(VERRE),
 };
 
 /** Couleurs de pastille par statut de trajet (fond doux + texte lisible). */
@@ -388,7 +474,7 @@ export const couleursStatutColis = new Proxy({} as Record<StatutColis, Ton>, {
 }) as Record<StatutColis, Ton>;
 
 // ──────────────────────── LA BASCULE, CÔTÉ REACT ───────────────────────────
-const ContextePeau = React.createContext<NomPeau>('bento');
+const ContextePeau = React.createContext<NomPeau>(PEAU_PAR_DEFAUT);
 
 /** La peau active, pour les rares écrans qui veulent s'y adapter. */
 export function usePeau(): NomPeau {

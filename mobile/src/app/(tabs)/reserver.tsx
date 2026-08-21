@@ -34,18 +34,20 @@ import { positionActuelle } from '@/lib/position';
 import { couleurs, espaces, ombres, rayons, stylesReactifs } from '@/lib/theme';
 import {
   champ,
+  dureeRouteMinutes,
+  estTarifDeTerrain,
   formaterMontant,
+  kmEntreVilles,
   localVerifie,
   ORIGINES_RIDES,
   POINTS_STONE_TOWN,
   profilTarifaireUtilisateur,
   tarifPriveItineraire,
-  estTarifDeTerrain,
   tarifTrajetProfil,
-  villeLaPlusProche,
   type ProfilTarifaire,
   type TypeCompte,
   type TypeTrajet,
+  villeLaPlusProche,
 } from '@/lib/types';
 
 type ModeCourse = 'prive' | 'partage';
@@ -88,6 +90,31 @@ export default function EcranReserver() {
   const [charge, setCharge] = useState(false);
   // Lieux proposés : hubs + villes (serveur), repli sur la liste locale.
   const [lieux, setLieux] = useState<string[]>(ORIGINES_RIDES);
+
+  /**
+   * La deuxième ligne d'un lieu dans la liste : combien de kilomètres, et
+   * combien de temps de route depuis l'autre bout du trajet. Rien tant que
+   * l'autre bout n'est pas choisi — annoncer « 0 km » serait pire que rien.
+   */
+  const detailLieu = (lieu: string, reference: string): string | null => {
+    if (!reference || lieu === reference || lieu === OPTION_MA_POSITION) return null;
+    const km = kmEntreVilles(reference, lieu);
+    if (km === null || km < 1) return null;
+    return t('lieu_distance', {
+      km: String(Math.round(km)),
+      min: String(dureeRouteMinutes(km)),
+    });
+  };
+
+  /** La distance du trajet choisi, rappelée sous le prix. */
+  const kmCourse = depart && arrivee ? kmEntreVilles(depart, arrivee) : null;
+  const distanceCourse =
+    kmCourse !== null && kmCourse >= 1
+      ? t('course_distance', {
+          km: String(Math.round(kmCourse)),
+          min: String(dureeRouteMinutes(kmCourse)),
+        })
+      : null;
   // « Ma position » : coordonnées exactes du client, transmises au chauffeur
   // après la réservation (pickup_lat/lng) pour qu'il vienne au bon endroit et
   // pas au centre du village. Effacées dès que le départ change à la main.
@@ -331,6 +358,7 @@ export default function EcranReserver() {
       <Text style={styles.titreSection}>{t('reserver_itineraire')}</Text>
       <Selecteur
         label={t('commun_depart')}
+        detailOption={(option) => detailLieu(option, arrivee)}
         valeur={depart}
         options={[OPTION_MA_POSITION, ...lieux]}
         libelleOption={(option) =>
@@ -353,6 +381,7 @@ export default function EcranReserver() {
             ? lieux.filter((lieu) => !POINTS_STONE_TOWN.includes(lieu))
             : lieux
         }
+        detailOption={(option) => detailLieu(option, depart)}
         onChange={setArrivee}
       />
       <Champ
@@ -608,6 +637,12 @@ export default function EcranReserver() {
                   : '—'}
               </Text>
             </View>
+            {!!distanceCourse && (
+              <View style={styles.ligneDistance}>
+                <Ionicons name="navigate-outline" size={15} color={couleurs.texteSecondaire} />
+                <Text style={styles.note}>{distanceCourse}</Text>
+              </View>
+            )}
             <Text style={styles.note}>{t('reserver_note_prix')}</Text>
           </View>
 
@@ -752,6 +787,11 @@ const styles = stylesReactifs(() => ({
   },
   // Prix CENTRÉ sous son libellé : les montants en shillings (6 chiffres)
   // débordaient de l'écran en rangée côte à côte.
+  ligneDistance: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: espaces.xs,
+  },
   lignePrix: {
     alignItems: 'center',
     gap: 2,

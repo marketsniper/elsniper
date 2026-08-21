@@ -10,11 +10,13 @@ export default function LayoutAuth() {
   return (
     <Stack
       screenOptions={{
-        headerStyle: { backgroundColor: couleurs.sable },
+        // Transparents : le lagon est posé une fois à la racine et traverse
+        // toute la navigation (voir app/_layout.tsx).
+        headerStyle: { backgroundColor: 'transparent' },
         headerTintColor: couleurs.primaireFonce,
         headerTitleStyle: { color: couleurs.encre, fontWeight: '700' },
         headerShadowVisible: false,
-        contentStyle: { backgroundColor: couleurs.sable },
+        contentStyle: { backgroundColor: 'transparent' },
       }}
     >
       <Stack.Screen name="accueil" options={{ headerShown: false }} />

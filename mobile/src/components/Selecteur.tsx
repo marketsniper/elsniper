@@ -1,5 +1,10 @@
-// Sélecteur maison (aucune dépendance) : champ pressable + Modal avec liste
-// scrollable de choix. Style aligné sur le composant Champ.
+// Sélecteur maison (aucune dépendance) : champ pressable + Modal avec une
+// liste défilante de choix.
+//
+// Chaque ligne est une CARTE, pas un simple texte : le nom du lieu, et
+// dessous ce qu'on veut savoir avant de choisir — la côte, la distance en
+// kilomètres, le temps de route. C'est la liste du prototype « Lagon de
+// verre » : on fait défiler, on lit, on touche.
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
@@ -13,6 +18,7 @@ export function Selecteur({
   options,
   placeholder,
   libelleOption,
+  detailOption,
   onChange,
 }: {
   label: string;
@@ -25,6 +31,11 @@ export function Selecteur({
    * exemple, dont le choix déclenche le GPS.
    */
   libelleOption?: (option: string) => string;
+  /**
+   * Deuxième ligne d'une option : zone, distance, durée… Renvoie null quand
+   * il n'y a rien à dire (« Ma position » avant que le GPS ait répondu).
+   */
+  detailOption?: (option: string) => string | null;
   onChange: (valeur: string) => void;
 }) {
   const { t } = useT();
@@ -62,6 +73,7 @@ export function Selecteur({
             <ScrollView style={styles.listeChoix} showsVerticalScrollIndicator>
               {options.map((option) => {
                 const choisi = option === valeur;
+                const detail = detailOption?.(option) ?? null;
                 return (
                   <Pressable
                     key={option}
@@ -69,15 +81,20 @@ export function Selecteur({
                       onChange(option);
                       setOuvert(false);
                     }}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: choisi }}
                     style={({ pressed }) => [
                       styles.choix,
                       choisi && styles.choixActif,
-                      pressed && { opacity: 0.7 },
+                      pressed && styles.choixEnfonce,
                     ]}
                   >
-                    <Text style={[styles.texteChoix, choisi && styles.texteChoixActif]}>
-                      {libelleOption ? libelleOption(option) : option}
-                    </Text>
+                    <View style={styles.texteschoix}>
+                      <Text style={[styles.texteChoix, choisi && styles.texteChoixActif]}>
+                        {libelleOption ? libelleOption(option) : option}
+                      </Text>
+                      {!!detail && <Text style={styles.detailChoix}>{detail}</Text>}
+                    </View>
                     {choisi && (
                       <Ionicons name="checkmark" size={20} color={couleurs.primaire} />
                     )}
@@ -128,7 +145,9 @@ const styles = stylesReactifs(() => ({
     justifyContent: 'flex-end',
   },
   feuille: {
-    backgroundColor: couleurs.surface,
+    // Opaque, volontairement : la liste recouvre l'écran, elle ne flotte pas
+    // dessus. Deux couches de verre l'une sur l'autre ne se lisent plus.
+    backgroundColor: couleurs.blanc,
     borderTopLeftRadius: rayons.carte,
     borderTopRightRadius: rayons.carte,
     paddingBottom: espaces.xl,
@@ -148,28 +167,44 @@ const styles = stylesReactifs(() => ({
     color: couleurs.encre,
   },
   listeChoix: {
-    paddingHorizontal: espaces.s,
+    paddingHorizontal: espaces.m,
   },
   choix: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     gap: espaces.m,
+    marginTop: espaces.s,
     paddingVertical: espaces.m,
-    paddingHorizontal: espaces.m,
+    paddingHorizontal: espaces.l,
     borderRadius: rayons.bouton,
-    minHeight: tailles.champ - 4,
+    minHeight: tailles.champ,
+    ...ombres.carte,
+    backgroundColor: couleurs.carteTranslucide,
   },
   choixActif: {
     backgroundColor: couleurs.primaireClair,
+    borderColor: couleurs.primaire,
+  },
+  // L'appui s'enfonce au lieu de pâlir : sur du verre, la transparence en
+  // moins ne se voit pas.
+  choixEnfonce: {
+    transform: [{ scale: 0.98 }],
+  },
+  texteschoix: {
+    flexShrink: 1,
+    gap: 2,
   },
   texteChoix: {
     fontSize: 16,
+    fontWeight: '600',
     color: couleurs.encre,
-    flexShrink: 1,
   },
   texteChoixActif: {
-    fontWeight: '700',
     color: couleurs.primaireFonce,
+  },
+  detailChoix: {
+    fontSize: 12.5,
+    color: couleurs.texteSecondaire,
   },
 }));

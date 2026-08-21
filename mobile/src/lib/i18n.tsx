@@ -1038,6 +1038,22 @@ const CHAINES = {
     en: 'Test alert sent to {n} phone(s) — it should arrive right away.',
     sw: 'Arifa ya majaribio imetumwa kwa simu {n} — inapaswa kufika mara moja.',
   },
+  // Deuxième ligne d'un lieu dans la liste : distance et temps de route.
+  lieu_distance: {
+    fr: '{km} km · environ {min} min de route',
+    en: '{km} km · about {min} min drive',
+    sw: 'km {km} · dakika {min} hivi barabarani',
+    it: '{km} km · circa {min} min di strada',
+    de: '{km} km · etwa {min} Min. Fahrt',
+  },
+  // Rappel de la distance sur le récapitulatif de prix.
+  course_distance: {
+    fr: '{km} km · environ {min} min',
+    en: '{km} km · about {min} min',
+    sw: 'km {km} · dakika {min} hivi',
+    it: '{km} km · circa {min} min',
+    de: '{km} km · etwa {min} Min.',
+  },
   alertes_test_vide: {
     fr: "Aucun téléphone n'est encore abonné aux alertes.",
     en: 'No phone is subscribed to alerts yet.',

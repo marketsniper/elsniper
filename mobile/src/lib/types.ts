@@ -803,6 +803,22 @@ export function kmEntreVilles(depart: string, arrivee: string): number | null {
 }
 
 /**
+ * TEMPS DE ROUTE ESTIMÉ, en minutes.
+ *
+ * Douze minutes de manœuvre — sortir du village, traverser Stone Town,
+ * trouver l'hôtel — plus une minute par kilomètre. Une simple vitesse
+ * moyenne se trompait aux deux bouts : trop optimiste sur l'aéroport ↔ Stone
+ * Town (dix kilomètres mais vingt minutes de ville), trop pessimiste sur les
+ * longues lignes du nord, où la route est droite et dégagée.
+ *
+ * Arrondi à cinq minutes : annoncer « 87 min » donnerait une précision qu'on
+ * n'a pas.
+ */
+export function dureeRouteMinutes(km: number): number {
+  return Math.max(10, Math.round((12 + km) / 5) * 5);
+}
+
+/**
  * MA POSITION → LA VILLE LA PLUS PROCHE.
  *
  * Le client appuie sur « Ma position » : son GPS donne un point, mais la

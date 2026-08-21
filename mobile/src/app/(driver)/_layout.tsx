@@ -22,13 +22,17 @@ export default function LayoutChauffeur() {
     <Tabs
       initialRouteName="courses"
       screenOptions={{
-        headerStyle: { backgroundColor: couleurs.sable },
+        // Transparents : le lagon de la racine traverse la navigation.
+        headerStyle: { backgroundColor: 'transparent' },
         headerTitleStyle: { color: couleurs.encre, fontWeight: '700' },
         headerShadowVisible: false,
         tabBarActiveTintColor: couleurs.primaire,
         tabBarInactiveTintColor: couleurs.texteSecondaire,
-        tabBarStyle: { backgroundColor: couleurs.surface, borderTopColor: couleurs.bordure },
-        sceneStyle: { backgroundColor: couleurs.sable },
+        tabBarStyle: {
+          backgroundColor: couleurs.voilePhotoSombre,
+          borderTopColor: couleurs.bordure,
+        },
+        sceneStyle: { backgroundColor: 'transparent' },
       }}
     >
       <Tabs.Screen
