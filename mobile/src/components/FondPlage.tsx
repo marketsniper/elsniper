@@ -62,19 +62,23 @@ export function FondPlage({
   children: React.ReactNode;
 }) {
   const peau = usePeau();
-  // En « Lagon de verre », le dégradé est posé une seule fois à la racine,
-  // DERRIÈRE l'en-tête et la barre d'onglets : le redessiner ici laisserait
-  // une couture nette en haut de chaque écran.
-  return <View style={peau === 'verre' ? styles.transparent : styles.fond}>{children}</View>;
+  // Chaque écran est OPAQUE et porte son propre lagon. C'est ce qui empêche
+  // les onglets inactifs de transparaître : sur le web, ils restent affichés
+  // derrière l'actif — seul un écran plein les recouvre. L'en-tête, lui,
+  // FLOTTE par-dessus (headerTransparent) : le dégradé démarre à y=0 sous le
+  // titre, aucune couture.
+  return (
+    <View style={styles.fond}>
+      {peau === 'verre' && <LagonDeVerre />}
+      {children}
+    </View>
+  );
 }
 
 const styles = stylesReactifs(() => ({
   fond: {
     flex: 1,
     backgroundColor: couleurs.sable,
-  },
-  transparent: {
-    flex: 1,
   },
   lagon: {
     ...StyleSheet.absoluteFillObject,

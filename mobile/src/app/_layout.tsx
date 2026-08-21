@@ -58,6 +58,10 @@ function PilesNavigation() {
         // navigation (voir LayoutRacine). Un fond opaque ici rendrait une
         // barre pleine en haut de chaque écran.
         headerStyle: { backgroundColor: 'transparent' },
+        // L'en-tête flotte sur l'écran : chaque écran est opaque et peint son
+        // lagon depuis y=0, le titre se pose dessus. C'est aussi ce qui rend
+        // les écrans pleins — donc les onglets inactifs invisibles.
+        headerTransparent: true,
         headerTintColor: couleurs.primaireFonce,
         headerTitleStyle: { color: couleurs.encre, fontWeight: '700' },
         headerShadowVisible: false,

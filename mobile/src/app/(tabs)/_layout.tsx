@@ -25,6 +25,7 @@ export default function LayoutOnglets() {
         // scène. Seule la barre d'onglets garde un voile, pour que le contenu
         // qui défile dessous ne rende pas les libellés illisibles.
         headerStyle: { backgroundColor: 'transparent' },
+        headerTransparent: true,
         headerTitleStyle: { color: couleurs.encre, fontWeight: '700' },
         headerShadowVisible: false,
         tabBarActiveTintColor: couleurs.primaire,

@@ -24,6 +24,7 @@ export default function LayoutChauffeur() {
       screenOptions={{
         // Transparents : le lagon de la racine traverse la navigation.
         headerStyle: { backgroundColor: 'transparent' },
+        headerTransparent: true,
         headerTitleStyle: { color: couleurs.encre, fontWeight: '700' },
         headerShadowVisible: false,
         tabBarActiveTintColor: couleurs.primaire,

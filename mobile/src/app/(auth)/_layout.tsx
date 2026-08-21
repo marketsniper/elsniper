@@ -13,6 +13,8 @@ export default function LayoutAuth() {
         // Transparents : le lagon est posé une fois à la racine et traverse
         // toute la navigation (voir app/_layout.tsx).
         headerStyle: { backgroundColor: 'transparent' },
+        // Voir app/_layout.tsx : l'écran s'écarte tout seul (Ecran).
+        headerTransparent: true,
         headerTintColor: couleurs.primaireFonce,
         headerTitleStyle: { color: couleurs.encre, fontWeight: '700' },
         headerShadowVisible: false,

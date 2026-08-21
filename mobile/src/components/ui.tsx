@@ -18,6 +18,7 @@ import {
   type TextStyle,
   type ViewStyle,
 } from 'react-native';
+import { HeaderHeightContext } from '@react-navigation/elements';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FondPlage, type NomFond } from '@/components/FondPlage';
@@ -89,6 +90,11 @@ export function Ecran({
   const rang = React.useRef(0);
   const compteur = React.useMemo(() => ({ suivant: () => rang.current++ }), []);
 
+  // L'en-tête flotte par-dessus l'écran (headerTransparent) : le contenu
+  // s'écarte de sa hauteur. Le contexte est absent quand l'en-tête est caché
+  // — zéro, et la zone sûre du haut reprend le relais.
+  const hauteurEntete = React.useContext(HeaderHeightContext) ?? 0;
+
   // « L'entrant se rassemble » : l'écran arrive un souffle trop grand et
   // légèrement effacé, puis se pose. Les cartes remontent ensuite en décalé.
   // Le lagon, lui, ne bouge pas : il est peint sous la navigation.
@@ -107,7 +113,10 @@ export function Ecran({
       }}
     >
     <FondPlage fond={fond} voile="clair">
-      <SafeAreaView style={styles.ecran} edges={['top', 'left', 'right']}>
+      <SafeAreaView
+        style={[styles.ecran, hauteurEntete > 0 && { paddingTop: hauteurEntete }]}
+        edges={hauteurEntete > 0 ? ['left', 'right'] : ['top', 'left', 'right']}
+      >
         <KeyboardAvoidingView
           style={styles.flexible}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
