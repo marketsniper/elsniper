@@ -451,6 +451,19 @@ export const TRAJETS_SPECIAUX_PRIVE_USD: { villes: [string, string]; prix: numbe
   { villes: ['Paje', 'Kizimkazi'], prix: 26 },
   { villes: ['Bwejuu', 'Kizimkazi'], prix: 34 },
   { villes: ['Michamvi', 'Kizimkazi'], prix: 42 },
+  // LES GRANDES TRAVERSÉES NORD ↔ SUD, PLAFONNÉES À 57 USD (21/08/2026) :
+  // le prix le plus bas qui laisse 50 USD au chauffeur (50 ÷ 0,88 = 56,82).
+  // Bwejuu y est aussi : il est ENTRE Paje et Jambiani, sur la même route.
+  { villes: ['Nungwi', 'Paje'], prix: 57 },
+  { villes: ['Nungwi', 'Bwejuu'], prix: 57 },
+  { villes: ['Nungwi', 'Jambiani'], prix: 57 },
+  { villes: ['Nungwi', 'Makunduchi'], prix: 57 },
+  { villes: ['Nungwi', 'Kizimkazi'], prix: 57 },
+  { villes: ['Kendwa', 'Paje'], prix: 57 },
+  { villes: ['Kendwa', 'Bwejuu'], prix: 57 },
+  { villes: ['Kendwa', 'Jambiani'], prix: 57 },
+  { villes: ['Kendwa', 'Makunduchi'], prix: 57 },
+  { villes: ['Kendwa', 'Kizimkazi'], prix: 57 },
   // LES BAIES SANS PONT — Michamvi fait face à la côte nord-est par-dessus la
   // baie de Chwaka, Fumba à Kizimkazi par-dessus la baie de Menai : quelques
   // kilomètres à vol d'oiseau, mais la route fait tout le tour. Le prix suit
@@ -582,12 +595,15 @@ export interface TarifsZone {
 /**
  * Prix d'une place en taxi partagé — déduit du prix de la course PRIVÉE du
  * même trajet, jamais fixé à part (miroir exact de la grille serveur) :
- * privé 42 → 12 · 47 → 15 · 53 → 16 · 63 et plus → 18.
+ * privé 42 → 12 · 47 → 15 · 53 → 16 · 57 et plus → 18.
  * Baisse de 1 USD sur toutes les places (18/08/2026) : le taxi partagé est le
  * produit d'appel, il retrouve son prix d'avant la hausse de 5 %.
+ * Seuil haut à 57 et non 63 (21/08/2026) : les grandes traversées nord ↔ sud
+ * ont baissé côté client, mais la route fait toujours 85 à 112 km — la place
+ * reste à 18 USD pour ne pas prendre cette baisse sur le chauffeur.
  */
 export function tarifPlacePartagee(priveUsd: number): number {
-  if (priveUsd >= 63) return 18;
+  if (priveUsd >= 57) return 18;
   if (priveUsd >= 53) return 16;
   if (priveUsd >= 47) return 15;
   return 12;

@@ -4,7 +4,11 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import request from 'supertest';
-import { privateUsdForRoute, priceTrip } from '../src/services/pricingService.js';
+import {
+  privateUsdForRoute,
+  priceTrip,
+  sharedSeatUsdForRoute,
+} from '../src/services/pricingService.js';
 import { app, authHeaders, createTourist, useTestDb } from './setup.js';
 
 useTestDb();
@@ -23,12 +27,12 @@ describe('Grille privée au kilomètre', () => {
     assert.equal(privateUsdForRoute('Stone Town', 'Makunduchi'), 47);
     // Trajets spéciaux : prioritaires sur la formule (et sur le minimum de
     // 20 USD pour les sauts de village de la côte est à 12 USD).
-    // Les traversées ne sont plus codées en dur : les paliers de distance
-    // les produisent, et dans les deux sens.
-    assert.equal(privateUsdForRoute('Nungwi', 'Paje'), 63);
-    assert.equal(privateUsdForRoute('Paje', 'Nungwi'), 63);
-    assert.equal(privateUsdForRoute('Nungwi', 'Kizimkazi'), 68);
-    assert.equal(privateUsdForRoute('Kizimkazi', 'Nungwi'), 68);
+    // Les grandes traversées nord ↔ sud sont plafonnées à 57 USD, dans les
+    // deux sens (voir le test du plancher chauffeur plus bas).
+    assert.equal(privateUsdForRoute('Nungwi', 'Paje'), 57);
+    assert.equal(privateUsdForRoute('Paje', 'Nungwi'), 57);
+    assert.equal(privateUsdForRoute('Nungwi', 'Kizimkazi'), 57);
+    assert.equal(privateUsdForRoute('Kizimkazi', 'Nungwi'), 57);
   });
 
   it('les baies sans pont se paient par la route, pas à vol d’oiseau', () => {
@@ -123,9 +127,14 @@ describe('Grille privée au kilomètre', () => {
     assert.equal(privateUsdForRoute('Nungwi', 'Kiwengwa'), 34); // ≈ 41 km
     assert.equal(privateUsdForRoute('Nungwi', 'Chwaka'), 50); // ≈ 68 km
     assert.equal(privateUsdForRoute('Matemwe', 'Paje'), 50); // ≈ 65 km
-    assert.equal(privateUsdForRoute('Nungwi', 'Paje'), 63); // ≈ 88 km, côte à côte
-    assert.equal(privateUsdForRoute('Kendwa', 'Kizimkazi'), 68); // ≈ 102 km, nord → sud
-    assert.equal(privateUsdForRoute('Nungwi', 'Makunduchi'), 68); // ≈ 107 km
+    // Au-delà de 75 km, le palier ne décide plus : les traversées nord ↔ sud
+    // sont plafonnées à 57 USD par un trajet spécial.
+    assert.equal(privateUsdForRoute('Nungwi', 'Paje'), 57); // ≈ 88 km, côte à côte
+    assert.equal(privateUsdForRoute('Kendwa', 'Kizimkazi'), 57); // ≈ 109 km, nord → sud
+    assert.equal(privateUsdForRoute('Nungwi', 'Makunduchi'), 57); // ≈ 110 km
+    // Le palier lui-même n'a pas bougé : il sert encore ailleurs (Matemwe et
+    // Pwani Mchangani vers la pointe sud, Nungwi ↔ Fumba).
+    assert.equal(privateUsdForRoute('Matemwe', 'Makunduchi'), 63); // ≈ 90 km
     // Symétrie : même prix dans les deux sens.
     assert.equal(
       privateUsdForRoute('Kiwengwa', 'Jambiani'),
@@ -215,5 +224,63 @@ describe('Grille privée au kilomètre', () => {
     assert.equal(creation.body.currency, 'USD');
     // Commission privée 10 % (au-dessus du seuil de 40 USD).
     assert.equal(Number(creation.body.commission), 6);
+  });
+
+  // ----- LE PLANCHER DE 50 USD POUR LE CHAUFFEUR --------------------------
+  //
+  // Décision du 21/08/2026 : les grandes traversées nord ↔ sud étaient trop
+  // chères pour le marché (63 et 68 USD). Elles baissent, MAIS pas en dessous
+  // du prix qui laisse 50 USD au chauffeur. Avec 12 % de commission, ce prix
+  // est 50 ÷ 0,88 = 56,82 → 57 USD (à 56, il ne resterait que 49,28).
+  //
+  // Ce test est le garde-fou de cette règle : toute baisse ultérieure d'une
+  // de ces traversées le fera échouer.
+  it('les traversées nord ↔ sud laissent au moins 50 USD au chauffeur', () => {
+    const traversees = [
+      ['Nungwi', 'Paje'],
+      ['Nungwi', 'Bwejuu'],
+      ['Nungwi', 'Jambiani'],
+      ['Nungwi', 'Makunduchi'],
+      ['Nungwi', 'Kizimkazi'],
+      ['Kendwa', 'Paje'],
+      ['Kendwa', 'Bwejuu'],
+      ['Kendwa', 'Jambiani'],
+      ['Kendwa', 'Makunduchi'],
+      ['Kendwa', 'Kizimkazi'],
+    ];
+    for (const [a, b] of traversees) {
+      for (const [depart, arrivee] of [
+        [a, b],
+        [b, a],
+      ]) {
+        assert.equal(privateUsdForRoute(depart, arrivee), 57, `${depart} → ${arrivee}`);
+        const course = priceTrip('private', 'tourist', { pickup: depart, dropoff: arrivee });
+        const chauffeur = course.price - course.commission;
+        assert.ok(
+          chauffeur >= 50,
+          `${depart} → ${arrivee} : le chauffeur ne garde que ${chauffeur} USD`
+        );
+        assert.equal(chauffeur, 50.16, `${depart} → ${arrivee}`);
+      }
+    }
+  });
+
+  it('la place en taxi partagé ne suit pas la baisse : 18 USD maintenus', () => {
+    // La route fait toujours 85 à 112 km. Si le seuil du barème des places
+    // était resté à 63 USD, la place serait tombée de 18 à 16 — une baisse
+    // prise sur le chauffeur, qui roule pourtant exactement autant.
+    for (const [a, b] of [
+      ['Nungwi', 'Paje'],
+      ['Kendwa', 'Makunduchi'],
+      ['Nungwi', 'Kizimkazi'],
+    ]) {
+      assert.equal(sharedSeatUsdForRoute(a, b), 18, `${a} → ${b}`);
+      assert.equal(sharedSeatUsdForRoute(b, a), 18, `${b} → ${a}`);
+    }
+    // Et le seuil abaissé ne déplace rien d'autre : aucun trajet ne se situe
+    // entre 53 et 57 USD, les barèmes du dessous sont donc intacts.
+    assert.equal(sharedSeatUsdForRoute('Stone Town', 'Jambiani'), 16); // privé 53
+    assert.equal(sharedSeatUsdForRoute('Stone Town', 'Nungwi'), 15); // privé 47
+    assert.equal(sharedSeatUsdForRoute('Stone Town', 'Chwaka'), 12); // privé 42
   });
 });

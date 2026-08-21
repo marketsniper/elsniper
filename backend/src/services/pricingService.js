@@ -54,7 +54,13 @@ const ZONE_TIERS = {
 // En dessous de 40 USD la question ne se pose pas : le taxi partagé n'existe
 // pas sur les trajets courts (voir PARTAGE_PRIVE_MIN_USD).
 function sharedSeatUsd(priveUsd) {
-  if (priveUsd >= 63) return 18;
+  // Seuil à 57 et non 63 : les grandes traversées nord ↔ sud ont vu leur prix
+  // privé ramené à 57 USD (décision commerciale), mais la route, elle, fait
+  // toujours 85 à 112 km. Laisser le seuil à 63 aurait fait tomber la place
+  // de 18 à 16 USD — une baisse prise sur le chauffeur, qui n'a rien demandé
+  // et qui roule exactement autant. Aucun autre trajet ne se situe entre 53
+  // et 63 USD : ce seuil ne déplace que ces traversées-là.
+  if (priveUsd >= 57) return 18;
   if (priveUsd >= 53) return 16;
   if (priveUsd >= 47) return 15;
   return 12;
@@ -205,6 +211,27 @@ const SPECIAL_PRIVATE_ROUTES_USD = [
   { a: 'Paje', b: 'Kizimkazi', usd: 26 }, // ~36 km par la côte sud
   { a: 'Bwejuu', b: 'Kizimkazi', usd: 34 }, // ~40 km
   { a: 'Michamvi', b: 'Kizimkazi', usd: 42 }, // ~55 km
+  // LES GRANDES TRAVERSÉES NORD ↔ SUD, PLAFONNÉES À 57 USD (21/08/2026).
+  //
+  // Elles montaient à 63 (côte est) et 68 USD (pointe sud) : les paliers au
+  // kilomètre continuaient de grimper alors que le marché, lui, ne suit plus.
+  // Le prix est ramené au plancher qui laisse 50 USD au chauffeur —
+  // 50 ÷ 0,88 = 56,82, arrondi au-dessus. À 56 USD il n'en resterait que
+  // 49,28 : 57 est le prix le plus bas possible sans entamer les 50 USD.
+  //
+  // Bwejuu est du lot sans avoir été demandé : le village est ENTRE Paje et
+  // Jambiani, sur la même route. L'y laisser à 63 aurait fait payer plus cher
+  // l'arrêt du milieu que les deux villages qui l'encadrent.
+  { a: 'Nungwi', b: 'Paje', usd: 57 }, // ~88 km
+  { a: 'Nungwi', b: 'Bwejuu', usd: 57 }, // ~84 km
+  { a: 'Nungwi', b: 'Jambiani', usd: 57 }, // ~97 km
+  { a: 'Nungwi', b: 'Makunduchi', usd: 57 }, // ~110 km
+  { a: 'Nungwi', b: 'Kizimkazi', usd: 57 }, // ~112 km
+  { a: 'Kendwa', b: 'Paje', usd: 57 }, // ~85 km
+  { a: 'Kendwa', b: 'Bwejuu', usd: 57 }, // ~81 km
+  { a: 'Kendwa', b: 'Jambiani', usd: 57 }, // ~94 km
+  { a: 'Kendwa', b: 'Makunduchi', usd: 57 }, // ~107 km
+  { a: 'Kendwa', b: 'Kizimkazi', usd: 57 }, // ~109 km
 ];
 
 // Trajets spéciaux à prix fixe (TZS, place locale en taxi partagé), deux

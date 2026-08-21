@@ -135,17 +135,18 @@ describe('Courses taxi (trips)', () => {
     const posted = await createTrip(touristToken, tourist.id, { tripType: 'posted_return' });
     assert.equal(Number(posted.price), 15);
 
-    // Trajet spécial Nungwi ↔ Paje : 60 USD en privé (54 pour un résident).
+    // Grande traversée Nungwi ↔ Paje : plafonnée à 57 USD depuis le 21/08/2026
+    // (le prix qui laisse 50 USD au chauffeur). Résident vérifié : −10 %.
     const special = await createTrip(touristToken, tourist.id, {
       pickupLocation: 'Nungwi',
       dropoffLocation: 'Paje',
     });
-    assert.equal(Number(special.price), 63);
+    assert.equal(Number(special.price), 57);
     const specialResident = await createTrip(residentToken, resident.id, {
       pickupLocation: 'Paje',
       dropoffLocation: 'Nungwi',
     });
-    assert.equal(Number(specialResident.price), 56.7);
+    assert.equal(Number(specialResident.price), 51.3);
 
     // Résident vérifié : remise de 10 % sur le tarif touriste, en USD.
     const privateResident = await createTrip(residentToken, resident.id);
