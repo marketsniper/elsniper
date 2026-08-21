@@ -506,13 +506,18 @@ export default function EcranEquipe() {
     else groupesPasses.push({ jour, liste: [course] });
   }
 
-  // TAXIS PARTAGÉS : les annonces encore ouvertes, du départ le plus proche au
-  // plus lointain. Une annonce close ou annulée reste consultable dans la
-  // rubrique, mais ne compte pas sur la case du menu — on n'y peut plus rien.
-  const partagesOuverts = partages.filter((a) => a.status === 'open');
-  const partagesTries = [...partages].sort((a, b) =>
-    a.departure_at.localeCompare(b.departure_at)
-  );
+  // TAXIS PARTAGÉS : les annonces OUVERTES d'abord, du départ le plus proche
+  // au plus lointain — c'est là qu'on peut encore agir. Les annonces closes ou
+  // annulées passent en bas, en lignes compactes : on les consulte, on n'y
+  // peut plus rien.
+  const partagesOuverts = [...partages]
+    .filter((a) => a.status === 'open')
+    .sort((a, b) => a.departure_at.localeCompare(b.departure_at));
+  const partagesTermines = [...partages]
+    .filter((a) => a.status !== 'open')
+    .sort((a, b) => b.departure_at.localeCompare(a.departure_at));
+  // Le nom complet de l'aéroport noie les cartes : « Aéroport » suffit ici.
+  const lieuCourt = (lieu: string) => (/^a[ée]roport/i.test(lieu) ? 'Aéroport' : lieu);
 
   // Les cases du menu — compteur ORANGE dès qu'une action attend
   // (paiements pas encore encaissés compris : le vert est réservé aux
@@ -1108,23 +1113,20 @@ export default function EcranEquipe() {
         </>
       )}
 
-      {/* 1 ter. TAXIS PARTAGÉS EN COURS — la tour de contrôle du remplissage.
-          Le tableau voyait les courses privées et les paiements, mais pas les
-          voitures partagées : personne ne pouvait dire quelles places restaient
-          à vendre avant qu'une voiture parte. Or un siège vide au départ ne se
-          rattrape jamais. */}
+      {/* 1 ter. TAXIS PARTAGÉS — la tour de contrôle du remplissage. Les
+          annonces encore vendables d'abord, en cartes ; les terminées en bas,
+          en lignes compactes. Un siège vide au départ ne se rattrape jamais. */}
       {section === 'partages' && (
         <>
           <Text style={styles.titreSection}>
             🚐 {t('equipe_partages')} ({partagesOuverts.length})
           </Text>
           <Text style={styles.introMenu}>{t('equipe_partages_intro')}</Text>
-          {partagesTries.length === 0 && (
+          {partagesOuverts.length === 0 && (
             <EncartInfo icone="people-circle-outline">{t('equipe_partages_vide')}</EncartInfo>
           )}
-          {partagesTries.map((annonce) => {
-            const depart = new Date(annonce.departure_at);
-            const heure = depart.toLocaleString(localeDate, {
+          {partagesOuverts.map((annonce) => {
+            const heure = new Date(annonce.departure_at).toLocaleString(localeDate, {
               weekday: 'short',
               day: 'numeric',
               month: 'short',
@@ -1132,37 +1134,34 @@ export default function EcranEquipe() {
               minute: '2-digit',
               timeZone: 'Africa/Dar_es_Salaam',
             });
-            const ouverte = annonce.status === 'open';
-            const complet = ouverte && annonce.seats_available === 0;
+            const complet = annonce.seats_available === 0;
             return (
-              <Carte key={annonce.id} style={!ouverte && styles.annonceClose}>
-                <View style={styles.entetePassee}>
+              <Carte key={annonce.id} style={styles.cartePartage}>
+                {/* Ligne 1 : le trajet, et LE chiffre qui compte — combien de
+                    places restent à vendre — dans une pastille colorée. */}
+                <View style={styles.entetePartage}>
                   <Text style={styles.itineraire} numberOfLines={1}>
-                    {annonce.origin} → {annonce.destination}
+                    {lieuCourt(annonce.origin)} → {lieuCourt(annonce.destination)}
                   </Text>
-                  <Text style={styles.prixPassee}>
-                    {annonce.price_per_seat_usd} $ {t('equipe_partages_la_place')}
-                  </Text>
-                </View>
-                <View style={styles.piedPassee}>
-                  <Text style={styles.detail}>🕒 {heure}</Text>
-                  <Text
-                    style={[
-                      styles.remplissage,
-                      complet && styles.remplissageComplet,
-                      !ouverte && styles.remplissageClos,
-                    ]}
-                  >
-                    {complet
-                      ? t('equipe_partages_complet')
-                      : !ouverte
-                        ? t('equipe_partages_close')
+                  <View style={[styles.pastillePartage, complet && styles.pastillePartageOk]}>
+                    <Text
+                      style={[
+                        styles.textePastillePartage,
+                        complet && styles.textePastillePartageOk,
+                      ]}
+                    >
+                      {complet
+                        ? t('equipe_partages_complet')
                         : t('equipe_partages_restantes', { n: annonce.seats_available })}
-                  </Text>
+                    </Text>
+                  </View>
                 </View>
+                <Text style={styles.departPartage}>
+                  🕒 {heure} · {annonce.price_per_seat_usd} $ {t('equipe_partages_la_place')}
+                </Text>
 
-                {/* La jauge : d'un coup d'œil, combien de sièges sont payés,
-                    combien attendent leur règlement, combien restent vides. */}
+                {/* La jauge : un carré par siège. Plein = payé, cerclé =
+                    réservé pas encore réglé, pâle = encore à vendre. */}
                 <View style={styles.jauge}>
                   {Array.from({ length: annonce.seats_total }, (_, i) => (
                     <View
@@ -1176,17 +1175,21 @@ export default function EcranEquipe() {
                       ]}
                     />
                   ))}
+                  <Text style={styles.bilanPartage}>
+                    {t('equipe_partages_bilan', {
+                      payees: annonce.seats_sold,
+                      libres: annonce.seats_available,
+                    })}
+                    {annonce.seats_reserved > 0
+                      ? ` · ${t('equipe_partages_reservees', { n: annonce.seats_reserved })}`
+                      : ''}
+                  </Text>
                 </View>
-                <Text style={styles.detail}>
-                  {t('equipe_partages_places', {
-                    payees: annonce.seats_sold,
-                    reservees: annonce.seats_reserved,
-                    total: annonce.seats_total,
-                  })}
-                  {annonce.commission_usd > 0
-                    ? ` · ${t('equipe_partages_commission', { montant: annonce.commission_usd.toFixed(2) })}`
-                    : ''}
-                </Text>
+                {annonce.commission_usd > 0 && (
+                  <Text style={styles.gainPartage}>
+                    💰 {t('equipe_partages_commission', { montant: annonce.commission_usd.toFixed(2) })}
+                  </Text>
+                )}
 
                 <View style={styles.ligneDetail}>
                   <Ionicons name="car-outline" size={14} color={couleurs.texteSecondaire} />
@@ -1196,13 +1199,12 @@ export default function EcranEquipe() {
                     {annonce.driver_phone ? ` · ${annonce.driver_phone}` : ''}
                   </Text>
                 </View>
-
                 {annonce.bookings.map((place, i) => (
                   <View key={i} style={styles.ligneDetail}>
                     <Ionicons
                       name={place.paid ? 'checkmark-circle' : 'time-outline'}
                       size={14}
-                      color={place.paid ? couleurs.succes : couleurs.texteSecondaire}
+                      color={place.paid ? couleurs.succes : couleurs.primaire}
                     />
                     <Text style={styles.detail}>
                       {place.client_name ?? t('equipe_partages_anonyme')} ·{' '}
@@ -1214,6 +1216,50 @@ export default function EcranEquipe() {
               </Carte>
             );
           })}
+
+          {/* Les annonces terminées : une ligne chacune, l'essentiel sans
+              encombrer — le remplissage final dit si la voiture est bien partie. */}
+          {partagesTermines.length > 0 && (
+            <>
+              <Text style={styles.titreSection}>
+                🗂 {t('equipe_partages_terminees')} ({partagesTermines.length})
+              </Text>
+              {partagesTermines.map((annonce) => {
+                const heure = new Date(annonce.departure_at).toLocaleString(localeDate, {
+                  weekday: 'short',
+                  day: 'numeric',
+                  month: 'short',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  timeZone: 'Africa/Dar_es_Salaam',
+                });
+                return (
+                  <View key={annonce.id} style={styles.lignePartageFinie}>
+                    <View style={styles.entetePassee}>
+                      <Text style={styles.itineraire} numberOfLines={1}>
+                        {lieuCourt(annonce.origin)} → {lieuCourt(annonce.destination)}
+                      </Text>
+                      <Text style={styles.bilanFin}>
+                        {t('equipe_partages_vendues', {
+                          n: annonce.seats_sold,
+                          total: annonce.seats_total,
+                        })}
+                      </Text>
+                    </View>
+                    <Text style={styles.detail}>
+                      {heure}
+                      {annonce.status === 'cancelled'
+                        ? ` · ${t('equipe_partages_annulee')}`
+                        : ''}
+                      {annonce.commission_usd > 0
+                        ? ` · zanziGo ${annonce.commission_usd.toFixed(2)} $`
+                        : ''}
+                    </Text>
+                  </View>
+                );
+              })}
+            </>
+          )}
         </>
       )}
 
@@ -1986,24 +2032,50 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: couleurs.texteSecondaire,
   },
-  // TAXIS PARTAGÉS : une annonce close se lit encore, mais s'efface.
-  annonceClose: { opacity: 0.55 },
-  remplissage: { fontSize: 13, fontWeight: '700', color: couleurs.primaireFonce },
-  remplissageComplet: { color: couleurs.succes },
-  remplissageClos: { color: couleurs.texteSecondaire, fontWeight: '600' },
-  // La jauge des sièges : un carré par place. Plein = payé, creux = réservé
-  // mais pas réglé, vide = encore à vendre.
-  jauge: { flexDirection: 'row', gap: 4, marginVertical: espaces.xs },
+  // TAXIS PARTAGÉS. Les cartes des annonces ouvertes portent un filet corail :
+  // ce sont elles qu'on travaille. La pastille dit LE chiffre qui compte.
+  cartePartage: { borderLeftWidth: 3, borderLeftColor: couleurs.primaire },
+  entetePartage: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: espaces.s,
+  },
+  pastillePartage: {
+    backgroundColor: couleurs.primaire,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  pastillePartageOk: { backgroundColor: couleurs.succes },
+  textePastillePartage: { color: '#fff', fontSize: 12, fontWeight: '800' },
+  textePastillePartageOk: { color: '#fff' },
+  departPartage: { fontSize: 14, fontWeight: '600', color: couleurs.primaireFonce },
+  // La jauge des sièges : un carré par place. Plein = payé, cerclé = réservé
+  // mais pas réglé, pâle = encore à vendre.
+  jauge: { flexDirection: 'row', alignItems: 'center', gap: 5, marginVertical: espaces.xs },
   siege: {
-    width: 18,
-    height: 14,
-    borderRadius: 3,
+    width: 24,
+    height: 18,
+    borderRadius: 4,
     borderWidth: 1.5,
     borderColor: couleurs.texteSecondaire,
-    opacity: 0.45,
+    opacity: 0.35,
   },
   siegePaye: { backgroundColor: couleurs.succes, borderColor: couleurs.succes, opacity: 1 },
-  siegeReserve: { borderColor: couleurs.primaire, borderWidth: 2, opacity: 1 },
+  siegeReserve: { borderColor: couleurs.primaire, borderWidth: 2.5, opacity: 1 },
+  bilanPartage: { fontSize: 12, color: couleurs.texteSecondaire, marginLeft: 4, flexShrink: 1 },
+  gainPartage: { fontSize: 13, fontWeight: '700', color: couleurs.succes },
+  // Annonce terminée : une ligne compacte, comme l'historique des courses.
+  lignePartageFinie: {
+    backgroundColor: couleurs.carteTranslucide,
+    borderRadius: rayons.bouton,
+    padding: espaces.m,
+    marginBottom: espaces.s,
+    gap: 4,
+    opacity: 0.75,
+  },
+  bilanFin: { fontSize: 13, fontWeight: '700', color: couleurs.texteSecondaire },
   lignePassee: {
     backgroundColor: couleurs.carteTranslucide,
     borderRadius: rayons.bouton,

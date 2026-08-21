@@ -2167,18 +2167,35 @@ const CHAINES = {
     sw: 'Hakuna gari la pamoja lililotangazwa siku hizi.',
   },
   equipe_partages_la_place: { fr: 'la place', en: 'per seat', sw: 'kiti' },
+  // Court exprès : la pastille doit se lire d'un coup d'œil, jamais tronquée.
   equipe_partages_restantes: {
-    fr: '{n} place·s à vendre',
-    en: '{n} seat·s left',
-    sw: 'viti {n} vimebaki',
+    fr: '{n} à vendre',
+    en: '{n} left',
+    sw: '{n} wazi',
   },
   equipe_partages_complet: { fr: 'Voiture pleine', en: 'Car full', sw: 'Gari limejaa' },
   equipe_partages_close: { fr: 'Annonce close', en: 'Closed', sw: 'Imefungwa' },
-  equipe_partages_places: {
-    fr: '{payees} payée·s · {reservees} en attente de paiement · {total} places',
-    en: '{payees} paid · {reservees} awaiting payment · {total} seats',
-    sw: '{payees} zimelipwa · {reservees} zinasubiri malipo · viti {total}',
+  equipe_partages_bilan: {
+    fr: '{payees} payée·s · {libres} libre·s',
+    en: '{payees} paid · {libres} free',
+    sw: '{payees} zimelipwa · {libres} wazi',
   },
+  equipe_partages_reservees: {
+    fr: '{n} à encaisser',
+    en: '{n} to collect',
+    sw: '{n} kusubiri malipo',
+  },
+  equipe_partages_terminees: {
+    fr: 'Annonces terminées',
+    en: 'Finished rides',
+    sw: 'Safari zilizokwisha',
+  },
+  equipe_partages_vendues: {
+    fr: '{n}/{total} vendue·s',
+    en: '{n}/{total} sold',
+    sw: '{n}/{total} zimeuzwa',
+  },
+  equipe_partages_annulee: { fr: 'annulée', en: 'cancelled', sw: 'imefutwa' },
   equipe_partages_commission: { fr: 'zanziGo {montant} $', en: 'zanziGo ${montant}', sw: 'zanziGo {montant} $' },
   equipe_partages_sieges: { fr: '{n} place·s', en: '{n} seat·s', sw: 'viti {n}' },
   equipe_partages_impayee: { fr: 'pas encore payée', en: 'not paid yet', sw: 'bado hajalipa' },
