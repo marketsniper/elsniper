@@ -231,11 +231,11 @@ describe('Grille privée : le net du chauffeur décide, le forfait s’ajoute', 
   ];
 
   it('la remise résident se partage moitié-moitié', () => {
-    // Décision du 21/08/2026 : le client garde ses −10 %, mais zanziGo et le
-    // chauffeur en lâchent 5 % CHACUN. Le partage se mesure sur ce que chacun
-    // touche VRAIMENT au prix plein, pas sur le net promis — le chauffeur
-    // dépasse souvent sa promesse, et le lui rappeler ici lui aurait fait
-    // porter plus que sa moitié.
+    // Décision du 21/08/2026 : le client garde sa remise, mais zanziGo et le
+    // chauffeur en lâchent la MOITIÉ chacun. Le partage se mesure sur ce que
+    // chacun touche VRAIMENT au prix plein, pas sur le net promis — le
+    // chauffeur dépasse souvent sa promesse, et le lui rappeler ici lui
+    // aurait fait porter plus que sa moitié.
     for (const type of ['private', 'shared_tourist']) {
       for (const [depart, arrivee] of COINS) {
         const plein = priceTrip(type, 'tourist', { pickup: depart, dropoff: arrivee });
@@ -256,7 +256,8 @@ describe('Grille privée : le net du chauffeur décide, le forfait s’ajoute', 
           Math.abs(perteChauffeur - baisse / 2) <= 0.01 + 1e-9,
           `${ou} : le chauffeur perd ${perteChauffeur} au lieu de ${baisse / 2}`
         );
-        assert.ok(perteChauffeur <= perteZanziGo + 1e-9, `${ou} : le centime va au chauffeur`);
+        // Le centime d'arrondi du prix remisé tombe sur NOUS, jamais sur lui.
+        assert.ok(perteChauffeur <= perteZanziGo + 1e-9, `${ou} : le centime reste à zanziGo`);
         assert.ok(remise.commission >= 0, 'zanziGo ne peut pas payer pour rouler');
       }
     }

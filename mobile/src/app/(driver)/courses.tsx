@@ -36,6 +36,7 @@ import {
   libelleTailleColis,
   useT,
 } from '@/lib/i18n';
+import { CaseMenu, GrilleMenu } from '@/components/CaseMenu';
 import { estBalaye, lireCoupDeBalai, passerCoupDeBalai } from '@/lib/menageLocal';
 import { couleurs, espaces, ombres, rayons, stylesReactifs } from '@/lib/theme';
 import {
@@ -374,7 +375,7 @@ export default function EcranCourses() {
       {caseOuverte === null && (
         <>
           <Text style={styles.introMenu}>{t('courses_menu_intro')}</Text>
-          <View style={styles.grilleMenu}>
+          <GrilleMenu>
             {(
               [
                 {
@@ -402,45 +403,27 @@ export default function EcranCourses() {
                   n: trajetsOuverts.length,
                 },
               ] satisfies { cle: CaseChauffeur; label: string; icone: React.ComponentProps<typeof Ionicons>['name']; n: number }[]
-            ).map((rubrique) => (
-              <Pressable
+            ).map((rubrique, rang) => (
+              <CaseMenu
                 key={rubrique.cle}
+                index={rang}
+                icone={rubrique.icone}
+                label={rubrique.label}
+                n={rubrique.n}
+                action
                 onPress={() => setCaseOuverte(rubrique.cle)}
-                accessibilityRole="button"
-                style={({ pressed }) => [styles.caseMenu, pressed && { opacity: 0.75 }]}
-              >
-                <View style={styles.bulleMenu}>
-                  <Ionicons name={rubrique.icone} size={30} color={couleurs.primaire} />
-                </View>
-                <Text style={styles.labelMenu}>{rubrique.label}</Text>
-                <View style={[styles.pastilleMenu, rubrique.n > 0 && styles.pastilleMenuAction]}>
-                  <Text
-                    style={[
-                      styles.textePastilleMenu,
-                      rubrique.n > 0 && styles.textePastilleMenuAction,
-                    ]}
-                  >
-                    {rubrique.n}
-                  </Text>
-                </View>
-              </Pressable>
+              />
             ))}
-            {/* Quatrième case : poster son propre trajet — elle n'ouvre pas
+            {/* Cinquième case : poster son propre trajet — elle n'ouvre pas
                 une liste mais l'écran des annonces, déjà existant. */}
-            <Pressable
+            <CaseMenu
+              index={4}
+              icone="megaphone-outline"
+              label={t('courses_case_poster')}
+              fleche
               onPress={() => router.push('/(driver)/annonces')}
-              accessibilityRole="button"
-              style={({ pressed }) => [styles.caseMenu, pressed && { opacity: 0.75 }]}
-            >
-              <View style={styles.bulleMenu}>
-                <Ionicons name="megaphone-outline" size={30} color={couleurs.primaire} />
-              </View>
-              <Text style={styles.labelMenu}>{t('courses_case_poster')}</Text>
-              <View style={styles.pastilleMenu}>
-                <Ionicons name="arrow-forward" size={14} color={couleurs.primaireFonce} />
-              </View>
-            </Pressable>
-          </View>
+            />
+          </GrilleMenu>
         </>
       )}
 
@@ -984,55 +967,6 @@ const styles = stylesReactifs(() => ({
     fontSize: 14,
     color: couleurs.texteSecondaire,
     textAlign: 'center',
-  },
-  grilleMenu: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: espaces.m,
-  },
-  caseMenu: {
-    flexBasis: '45%',
-    flexGrow: 1,
-    backgroundColor: couleurs.carteTranslucide,
-    borderRadius: rayons.carte,
-    paddingVertical: espaces.xl,
-    paddingHorizontal: espaces.m,
-    alignItems: 'center',
-    gap: espaces.s,
-    ...ombres.carte,
-  },
-  bulleMenu: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: couleurs.primaireClair,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  labelMenu: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: couleurs.encre,
-    textAlign: 'center',
-  },
-  pastilleMenu: {
-    minWidth: 32,
-    alignItems: 'center',
-    backgroundColor: couleurs.primaireClair,
-    borderRadius: rayons.pastille,
-    paddingHorizontal: espaces.s,
-    paddingVertical: 3,
-  },
-  pastilleMenuAction: {
-    backgroundColor: couleurs.primaire,
-  },
-  textePastilleMenu: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: couleurs.primaireFonce,
-  },
-  textePastilleMenuAction: {
-    color: couleurs.surPrimaire,
   },
   retourMenu: {
     flexDirection: 'row',

@@ -19,10 +19,10 @@ import {
 useTestDb();
 
 describe('Devises taxi partagé (parcours local complet)', () => {
-  it('résident : la remise de 10 % se partage moitié-moitié avec le chauffeur', async () => {
-    // Aéroport → Nungwi : la place vaut 17 USD, commission 25 % (4,25 au
-    // chauffeur 12,75). Le résident paie 15,30 ; la remise de 1,70 se coupe
-    // en deux — 0,85 pour zanziGo, 0,85 pour le chauffeur.
+  it('résident : la remise de 5 % se partage moitié-moitié avec le chauffeur', async () => {
+    // Aéroport → Nungwi : la place vaut 17 USD, commission 25 % (4,25 à
+    // zanziGo, 12,75 au chauffeur). Le résident paie 16,15 ; la remise de
+    // 0,85 se coupe en deux — le centime d'arrondi tombe sur zanziGo.
     const { token: tokenChauffeur } = await createVerifiedDriver();
     const { token: tokenResident } = await createResident();
 
@@ -36,7 +36,7 @@ describe('Devises taxi partagé (parcours local complet)', () => {
     const liste = await request(app).get('/api/rides').set(authHeaders(tokenResident));
     const ride = liste.body[0];
     assert.equal(ride.currency, 'USD');
-    assert.equal(Number(ride.price_per_seat_usd), 15.3, 'le résident garde ses −10 %');
+    assert.equal(Number(ride.price_per_seat_usd), 16.15, 'le résident garde ses −5 %');
 
     const resa = await request(app)
       .post(`/api/rides/${ride.id}/book`)
@@ -47,9 +47,9 @@ describe('Devises taxi partagé (parcours local complet)', () => {
     const mine = await request(app).get('/api/rides/mine').set(authHeaders(tokenChauffeur));
     const booking = mine.body[0].bookings[0];
     assert.equal(booking.client_type, 'resident');
-    assert.equal(Number(booking.price_per_seat), 15.3);
-    assert.equal(Number(booking.net_per_seat), 11.9, 'le chauffeur porte 0,85 de la remise');
-    assert.equal(Number(booking.commission_per_seat), 3.4, 'zanziGo porte l’autre 0,85');
+    assert.equal(Number(booking.price_per_seat), 16.15);
+    assert.equal(Number(booking.net_per_seat), 12.33, 'le chauffeur porte 0,42 de la remise');
+    assert.equal(Number(booking.commission_per_seat), 3.82, 'zanziGo porte les 0,43 restants');
   });
 
   it('local : TZS sur la liste, la réservation et la fiche chauffeur', async () => {

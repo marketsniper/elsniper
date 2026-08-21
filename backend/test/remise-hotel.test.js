@@ -38,12 +38,12 @@ describe('Remise partenaire hôtel', () => {
   });
 
   it('la remise résident, elle, reste sur les deux', () => {
-    // Le résident vérifié garde ses −10 % partout : c'est une remise de
+    // Le résident vérifié garde ses −5 % partout : c'est une remise de
     // personne, pas de professionnel qui revend la course.
-    assert.equal(priceTrip('private', 'resident', route).price, 46.8);
+    assert.equal(priceTrip('private', 'resident', route).price, 49.4);
     assert.equal(
       priceTrip('shared_tourist', 'resident', route).price,
-      Math.round(17 * 0.9 * 100) / 100
+      Math.round(17 * 0.95 * 100) / 100
     );
   });
 

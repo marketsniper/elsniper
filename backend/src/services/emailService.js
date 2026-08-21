@@ -194,7 +194,7 @@ export function emailCodeOtp(code) {
 
 const LIBELLES_PROFIL = {
   tourist: 'Touriste · prix en USD',
-  resident: 'Résident · prix en USD (−10 % une fois vérifié)',
+  resident: 'Résident · prix en USD (−5 % une fois vérifié)',
   local: 'Local · prix en shillings (TZS)',
 };
 

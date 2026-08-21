@@ -7,7 +7,7 @@ import { config } from '../config.js';
 import {
   TAUX_PLACE_LOCALE,
   TAUX_PLACE_USD,
-  partRemiseResidentUsd,
+  netPlaceResidentUsd,
   sharedSeatUsdForRoute,
 } from '../services/pricingService.js';
 
@@ -15,7 +15,7 @@ import {
 // profil du client (même cloison que partout ailleurs) :
 //  - hôtel : grille USD −5 %, commission au taux des places USD ;
 //  - local : prix TZS de l'annonce, commission au taux des places locales ;
-//  - résident vérifié : USD −10 % ; touriste : USD plein tarif.
+//  - résident vérifié : USD −5 % ; touriste : USD plein tarif.
 // Les taux viennent de la grille (pricingService) : les recopier ici avait
 // laissé les places de taxi partagé sur l'ancien barème.
 export function valeurReservationPlace(ligne) {
@@ -35,7 +35,7 @@ export function valeurReservationPlace(ligne) {
     // Remise résident partagée : zanziGo n'encaisse que sa moitié de moins,
     // le chauffeur porte l'autre. Compté par place, puis multiplié.
     const prixPlace = round2(usd * (1 - config.residentDiscountRate));
-    const commissionPlace = round2(round2(usd * TAUX_PLACE_USD) - partRemiseResidentUsd(usd));
+    const commissionPlace = round2(prixPlace - netPlaceResidentUsd(usd));
     return {
       price: round2(prixPlace * ligne.seats),
       commission: round2(Math.max(0, commissionPlace) * ligne.seats),

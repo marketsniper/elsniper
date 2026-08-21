@@ -23,7 +23,7 @@ import {
   hubToHubRoute,
   localSeatTzsForRoute,
   memeEndroit,
-  partRemiseResidentUsd,
+  netPlaceResidentUsd,
   sharedAllowedForRoute,
   sharedSeatUsdForRoute,
 } from '../services/pricingService.js';
@@ -78,7 +78,7 @@ async function pricingPourClient({ userId, hotelId }) {
     );
     const user = rows[0];
     if (user && user.account_type !== 'local') {
-      // Touristes : tarif plein ; résidents vérifiés : −10 %.
+      // Touristes : tarif plein ; résidents vérifiés : −5 %.
       const verifie = user.account_type === 'resident' && user.verification_status === 'verified';
       return { mode: 'USD', remise: verifie ? config.residentDiscountRate : 0 };
     }
@@ -680,7 +680,7 @@ router.get(
             // appliquer le pourcentage au prix déjà remisé lui en aurait fait
             // porter les trois quarts.
             const prix = round2(usd * (1 - config.residentDiscountRate));
-            const net = round2(round2(usd * (1 - TAUX_PLACE_USD)) - partRemiseResidentUsd(usd));
+            const net = netPlaceResidentUsd(usd);
             return avecPaiement(b, {
               seats: b.seats,
               client_type: 'resident',

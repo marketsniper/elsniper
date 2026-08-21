@@ -48,6 +48,7 @@ import {
   type StatsAbonnes,
 } from '@/lib/api';
 import { formaterDateRelativeI18n, libelleTypeTrajet, useT } from '@/lib/i18n';
+import { CaseMenu, GrilleMenu } from '@/components/CaseMenu';
 import { useRafraichissementAuto } from '@/lib/rafraichissementAuto';
 import { couleurs, espaces, ombres, rayons, stylesReactifs } from '@/lib/theme';
 import {
@@ -678,40 +679,24 @@ export default function EcranEquipe() {
 
           <Text style={styles.titreSection}>{t('equipe_resume_titre')}</Text>
           <Text style={styles.introMenu}>{t('equipe_menu_intro')}</Text>
-          <View style={styles.grilleMenu}>
-            {rubriques.map((rubrique) => (
-              <Pressable
+          <GrilleMenu>
+            {rubriques.map((rubrique, rang) => (
+              <CaseMenu
                 key={rubrique.cle}
+                index={rang}
+                compacte
+                icone={rubrique.icone}
+                label={rubrique.label}
+                n={rubrique.n}
+                action={rubrique.action}
                 onPress={() =>
                   rubrique.ecran
                     ? router.push(rubrique.ecran)
                     : ouvrirSection(rubrique.cle as SectionEquipe)
                 }
-                accessibilityRole="button"
-                style={({ pressed }) => [styles.caseMenu, pressed && { opacity: 0.75 }]}
-              >
-                <View style={styles.bulleMenu}>
-                  <Ionicons name={rubrique.icone} size={26} color={couleurs.primaire} />
-                </View>
-                <Text style={styles.labelMenu}>{rubrique.label}</Text>
-                <View
-                  style={[
-                    styles.pastilleMenu,
-                    rubrique.action && rubrique.n > 0 && styles.pastilleMenuAction,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.textePastilleMenu,
-                      rubrique.action && rubrique.n > 0 && styles.textePastilleMenuAction,
-                    ]}
-                  >
-                    {rubrique.n}
-                  </Text>
-                </View>
-              </Pressable>
+              />
             ))}
-          </View>
+          </GrilleMenu>
         </>
       )}
 
@@ -2175,55 +2160,6 @@ const styles = stylesReactifs(() => ({
     fontSize: 13,
     color: couleurs.texteSecondaire,
     marginTop: -espaces.s,
-  },
-  grilleMenu: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: espaces.m,
-  },
-  caseMenu: {
-    flexBasis: '45%',
-    flexGrow: 1,
-    backgroundColor: couleurs.carteTranslucide,
-    borderRadius: rayons.carte,
-    paddingVertical: espaces.xl,
-    paddingHorizontal: espaces.m,
-    alignItems: 'center',
-    gap: espaces.s,
-    ...ombres.carte,
-  },
-  bulleMenu: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: couleurs.primaireClair,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  labelMenu: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: couleurs.encre,
-    textAlign: 'center',
-  },
-  pastilleMenu: {
-    minWidth: 30,
-    alignItems: 'center',
-    backgroundColor: couleurs.primaireClair,
-    borderRadius: rayons.pastille,
-    paddingHorizontal: espaces.s,
-    paddingVertical: 3,
-  },
-  pastilleMenuAction: {
-    backgroundColor: couleurs.attenteFond,
-  },
-  textePastilleMenu: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: couleurs.primaireFonce,
-  },
-  textePastilleMenuAction: {
-    color: couleurs.attente,
   },
   bandeauAbonnes: {
     backgroundColor: couleurs.carteTranslucide,

@@ -2,7 +2,7 @@
 // Le backend attend {fullName, phone, email?, accountType, idDocumentUrl?} —
 // le téléphone doit être celui vérifié par OTP (celui du jeton).
 // Segmentation : touriste (aucun document, USD plein tarif) ; résident
-// (documents de résidence requis, −10 % une fois validé, USD) ; local
+// (documents de résidence requis, −5 % une fois validé, USD) ; local
 // (carte d'identité tanzanienne NIDA requise, 16 000 TZS partout une fois
 // validé). Le flux « visiteur » de l'accueil laisse le choix touriste ou
 // résident ; le flux « local » préremplit accountType='local'.

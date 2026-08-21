@@ -395,7 +395,7 @@ export function formaterDate(iso: unknown): string {
 // Grille tarifaire — miroir de backend/src/services/pricingService.js.
 // Le prix officiel est TOUJOURS calculé et FIGÉ côté serveur à la création ;
 // cette grille sert uniquement à afficher le prix avant de réserver.
-// Segmentation : touriste USD plein tarif ; résident USD (−10 % une fois
+// Segmentation : touriste USD plein tarif ; résident USD (−5 % une fois
 // vérifié) ; local (carte tanzanienne) 17 000 TZS partout une fois vérifié ;
 // hôtel TZS (grille dédiée). Un touriste/résident ne voit JAMAIS de TZS,
 // un local ne voit JAMAIS d'USD.
@@ -579,12 +579,12 @@ export function tarifSpecialLocal(depart: string, arrivee: string): number | nul
 /**
  * Remise résident (documents de résidence validés) sur tous les prix USD.
  *
- * Côté client, elle ne change rien : le résident paie 10 % de moins, point.
+ * Côté client, elle ne change rien : le résident paie 5 % de moins, point.
  * Côté partage, elle est portée MOITIÉ-MOITIÉ par zanziGo et le chauffeur
- * (5 % chacun) — mais ce calcul-là appartient au serveur, seul juge des
+ * (2,5 % chacun) — mais ce calcul-là appartient au serveur, seul juge des
  * commissions. Ici on n'affiche qu'un prix.
  */
-export const REMISE_RESIDENT = 0.1;
+export const REMISE_RESIDENT = 0.05;
 /** Taux de conversion USD → TZS (courses privées des locaux, grille colis). */
 export const TAUX_USD_TZS = 2600;
 /** Remise hôtel partenaire (−5 % sur la grille touriste). */
@@ -986,7 +986,7 @@ export function tarifTrajetProfil(
     plein = TARIFS_TRAJET_USD[type];
   }
   if (plein === undefined) return null;
-  // Grille touriste remisée : résident vérifié −10 %, hôtel partenaire −5 %.
+  // Grille touriste remisée : résident vérifié −5 %, hôtel partenaire −5 %.
   const remise =
     profil === 'resident_verifie' ? REMISE_RESIDENT : profil === 'hotel' ? REMISE_HOTEL : 0;
   const montant = remise ? Math.round(plein * (1 - remise) * 100) / 100 : plein;

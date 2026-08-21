@@ -131,7 +131,7 @@ describe('Trajets partagés (rides)', () => {
     assert.equal(anonymous.status, 401);
   });
 
-  it('cloison tarifaire : touriste 17 USD, résident vérifié 15,30 USD, local TZS', async () => {
+  it('cloison tarifaire : touriste 17 USD, résident vérifié 16,15 USD, local TZS', async () => {
     const { token } = await createVerifiedDriver();
     const ride = (await postRide(token)).body;
 
@@ -145,11 +145,11 @@ describe('Trajets partagés (rides)', () => {
 
     const { createResident, createLocal } = await import('./setup.js');
 
-    // Résident vérifié : remise de 10 % sur 17 USD → 15,30, jamais le prix local.
+    // Résident vérifié : remise de 5 % sur 17 USD → 16,15, jamais le prix local.
     const { token: residentToken } = await createResident();
     const forResident = await request(app).get('/api/rides').set(authHeaders(residentToken));
     const r = forResident.body.find((x) => x.id === ride.id);
-    assert.equal(r.price_per_seat_usd, 15.3);
+    assert.equal(r.price_per_seat_usd, 16.15);
     assert.equal(r.currency, 'USD');
     assert.equal(r.price_per_seat, undefined);
 

@@ -120,7 +120,7 @@ router.get(
           u.id_document_url,
         ]),
         infos: infos(
-          ['Type de compte', u.account_type === 'local' ? 'Local (tarif en shillings)' : 'Résident (−10 %)'],
+          ['Type de compte', u.account_type === 'local' ? 'Local (tarif en shillings)' : 'Résident (−5 %)'],
           ['Téléphone', u.phone],
           ['E-mail', u.email]
         ),

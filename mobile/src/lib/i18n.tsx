@@ -3062,11 +3062,11 @@ const CHAINES = {
   profil_compte_defaut: { fr: 'Compte zanziGo', en: 'zanziGo account', sw: 'Akaunti ya zanziGo' , it: 'Account zanziGo', de: 'zanziGo-Konto' },
   profil_badge_verifie: { fr: 'Compte vérifié ✓', en: 'Verified account ✓', sw: 'Akaunti imethibitishwa ✓' , it: 'Account verificato ✓', de: 'Konto geprüft ✓' },
   profil_badge_resident_ok: {
-    fr: 'Résident vérifié −10 % ✓',
-    en: 'Verified resident −10% ✓',
-    sw: 'Mkazi amethibitishwa −10% ✓',
-    it: 'Residente verificato −10% ✓',
-    de: 'Ansässiger geprüft −10 % ✓',
+    fr: 'Résident vérifié −5 % ✓',
+    en: 'Verified resident −5% ✓',
+    sw: 'Mkazi amethibitishwa −5% ✓',
+    it: 'Residente verificato −5% ✓',
+    de: 'Ansässiger geprüft −5 % ✓',
   },
   profil_badge_resident_attente: {
     fr: 'Documents en cours de validation',

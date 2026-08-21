@@ -71,7 +71,7 @@ export const config = {
   // postent leur prix local en TZS, les visiteurs voient ce tarif-ci.
   sharedRideUsdPerSeat: Number(env.RIDES_USD_PER_SEAT) || 18,
   // Remise accordée aux résidents vérifiés (sur les prix USD).
-  residentDiscountRate: Number(env.RESIDENT_DISCOUNT_RATE) || 0.1,
+  residentDiscountRate: Number(env.RESIDENT_DISCOUNT_RATE) || 0.05,
   hotelDiscountRate: Number(env.HOTEL_DISCOUNT_RATE) || 0.05,
   // Tarif local unique (TZS) — réservé aux locaux à carte d'identité
   // tanzanienne vérifiée, pour TOUS les types de trajets.
