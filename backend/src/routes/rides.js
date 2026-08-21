@@ -13,7 +13,7 @@ import { z } from 'zod';
 import { query, withTransaction } from '../db.js';
 import { HttpError, notFound } from '../errors.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
-import { isAdmin, requireAuth } from '../middleware/auth.js';
+import { isAdmin, requireAuth, requireAdmin } from '../middleware/auth.js';
 import { buildTeamNotificationLink } from '../services/whatsappService.js';
 import { config } from '../config.js';
 import {
@@ -466,6 +466,89 @@ router.post(
 
 // GET /rides — trajets partagés ouverts à venir (tout compte authentifié),
 // avec les infos publiques du chauffeur (nom, véhicule, note).
+// GET /rides/equipe — LA TOUR DE CONTRÔLE DES TAXIS PARTAGÉS.
+//
+// Le tableau de bord voyait les courses privées, les paiements, les
+// candidatures… mais pas les annonces de taxi partagé : personne ne pouvait
+// dire, à un instant donné, quelles voitures partaient, avec combien de monde
+// à bord et combien de places restaient à vendre. C'est pourtant là que se
+// joue le remplissage — et un siège vide au départ ne se rattrape jamais.
+//
+// On remonte les deux derniers jours et tout l'à-venir : assez pour voir ce
+// qui vient de partir sans noyer l'écran sous l'historique.
+router.get(
+  '/equipe',
+  requireAdmin,
+  asyncHandler(async (_req, res) => {
+    await cloturerRidesPartis();
+    await annulerReservationsImpayees();
+    const { rows } = await query(
+      `SELECT r.*, d.full_name AS driver_name, d.phone AS driver_phone,
+              d.vehicle_plate, d.vehicle_model
+       FROM posted_rides r
+       JOIN drivers d ON d.id = r.driver_id
+       WHERE r.departure_at > now() - interval '2 days'
+       ORDER BY r.departure_at ASC
+       LIMIT 200`
+    );
+    if (rows.length === 0) return res.json([]);
+
+    const { rows: reservations } = await query(
+      `SELECT b.ride_id, b.seats, b.created_at, b.paid_at,
+              u.full_name AS user_name, u.account_type,
+              h.name AS hotel_name
+       FROM ride_bookings b
+       LEFT JOIN users u ON u.id = b.user_id
+       LEFT JOIN hotels h ON h.id = b.hotel_id
+       WHERE b.ride_id = ANY($1) AND b.cancelled_at IS NULL
+       ORDER BY b.created_at ASC`,
+      [rows.map((r) => r.id)]
+    );
+    const parRide = {};
+    for (const b of reservations) (parRide[b.ride_id] ??= []).push(b);
+
+    const round2 = (n) => Math.round(n * 100) / 100;
+    res.json(
+      rows.map((r) => {
+        const places = parRide[r.id] ?? [];
+        const vendues = places.filter((b) => b.paid_at).reduce((n, b) => n + b.seats, 0);
+        const reservees = places.filter((b) => !b.paid_at).reduce((n, b) => n + b.seats, 0);
+        // Le prix d'une place en USD : c'est celui que paient les touristes,
+        // et donc celui qui dit ce que vaut vraiment le remplissage.
+        const usd = sharedSeatUsdForRoute(r.origin, r.destination);
+        return {
+          id: r.id,
+          origin: r.origin,
+          destination: r.destination,
+          departure_at: r.departure_at,
+          status: r.status,
+          seats_total: r.seats_total,
+          seats_available: r.seats_available,
+          seats_sold: vendues,
+          seats_reserved: reservees,
+          price_per_seat: Number(r.price_per_seat),
+          price_per_seat_usd: usd,
+          currency: r.currency,
+          // Ce que zanziGo encaisse sur les places DÉJÀ PAYÉES.
+          commission_usd: round2(vendues * usd * TAUX_PLACE_USD),
+          driver_name: r.driver_name,
+          driver_phone: r.driver_phone,
+          vehicle_plate: r.vehicle_plate,
+          vehicle_model: r.vehicle_model,
+          bookings: places.map((b) => ({
+            seats: b.seats,
+            paid: b.paid_at !== null,
+            // Le nom ne s'affiche qu'une fois la place payée — même règle que
+            // partout ailleurs : l'identité du client se mérite par le paiement.
+            client_name: b.paid_at ? (b.hotel_name ?? b.user_name) : null,
+            client_type: b.hotel_name ? 'hotel' : (b.account_type ?? 'tourist'),
+          })),
+        };
+      })
+    );
+  })
+);
+
 router.get(
   '/',
   requireAuth,

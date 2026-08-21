@@ -2154,6 +2154,39 @@ const CHAINES = {
     en: 'Upcoming rides',
     sw: 'Safari zijazo',
   },
+  // Rubrique « Taxis partagés » : la tour de contrôle du remplissage.
+  equipe_partages: { fr: 'Taxis partagés', en: 'Shared taxis', sw: 'Teksi za pamoja' },
+  equipe_partages_intro: {
+    fr: 'Les voitures partagées annoncées par les chauffeurs. Une place vide au départ ne se rattrape jamais : appelez le chauffeur ou relancez les clients en attente.',
+    en: 'Shared cars posted by drivers. An empty seat at departure is lost for good: call the driver or chase the waiting clients.',
+    sw: 'Magari ya pamoja yaliyotangazwa na madereva. Kiti kitupu wakati wa kuondoka hakirudi: mpigie dereva au wafuate wateja wanaosubiri.',
+  },
+  equipe_partages_vide: {
+    fr: 'Aucune voiture partagée annoncée ces jours-ci.',
+    en: 'No shared car posted these days.',
+    sw: 'Hakuna gari la pamoja lililotangazwa siku hizi.',
+  },
+  equipe_partages_la_place: { fr: 'la place', en: 'per seat', sw: 'kiti' },
+  equipe_partages_restantes: {
+    fr: '{n} place·s à vendre',
+    en: '{n} seat·s left',
+    sw: 'viti {n} vimebaki',
+  },
+  equipe_partages_complet: { fr: 'Voiture pleine', en: 'Car full', sw: 'Gari limejaa' },
+  equipe_partages_close: { fr: 'Annonce close', en: 'Closed', sw: 'Imefungwa' },
+  equipe_partages_places: {
+    fr: '{payees} payée·s · {reservees} en attente de paiement · {total} places',
+    en: '{payees} paid · {reservees} awaiting payment · {total} seats',
+    sw: '{payees} zimelipwa · {reservees} zinasubiri malipo · viti {total}',
+  },
+  equipe_partages_commission: { fr: 'zanziGo {montant} $', en: 'zanziGo ${montant}', sw: 'zanziGo {montant} $' },
+  equipe_partages_sieges: { fr: '{n} place·s', en: '{n} seat·s', sw: 'viti {n}' },
+  equipe_partages_impayee: { fr: 'pas encore payée', en: 'not paid yet', sw: 'bado hajalipa' },
+  equipe_partages_anonyme: {
+    fr: 'Client (nom à la confirmation du paiement)',
+    en: 'Client (name shown once paid)',
+    sw: 'Mteja (jina litaonekana baada ya malipo)',
+  },
   equipe_a_venir_vide: {
     fr: 'Aucun départ programmé pour les prochains jours.',
     en: 'No departures scheduled for the coming days.',

@@ -39,7 +39,14 @@ import {
   Titre,
 } from '@/components/ui';
 import { CartePosition } from '@/components/CartePosition';
-import { api, definirCleEquipe, ErreurApi, type AttentePartage, type StatsAbonnes } from '@/lib/api';
+import {
+  api,
+  definirCleEquipe,
+  ErreurApi,
+  type AnnoncePartageEquipe,
+  type AttentePartage,
+  type StatsAbonnes,
+} from '@/lib/api';
 import { formaterDateRelativeI18n, libelleTypeTrajet, useT } from '@/lib/i18n';
 import { useRafraichissementAuto } from '@/lib/rafraichissementAuto';
 import { couleurs, espaces, ombres, rayons } from '@/lib/theme';
@@ -66,6 +73,7 @@ const CLE_STOCKAGE = 'zanzigo.cle_equipe';
 type SectionEquipe =
   | 'courses'
   | 'avenir'
+  | 'partages'
   | 'paiements'
   | 'candidatures'
   | 'comptes'
@@ -122,6 +130,7 @@ export default function EcranEquipe() {
   const [hotelsVerifies, setHotelsVerifies] = useState<Hotel[]>([]);
   // Liste d'attente du taxi partagé : demandes clients à recontacter.
   const [attentes, setAttentes] = useState<AttentePartage[]>([]);
+  const [partages, setPartages] = useState<AnnoncePartageEquipe[]>([]);
   // Dates d'expiration saisies par chauffeur (permis / assurance).
   // Sauvegarde de la base : téléchargement en cours.
   const [sauvegardeEnCours, setSauvegardeEnCours] = useState(false);
@@ -179,7 +188,7 @@ export default function EcranEquipe() {
   const charger = useCallback(async () => {
     setErreur('');
     try {
-      const [lesCourses, lesPaiements, lesCandidats, lesClients, lesHotels, lesChauffeurs, lesAbonnes, lesVerifies, lesRemboursements, lesRecus, lesAttentes] =
+      const [lesCourses, lesPaiements, lesCandidats, lesClients, lesHotels, lesChauffeurs, lesAbonnes, lesVerifies, lesRemboursements, lesRecus, lesAttentes, lesPartages] =
         await Promise.all([
           api.listerCoursesEquipe(),
           api.listerPaiementsEquipe(),
@@ -192,6 +201,7 @@ export default function EcranEquipe() {
           api.listerRemboursementsEquipe().catch(() => []),
           api.listerPaiementsRecus().catch(() => []),
           api.listerAttentesPartage(true).catch(() => []),
+          api.listerAnnoncesPartageEquipe().catch(() => []),
         ]);
       // Compteur de la case « À vérifier » : silencieux s'il échoue, la case
       // affichera 0 plutôt que de faire tomber tout le tableau de bord.
@@ -210,6 +220,7 @@ export default function EcranEquipe() {
       setRemboursements(lesRemboursements);
       setPaiementsRecus(lesRecus);
       setAttentes(lesAttentes);
+      setPartages(lesPartages);
     } catch (e) {
       setErreur(e instanceof ErreurApi ? e.message : t('equipe_action_erreur'));
     }
@@ -495,6 +506,14 @@ export default function EcranEquipe() {
     else groupesPasses.push({ jour, liste: [course] });
   }
 
+  // TAXIS PARTAGÉS : les annonces encore ouvertes, du départ le plus proche au
+  // plus lointain. Une annonce close ou annulée reste consultable dans la
+  // rubrique, mais ne compte pas sur la case du menu — on n'y peut plus rien.
+  const partagesOuverts = partages.filter((a) => a.status === 'open');
+  const partagesTries = [...partages].sort((a, b) =>
+    a.departure_at.localeCompare(b.departure_at)
+  );
+
   // Les cases du menu — compteur ORANGE dès qu'une action attend
   // (paiements pas encore encaissés compris : le vert est réservé aux
   // paiements par crédit hôtel, déjà dans la caisse).
@@ -517,6 +536,7 @@ export default function EcranEquipe() {
     },
     { cle: 'courses', label: t('equipe_stat_courses'), icone: 'car-outline', n: coursesATraiter.length, action: true },
     { cle: 'avenir', label: t('equipe_courses_a_venir'), icone: 'calendar-outline', n: coursesAVenir.length, action: false },
+    { cle: 'partages', label: t('equipe_partages'), icone: 'people-circle-outline', n: partagesOuverts.length, action: false },
     { cle: 'attentes', label: t('equipe_stat_attentes'), icone: 'notifications-outline', n: attentes.filter((a) => !a.matched_at).length, action: true },
     { cle: 'paiements', label: t('equipe_stat_paiements'), icone: 'cash-outline', n: paiements.length + remboursements.length, action: true },
     { cle: 'candidatures', label: t('equipe_stat_candidatures'), icone: 'document-text-outline', n: candidats.length, action: true },
@@ -1085,6 +1105,115 @@ export default function EcranEquipe() {
               })}
             </View>
           ))}
+        </>
+      )}
+
+      {/* 1 ter. TAXIS PARTAGÉS EN COURS — la tour de contrôle du remplissage.
+          Le tableau voyait les courses privées et les paiements, mais pas les
+          voitures partagées : personne ne pouvait dire quelles places restaient
+          à vendre avant qu'une voiture parte. Or un siège vide au départ ne se
+          rattrape jamais. */}
+      {section === 'partages' && (
+        <>
+          <Text style={styles.titreSection}>
+            🚐 {t('equipe_partages')} ({partagesOuverts.length})
+          </Text>
+          <Text style={styles.introMenu}>{t('equipe_partages_intro')}</Text>
+          {partagesTries.length === 0 && (
+            <EncartInfo icone="people-circle-outline">{t('equipe_partages_vide')}</EncartInfo>
+          )}
+          {partagesTries.map((annonce) => {
+            const depart = new Date(annonce.departure_at);
+            const heure = depart.toLocaleString(localeDate, {
+              weekday: 'short',
+              day: 'numeric',
+              month: 'short',
+              hour: '2-digit',
+              minute: '2-digit',
+              timeZone: 'Africa/Dar_es_Salaam',
+            });
+            const ouverte = annonce.status === 'open';
+            const complet = ouverte && annonce.seats_available === 0;
+            return (
+              <Carte key={annonce.id} style={!ouverte && styles.annonceClose}>
+                <View style={styles.entetePassee}>
+                  <Text style={styles.itineraire} numberOfLines={1}>
+                    {annonce.origin} → {annonce.destination}
+                  </Text>
+                  <Text style={styles.prixPassee}>
+                    {annonce.price_per_seat_usd} $ {t('equipe_partages_la_place')}
+                  </Text>
+                </View>
+                <View style={styles.piedPassee}>
+                  <Text style={styles.detail}>🕒 {heure}</Text>
+                  <Text
+                    style={[
+                      styles.remplissage,
+                      complet && styles.remplissageComplet,
+                      !ouverte && styles.remplissageClos,
+                    ]}
+                  >
+                    {complet
+                      ? t('equipe_partages_complet')
+                      : !ouverte
+                        ? t('equipe_partages_close')
+                        : t('equipe_partages_restantes', { n: annonce.seats_available })}
+                  </Text>
+                </View>
+
+                {/* La jauge : d'un coup d'œil, combien de sièges sont payés,
+                    combien attendent leur règlement, combien restent vides. */}
+                <View style={styles.jauge}>
+                  {Array.from({ length: annonce.seats_total }, (_, i) => (
+                    <View
+                      key={i}
+                      style={[
+                        styles.siege,
+                        i < annonce.seats_sold && styles.siegePaye,
+                        i >= annonce.seats_sold &&
+                          i < annonce.seats_sold + annonce.seats_reserved &&
+                          styles.siegeReserve,
+                      ]}
+                    />
+                  ))}
+                </View>
+                <Text style={styles.detail}>
+                  {t('equipe_partages_places', {
+                    payees: annonce.seats_sold,
+                    reservees: annonce.seats_reserved,
+                    total: annonce.seats_total,
+                  })}
+                  {annonce.commission_usd > 0
+                    ? ` · ${t('equipe_partages_commission', { montant: annonce.commission_usd.toFixed(2) })}`
+                    : ''}
+                </Text>
+
+                <View style={styles.ligneDetail}>
+                  <Ionicons name="car-outline" size={14} color={couleurs.texteSecondaire} />
+                  <Text style={styles.detail}>
+                    {annonce.driver_name}
+                    {annonce.vehicle_plate ? ` · ${annonce.vehicle_plate}` : ''}
+                    {annonce.driver_phone ? ` · ${annonce.driver_phone}` : ''}
+                  </Text>
+                </View>
+
+                {annonce.bookings.map((place, i) => (
+                  <View key={i} style={styles.ligneDetail}>
+                    <Ionicons
+                      name={place.paid ? 'checkmark-circle' : 'time-outline'}
+                      size={14}
+                      color={place.paid ? couleurs.succes : couleurs.texteSecondaire}
+                    />
+                    <Text style={styles.detail}>
+                      {place.client_name ?? t('equipe_partages_anonyme')} ·{' '}
+                      {t('equipe_partages_sieges', { n: place.seats })}
+                      {place.paid ? '' : ` · ${t('equipe_partages_impayee')}`}
+                    </Text>
+                  </View>
+                ))}
+              </Carte>
+            );
+          })}
         </>
       )}
 
@@ -1857,6 +1986,24 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: couleurs.texteSecondaire,
   },
+  // TAXIS PARTAGÉS : une annonce close se lit encore, mais s'efface.
+  annonceClose: { opacity: 0.55 },
+  remplissage: { fontSize: 13, fontWeight: '700', color: couleurs.primaireFonce },
+  remplissageComplet: { color: couleurs.succes },
+  remplissageClos: { color: couleurs.texteSecondaire, fontWeight: '600' },
+  // La jauge des sièges : un carré par place. Plein = payé, creux = réservé
+  // mais pas réglé, vide = encore à vendre.
+  jauge: { flexDirection: 'row', gap: 4, marginVertical: espaces.xs },
+  siege: {
+    width: 18,
+    height: 14,
+    borderRadius: 3,
+    borderWidth: 1.5,
+    borderColor: couleurs.texteSecondaire,
+    opacity: 0.45,
+  },
+  siegePaye: { backgroundColor: couleurs.succes, borderColor: couleurs.succes, opacity: 1 },
+  siegeReserve: { borderColor: couleurs.primaire, borderWidth: 2, opacity: 1 },
   lignePassee: {
     backgroundColor: couleurs.carteTranslucide,
     borderRadius: rayons.bouton,

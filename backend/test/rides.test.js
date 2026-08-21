@@ -319,3 +319,63 @@ describe('Trajets partagés — réservation de places dans l\'app', () => {
     assert.equal(ligne.seats_available, ride.seats_available);
   });
 });
+
+// LA TOUR DE CONTRÔLE DES TAXIS PARTAGÉS.
+//
+// Le tableau de bord voyait tout — courses privées, paiements, candidatures —
+// sauf les voitures partagées. Personne ne pouvait dire, avant qu'une voiture
+// parte, combien de places restaient à vendre. Ces tests verrouillent la vue
+// qui répond à cette question.
+describe('Trajets partagés — la vue équipe', () => {
+  it('la clé équipe est exigée : un chauffeur ou un touriste n’y accède pas', async () => {
+    const { token } = await createVerifiedDriver();
+    const { token: touristToken } = await createTourist();
+    for (const jeton of [token, touristToken]) {
+      const res = await request(app).get('/api/rides/equipe').set(authHeaders(jeton));
+      assert.equal(res.status, 401, 'la vue équipe doit rester fermée');
+    }
+    const sansRien = await request(app).get('/api/rides/equipe');
+    assert.equal(sansRien.status, 401);
+  });
+
+  it('chaque annonce dit où en est son remplissage', async () => {
+    const { token } = await createVerifiedDriver();
+    const annonce = (await postRide(token, { seatsTotal: 6 })).body;
+
+    const vue = await request(app).get('/api/rides/equipe').set(adminHeaders());
+    assert.equal(vue.status, 200);
+    const a = vue.body.find((r) => r.id === annonce.id);
+    assert.ok(a, 'l’annonce doit apparaître dans la vue équipe');
+    assert.equal(a.seats_total, 6);
+    assert.equal(a.seats_available, 6);
+    assert.equal(a.seats_sold, 0, 'rien de payé au départ');
+    assert.equal(a.seats_reserved, 0);
+    assert.equal(a.commission_usd, 0, 'pas de place payée, pas de commission');
+    assert.ok(a.driver_name, 'le chauffeur doit être nommé — c’est lui qu’on appelle');
+    assert.ok(a.price_per_seat_usd > 0, 'le prix touriste dit ce que vaut le remplissage');
+  });
+
+  it('une place réservée mais pas payée se compte à part', async () => {
+    const { token } = await createVerifiedDriver();
+    const annonce = (await postRide(token, { seatsTotal: 4 })).body;
+    const { token: clientToken, user } = await createTourist();
+    const resa = await request(app)
+      .post(`/api/rides/${annonce.id}/book`)
+      .set(authHeaders(clientToken))
+      .send({ userId: user.id, seats: 2 });
+    assert.equal(resa.status, 201, JSON.stringify(resa.body));
+
+    const vue = await request(app).get('/api/rides/equipe').set(adminHeaders());
+    const a = vue.body.find((r) => r.id === annonce.id);
+    assert.equal(a.seats_reserved, 2, 'réservée, pas encore réglée');
+    assert.equal(a.seats_sold, 0, 'une place non payée n’est pas une place vendue');
+    assert.equal(a.seats_available, 2, 'les places restantes ont bien baissé');
+    assert.equal(a.bookings.length, 1);
+    assert.equal(a.bookings[0].paid, false);
+    assert.equal(
+      a.bookings[0].client_name,
+      null,
+      'le nom du client ne s’affiche qu’une fois la place payée'
+    );
+  });
+});

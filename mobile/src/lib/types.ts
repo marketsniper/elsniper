@@ -485,6 +485,22 @@ const COMMISSION_PRIVE_SEUIL_USD = 40;
 const CORRIDOR_SUD_EST = ['paje', 'bwejuu', 'jambiani'];
 const COMMISSION_CORRIDOR = 0.15;
 
+/**
+ * AÉROPORT ↔ STONE TOWN : commission fixée en DOLLARS, pas en pourcentage.
+ * Sept kilomètres, mais la course la plus fréquente de l'île.
+ */
+const COMMISSION_AEROPORT_VILLE_USD = 4.5;
+
+function estAeroportVille(depart: string, arrivee: string): boolean {
+  const d = normaliserLieu(depart);
+  const a = normaliserLieu(arrivee);
+  const villeSt = POINTS_STONE_TOWN.map(normaliserLieu);
+  return (
+    (HUBS_TARIFAIRES.has(d) && villeSt.includes(a)) ||
+    (villeSt.includes(d) && HUBS_TARIFAIRES.has(a))
+  );
+}
+
 function versCorridorSudEst(depart: string, arrivee: string): boolean {
   const d = normaliserLieu(depart);
   const a = normaliserLieu(arrivee);
@@ -496,8 +512,9 @@ function versCorridorSudEst(depart: string, arrivee: string): boolean {
 
 /** Taux de commission d'une course privée, selon le prix ET l'itinéraire. */
 export function tauxCommissionPrive(prixUsd: number, depart?: string, arrivee?: string): number {
-  if (depart !== undefined && arrivee !== undefined && versCorridorSudEst(depart, arrivee)) {
-    return COMMISSION_CORRIDOR;
+  if (depart !== undefined && arrivee !== undefined) {
+    if (estAeroportVille(depart, arrivee)) return COMMISSION_AEROPORT_VILLE_USD / prixUsd;
+    if (versCorridorSudEst(depart, arrivee)) return COMMISSION_CORRIDOR;
   }
   return prixUsd >= COMMISSION_PRIVE_SEUIL_USD ? COMMISSION_PRIVE.grand : COMMISSION_PRIVE.petit;
 }
@@ -865,6 +882,8 @@ export function netChauffeurPriveUsd(depart: string, arrivee: string): number {
  */
 export function tarifPriveItineraire(depart: string, arrivee: string): number {
   const net = netChauffeurPriveUsd(depart, arrivee);
+  // Commission fixée en dollars : le prix est la somme, pas une division.
+  if (estAeroportVille(depart, arrivee)) return net + COMMISSION_AEROPORT_VILLE_USD;
   for (let prix = Math.floor(net); prix <= net * 2 + 10; prix += 1) {
     if (Math.round(prix * (1 - tauxCommissionPrive(prix, depart, arrivee)) * 100) / 100 >= net) {
       return prix;

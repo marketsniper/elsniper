@@ -4,6 +4,7 @@
 
 import type {
   Chauffeur,
+  Devise,
   Colis,
   Hotel,
   MoyenPaiement,
@@ -643,6 +644,46 @@ export async function creerAttentePartage(donnees: {
 }
 
 /** GET /rides/attente — ses demandes (client) ou toutes (équipe, admin:true). */
+/**
+ * UNE ANNONCE DE TAXI PARTAGÉ, vue par l'équipe : qui roule, quand, et où en
+ * est le remplissage. C'est le seul endroit où l'on voit un siège vide AVANT
+ * le départ — après, il ne se rattrape plus.
+ */
+export interface AnnoncePartageEquipe {
+  id: string;
+  origin: string;
+  destination: string;
+  departure_at: string;
+  status: 'open' | 'closed' | 'cancelled';
+  seats_total: number;
+  seats_available: number;
+  /** Places payées. */
+  seats_sold: number;
+  /** Places réservées mais pas encore réglées (5 min pour payer). */
+  seats_reserved: number;
+  price_per_seat: number;
+  price_per_seat_usd: number;
+  currency: Devise;
+  /** Ce que zanziGo encaisse sur les places déjà payées. */
+  commission_usd: number;
+  driver_name: string;
+  driver_phone: string | null;
+  vehicle_plate: string | null;
+  vehicle_model: string | null;
+  bookings: {
+    seats: number;
+    paid: boolean;
+    client_name: string | null;
+    client_type: string;
+  }[];
+}
+
+/** GET /rides/equipe — toutes les annonces de taxi partagé (clé équipe). */
+export async function listerAnnoncesPartageEquipe(): Promise<AnnoncePartageEquipe[]> {
+  const reponse = await requete<unknown>('/rides/equipe', { admin: true });
+  return commeListe<AnnoncePartageEquipe>(reponse);
+}
+
 export async function listerAttentesPartage(admin = false): Promise<AttentePartage[]> {
   const reponse = await requete<unknown>('/rides/attente', admin ? { admin: true } : {});
   return commeListe<AttentePartage>(reponse);
@@ -1452,6 +1493,7 @@ export const api = {
   noterTrajet,
   creerAttentePartage,
   listerAttentesPartage,
+  listerAnnoncesPartageEquipe,
   annulerAttentePartage,
   partagerPointRendezVous,
   positionDeMonChauffeur,

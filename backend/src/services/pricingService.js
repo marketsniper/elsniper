@@ -145,6 +145,19 @@ const COMMISSION_PRIVE_SEUIL_USD = 40;
 const CORRIDOR_SUD_EST = new Set(['paje', 'bwejuu', 'jambiani']);
 const COMMISSION_CORRIDOR = 0.15;
 
+// AÉROPORT ↔ STONE TOWN : commission fixée en DOLLARS, pas en pourcentage.
+// Sept kilomètres seulement, mais la course la plus fréquente de l'île — celle
+// qui tourne toute la journée. Un pourcentage y rapportait 1,95 USD, moins que
+// le coût du service ; la commission est donc posée à 4,50, et le chauffeur
+// garde ses 11 USD comme prévu.
+const COMMISSION_AEROPORT_VILLE_USD = 4.5;
+
+function estAeroportVille(pickup, dropoff) {
+  const p = normCity(pickup);
+  const d = normCity(dropoff);
+  return (HUBS.has(p) && HUBS_VILLE.has(d)) || (HUBS_VILLE.has(p) && HUBS.has(d));
+}
+
 function versCorridorSudEst(pickup, dropoff) {
   const p = normCity(pickup);
   const d = normCity(dropoff);
@@ -153,7 +166,10 @@ function versCorridorSudEst(pickup, dropoff) {
 
 /** Taux de commission d'une course privée, selon le prix ET l'itinéraire. */
 function tauxCommissionPrive(prixUsd, pickup, dropoff) {
-  if (pickup !== undefined && versCorridorSudEst(pickup, dropoff)) return COMMISSION_CORRIDOR;
+  if (pickup !== undefined) {
+    if (estAeroportVille(pickup, dropoff)) return COMMISSION_AEROPORT_VILLE_USD / prixUsd;
+    if (versCorridorSudEst(pickup, dropoff)) return COMMISSION_CORRIDOR;
+  }
   return prixUsd >= COMMISSION_PRIVE_SEUIL_USD ? COMMISSION_PRIVE.grand : COMMISSION_PRIVE.petit;
 }
 
@@ -461,6 +477,8 @@ export function kmEntreVilles(a, b) {
 // villes connues, zone en dernier recours.
 export function privateUsdForRoute(pickup, dropoff) {
   const net = netChauffeurPriveUsd(pickup, dropoff);
+  // Commission fixée en dollars : le prix est la somme, pas une division.
+  if (estAeroportVille(pickup, dropoff)) return net + COMMISSION_AEROPORT_VILLE_USD;
   // Le premier dollar entier qui laisse au chauffeur son montant promis une
   // fois la commission prélevée. On part du net lui-même : en dessous, aucun
   // prix ne peut convenir.
