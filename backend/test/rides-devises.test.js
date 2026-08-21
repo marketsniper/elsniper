@@ -10,6 +10,7 @@ import {
   app,
   authHeaders,
   createLocal,
+  createResident,
   createTourist,
   createVerifiedDriver,
   useTestDb,
@@ -18,6 +19,39 @@ import {
 useTestDb();
 
 describe('Devises taxi partagé (parcours local complet)', () => {
+  it('résident : la remise de 10 % se partage moitié-moitié avec le chauffeur', async () => {
+    // Aéroport → Nungwi : la place vaut 17 USD, commission 25 % (4,25 au
+    // chauffeur 12,75). Le résident paie 15,30 ; la remise de 1,70 se coupe
+    // en deux — 0,85 pour zanziGo, 0,85 pour le chauffeur.
+    const { token: tokenChauffeur } = await createVerifiedDriver();
+    const { token: tokenResident } = await createResident();
+
+    const depart = new Date(Date.now() + 6 * 3600 * 1000).toISOString();
+    const posted = await request(app)
+      .post('/api/rides')
+      .set(authHeaders(tokenChauffeur))
+      .send({ origin: 'Aéroport (AAKIA)', destination: 'Nungwi', departureAt: depart, seatsTotal: 6 });
+    assert.equal(posted.status, 201);
+
+    const liste = await request(app).get('/api/rides').set(authHeaders(tokenResident));
+    const ride = liste.body[0];
+    assert.equal(ride.currency, 'USD');
+    assert.equal(Number(ride.price_per_seat_usd), 15.3, 'le résident garde ses −10 %');
+
+    const resa = await request(app)
+      .post(`/api/rides/${ride.id}/book`)
+      .set(authHeaders(tokenResident))
+      .send({ seats: 1 });
+    assert.equal(resa.status, 201);
+
+    const mine = await request(app).get('/api/rides/mine').set(authHeaders(tokenChauffeur));
+    const booking = mine.body[0].bookings[0];
+    assert.equal(booking.client_type, 'resident');
+    assert.equal(Number(booking.price_per_seat), 15.3);
+    assert.equal(Number(booking.net_per_seat), 11.9, 'le chauffeur porte 0,85 de la remise');
+    assert.equal(Number(booking.commission_per_seat), 3.4, 'zanziGo porte l’autre 0,85');
+  });
+
   it('local : TZS sur la liste, la réservation et la fiche chauffeur', async () => {
     const { token: tokenChauffeur } = await createVerifiedDriver();
     const { token: tokenLocal } = await createLocal();

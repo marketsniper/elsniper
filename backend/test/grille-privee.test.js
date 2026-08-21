@@ -222,27 +222,59 @@ describe('Grille privée : le net du chauffeur décide, le forfait s’ajoute', 
     assert.ok(emprunte.price - emprunte.commission >= 105000 / 2600, 'promesse tenue');
   });
 
-  it('la remise ne mord JAMAIS sur la part du chauffeur', () => {
-    // Le net est un montant promis, pas un pourcentage : un arrangement passé
-    // avec un hôtel ou un résident ne le regarde pas. C'est zanziGo qui paie
-    // la remise, quitte à ne rien gagner sur cette course-là.
-    for (const audience of ['resident', 'hotel']) {
-      for (const [depart, arrivee] of [
-        ['Stone Town', 'Nungwi'],
-        ['Stone Town', 'Paje'],
-        ['Nungwi', 'Makunduchi'],
-        ['Paje', 'Jambiani'],
-      ]) {
-        const course = priceTrip('private', audience, { pickup: depart, dropoff: arrivee });
-        const net = netChauffeurPriveUsd(depart, arrivee);
-        const garde = course.price - course.commission;
-        // Au moins la promesse — et pas plus d'un centime au-dessus : le
-        // centime d'arrondi reste chez le chauffeur, jamais chez zanziGo.
-        assert.ok(garde >= net - 1e-9, `${audience} ${depart} → ${arrivee} : ${garde} < ${net}`);
-        assert.ok(garde <= net + 0.01 + 1e-9, `${audience} ${depart} → ${arrivee} : ${garde} > ${net}`);
-        assert.ok(course.commission >= 0, 'zanziGo ne peut pas payer pour rouler');
-        assert.ok(course.price <= privateUsdForRoute(depart, arrivee), 'la remise doit baisser');
+  const COINS = [
+    ['Stone Town', 'Nungwi'],
+    ['Stone Town', 'Paje'],
+    ['Nungwi', 'Makunduchi'],
+    ['Paje', 'Jambiani'],
+    ['Aéroport international Abeid Amani Karume', 'Stone Town'],
+  ];
+
+  it('la remise résident se partage moitié-moitié', () => {
+    // Décision du 21/08/2026 : le client garde ses −10 %, mais zanziGo et le
+    // chauffeur en lâchent 5 % CHACUN. Le partage se mesure sur ce que chacun
+    // touche VRAIMENT au prix plein, pas sur le net promis — le chauffeur
+    // dépasse souvent sa promesse, et le lui rappeler ici lui aurait fait
+    // porter plus que sa moitié.
+    for (const type of ['private', 'shared_tourist']) {
+      for (const [depart, arrivee] of COINS) {
+        const plein = priceTrip(type, 'tourist', { pickup: depart, dropoff: arrivee });
+        const remise = priceTrip(type, 'resident', { pickup: depart, dropoff: arrivee });
+        const ou = `${type} ${depart} → ${arrivee}`;
+        const baisse = plein.price - remise.price;
+        assert.ok(baisse > 0, `${ou} : la remise doit baisser le prix`);
+        const perteZanziGo = plein.commission - remise.commission;
+        const perteChauffeur =
+          plein.price - plein.commission - (remise.price - remise.commission);
+        // Un centime de tolérance : l'arrondi au centime inférieur doit
+        // toujours tomber du côté du chauffeur, jamais du nôtre.
+        assert.ok(
+          Math.abs(perteZanziGo - baisse / 2) <= 0.01 + 1e-9,
+          `${ou} : zanziGo perd ${perteZanziGo} au lieu de ${baisse / 2}`
+        );
+        assert.ok(
+          Math.abs(perteChauffeur - baisse / 2) <= 0.01 + 1e-9,
+          `${ou} : le chauffeur perd ${perteChauffeur} au lieu de ${baisse / 2}`
+        );
+        assert.ok(perteChauffeur <= perteZanziGo + 1e-9, `${ou} : le centime va au chauffeur`);
+        assert.ok(remise.commission >= 0, 'zanziGo ne peut pas payer pour rouler');
       }
+    }
+  });
+
+  it("la remise hôtel ne mord JAMAIS sur la part du chauffeur", () => {
+    // Le geste commercial fait pour décrocher un partenariat est celui de la
+    // MAISON : le chauffeur n'a rien négocié, son net promis reste intact.
+    for (const [depart, arrivee] of COINS) {
+      const course = priceTrip('private', 'hotel', { pickup: depart, dropoff: arrivee });
+      const net = netChauffeurPriveUsd(depart, arrivee);
+      const garde = course.price - course.commission;
+      // Au moins la promesse — et pas plus d'un centime au-dessus : le
+      // centime d'arrondi reste chez le chauffeur, jamais chez zanziGo.
+      assert.ok(garde >= net - 1e-9, `hôtel ${depart} → ${arrivee} : ${garde} < ${net}`);
+      assert.ok(garde <= net + 0.01 + 1e-9, `hôtel ${depart} → ${arrivee} : ${garde} > ${net}`);
+      assert.ok(course.commission >= 0, 'zanziGo ne peut pas payer pour rouler');
+      assert.ok(course.price <= privateUsdForRoute(depart, arrivee), 'la remise doit baisser');
     }
   });
 

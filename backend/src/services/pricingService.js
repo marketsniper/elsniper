@@ -5,7 +5,8 @@ import { config } from '../config.js';
 //
 // Segmentation (cloison stricte, appliquée aussi à l'affichage côté app) :
 //  - tourist  : USD plein tarif (AC incluse sur les options touristes) ;
-//  - resident : USD avec remise (config.residentDiscountRate, 10 %) ;
+//  - resident : USD avec remise (config.residentDiscountRate, 10 %) —
+//               partagée moitié-moitié entre zanziGo et le chauffeur ;
 //  - local    : TZS — tarif de la zone (carte tanzanienne vérifiée) ;
 //  - hotel    : USD — même grille que les touristes avec remise partenaire
 //               (config.hotelDiscountRate, 5 %).
@@ -275,9 +276,10 @@ export function arrondiMillierTzs(montant) {
 /**
  * COMMISSION D'UNE COURSE PRIVÉE : le pourcentage appliqué au prix de base,
  * PLUS le supplément entre villages en entier — ce dollar-là ne se partage
- * pas. Et jamais au point d'entamer le net promis au chauffeur : sur une
- * course remisée, c'est zanziGo qui absorbe la remise, quitte à ne rien
- * gagner sur cette course.
+ * pas. Et jamais au point d'entamer le net qu'on lui a promis : la
+ * commission s'arrête là, quitte à ce que zanziGo ne gagne rien sur cette
+ * course. (Sur une course remisée, le net passé ici est DÉJÀ celui d'après
+ * partage — voir priceTrip.)
  */
 function commissionPrive(prix, net, taux, supplement = 0) {
   const base = prix - supplement;
@@ -364,7 +366,8 @@ function dansLeGroupe(groupe, p, d) {
  * CE QUE LE CHAUFFEUR GARDE sur une course privée, en dollars.
  *
  * C'est le chiffre de référence de toute la grille : le prix client s'en
- * déduit, jamais l'inverse. Une remise commerciale ne l'entame donc jamais.
+ * déduit, jamais l'inverse. Seule la remise RÉSIDENT l'entame, de la moitié
+ * de son montant — voir priceTrip.
  */
 export function netChauffeurPriveUsd(pickup, dropoff) {
   const p = normCity(pickup);
@@ -645,18 +648,59 @@ export function priceTrip(tripType, audience, route = {}) {
         : 0;
   const remise = tauxRemise ? round2(usd * (1 - tauxRemise)) : usd;
 
+  // QUI PAIE LA REMISE ?
+  //
+  //  · RÉSIDENT (−10 %) : les deux, à parts égales. Le client paie 10 % de
+  //    moins, zanziGo abandonne 5 % du prix plein et le chauffeur 5 %. Un
+  //    résident est un client de toute l'année, pas d'un séjour : le
+  //    chauffeur y gagne un habitué, il en porte donc la moitié.
+  //  · HÔTEL PARTENAIRE (−5 %) : zanziGo seule. C'est un geste commercial de
+  //    la maison pour décrocher un partenariat — le chauffeur n'a rien
+  //    négocié, son net reste intact.
+  const partChauffeur =
+    audience === 'resident' && tauxRemise ? round2((usd * tauxRemise) / 2) : 0;
+
+  // Le partage se calcule TOUJOURS à partir du partage au PRIX PLEIN, jamais
+  // du net promis. Le chauffeur touche souvent un peu plus que sa promesse
+  // (12 % de 52 laissent 45,76 là où on lui promet 45) : retrancher la moitié
+  // de la remise du plancher, et non de ce qu'il touche vraiment, lui aurait
+  // fait porter bien plus que sa moitié.
   if (tripType === 'private') {
-    // LA REMISE SORT DE LA POCHE DE ZANZIGO, JAMAIS DE CELLE DU CHAUFFEUR.
-    // Le net est un montant promis : un arrangement commercial passé avec un
-    // hôtel ou un résident ne le regarde pas. Le prix ne descend donc jamais
-    // sous ce net, et la commission ne peut pas mordre dedans — au pire
-    // zanziGo ne gagne rien sur cette course-là.
     const net = netChauffeurPriveUsd(route.pickup, route.dropoff);
-    const price = Math.max(net, remise);
     const supp = supplementUsd(route.pickup, route.dropoff);
+    if (partChauffeur) {
+      const pleine = commissionPrive(usd, net, taux, supp);
+      return {
+        price: remise,
+        commission: Math.max(0, round2(pleine - partChauffeur)),
+        currency: 'USD',
+      };
+    }
+    // Remise hôtel (ou aucune remise) : le net promis est un plancher que la
+    // commission ne franchit pas — au pire zanziGo ne gagne rien.
+    const price = Math.max(net, remise);
     return { price, commission: commissionPrive(price, net, taux, supp), currency: 'USD' };
   }
+  if (partChauffeur) {
+    return {
+      price: remise,
+      commission: Math.max(0, round2(round2(usd * taux) - partChauffeur)),
+      currency: 'USD',
+    };
+  }
   return { price: remise, commission: round2(remise * taux), currency: 'USD' };
+}
+
+/**
+ * CE QUE LE CHAUFFEUR ABANDONNE sur une remise résident : la moitié.
+ *
+ * Décision du 21/08/2026 : le résident garde ses −10 %, mais la remise ne
+ * sort plus de la seule poche de zanziGo — chacun en lâche 5 % du prix plein.
+ * Exporté pour que les listes de places partagées et les statistiques
+ * comptent comme la grille, au lieu de refaire le calcul chacune de leur côté.
+ */
+export function partRemiseResidentUsd(usdPlein) {
+  return round2((usdPlein * config.residentDiscountRate) / 2);
 }
 
 // size : 'small' | 'medium' | 'large' ; remise : ex. 0.05 pour un hôtel

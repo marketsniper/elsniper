@@ -576,7 +576,14 @@ export function tarifSpecialLocal(depart: string, arrivee: string): number | nul
   return tarifSpecialItineraire(TRAJETS_SPECIAUX_LOCAL_TZS, depart, arrivee);
 }
 
-/** Remise résident (documents de résidence validés) sur tous les prix USD. */
+/**
+ * Remise résident (documents de résidence validés) sur tous les prix USD.
+ *
+ * Côté client, elle ne change rien : le résident paie 10 % de moins, point.
+ * Côté partage, elle est portée MOITIÉ-MOITIÉ par zanziGo et le chauffeur
+ * (5 % chacun) — mais ce calcul-là appartient au serveur, seul juge des
+ * commissions. Ici on n'affiche qu'un prix.
+ */
 export const REMISE_RESIDENT = 0.1;
 /** Taux de conversion USD → TZS (courses privées des locaux, grille colis). */
 export const TAUX_USD_TZS = 2600;

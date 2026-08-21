@@ -17,14 +17,15 @@ import { isAdmin, requireAuth, requireAdmin } from '../middleware/auth.js';
 import { buildTeamNotificationLink } from '../services/whatsappService.js';
 import { config } from '../config.js';
 import {
+  TAUX_PLACE_LOCALE,
+  TAUX_PLACE_USD,
+  arrondiMillierTzs,
   hubToHubRoute,
   localSeatTzsForRoute,
   memeEndroit,
+  partRemiseResidentUsd,
   sharedAllowedForRoute,
   sharedSeatUsdForRoute,
-  TAUX_PLACE_LOCALE,
-  arrondiMillierTzs,
-  TAUX_PLACE_USD,
 } from '../services/pricingService.js';
 import { libelleMoyen, moyensPour, reglement } from '../services/moyenPaiement.js';
 import { createPaymentOrder, isStubMode } from '../services/pesapalService.js';
@@ -673,14 +674,31 @@ router.get(
             );
           }
           const resident = b.account_type === 'resident' && b.verification_status === 'verified';
+          if (resident) {
+            // Remise résident : partagée moitié-moitié. Le net se calcule à
+            // partir du partage au PRIX PLEIN moins la part du chauffeur —
+            // appliquer le pourcentage au prix déjà remisé lui en aurait fait
+            // porter les trois quarts.
+            const prix = round2(usd * (1 - config.residentDiscountRate));
+            const net = round2(round2(usd * (1 - TAUX_PLACE_USD)) - partRemiseResidentUsd(usd));
+            return avecPaiement(b, {
+              seats: b.seats,
+              client_type: 'resident',
+              client_name: b.user_name ?? null,
+              price_per_seat: prix,
+              currency: 'USD',
+              commission_per_seat: round2(prix - net),
+              net_per_seat: net,
+            });
+          }
           return avecPaiement(
             b,
             avecGain(
               {
                 seats: b.seats,
-                client_type: resident ? 'resident' : 'tourist',
+                client_type: 'tourist',
                 client_name: b.user_name ?? null,
-                price_per_seat: resident ? round2(usd * (1 - config.residentDiscountRate)) : usd,
+                price_per_seat: usd,
                 currency: 'USD',
               },
               TAUX_PLACE_USD

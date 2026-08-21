@@ -5,9 +5,10 @@ import { asyncHandler } from '../middleware/errorHandler.js';
 import { requireAdmin } from '../middleware/auth.js';
 import { config } from '../config.js';
 import {
-  sharedSeatUsdForRoute,
   TAUX_PLACE_LOCALE,
   TAUX_PLACE_USD,
+  partRemiseResidentUsd,
+  sharedSeatUsdForRoute,
 } from '../services/pricingService.js';
 
 // Prix, commission et devise d'une réservation de place PAYÉE, selon le
@@ -30,7 +31,18 @@ export function valeurReservationPlace(ligne) {
   }
   const resident =
     ligne.account_type === 'resident' && ligne.verification_status === 'verified';
-  const price = round2((resident ? usd * (1 - config.residentDiscountRate) : usd) * ligne.seats);
+  if (resident) {
+    // Remise résident partagée : zanziGo n'encaisse que sa moitié de moins,
+    // le chauffeur porte l'autre. Compté par place, puis multiplié.
+    const prixPlace = round2(usd * (1 - config.residentDiscountRate));
+    const commissionPlace = round2(round2(usd * TAUX_PLACE_USD) - partRemiseResidentUsd(usd));
+    return {
+      price: round2(prixPlace * ligne.seats),
+      commission: round2(Math.max(0, commissionPlace) * ligne.seats),
+      currency: 'USD',
+    };
+  }
+  const price = round2(usd * ligne.seats);
   return { price, commission: round2(price * TAUX_PLACE_USD), currency: 'USD' };
 }
 
