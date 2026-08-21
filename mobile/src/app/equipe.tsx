@@ -65,6 +65,7 @@ const CLE_STOCKAGE = 'zanzigo.cle_equipe';
 // écran d'accueil de téléphone), chaque case ouvre sa rubrique.
 type SectionEquipe =
   | 'courses'
+  | 'avenir'
   | 'paiements'
   | 'candidatures'
   | 'comptes'
@@ -494,7 +495,7 @@ export default function EcranEquipe() {
     else groupesPasses.push({ jour, liste: [course] });
   }
 
-  // Les six cases du menu — compteur ORANGE dès qu'une action attend
+  // Les cases du menu — compteur ORANGE dès qu'une action attend
   // (paiements pas encore encaissés compris : le vert est réservé aux
   // paiements par crédit hôtel, déjà dans la caisse).
   const rubriques: {
@@ -515,6 +516,7 @@ export default function EcranEquipe() {
       ecran: '/verifications',
     },
     { cle: 'courses', label: t('equipe_stat_courses'), icone: 'car-outline', n: coursesATraiter.length, action: true },
+    { cle: 'avenir', label: t('equipe_courses_a_venir'), icone: 'calendar-outline', n: coursesAVenir.length, action: false },
     { cle: 'attentes', label: t('equipe_stat_attentes'), icone: 'notifications-outline', n: attentes.filter((a) => !a.matched_at).length, action: true },
     { cle: 'paiements', label: t('equipe_stat_paiements'), icone: 'cash-outline', n: paiements.length + remboursements.length, action: true },
     { cle: 'candidatures', label: t('equipe_stat_candidatures'), icone: 'document-text-outline', n: candidats.length, action: true },
@@ -969,55 +971,6 @@ export default function EcranEquipe() {
         );
       })}
 
-      {/* COURSES À VENIR : les départs déjà programmés, du plus proche au plus
-          lointain. Dépliées d'office, contrairement à l'historique : ce sont
-          elles qu'on regarde le matin pour préparer la journée. */}
-      {groupesAVenir.length > 0 && (
-        <>
-          <Text style={styles.titreSection}>
-            📅 {t('equipe_courses_a_venir')} ({coursesAVenir.length})
-          </Text>
-          {groupesAVenir.map((groupe) => (
-            <View key={`avenir-${groupe.jour}`}>
-              <View style={styles.enTeteJourAVenir}>
-                <Ionicons name="calendar-outline" size={16} color={couleurs.primaireFonce} />
-                <Text style={styles.texteJour}>{libelleJour(groupe.jour)}</Text>
-                <Text style={styles.compteJour}>
-                  {t('equipe_jour_compte', { n: groupe.liste.length })}
-                </Text>
-              </View>
-              {groupe.liste.map((course) => {
-                const statut = champ<StatutTrajet>(course, 'status', 'statut');
-                const heure = new Date(dateCourse(course)).toLocaleTimeString(localeDate, {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                  timeZone: 'Africa/Dar_es_Salaam',
-                });
-                const chauffeurCourse = champ<string>(course, 'driver_name', 'driverName');
-                return (
-                  <View key={course.id} style={styles.ligneAVenir}>
-                    <View style={styles.entetePassee}>
-                      <Text style={styles.itineraire} numberOfLines={1}>
-                        {String(champ(course, 'pickup_location', 'pickupLocation') ?? '?')} →{' '}
-                        {String(champ(course, 'dropoff_location', 'dropoffLocation') ?? '?')}
-                      </Text>
-                      <Text style={styles.prixPassee}>{formaterPrix(course)}</Text>
-                    </View>
-                    <View style={styles.piedPassee}>
-                      <Text style={styles.heureAVenir}>
-                        🕒 {heure}
-                        {chauffeurCourse ? ` · 🚕 ${chauffeurCourse}` : ''}
-                      </Text>
-                      {statut && <BadgeStatutTrajet statut={statut} />}
-                    </View>
-                  </View>
-                );
-              })}
-            </View>
-          ))}
-        </>
-      )}
-
       {/* Courses PASSÉES : rangées par jour, repliées par défaut — on
           touche une date pour voir le détail du jour. */}
       {groupesPasses.length > 0 && (
@@ -1080,6 +1033,58 @@ export default function EcranEquipe() {
         </>
       )}
 
+        </>
+      )}
+
+      {/* 1 bis. COURSES À VENIR : les départs déjà programmés, du plus proche
+          au plus lointain. Sa propre case dans le menu, dépliée d'office :
+          c'est le planning qu'on regarde le matin pour préparer la journée. */}
+      {section === 'avenir' && (
+        <>
+          <Text style={styles.titreSection}>
+            📅 {t('equipe_courses_a_venir')} ({coursesAVenir.length})
+          </Text>
+          {coursesAVenir.length === 0 && (
+            <EncartInfo icone="calendar-outline">{t('equipe_a_venir_vide')}</EncartInfo>
+          )}
+          {groupesAVenir.map((groupe) => (
+            <View key={`avenir-${groupe.jour}`}>
+              <View style={styles.enTeteJourAVenir}>
+                <Ionicons name="calendar-outline" size={16} color={couleurs.primaireFonce} />
+                <Text style={styles.texteJour}>{libelleJour(groupe.jour)}</Text>
+                <Text style={styles.compteJour}>
+                  {t('equipe_jour_compte', { n: groupe.liste.length })}
+                </Text>
+              </View>
+              {groupe.liste.map((course) => {
+                const statut = champ<StatutTrajet>(course, 'status', 'statut');
+                const heure = new Date(dateCourse(course)).toLocaleTimeString(localeDate, {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  timeZone: 'Africa/Dar_es_Salaam',
+                });
+                const chauffeurCourse = champ<string>(course, 'driver_name', 'driverName');
+                return (
+                  <View key={course.id} style={styles.ligneAVenir}>
+                    <View style={styles.entetePassee}>
+                      <Text style={styles.itineraire} numberOfLines={1}>
+                        {String(champ(course, 'pickup_location', 'pickupLocation') ?? '?')} →{' '}
+                        {String(champ(course, 'dropoff_location', 'dropoffLocation') ?? '?')}
+                      </Text>
+                      <Text style={styles.prixPassee}>{formaterPrix(course)}</Text>
+                    </View>
+                    <View style={styles.piedPassee}>
+                      <Text style={styles.heureAVenir}>
+                        🕒 {heure}
+                        {chauffeurCourse ? ` · 🚕 ${chauffeurCourse}` : ''}
+                      </Text>
+                      {statut && <BadgeStatutTrajet statut={statut} />}
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          ))}
         </>
       )}
 
