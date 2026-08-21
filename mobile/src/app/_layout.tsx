@@ -3,6 +3,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { DarkTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack, useRouter, type Href } from 'expo-router';
+import { useFonts } from 'expo-font';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect } from 'react';
 import { Pressable, Text, View } from 'react-native';
@@ -13,7 +14,7 @@ import { reparerAlertesWeb } from '@/lib/alerteWeb';
 import { reveillerServeur } from '@/lib/api';
 import { AuthProvider } from '@/lib/auth';
 import { LangueProvider, useT } from '@/lib/i18n';
-import { couleurs, FournisseurPeau, PEAU_PAR_DEFAUT } from '@/lib/theme';
+import { couleurs, FICHIERS_POLICES, FournisseurPeau, PEAU_PAR_DEFAUT } from '@/lib/theme';
 
 // Flèche de retour GARANTIE sur chaque fiche : le retour natif disparaît
 // quand l'historique est vide (page web rechargée, PWA relancée…) et son
@@ -61,10 +62,11 @@ function PilesNavigation() {
         headerTitleStyle: { color: couleurs.encre, fontWeight: '700' },
         headerShadowVisible: false,
         contentStyle: { backgroundColor: 'transparent' },
-        // La signature de « Nuit d'épices » : les pages glissent
-        // latéralement. Android ouvrait les fiches par le bas, l'iPhone par
-        // le côté — même geste partout, maintenant.
-        animation: 'slide_from_right',
+        // La signature du « Lagon de verre » : l'écran entrant se rassemble
+        // sur place, et ses cartes remontent ensuite en décalé (voir Carte).
+        // Un glissé latéral aurait fait bouger le lagon, qui doit rester
+        // immobile sous les panneaux.
+        animation: 'fade',
       }}
     >
       <Stack.Screen name="index" options={{ headerShown: false }} />
@@ -103,6 +105,15 @@ export default function LayoutRacine() {
   useEffect(() => {
     reveillerServeur();
   }, []);
+
+  // Instrument Sans : on attend qu'elle soit là avant de dessiner. Sinon le
+  // premier rendu sort dans la police du système, puis tout se recompose sous
+  // les yeux du client — un sursaut visible à chaque ouverture. En cas
+  // d'échec de chargement, on dessine quand même : une police de repli vaut
+  // mieux qu'un écran blanc.
+  const [policesPretes, erreurPolices] = useFonts(FICHIERS_POLICES);
+  if (!policesPretes && !erreurPolices) return null;
+
   return (
     <LangueProvider>
       <AuthProvider>

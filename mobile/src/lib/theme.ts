@@ -20,7 +20,7 @@
 // de la peau du moment. La bascule se fait dans FournisseurPeau, plus bas.
 // ══════════════════════════════════════════════════════════════════════════
 import React from 'react';
-import { StyleSheet, type TextStyle } from 'react-native';
+import { Platform, StyleSheet, type TextStyle } from 'react-native';
 
 import type { StatutColis, StatutTrajet } from './types';
 
@@ -378,6 +378,83 @@ export const ombres = new Proxy({} as Ombres, {
   }),
 }) as Ombres;
 
+// ──────────────────────────── LA TYPOGRAPHIE ───────────────────────────────
+/**
+ * INSTRUMENT SANS, la voix de la direction : gras serré sur les titres,
+ * lisible et neutre sur le reste.
+ *
+ * Quatre fichiers, un par graisse : React Native ne synthétise pas le gras
+ * d'une police chargée à la main, il faut nommer la coupe exacte.
+ */
+export const POLICES = {
+  400: 'InstrumentSans',
+  500: 'InstrumentSans-Medium',
+  600: 'InstrumentSans-SemiBold',
+  700: 'InstrumentSans-Bold',
+} as const;
+
+/** Les fichiers à charger au démarrage (expo-font). */
+export const FICHIERS_POLICES = {
+  InstrumentSans: require('../../assets/fonts/InstrumentSans-Regular.ttf'),
+  'InstrumentSans-Medium': require('../../assets/fonts/InstrumentSans-Medium.ttf'),
+  'InstrumentSans-SemiBold': require('../../assets/fonts/InstrumentSans-SemiBold.ttf'),
+  'InstrumentSans-Bold': require('../../assets/fonts/InstrumentSans-Bold.ttf'),
+};
+
+function familleSelonPoids(poids: unknown): string {
+  const p = String(poids ?? '400');
+  if (p === 'bold' || p === '700' || p === '800' || p === '900') return POLICES[700];
+  if (p === '600') return POLICES[600];
+  if (p === '500') return POLICES[500];
+  return POLICES[400];
+}
+
+/**
+ * LE VRAI VERRE DÉPOLI — sur le web seulement.
+ *
+ * `backdrop-filter` floute ce qui passe DERRIÈRE le panneau : c'est ce qui
+ * sépare un vrai verre dépoli d'un simple voile blanc. React Native ne
+ * connaît pas cette propriété sur téléphone ; l'application installée garde
+ * le voile translucide, qui en donne déjà l'impression. La version web — la
+ * PWA, celle que les clients ouvrent en scannant le QR — a le verre pour de
+ * bon.
+ */
+const FLOU_VERRE =
+  Platform.OS === 'web' ? { backdropFilter: 'blur(20px) saturate(160%)' } : null;
+
+/** Les surfaces qui reçoivent le flou : celles peintes en verre. */
+const SURFACES_DE_VERRE = new Set([VERRE.carteTranslucide, VERRE.surface, VERRE.primaireClair]);
+
+/**
+ * Pose la police sur tout style qui parle de texte.
+ *
+ * React Native n'a pas de police globale : sans ce passage, il aurait fallu
+ * écrire `fontFamily` dans les quelque huit cents styles de l'application —
+ * et en oublier. Toute entrée qui porte une taille ou une graisse reçoit la
+ * coupe correspondante ; celles qui nomment déjà une police sont laissées
+ * telles quelles.
+ */
+function poserLaPolice<T extends Record<string, unknown>>(feuille: T): T {
+  const verre = peauActive === 'verre' && FLOU_VERRE;
+  const sortie: Record<string, unknown> = {};
+  for (const [cle, valeur] of Object.entries(feuille)) {
+    const entree = valeur as Record<string, unknown>;
+    if (!entree || typeof entree !== 'object') {
+      sortie[cle] = entree;
+      continue;
+    }
+    let finale = entree;
+    if (('fontSize' in finale || 'fontWeight' in finale) && !('fontFamily' in finale)) {
+      finale = { ...finale, fontFamily: familleSelonPoids(finale.fontWeight) };
+    }
+    if (verre && SURFACES_DE_VERRE.has(finale.backgroundColor as string)) {
+      finale = { ...finale, ...FLOU_VERRE };
+    }
+    sortie[cle] = finale;
+  }
+  return sortie as T;
+}
+
 // ───────────────────────── LES FEUILLES RÉACTIVES ──────────────────────────
 /**
  * Comme StyleSheet.create, mais la feuille est (re)construite pour CHAQUE
@@ -395,7 +472,7 @@ export function stylesReactifs<
   const feuille = (): Record<string | symbol, unknown> => {
     let f = feuilles.get(peauActive);
     if (!f) {
-      f = StyleSheet.create(fabrique());
+      f = StyleSheet.create(poserLaPolice(fabrique()));
       feuilles.set(peauActive, f);
     }
     return f as Record<string | symbol, unknown>;

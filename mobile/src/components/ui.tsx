@@ -3,6 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import {
   ActivityIndicator,
+  Animated,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -60,7 +61,13 @@ export function Ecran({
       setRafraichit(false);
     }
   };
+  // Un compteur neuf par écran : la première carte de CHAQUE écran arrive en
+  // premier, même si l'écran précédent en affichait douze.
+  const rang = React.useRef(0);
+  const compteur = React.useMemo(() => ({ suivant: () => rang.current++ }), []);
+
   return (
+    <RangDesCartes.Provider value={compteur}>
     <FondPlage fond={fond} voile="clair">
       <SafeAreaView style={styles.ecran} edges={['top', 'left', 'right']}>
         <KeyboardAvoidingView
@@ -93,6 +100,7 @@ export function Ecran({
         {onRefresh && <BoutonRafraichir onPress={rafraichir} enCours={rafraichit} />}
       </SafeAreaView>
     </FondPlage>
+    </RangDesCartes.Provider>
   );
 }
 
@@ -168,7 +176,23 @@ export function LogoZanziGo({
   );
 }
 
-/** Carte blanche arrondie. */
+/**
+ * LE RANG D'UNE CARTE DANS SON ÉCRAN.
+ *
+ * « Les cartes remontent en décalé » : pour décaler, il faut savoir qui est
+ * premier. Chaque écran ouvre un compteur, chaque carte y prend son numéro à
+ * la volée — aucun écran n'a à numéroter ses cartes à la main.
+ */
+const RangDesCartes = React.createContext<{ suivant: () => number } | null>(null);
+
+function useRangDeCarte(): number {
+  const compteur = React.useContext(RangDesCartes);
+  const rang = React.useRef<number | null>(null);
+  if (rang.current === null) rang.current = compteur ? compteur.suivant() : 0;
+  return rang.current;
+}
+
+/** Panneau de verre arrondi — il remonte en place à l'ouverture de l'écran. */
 export function Carte({
   children,
   style,
@@ -176,7 +200,36 @@ export function Carte({
   children: React.ReactNode;
   style?: StyleProp<ViewStyle>;
 }) {
-  return <View style={[styles.carte, style]}>{children}</View>;
+  const rang = useRangDeCarte();
+  const entree = React.useRef(new Animated.Value(0)).current;
+
+  React.useEffect(() => {
+    Animated.timing(entree, {
+      toValue: 1,
+      duration: 380,
+      // Au-delà de la sixième, on ne décale plus : sur une longue liste, la
+      // dernière carte serait arrivée trois secondes après la première.
+      delay: Math.min(rang, 6) * 60,
+      useNativeDriver: true,
+    }).start();
+  }, [entree, rang]);
+
+  return (
+    <Animated.View
+      style={[
+        styles.carte,
+        {
+          opacity: entree,
+          transform: [
+            { translateY: entree.interpolate({ inputRange: [0, 1], outputRange: [18, 0] }) },
+          ],
+        },
+        style,
+      ]}
+    >
+      {children}
+    </Animated.View>
+  );
 }
 
 export function Titre({ children }: { children: React.ReactNode }) {
