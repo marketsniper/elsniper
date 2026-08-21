@@ -11,6 +11,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import request from 'supertest';
 import {
+  pricePackage,
   privateUsdForRoute,
   netChauffeurPriveUsd,
   forfaitZanzigoTrajetUsd,
@@ -294,6 +295,30 @@ describe('Grille privée : le net du chauffeur décide, le forfait s’ajoute', 
         `Nungwi → ${etape} dépasse Nungwi → Makunduchi`
       );
     }
+  });
+
+  it('le chauffeur touche des comptes RONDS en shillings', () => {
+    // 118 976 devient 118 000 ; les shillings restants rejoignent la
+    // commission zanziGo. Un chauffeur vérifie son portefeuille de tête.
+    for (const [a, b] of [
+      ['Stone Town', 'Nungwi'],
+      ['Stone Town', 'Paje'],
+      ['Paje', 'Jambiani'],
+      ['Nungwi', 'Makunduchi'],
+      ['Aéroport international Abeid Amani Karume', 'Stone Town'],
+    ]) {
+      const course = priceTrip('private', 'local', { pickup: a, dropoff: b });
+      const net = course.price - course.commission;
+      assert.equal(net % 1000, 0, `${a} → ${b} : ${net} n'est pas un compte rond`);
+    }
+    // L'exemple fondateur de la règle, à la lettre.
+    const nungwi = priceTrip('private', 'local', { pickup: 'Stone Town', dropoff: 'Nungwi' });
+    assert.equal(nungwi.price - nungwi.commission, 118000);
+    // La place locale et le colis en shillings suivent.
+    const place = priceTrip('shared_local', 'local', { pickup: 'Stone Town', dropoff: 'Nungwi' });
+    assert.equal(place.price - place.commission, 13000);
+    const colis = pricePackage('TZS', 'small');
+    assert.equal((colis.price - colis.commission) % 1000, 0);
   });
 
   it('bout en bout : une course privée Stone Town → Nungwi est créée à 49 USD', async () => {

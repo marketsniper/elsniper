@@ -59,7 +59,7 @@ describe('Devises taxi partagé (parcours local complet)', () => {
     // Commission partagé local 17 % : le chauffeur touche 83 % de 16 000,
     // soit PLUS que les 12 750 d'avant (15 % de 15 000) — la hausse de la
     // place a été décidée pour ça.
-    assert.equal(Number(booking.net_per_seat), 13600);
+    assert.equal(Number(booking.net_per_seat), 13000);
   });
 
   it('téléphone équipe : l\'identité CLIENT prime sur la clé admin (touriste = USD)', async () => {

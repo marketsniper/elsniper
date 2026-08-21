@@ -261,6 +261,14 @@ const PACKAGE_FARES = {
 
 const round2 = (n) => Math.round(n * 100) / 100;
 
+// LE CHAUFFEUR TOUCHE DES COMPTES RONDS (21/08/2026). Tout gain en shillings
+// est arrondi au MILLIER INFÉRIEUR — 118 976 devient 118 000 — et les
+// shillings restants rejoignent la commission zanziGo. Un chauffeur vérifie
+// son portefeuille de tête ; personne ne compte 976 shillings.
+export function arrondiMillierTzs(montant) {
+  return Math.floor(montant / 1000) * 1000;
+}
+
 /**
  * COMMISSION D'UNE COURSE PRIVÉE : le pourcentage appliqué au prix de base,
  * PLUS le supplément entre villages en entier — ce dollar-là ne se partage
@@ -580,9 +588,12 @@ export function priceTrip(tripType, audience, route = {}) {
       const supp = supplementUsd(route.pickup, route.dropoff);
       const taux = tauxCommissionPrive(usd - supp, route.pickup, route.dropoff);
       const suppTzs = Math.round(supp * config.usdToTzsRate);
+      // Compte rond pour le chauffeur : son gain est arrondi au millier
+      // inférieur, les shillings restants rejoignent la commission.
+      const brut = price - commissionPrive(price, net, taux, suppTzs);
       return {
         price,
-        commission: commissionPrive(price, net, taux, suppTzs),
+        commission: price - arrondiMillierTzs(brut),
         currency: 'TZS',
       };
     }
@@ -590,7 +601,10 @@ export function priceTrip(tripType, audience, route = {}) {
     // GRANDS AXES uniquement ; ailleurs, prix touriste converti en TZS —
     // commission 17 % dans les deux cas (taxi partagé local en TZS).
     const price = localSeatTzsForRoute(route.pickup, route.dropoff);
-    return { price, commission: round2(price * COMMISSION_RATES.local), currency: 'TZS' };
+    // Même règle du compte rond : 17 000 − 20 % = 13 600, le chauffeur touche
+    // 13 000 et les 600 restants vont à la commission.
+    const netRond = arrondiMillierTzs(price * (1 - COMMISSION_RATES.local));
+    return { price, commission: price - netRond, currency: 'TZS' };
   }
 
   let usd;
@@ -642,6 +656,12 @@ export function pricePackage(currency, size = 'medium', remise = 0) {
   const fare = PACKAGE_FARES[size]?.[currency];
   if (fare === undefined) return null;
   const price = remise ? round2(fare * (1 - remise)) : fare;
+  // Colis en shillings : même règle du compte rond que les courses — le net
+  // du chauffeur tombe au millier inférieur, le reste rejoint la commission.
+  if (currency === 'TZS') {
+    const netRond = arrondiMillierTzs(price * (1 - COMMISSION_RATES.package));
+    return { price, commission: round2(price - netRond), currency };
+  }
   return {
     price,
     commission: round2(price * COMMISSION_RATES.package), // 20 % — chauffeur 80 %

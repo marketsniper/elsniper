@@ -23,6 +23,7 @@ import {
   sharedAllowedForRoute,
   sharedSeatUsdForRoute,
   TAUX_PLACE_LOCALE,
+  arrondiMillierTzs,
   TAUX_PLACE_USD,
 } from '../services/pricingService.js';
 import { libelleMoyen, moyensPour, reglement } from '../services/moyenPaiement.js';
@@ -613,11 +614,24 @@ router.get(
         const usd = sharedSeatUsdForRoute(r.origin, r.destination);
         // Commission zanziGo par place : taux local (TZS) ou taux touriste
         // (USD), pris dans la grille — le chauffeur voit son net.
-        const avecGain = (base, taux) => ({
-          ...base,
-          commission_per_seat: round2(base.price_per_seat * taux),
-          net_per_seat: round2(base.price_per_seat * (1 - taux)),
-        });
+        // Les places en SHILLINGS suivent la règle du compte rond : le net du
+        // chauffeur est arrondi au millier inférieur, le reste rejoint la
+        // commission. Les places en dollars gardent le calcul au centime.
+        const avecGain = (base, taux) => {
+          if (base.currency === 'TZS') {
+            const netRond = arrondiMillierTzs(base.price_per_seat * (1 - taux));
+            return {
+              ...base,
+              commission_per_seat: round2(base.price_per_seat - netRond),
+              net_per_seat: netRond,
+            };
+          }
+          return {
+            ...base,
+            commission_per_seat: round2(base.price_per_seat * taux),
+            net_per_seat: round2(base.price_per_seat * (1 - taux)),
+          };
+        };
         // Chaque réservation indique si la place a été payée — et le NOM du
         // passager n'apparaît qu'à ce moment-là : même règle que pour les
         // courses privées (vueChauffeur), l'identité du client se mérite par
