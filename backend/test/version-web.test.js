@@ -76,6 +76,49 @@ describe('Version web : le téléphone ne peut pas rester en arrière', () => {
     );
   });
 
+  it('les icônes portent leur empreinte, et chacune existe', async () => {
+    // Une application posée sur l'écran d'accueil garde l'icône qu'elle avait
+    // le jour de l'installation : le téléphone ne la redemande QUE si son
+    // ADRESSE change. Avec « icone-192.png » figé, un nouveau logo ne
+    // remplaçait jamais l'ancien — l'écran d'accueil restait en arrière.
+    const manifeste = JSON.parse((await request(app).get('/web/manifest.webmanifest')).text);
+    assert.ok(manifeste.icons.length >= 3, 'le manifeste a perdu des icônes');
+    for (const icone of manifeste.icons) {
+      assert.match(
+        icone.src,
+        /^\/web\/[a-z0-9-]+\.[0-9a-f]{8,}\.png$/,
+        `${icone.src} n'a pas d'empreinte : le téléphone garderait l'ancien logo`
+      );
+      const fichier = await request(app).get(icone.src);
+      assert.equal(fichier.status, 200, `${icone.src} est annoncé mais introuvable`);
+    }
+
+    // Même règle pour l'icône iOS, qui vit dans la page et non le manifeste.
+    const page = await request(app).get('/web/');
+    const apple = page.text.match(/apple-touch-icon" href="([^"]+)"/);
+    assert.ok(apple, 'la balise apple-touch-icon a disparu de la page');
+    assert.match(
+      apple[1],
+      /^\/web\/apple-touch-icon\.[0-9a-f]{8,}\.png$/,
+      'l’icône iOS garde un nom fixe'
+    );
+    assert.equal((await request(app).get(apple[1])).status, 200, 'icône iOS introuvable');
+  });
+
+  it('le service worker change à chaque version, sinon l’ancienne apparence survit', async () => {
+    // Le navigateur ne réinstalle le service worker que s'il DIFFÈRE de celui
+    // qu'il a déjà, à l'octet près. Avec un nom de cache écrit en dur, il
+    // restait identique d'une mise en ligne à l'autre : ni ménage des vieux
+    // caches, ni rechargement des fenêtres — le code prévu pour ça ne
+    // s'exécutait jamais, et l'utilisateur voyait toujours l'écran d'avant.
+    const version = JSON.parse((await request(app).get('/web/version.json')).text).version;
+    const sw = (await request(app).get('/web/service-worker.js')).text;
+    assert.ok(
+      sw.includes(`zanzigo-web-${version}`),
+      `le service worker ne porte pas l’estampille ${version} : le cache d’avant survivrait`
+    );
+  });
+
   it('le service worker vide l’ancien cache et recharge les fenêtres ouvertes', async () => {
     const sw = (await request(app).get('/web/service-worker.js')).text;
     assert.ok(!/zanzigo-web-v1'/.test(sw), 'le nom du cache n’a pas changé : l’ancien survivrait');

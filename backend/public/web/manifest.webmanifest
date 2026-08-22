@@ -11,8 +11,8 @@
   "theme_color": "#09404E",
   "lang": "fr",
   "icons": [
-    { "src": "/web/icone-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "/web/icone-512.png", "sizes": "512x512", "type": "image/png" },
-    { "src": "/web/icone-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    { "src": "/web/icone-192.98a6226b97.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/web/icone-512.cbce26f6b6.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/web/icone-maskable-512.69c698cf59.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ]
 }

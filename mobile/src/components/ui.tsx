@@ -4,6 +4,7 @@ import React from 'react';
 import {
   ActivityIndicator,
   Animated,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -338,6 +339,28 @@ export function LogoZanziGo({
       <Text style={{ color: surFonce ? couleurs.blanc : couleurs.encre }}>zanzi</Text>
       <Text style={{ color: accent }}>Go</Text>
     </Text>
+  );
+}
+
+/**
+ * LA MARQUE EN TÊTE D'ÉCRAN — sur CHAQUE onglet, client comme chauffeur.
+ *
+ * Elle vivait jusqu'ici sur les seuls écrans d'entrée. Or personne n'y
+ * retourne : une fois connecté, l'aiguillage envoie droit sur « Réserver ».
+ * Un client fidèle pouvait donc ne jamais voir la marque de l'application
+ * qu'il ouvre tous les jours. Elle se pose maintenant à gauche de l'en-tête,
+ * qui est transparent : elle flotte au-dessus du lagon, sans barre ni couture.
+ */
+export function MarqueEntete() {
+  return (
+    <View style={styles.marqueEntete}>
+      <Image
+        source={require('../../assets/images/logo-marque.png')}
+        style={styles.marqueBadge}
+        accessibilityLabel="zanziGo"
+      />
+      <LogoZanziGo taille={18} />
+    </View>
   );
 }
 
@@ -829,6 +852,23 @@ const styles = stylesReactifs(() => ({
   logo: {
     fontWeight: '800' as TextStyle['fontWeight'],
     letterSpacing: -1,
+  },
+  marqueEntete: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    // L'en-tête flottant n'a pas de fond : sans cette marge, le badge
+    // se collait au bord de l'écran. À droite, de quoi respirer avant le
+    // titre de l'onglet, qui vient se poser juste après.
+    marginLeft: 16,
+    marginRight: 10,
+  },
+  marqueBadge: {
+    width: 26,
+    height: 26,
+    // Le fichier porte déjà ses coins arrondis ; ce rayon n'est là que pour
+    // les rogner encore un peu si la plateforme redimensionne à sa façon.
+    borderRadius: 7,
   },
   carte: {
     backgroundColor: couleurs.carteTranslucide,

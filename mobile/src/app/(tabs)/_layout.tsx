@@ -4,6 +4,7 @@ import { Tabs } from 'expo-router';
 import React from 'react';
 import type { ColorValue } from 'react-native';
 
+import { MarqueEntete } from '@/components/ui';
 import { useRetourSiDeconnecte } from '@/lib/auth';
 import { useT } from '@/lib/i18n';
 import { couleurs } from '@/lib/theme';
@@ -28,6 +29,10 @@ export default function LayoutOnglets() {
         headerTransparent: true,
         headerTitleStyle: { color: couleurs.encre, fontWeight: '700' },
         headerShadowVisible: false,
+        // La marque, à gauche de CHAQUE en-tête : c'est le seul endroit que
+        // voit un utilisateur déjà connecté, qui ne repasse jamais par
+        // l'écran d'entrée.
+        headerLeft: () => <MarqueEntete />,
         tabBarActiveTintColor: couleurs.primaire,
         tabBarInactiveTintColor: couleurs.texteSecondaire,
         tabBarStyle: {
