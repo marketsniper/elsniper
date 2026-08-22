@@ -5,7 +5,7 @@ import React from 'react';
 import { Text, View } from 'react-native';
 
 import { useT } from '@/lib/i18n';
-import { couleurs, espaces, stylesReactifs } from '@/lib/theme';
+import { couleurs, espaces, stylesReactifs, usePeau } from '@/lib/theme';
 
 export interface EtapeTimeline {
   cle: string;
@@ -23,6 +23,12 @@ export function TimelineStatut({
 }) {
   const { t } = useT();
   const indexCourant = etapes.findIndex((e) => e.cle === statutCourant);
+  // LES PIQUETS DE MWANI. Sur l'estran, la frise cesse d'être une colonne de
+  // pastilles pour devenir ce qu'on voit à marée basse tout le long de la
+  // côte est : une rangée de piquets de ferme d'algues, reliés par une corde
+  // tendue. C'est aussi, exactement, ce que raconte une course — une corde
+  // tendue entre deux points. Les autres peaux gardent leurs pastilles.
+  const piquets = usePeau() === 'estran';
 
   return (
     <View>
@@ -36,11 +42,12 @@ export function TimelineStatut({
               <View
                 style={[
                   styles.point,
+                  piquets && styles.piquet,
                   atteinte ? styles.pointAtteint : styles.pointInactif,
-                  courante && styles.pointCourant,
+                  courante && (piquets ? styles.piquetCourant : styles.pointCourant),
                 ]}
               >
-                {atteinte && (
+                {atteinte && !piquets && (
                   <Ionicons name="checkmark" size={12} color={couleurs.surPrimaire} />
                 )}
               </View>
@@ -111,6 +118,19 @@ const styles = stylesReactifs(() => ({
   },
   pointAnnule: {
     backgroundColor: couleurs.danger,
+  },
+  // Le piquet : un pieu court planté dans le fond, pas une pastille. Il est
+  // plus HAUT que large — c'est ce qui le fait lire comme un objet debout.
+  piquet: {
+    width: 5,
+    height: 22,
+    borderRadius: 2.5,
+  },
+  piquetCourant: {
+    width: 7,
+    height: 28,
+    borderRadius: 3.5,
+    borderWidth: 0,
   },
   trait: {
     width: 2,

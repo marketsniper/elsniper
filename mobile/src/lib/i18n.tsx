@@ -2943,6 +2943,22 @@ const CHAINES = {
     de: 'Im Schatten, abends, im Auto',
   },
   peau_bento: { fr: 'Bento', en: 'Bento', sw: 'Bento', it: 'Bento', de: 'Bento' },
+  peau_estran: { fr: 'Estran', en: 'Tideline', sw: 'Ufuo', it: 'Battigia', de: 'Watt' },
+  peau_estran_quand: {
+    fr: 'Partout, de jour comme de nuit',
+    en: 'Everywhere, day and night',
+    sw: 'Kila mahali, mchana na usiku',
+    it: 'Ovunque, giorno e notte',
+    de: 'Überall, Tag und Nacht',
+  },
+  peau_nuit: { fr: 'Nuit d\'épices', en: 'Spice night', sw: 'Usiku wa viungo', it: 'Notte di spezie', de: 'Gewürznacht' },
+  peau_nuit_quand: {
+    fr: 'La nuit, au calme',
+    en: 'At night, in the quiet',
+    sw: 'Usiku, kwa utulivu',
+    it: 'La notte, in tranquillità',
+    de: 'Nachts, in Ruhe',
+  },
   peau_bento_quand: {
     fr: 'En plein soleil, sur la plage',
     en: 'In full sun, on the beach',

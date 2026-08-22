@@ -21,8 +21,8 @@ import {
 import { HeaderHeightContext } from '@react-navigation/elements';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { FondPlage, LagonDeVerre, type NomFond } from '@/components/FondPlage';
-import { LANGUES, useT, libelleStatutColis, libelleStatutTrajet } from '@/lib/i18n';
+import { EstranDeZanzibar, FondPlage, LagonDeVerre, type NomFond } from '@/components/FondPlage';
+import { LANGUES, useT, libelleStatutColis, libelleStatutTrajet, type CleChaine } from '@/lib/i18n';
 import { PEAUX_AU_CHOIX, usePreferencePeau } from '@/lib/preferencePeau';
 import {
   apercuPeau,
@@ -35,6 +35,7 @@ import {
   stylesReactifs,
   tailles,
   usePeau,
+  type NomPeau,
 } from '@/lib/theme';
 import type { StatutColis, StatutTrajet } from '@/lib/types';
 
@@ -210,8 +211,18 @@ export function SelecteurLangue({ compact = false }: { compact?: boolean }) {
   );
 }
 
+// Le nom et le « quand l'utiliser » de chaque peau. Une TABLE, pas un
+// ternaire : le sélecteur était écrit pour exactement deux peaux, et une
+// troisième se serait affichée sous le nom de la première.
+const LIBELLES_PEAU: Record<NomPeau, { nom: CleChaine; quand: CleChaine }> = {
+  verre: { nom: 'peau_lagon', quand: 'peau_lagon_quand' },
+  bento: { nom: 'peau_bento', quand: 'peau_bento_quand' },
+  nuit: { nom: 'peau_nuit', quand: 'peau_nuit_quand' },
+  estran: { nom: 'peau_estran', quand: 'peau_estran_quand' },
+};
+
 /**
- * LE CHOIX DU DESIGN — Lagon ou Bento.
+ * LE CHOIX DU DESIGN.
  *
  * Zanzibar, midi, sur la plage : un écran sombre devient un miroir. Le même
  * écran sous une paillote au coucher du soleil est le plus reposant qui
@@ -230,14 +241,14 @@ export function SelecteurPeau({ compact = false }: { compact?: boolean }) {
       {PEAUX_AU_CHOIX.map((nom) => {
         const actif = peau === nom;
         const vue = apercuPeau(nom);
-        const bento = nom === 'bento';
+        const mots = LIBELLES_PEAU[nom];
         return (
           <Pressable
             key={nom}
             onPress={() => choisir(nom)}
             accessibilityRole="radio"
             accessibilityState={{ selected: actif }}
-            accessibilityLabel={bento ? t('peau_bento') : t('peau_lagon')}
+            accessibilityLabel={t(mots.nom)}
             style={({ pressed }) => [
               styles.casePeau,
               actif && styles.casePeauActive,
@@ -252,6 +263,7 @@ export function SelecteurPeau({ compact = false }: { compact?: boolean }) {
               ]}
             >
               {nom === 'verre' && <LagonDeVerre fond={vue.fond} />}
+              {nom === 'estran' && <EstranDeZanzibar fond={vue.fond} />}
               <View
                 style={[
                   styles.apercuCarte,
@@ -268,16 +280,12 @@ export function SelecteurPeau({ compact = false }: { compact?: boolean }) {
               <View style={[styles.apercuBouton, { backgroundColor: vue.accent }]} />
             </View>
             <View style={styles.enTetePeau}>
-              <Text style={styles.nomPeau}>{bento ? t('peau_bento') : t('peau_lagon')}</Text>
+              <Text style={styles.nomPeau}>{t(mots.nom)}</Text>
               {actif && (
                 <Ionicons name="checkmark-circle" size={18} color={couleurs.primaire} />
               )}
             </View>
-            {!compact && (
-              <Text style={styles.quandPeau}>
-                {bento ? t('peau_bento_quand') : t('peau_lagon_quand')}
-              </Text>
-            )}
+            {!compact && <Text style={styles.quandPeau}>{t(mots.quand)}</Text>}
           </Pressable>
         );
       })}
@@ -356,6 +364,13 @@ export function Carte({
         style,
       ]}
     >
+      {/* L'OMBRE DE CONTACT — la petite ombre dense juste sous l'objet. La
+          carte porte déjà l'ombre longue et douce qui la décolle du fond ;
+          celle-ci la POSE. React Native n'accepte qu'une ombre par vue : il
+          faut donc deux couches pour qu'une carte ait du poids. */}
+      {!!ombres.contact && (
+        <View style={styles.calqueContact} pointerEvents="none" />
+      )}
       {verre && VueFloue && (
         <View style={styles.calqueFlou} pointerEvents="none">
           <VueFloue
@@ -669,12 +684,17 @@ const styles = stylesReactifs(() => ({
     ...ombres.carte,
   },
   // ─── LE CHOIX DU DESIGN ────────────────────────────────────────────────
+  // `flexWrap` : la rangée était dimensionnée pour exactement deux cases.
+  // `minWidth` garde une case lisible quand il y en a trois.
   rangeePeaux: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: espaces.m,
   },
   casePeau: {
-    flex: 1,
+    flexGrow: 1,
+    flexShrink: 1,
+    flexBasis: 130,
     backgroundColor: couleurs.carteTranslucide,
     borderRadius: rayons.carte,
     borderWidth: 1,
@@ -787,6 +807,12 @@ const styles = stylesReactifs(() => ({
   },
   // Le flou, découpé à l'arrondi de la carte. `overflow` est ici et pas sur
   // la carte : masquer la carte masquerait aussi son ombre (iOS).
+  calqueContact: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: rayons.carte,
+    backgroundColor: couleurs.carteTranslucide,
+    ...(ombres.contact ?? {}),
+  },
   calqueFlou: {
     ...StyleSheet.absoluteFillObject,
     borderRadius: rayons.carte,

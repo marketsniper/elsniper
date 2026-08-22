@@ -20,7 +20,7 @@ import { FournisseurPeau, PEAU_PAR_DEFAUT, type NomPeau } from './theme';
 const CLE = 'zanzigo.peau';
 
 /** Les peaux proposées au client, dans l'ordre où elles s'affichent. */
-export const PEAUX_AU_CHOIX = ['verre', 'bento'] as const satisfies readonly NomPeau[];
+export const PEAUX_AU_CHOIX = ['estran', 'verre', 'bento'] as const satisfies readonly NomPeau[];
 
 function peauValide(valeur: string | null): NomPeau | null {
   return (PEAUX_AU_CHOIX as readonly string[]).includes(valeur ?? '')

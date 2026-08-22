@@ -9,13 +9,13 @@ import React, { useEffect } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import { FournisseurDialogues } from '@/components/BoiteDialogue';
-import { LagonDeVerre } from '@/components/FondPlage';
+import { EstranDeZanzibar, LagonDeVerre } from '@/components/FondPlage';
 import { reparerAlertesWeb } from '@/lib/alerteWeb';
 import { reveillerServeur } from '@/lib/api';
 import { AuthProvider } from '@/lib/auth';
 import { LangueProvider, useT } from '@/lib/i18n';
 import { FournisseurPreferencePeau } from '@/lib/preferencePeau';
-import { couleurs, FICHIERS_POLICES, usePeau } from '@/lib/theme';
+import { couleurs, FICHIERS_POLICES, usePeau, type NomPeau } from '@/lib/theme';
 
 // Flèche de retour GARANTIE sur chaque fiche : le retour natif disparaît
 // quand l'historique est vide (page web rechargée, PWA relancée…) et son
@@ -100,6 +100,12 @@ function PilesNavigation() {
 // Transparent, il le laisse passer. Deux variantes : les valeurs par défaut
 // de React Navigation (bordures, curseur de saisie) n'ont pas la même
 // lisibilité sur crème que sur bleu profond.
+// Les peaux CLAIRES : elles demandent une heure sombre dans la barre d'état
+// et les valeurs claires de React Navigation. Une liste plutôt qu'un test sur
+// « bento » — une quatrième peau claire serait sinon sortie avec l'heure en
+// blanc sur fond blanc.
+const PEAUX_CLAIRES = new Set<NomPeau>(['bento', 'estran']);
+
 const THEME_SOMBRE = {
   ...DarkTheme,
   colors: { ...DarkTheme.colors, background: 'transparent', card: 'transparent' },
@@ -123,7 +129,7 @@ function CadreApplication() {
     <>
       {/* Heure et batterie du téléphone : claires sur le lagon, sombres sur
           le crème de Bento — sinon elles disparaissent. */}
-      <StatusBar style={peau === 'bento' ? 'dark' : 'light'} />
+      <StatusBar style={PEAUX_CLAIRES.has(peau) ? 'dark' : 'light'} />
       {/* La `key` remonte toute la navigation à chaque changement de peau.
           C'est volontaire : les feuilles de style sont lues À LA VOLÉE par
           les écrans, et un écran déjà rendu ne se redessine pas parce qu'un
@@ -131,7 +137,8 @@ function CadreApplication() {
           l'ancienne peau, texte blanc sur crème compris. */}
       <View key={peau} style={{ flex: 1, backgroundColor: couleurs.sable }}>
         {peau === 'verre' && <LagonDeVerre />}
-        <ThemeProvider value={peau === 'bento' ? THEME_CLAIR : THEME_SOMBRE}>
+        {peau === 'estran' && <EstranDeZanzibar />}
+        <ThemeProvider value={PEAUX_CLAIRES.has(peau) ? THEME_CLAIR : THEME_SOMBRE}>
           {/* Les fenêtres de confirmation s'affichent par-dessus tout écran. */}
           <FournisseurDialogues>
             <PilesNavigation />

@@ -24,7 +24,7 @@ import { Platform, StyleSheet, type TextStyle } from 'react-native';
 
 import type { StatutColis, StatutTrajet } from './types';
 
-export type NomPeau = 'bento' | 'nuit' | 'verre';
+export type NomPeau = 'bento' | 'nuit' | 'verre' | 'estran';
 
 interface Palette {
   primaire: string;
@@ -230,7 +230,73 @@ const VERRE: Palette = {
   surChauffeurDoux: 'rgba(14, 39, 51, 0.76)',
 };
 
-const PEAUX: Record<NomPeau, Palette> = { bento: BENTO, nuit: NUIT, verre: VERRE };
+// ──────────────────────────── 05 · ESTRAN ─────────────────────────────────
+//
+// LA CARTE MARINE DE ZANZIBAR.
+//
+// Deux fois par jour la mer recule de plusieurs centaines de mètres et l'île
+// montre ses courbes de niveau : bancs de sable, herbiers, tombant du récif.
+// C'est cette lecture-là que porte la peau — un relevé bathymétrique en
+// strates, des cartes posées à des profondeurs mesurées, et UNE seule chose
+// chaude à l'écran : l'orange qui demande d'agir.
+//
+// Trois corrections de fond par rapport au lagon précédent :
+//  · l'eau du lagon n'est pas turquoise. Les herbiers en couvrent l'essentiel
+//    et la donnent JADE, presque olive. Le turquoise n'existe qu'en bandes
+//    étroites, sur le sable nu — il redevient donc un accent, pas un champ.
+//  · la peau est CLAIRE. Le texte sombre sur fond clair se lit mieux (la
+//    pupille se contracte, moins d'aberrations optiques) et l'écart se creuse
+//    dans le noir — c'est-à-dire dans la voiture du chauffeur, la nuit. En
+//    plein soleil les deux polarités se valent : une peau sombre n'apporte
+//    donc rien et coûte le reflet.
+//  · les surfaces qui portent du texte sont OPAQUES. Un panneau translucide
+//    n'a pas de contraste mesurable : il dépend de ce qui passe derrière. Le
+//    verre dépoli reste, mais pour le décor.
+const ESTRAN: Palette = {
+  primaire: '#D4551F', // l'étoile de l'estran — la couleur d'action, et rien d'autre
+  primaireFonce: '#0B4A47', // teal profond : liens, chiffres, libellés qui portent
+  primaireClair: '#FBE4D6', // pastilles et encarts d'information
+  sable: '#E7EEEB', // l'estran découvert — le fond de tous les écrans
+  blanc: '#FFFFFF',
+  encre: '#0A2A2E', // le tombant : texte principal, et couleur de toutes les ombres
+  texteSecondaire: '#41615F', // l'herbier
+  bordure: '#D2DEDA',
+  danger: '#8E1F26', // l'oursin — volontairement sourd, il ne doit pas crier
+  dangerFonce: '#6B141A',
+  dangerFond: '#F7E4E4',
+  dangerBordure: '#E6C4C4',
+  succes: '#0E6E34',
+  surSucces: '#FFFFFF',
+  succesFond: '#DDEEE2',
+  attente: '#8A5A12',
+  attenteFond: '#F7E9CE',
+  orange: '#B4541B',
+  orangeFond: '#FAE4D5',
+  etoile: '#C9891A', // l'or clair disparaît sur un fond clair : on l'assombrit
+  voile: 'rgba(10, 42, 46, 0.74)',
+  succesClair: '#7BE3A3',
+  dangerClair: '#FCA5A5',
+  voilePhotoClair: '#E7EEEB',
+  voilePhotoSombre: 'rgba(10, 42, 46, 0.55)',
+  fondOnglets: '#FFFFFF',
+  carteTranslucide: '#FFFFFF', // OPAQUE : la profondeur vient de l'ombre, pas de la transparence
+  surface: '#FFFFFF',
+  surPrimaire: '#FFFFFF',
+  or: '#C9891A',
+  nuit: '#0A2A2E',
+  vertFeu: '#0E6E34',
+  surVertFeu: '#FFFFFF',
+  turquoise: '#0B6E74', // le lagon à un mètre — le repère CLIENT sur une carte
+  surVoile: '#FFFFFF',
+  accentFond: '#0A2A2E',
+  surAccent: '#E7EEEB',
+  surAccentDoux: 'rgba(231, 238, 235, 0.74)',
+  chauffeurFond: '#F2B389',
+  surChauffeur: '#3A1C0C',
+  surChauffeurDoux: 'rgba(58, 28, 12, 0.74)',
+};
+
+const PEAUX: Record<NomPeau, Palette> = { bento: BENTO, nuit: NUIT, verre: VERRE, estran: ESTRAN };
 
 /**
  * LA PEAU DE L'APPLICATION — « Lagon de verre » (21/08/2026).
@@ -242,7 +308,7 @@ const PEAUX: Record<NomPeau, Palette> = { bento: BENTO, nuit: NUIT, verre: VERRE
  * couleurs de la peau précédente : l'application s'ouvrait sur un fond crème
  * sous un dégradé de lagon.
  */
-export const PEAU_PAR_DEFAUT: NomPeau = 'verre';
+export const PEAU_PAR_DEFAUT: NomPeau = 'estran';
 
 // La peau active. Volontairement une variable de module : les feuilles de
 // style sont construites hors composant, elles doivent pouvoir la consulter
@@ -286,6 +352,10 @@ const RAYONS: Record<NomPeau, Rayons> = {
   nuit: { carte: 12, bouton: 12, pastille: 999 },
   // Le verre est généreux : des angles serrés casseraient l'effet de panneau.
   verre: { carte: 18, bouton: 16, pastille: 999 },
+  // L'estran : des angles mesurés. Une carte marine a des cartouches, pas des
+  // galets — et un arrondi uniforme partout est l'un des tics du design
+  // fabriqué à la chaîne.
+  estran: { carte: 14, bouton: 10, pastille: 999 },
 };
 
 export const rayons = new Proxy({} as Rayons, {
@@ -334,6 +404,15 @@ interface Relief {
 interface Ombres {
   carte: Relief;
   douce: Relief;
+  /**
+   * L'OMBRE DE CONTACT — la petite ombre dense, juste sous l'objet.
+   *
+   * React Native n'accepte qu'UNE ombre par vue : une ombre longue et douce
+   * fait flotter, une ombre courte et dense fait poser, et il faut les deux
+   * pour qu'un objet ait l'air pesant. `Carte` la peint donc sur une couche
+   * intérieure. Optionnelle : les peaux qui n'en veulent pas ne changent pas.
+   */
+  contact?: Relief;
 }
 const OMBRES: Record<NomPeau, Ombres> = {
   bento: {
@@ -398,6 +477,43 @@ const OMBRES: Record<NomPeau, Ombres> = {
       elevation: 6,
     },
   },
+  // ─── L'ESTRAN : UNE SEULE SOURCE DE LUMIÈRE, HAUTE ───────────────────────
+  //
+  // Ce qui fait lire la profondeur n'est pas la force de l'ombre, c'est sa
+  // COHÉRENCE : deux directions de lumière dans un même écran détruisent
+  // l'illusion. Ici tout tombe verticalement, comme le soleil au 6e parallèle
+  // sud à midi. Et chaque carte porte DEUX ombres : une longue et douce qui
+  // la décolle, une courte et dense qui la pose. C'est le couple qui donne le
+  // poids — une ombre seule fait un autocollant.
+  estran: {
+    carte: {
+      borderWidth: 1,
+      borderColor: ESTRAN.bordure,
+      shadowColor: ESTRAN.encre,
+      shadowOpacity: 0.13,
+      shadowRadius: 22,
+      shadowOffset: { width: 0, height: 10 },
+      elevation: 3,
+    },
+    douce: {
+      borderWidth: 1,
+      borderColor: ESTRAN.bordure,
+      shadowColor: ESTRAN.encre,
+      shadowOpacity: 0.18,
+      shadowRadius: 34,
+      shadowOffset: { width: 0, height: 18 },
+      elevation: 6,
+    },
+    contact: {
+      borderWidth: 0,
+      borderColor: 'transparent',
+      shadowColor: ESTRAN.encre,
+      shadowOpacity: 0.1,
+      shadowRadius: 3,
+      shadowOffset: { width: 0, height: 2 },
+      elevation: 1,
+    },
+  },
 };
 
 export const ombres = new Proxy({} as Ombres, {
@@ -419,12 +535,68 @@ export const ombres = new Proxy({} as Ombres, {
  * Quatre fichiers, un par graisse : React Native ne synthétise pas le gras
  * d'une police chargée à la main, il faut nommer la coupe exacte.
  */
-export const POLICES = {
-  400: 'InstrumentSans',
-  500: 'InstrumentSans-Medium',
-  600: 'InstrumentSans-SemiBold',
-  700: 'InstrumentSans-Bold',
-} as const;
+/**
+ * LA VOIX DE CHAQUE PEAU.
+ *
+ * La police fait partie de la direction, pas du réglage global : les feuilles
+ * de style étant déjà construites peau par peau, `poserLaPolice` peut choisir
+ * la famille du moment sans que rien d'autre ne bouge.
+ *
+ * · Instrument Sans — les trois premières directions.
+ * · ARCHIVO, sur l'estran. Grotesque à très grande hauteur d'x et à
+ *   descendantes courtes : à corps égal, il rend plus de millimètres de
+ *   glyphe qu'Instrument Sans. Ça compte ici — passer de 3 à 4 mm de hauteur
+ *   de glyphe améliore le seuil de lisibilité MÊME en pleine lumière, et nos
+ *   chauffeurs lisent au coup d'œil, moteur tournant.
+ * · FAUSTINA pour les montants. Un serif de labeur, pas un serif de mode :
+ *   il donne aux chiffres une assise que la grotesque n'a pas, et il évite le
+ *   couple « grotesque + serif d'affichage » qu'on voit sur toutes les
+ *   planches fabriquées à la chaîne. Même fonderie qu'Archivo (Omnibus-Type),
+ *   donc des métriques verticales voisines : « 48 » et « USD » se posent sur
+ *   la même ligne de base sans rattrapage à la main.
+ */
+const POLICES_PAR_PEAU: Record<NomPeau, { 400: string; 500: string; 600: string; 700: string }> = {
+  bento: {
+    400: 'InstrumentSans',
+    500: 'InstrumentSans-Medium',
+    600: 'InstrumentSans-SemiBold',
+    700: 'InstrumentSans-Bold',
+  },
+  nuit: {
+    400: 'InstrumentSans',
+    500: 'InstrumentSans-Medium',
+    600: 'InstrumentSans-SemiBold',
+    700: 'InstrumentSans-Bold',
+  },
+  verre: {
+    400: 'InstrumentSans',
+    500: 'InstrumentSans-Medium',
+    600: 'InstrumentSans-SemiBold',
+    700: 'InstrumentSans-Bold',
+  },
+  estran: {
+    400: 'Archivo',
+    500: 'Archivo-Medium',
+    600: 'Archivo-SemiBold',
+    700: 'Archivo-Bold',
+  },
+};
+
+/** Compatibilité : la famille de la peau ACTIVE, par graisse. */
+export const POLICES = new Proxy({} as Record<400 | 500 | 600 | 700, string>, {
+  get: (_c, cle) => POLICES_PAR_PEAU[peauActive][Number(cle) as 400],
+}) as Record<400 | 500 | 600 | 700, string>;
+
+/**
+ * LA POLICE DES MONTANTS — à poser À LA MAIN, jamais injectée.
+ *
+ * `poserLaPolice` ne remplit que les styles SANS fontFamily : il suffit donc
+ * d'écrire `fontFamily: POLICE_MONTANT` là où un chiffre doit peser.
+ * Renvoie la famille d'interface sur les peaux qui n'ont pas de serif.
+ */
+export function policeMontant(): string {
+  return peauActive === 'estran' ? 'Faustina-Bold' : POLICES_PAR_PEAU[peauActive][700];
+}
 
 /** Les fichiers à charger au démarrage (expo-font). */
 export const FICHIERS_POLICES = {
@@ -432,6 +604,12 @@ export const FICHIERS_POLICES = {
   'InstrumentSans-Medium': require('../../assets/fonts/InstrumentSans-Medium.ttf'),
   'InstrumentSans-SemiBold': require('../../assets/fonts/InstrumentSans-SemiBold.ttf'),
   'InstrumentSans-Bold': require('../../assets/fonts/InstrumentSans-Bold.ttf'),
+  Archivo: require('../../assets/fonts/Archivo-Regular.ttf'),
+  'Archivo-Medium': require('../../assets/fonts/Archivo-Medium.ttf'),
+  'Archivo-SemiBold': require('../../assets/fonts/Archivo-SemiBold.ttf'),
+  'Archivo-Bold': require('../../assets/fonts/Archivo-Bold.ttf'),
+  'Faustina-SemiBold': require('../../assets/fonts/Faustina-SemiBold.ttf'),
+  'Faustina-Bold': require('../../assets/fonts/Faustina-Bold.ttf'),
 };
 
 function familleSelonPoids(poids: unknown): string {
@@ -552,11 +730,13 @@ const TONS_TRAJET: Record<NomPeau, Record<StatutTrajet, Ton>> = {
   bento: tonsTrajet(BENTO),
   nuit: tonsTrajet(NUIT),
   verre: tonsTrajet(VERRE),
+  estran: tonsTrajet(ESTRAN),
 };
 const TONS_COLIS: Record<NomPeau, Record<StatutColis, Ton>> = {
   bento: tonsColis(BENTO),
   nuit: tonsColis(NUIT),
   verre: tonsColis(VERRE),
+  estran: tonsColis(ESTRAN),
 };
 
 /** Couleurs de pastille par statut de trajet (fond doux + texte lisible). */

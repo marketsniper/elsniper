@@ -12,8 +12,8 @@
 //
 // Le composant garde son nom et ses props : trente écrans les passent.
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
-import Svg, { Defs, RadialGradient, Rect, Stop } from 'react-native-svg';
+import { StyleSheet, useWindowDimensions, View } from 'react-native';
+import Svg, { Defs, LinearGradient, Path, RadialGradient, Rect, Stop } from 'react-native-svg';
 
 import { couleurs, stylesReactifs, usePeau } from '@/lib/theme';
 
@@ -55,6 +55,140 @@ export function LagonDeVerre({ fond }: { fond?: string } = {}) {
   );
 }
 
+// ───────────────────────────── L'ESTRAN ────────────────────────────────────
+//
+// UN RELEVÉ BATHYMÉTRIQUE, DESSINÉ, PAS PHOTOGRAPHIÉ.
+//
+// Deux fois par jour la mer recule de plusieurs centaines de mètres et
+// découvre les courbes de niveau de l'île. Le fond de l'application est ce
+// relevé : cinq bandes séparées par des laisses de mer, de l'estran clair en
+// haut au tombant du récif en bas.
+//
+// Les courbes sont ENGENDRÉES, pas tracées à la main : déplacement du point
+// milieu, six itérations, rugosité H ≈ 0,62 — soit une dimension fractale
+// D ≈ 1,38. C'est la bande pour laquelle une préférence humaine est
+// documentée (Taylor et coll.) ; la littérature reste nuancée et pleine de
+// différences individuelles, on ne lui fait pas dire plus que ça. Ce qu'on
+// sait à coup sûr, en revanche, c'est qu'une courbe fractale ne ressemble
+// PAS à une sinusoïde — et c'est ce qui distingue un rivage d'un motif
+// fabriqué à la chaîne.
+//
+// Les graines sont EN DUR : aucun tirage au rendu. Deux téléphones du même
+// couple doivent afficher exactement le même dessin, sinon l'application a
+// l'air cassée.
+
+const GRAINES = [7, 23, 41, 59, 83];
+
+/** Générateur congruentiel linéaire — reproductible, sans dépendance. */
+function bruit(graine: number): () => number {
+  let etat = graine >>> 0;
+  return () => {
+    etat = (Math.imul(etat, 1664525) + 1013904223) >>> 0;
+    return etat / 4294967296;
+  };
+}
+
+/**
+ * Une laisse de mer : 2^n + 1 hauteurs normalisées, par déplacement du point
+ * milieu. À chaque itération on insère un point au milieu de chaque segment
+ * et on le décale d'un bruit dont l'amplitude décroît en 2^(-H).
+ */
+function laisse(graine: number, iterations = 6, H = 0.62): number[] {
+  const r = bruit(graine);
+  let points = [0, 0];
+  let amplitude = 1;
+  for (let i = 0; i < iterations; i += 1) {
+    const suivant: number[] = [];
+    for (let k = 0; k < points.length - 1; k += 1) {
+      suivant.push(points[k], (points[k] + points[k + 1]) / 2 + (r() * 2 - 1) * amplitude);
+    }
+    suivant.push(points[points.length - 1]);
+    points = suivant;
+    amplitude *= Math.pow(2, -H);
+  }
+  return points;
+}
+
+/**
+ * Les cinq tons du relevé, du plus découvert au plus profond.
+ *
+ * La gamme est VOLONTAIREMENT resserrée. Au premier essai elle allait
+ * jusqu'au jade soutenu : le bas de l'écran devenait un bloc qui se battait
+ * avec les cartes, et les laisses de mer se lisaient comme du papier déchiré.
+ * Un fond doit se laisser regarder sans qu'on le regarde. On garde la
+ * bathymétrie — l'eau se fonce vers le bas — mais dans un souffle.
+ */
+const STRATES = ['#E2EAE6', '#D9E3DF', '#CEDAD6', '#C2D0CD', '#B3C5C3'];
+// L'amplitude décroît avec la profondeur : le platier près du récif est
+// tourmenté, le fond du chenal est lisse. C'est de la bathymétrie vraie.
+const AMPLITUDES = [30, 22, 15, 10, 7];
+
+/**
+ * Le chemin fermé d'une bande : la laisse de mer en haut, puis on descend
+ * jusqu'en bas de l'écran. Les bandes sont peintes l'une SUR l'autre — pas
+ * de transparence, donc pas de couleur imprévisible sous le texte.
+ */
+function cheminBande(hauteurs: number[], y: number, amplitude: number, l: number, h: number) {
+  const pas = l / (hauteurs.length - 1);
+  let d = `M 0 ${(y + hauteurs[0] * amplitude).toFixed(1)}`;
+  for (let i = 1; i < hauteurs.length; i += 1) {
+    d += ` L ${(i * pas).toFixed(1)} ${(y + hauteurs[i] * amplitude).toFixed(1)}`;
+  }
+  return `${d} L ${l.toFixed(1)} ${h.toFixed(1)} L 0 ${h.toFixed(1)} Z`;
+}
+
+export function EstranDeZanzibar({ fond }: { fond?: string } = {}) {
+  const cle = React.useId().replace(/[^a-zA-Z0-9]/g, '');
+  const { width, height } = useWindowDimensions();
+  // Une seule et même géométrie tant que la largeur ne change pas : ce calcul
+  // ne doit pas repartir à chaque image.
+  const bandes = React.useMemo(() => {
+    const l = Math.max(1, width);
+    const h = Math.max(1, height);
+    // Le relevé commence sous l'en-tête et court jusqu'en bas.
+    // Le relevé démarre sous la première carte, pas sous l'en-tête : une
+    // laisse de mer qui coupe la carte d'ouverture en deux la fait paraître
+    // déchirée.
+    const depart = h * 0.46;
+    const pas = (h - depart) / STRATES.length;
+    return GRAINES.map((graine, k) => ({
+      d: cheminBande(laisse(graine), depart + k * pas, AMPLITUDES[k], l, h),
+      teinte: STRATES[k],
+    }));
+  }, [width, height]);
+
+  return (
+    <View style={styles.lagon} pointerEvents="none">
+      <Svg width="100%" height="100%">
+        <Defs>
+          {/* Le ciel de l'estran : à peine un souffle plus clair en haut. Deux
+              pour cent de variation — assez pour que la page ne soit pas un
+              aplat mort, trop peu pour qu'on le remarque. */}
+          <LinearGradient id={`${cle}-ciel`} x1="0" y1="0" x2="0" y2="1">
+            <Stop offset="0" stopColor="#F3F8F5" stopOpacity="1" />
+            <Stop offset="1" stopColor={fond ?? couleurs.sable} stopOpacity="1" />
+          </LinearGradient>
+        </Defs>
+        <Rect x="0" y="0" width="100%" height="100%" fill={`url(#${cle}-ciel)`} />
+        {bandes.map((bande, i) => (
+          <React.Fragment key={i}>
+            <Path d={bande.d} fill={bande.teinte} />
+            {/* La laisse elle-même : le trait d'écume que laisse la marée en
+                se retirant. C'est lui qui fait « relevé » plutôt que « vague ». */}
+            <Path
+              d={bande.d}
+              fill="none"
+              stroke="#FFFFFF"
+              strokeWidth={1}
+              strokeOpacity={0.3}
+            />
+          </React.Fragment>
+        ))}
+      </Svg>
+    </View>
+  );
+}
+
 export function FondPlage({
   children,
 }: {
@@ -73,6 +207,7 @@ export function FondPlage({
   return (
     <View style={styles.fond}>
       {peau === 'verre' && <LagonDeVerre />}
+      {peau === 'estran' && <EstranDeZanzibar />}
       {children}
     </View>
   );

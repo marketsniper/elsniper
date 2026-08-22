@@ -30,7 +30,7 @@ import { useAuth } from '@/lib/auth';
 import { useRafraichissementAuto } from '@/lib/rafraichissementAuto';
 import { lireStockage } from '@/lib/stockage';
 import { formaterDateRelativeI18n, libelleStatutTrajet, libelleTypeTrajet, useT } from '@/lib/i18n';
-import { couleurs, espaces, stylesReactifs } from '@/lib/theme';
+import { couleurs, espaces, policeMontant, stylesReactifs } from '@/lib/theme';
 import {
   champ,
   coordonneesVille,
@@ -890,11 +890,15 @@ const styles = stylesReactifs(() => ({
     gap: espaces.xs,
     marginTop: espaces.m,
   },
+  // Le chiffre qui compte prend le serif de labeur : il donne aux nombres une
+  // assise que la grotesque n'a pas. `poserLaPolice` ne remplit que les styles
+  // SANS fontFamily — l'écrire ici suffit à l'imposer.
   bandeauChiffre: {
     fontSize: 56,
-    lineHeight: 60,
+    lineHeight: 62,
     fontWeight: '800',
     letterSpacing: -2,
+    fontFamily: policeMontant(),
     color: couleurs.primaire,
   },
   bandeauUnite: {
@@ -976,7 +980,8 @@ const styles = stylesReactifs(() => ({
   prix: {
     fontSize: 26,
     fontWeight: '800',
-    letterSpacing: -0.6,
+    letterSpacing: -0.4,
+    fontFamily: policeMontant(),
     color: couleurs.encre,
   },
 
@@ -1008,7 +1013,8 @@ const styles = stylesReactifs(() => ({
   prixMoyen: {
     fontSize: 20,
     fontWeight: '800',
-    letterSpacing: -0.5,
+    letterSpacing: -0.3,
+    fontFamily: policeMontant(),
     color: couleurs.primaire,
   },
   filetMoyen: {

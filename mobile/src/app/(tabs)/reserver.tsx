@@ -39,7 +39,7 @@ import {
   useT,
 } from '@/lib/i18n';
 import { positionActuelle } from '@/lib/position';
-import { couleurs, espaces, ombres, rayons, stylesReactifs } from '@/lib/theme';
+import { couleurs, espaces, ombres, policeMontant, rayons, stylesReactifs } from '@/lib/theme';
 import {
   champ,
   dureeRouteMinutes,
@@ -804,6 +804,7 @@ const styles = stylesReactifs(() => ({
     fontWeight: '800',
     color: couleurs.encre,
     letterSpacing: -0.5,
+    fontFamily: policeMontant(),
   },
   // En attendant le choix du trajet : pas de montant, juste une invitation.
   prixModeAttente: {
