@@ -76,9 +76,9 @@ interface Palette {
   surAccentDoux: string;
   /**
    * LA CARTE « CHAUFFEUR » de la page d'accueil — un aplat PLEIN au milieu
-   * de trois cartes translucides. C'est le turquoise de la marque, jamais
-   * utilisé ailleurs comme surface : la case ne ressemble à rien d'autre
-   * dans l'application, on la trouve sans la chercher.
+   * de trois cartes translucides. Un orange pastel : assez chaud pour
+   * accrocher l'œil sur le crème comme sur le lagon, assez doux pour ne pas
+   * voler la vedette au corail, qui reste la couleur des actions.
    */
   chauffeurFond: string;
   /** Titre posé sur `chauffeurFond`. */
@@ -127,9 +127,9 @@ const BENTO: Palette = {
   accentFond: '#241017',
   surAccent: '#FFF4E8',
   surAccentDoux: 'rgba(255, 244, 232, 0.72)',
-  chauffeurFond: '#0E9AA7',
-  surChauffeur: '#FFFFFF',
-  surChauffeurDoux: 'rgba(255, 255, 255, 0.82)',
+  chauffeurFond: '#F9A97E',
+  surChauffeur: '#241017',
+  surChauffeurDoux: 'rgba(36, 16, 23, 0.74)',
 };
 
 // ──────────────────────────── 03 · NUIT D'ÉPICES ───────────────────────────
@@ -177,9 +177,9 @@ const NUIT: Palette = {
   accentFond: '#221A10',
   surAccent: '#F5EDE1',
   surAccentDoux: 'rgba(245, 237, 225, 0.66)',
-  chauffeurFond: '#2BB3B8',
-  surChauffeur: '#08120F',
-  surChauffeurDoux: 'rgba(8, 18, 15, 0.72)',
+  chauffeurFond: '#F2A97E',
+  surChauffeur: '#1A0F08',
+  surChauffeurDoux: 'rgba(26, 15, 8, 0.74)',
 };
 
 // ─────────────────────────── 01 · LAGON DE VERRE ───────────────────────────
@@ -225,9 +225,9 @@ const VERRE: Palette = {
   accentFond: 'rgba(255, 255, 255, 0.2)',
   surAccent: '#F4FBFC',
   surAccentDoux: 'rgba(244, 251, 252, 0.7)',
-  chauffeurFond: '#37C4C9',
+  chauffeurFond: '#FFB693',
   surChauffeur: '#0E2733',
-  surChauffeurDoux: 'rgba(14, 39, 51, 0.78)',
+  surChauffeurDoux: 'rgba(14, 39, 51, 0.76)',
 };
 
 const PEAUX: Record<NomPeau, Palette> = { bento: BENTO, nuit: NUIT, verre: VERRE };

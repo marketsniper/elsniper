@@ -239,10 +239,10 @@ const styles = stylesReactifs(() => ({
     minHeight: 88,
     ...ombres.carte,
   },
-  // Un APLAT PLEIN au milieu de trois panneaux translucides. L'ancien
-  // « sombre » datait des peaux claires : sur le lagon, son fond blanc à
-  // 20 % était à un cheveu des autres cartes — la case du chauffeur
-  // disparaissait dans la page.
+  // Un APLAT PLEIN — orange pastel — au milieu de trois panneaux
+  // translucides. L'ancien « sombre » datait des peaux claires : sur le
+  // lagon, son fond blanc à 20 % était à un cheveu des autres cartes, et la
+  // case du chauffeur disparaissait dans la page.
   carteVedette: {
     backgroundColor: couleurs.chauffeurFond,
   },
