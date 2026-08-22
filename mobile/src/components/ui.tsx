@@ -24,11 +24,10 @@ import { HeaderHeightContext } from '@react-navigation/elements';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Canopee } from '@/components/Canopee';
-import { EstranDeZanzibar, FondPlage, LagonDeVerre, type NomFond } from '@/components/FondPlage';
+import { FondPlage, type NomFond } from '@/components/FondPlage';
 import { LANGUES, useT, libelleStatutColis, libelleStatutTrajet, type CleChaine } from '@/lib/i18n';
 import { PEAUX_AU_CHOIX, usePreferencePeau } from '@/lib/preferencePeau';
 import {
-  apercuPeau,
   couleurs,
   couleursStatutColis,
   couleursStatutTrajet,
@@ -261,14 +260,13 @@ const LIBELLES_PEAU: Record<NomPeau, { nom: CleChaine; quand: CleChaine }> = {
  * fond, panneau, deux lignes de texte, bouton — dessiné dans les VRAIES
  * couleurs de la peau. On choisit ce qu'on voit.
  */
-export function SelecteurPeau({ compact = false }: { compact?: boolean }) {
+export function SelecteurPeau() {
   const { peau, choisir } = usePreferencePeau();
   const { t } = useT();
   return (
     <View style={styles.rangeePeaux}>
       {PEAUX_AU_CHOIX.map((nom) => {
         const actif = peau === nom;
-        const vue = apercuPeau(nom);
         const mots = LIBELLES_PEAU[nom];
         return (
           <Pressable
@@ -283,37 +281,18 @@ export function SelecteurPeau({ compact = false }: { compact?: boolean }) {
               pressed && { opacity: 0.75 },
             ]}
           >
-            <View
-              style={[
-                styles.apercuPeau,
-                compact && styles.apercuPeauCompact,
-                { backgroundColor: vue.fond },
-              ]}
-            >
-              {nom === 'verre' && <LagonDeVerre fond={vue.fond} />}
-              {nom === 'estran' && <EstranDeZanzibar fond={vue.fond} />}
-              <View
-                style={[
-                  styles.apercuCarte,
-                  { backgroundColor: vue.carte, borderColor: vue.bordure },
-                ]}
-              >
-                <View
-                  style={[styles.apercuBarre, { backgroundColor: vue.texte, width: '75%' }]}
-                />
-                <View
-                  style={[styles.apercuBarre, { backgroundColor: vue.secondaire, width: '50%' }]}
-                />
-              </View>
-              <View style={[styles.apercuBouton, { backgroundColor: vue.accent }]} />
-            </View>
-            <View style={styles.enTetePeau}>
-              <Text style={styles.nomPeau}>{t(mots.nom)}</Text>
-              {actif && (
-                <Ionicons name="checkmark-circle" size={18} color={couleurs.primaire} />
-              )}
-            </View>
-            {!compact && <Text style={styles.quandPeau}>{t(mots.quand)}</Text>}
+            <Text style={styles.nomPeau}>{t(mots.nom)}</Text>
+            {/* Le moment où la peau sert, à droite : c'est ce qui aide à
+                choisir. Sur une seule ligne — une traduction plus longue
+                s'abrège plutôt que de faire grandir la rangée. */}
+            <Text style={styles.quandPeau} numberOfLines={1}>
+              {t(mots.quand)}
+            </Text>
+            <Ionicons
+              name={actif ? 'checkmark-circle' : 'ellipse-outline'}
+              size={18}
+              color={actif ? couleurs.primaire : couleurs.bordure}
+            />
           </Pressable>
         );
       })}
@@ -355,7 +334,7 @@ export function MarqueEntete() {
   return (
     <View style={styles.marqueEntete}>
       <Image
-        source={require('../../assets/images/logo-marque.png')}
+        source={require('../../assets/images/logo-epingle.png')}
         style={styles.marqueBadge}
         accessibilityLabel="zanziGo"
       />
@@ -741,72 +720,44 @@ const styles = stylesReactifs(() => ({
   // ─── LE CHOIX DU DESIGN ────────────────────────────────────────────────
   // `flexWrap` : la rangée était dimensionnée pour exactement deux cases.
   // `minWidth` garde une case lisible quand il y en a trois.
+  // LE CHOIX D'APPARENCE, EN LISTE.
+  // Chaque peau montrait un écran miniature de 96 px de haut : quatre
+  // vignettes en damier mangeaient la moitié de la page pour un réglage
+  // qu'on touche une fois. Le nom et le moment suffisent.
   rangeePeaux: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: espaces.m,
+    gap: espaces.xs,
   },
   casePeau: {
-    flexGrow: 1,
-    flexShrink: 1,
-    flexBasis: 130,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: espaces.s,
     backgroundColor: couleurs.carteTranslucide,
     borderRadius: rayons.carte,
     borderWidth: 1,
     borderColor: couleurs.bordure,
-    padding: espaces.s,
-    gap: 6,
+    paddingVertical: 11,
+    paddingHorizontal: espaces.m,
   },
-  // La case choisie porte un liseré de la couleur d'action : on voit
+  // La ligne choisie porte un liseré de la couleur d'action : on voit
   // laquelle est en service sans lire la coche.
   casePeauActive: {
     borderWidth: 2,
     borderColor: couleurs.primaire,
-  },
-  // L'aperçu : un écran miniature, aux proportions d'un téléphone.
-  apercuPeau: {
-    height: 96,
-    borderRadius: 12,
-    overflow: 'hidden',
-    padding: 10,
-    justifyContent: 'space-between',
-  },
-  apercuPeauCompact: {
-    height: 64,
-    padding: 7,
-  },
-  apercuCarte: {
-    borderRadius: 8,
-    borderWidth: 1,
-    padding: 8,
-    gap: 5,
-  },
-  apercuBarre: {
-    height: 4,
-    borderRadius: 2,
-    // Les barres évoquent du texte : à pleine opacité elles feraient des
-    // traits de peinture, pas des lignes lues de loin.
-    opacity: 0.85,
-  },
-  apercuBouton: {
-    height: 14,
-    borderRadius: 7,
-  },
-  enTetePeau: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: espaces.xs,
+    // Le liseré passe de 1 à 2 px : sans cette compensation, la ligne
+    // active serait plus haute que les autres et la liste tressauterait.
+    paddingVertical: 10,
+    paddingHorizontal: espaces.m - 1,
   },
   nomPeau: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '700',
     color: couleurs.encre,
   },
   quandPeau: {
+    flex: 1,
     fontSize: 12,
-    lineHeight: 16,
     color: couleurs.texteSecondaire,
+    textAlign: 'right',
   },
   rangeeLangues: {
     flexDirection: 'row',
@@ -864,11 +815,10 @@ const styles = stylesReactifs(() => ({
     marginRight: 10,
   },
   marqueBadge: {
+    // L'épingle est détourée : pas de fond, donc pas de coins à arrondir.
     width: 26,
     height: 26,
-    // Le fichier porte déjà ses coins arrondis ; ce rayon n'est là que pour
-    // les rogner encore un peu si la plateforme redimensionne à sa façon.
-    borderRadius: 7,
+    resizeMode: 'contain' as const,
   },
   carte: {
     backgroundColor: couleurs.carteTranslucide,

@@ -9,7 +9,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Canopee } from '@/components/Canopee';
 import { FondPlage } from '@/components/FondPlage';
-import { IleDeZanzibar } from '@/components/Ile';
 import { LaCourse } from '@/components/LaCourse';
 import { Colobe } from '@/components/marques/Colobe';
 import { EtiquetteVersion } from '@/components/Version';
@@ -116,28 +115,18 @@ export default function EcranAccueil() {
         >
           <SelecteurLangue />
           <View style={styles.entete}>
-            {/* LA MARQUE, en image : l'icône même de l'application — le
-                colobe ocre au-dessus du lagon et du rivage. Elle porte SON
-                fond, et c'est voulu : le colobe posé nu tombait à 2,1:1 sur
-                le crème du Bento et 1,9:1 sur l'Estran, un fantôme. Derrière
-                la mer, il tient sur les quatre peaux.
-                Le NOM, lui, reste écrit par l'application, dans les couleurs
-                de la peau du moment : gravé dans le fichier, il sortirait en
-                encre sombre sur le Lagon — invisible. */}
+            {/* L'ÉPINGLE seule, en image ; le nom est écrit PAR l'application,
+                dans les couleurs de la peau du moment. Un logotype gravé dans
+                le fichier sortirait en encre sombre sur le Lagon — invisible.
+                Le mot appartient au thème, l'image ne porte que la marque. */}
             <Image
-              source={require('../../../assets/images/logo-marque.png')}
+              source={require('../../../assets/images/logo-epingle.png')}
               style={styles.logoImage}
               accessibilityLabel="zanziGo"
             />
             <LogoZanziGo taille={38} />
             <Text style={styles.tagline}>{t('app_tagline')}</Text>
           </View>
-
-          {/* L'ÎLE, EN VOLUME. Avant même la question « qui êtes-vous ? »,
-              le client voit ce que zanziGo couvre : Unguja entière, ses
-              routes et ses villes. C'est la promesse de la maison, montrée
-              plutôt qu'écrite. */}
-          <IleDeZanzibar />
 
           {/* LA COURSE — un chauffeur, deux passagers, un madafu, et la
               route qui défile. C'est une entreprise de taxi : il fallait

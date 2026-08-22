@@ -7,7 +7,7 @@
 //    dernière version en cache quand le réseau est coupé, et en tout dernier
 //    recours sur un écran d'attente maison : JAMAIS « Ce site est
 //    inaccessible » du navigateur, qui laisse l'utilisateur devant un mur.
-const CACHE = 'zanzigo-web-2026-08-22.1501-7f9aac8';
+const CACHE = 'zanzigo-web-2026-08-22.1535-8ad8566';
 const COQUILLE = '/web/';
 
 // Y avait-il déjà une version installée ? Si oui, les fenêtres ouvertes
@@ -93,8 +93,8 @@ self.addEventListener('push', (evenement) => {
       }),
       self.registration.showNotification(donnees.titre, {
       body: donnees.corps,
-      icon: '/web/icone-192.98a6226b97.png',
-      badge: '/web/icone-192.98a6226b97.png',
+      icon: '/web/icone-192.33b262580f.png',
+      badge: '/web/icone-192.33b262580f.png',
       // Un même sujet remplace l'alerte précédente au lieu de s'empiler.
       tag: donnees.tag || 'zanzigo',
       renotify: true,

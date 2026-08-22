@@ -810,33 +810,6 @@ export const couleursStatutColis = new Proxy({} as Record<StatutColis, Ton>, {
   }),
 }) as Record<StatutColis, Ton>;
 
-/**
- * LES QUELQUES COULEURS D'UNE PEAU QUI N'EST PAS L'ACTIVE.
- *
- * Les miroirs ci-dessus renvoient toujours la peau du moment — parfait pour
- * dessiner l'application, inutilisable pour dessiner l'APERÇU d'une autre.
- * Le sélecteur de design a besoin de montrer les deux côte à côte : il vient
- * les chercher ici, nommément.
- */
-export function apercuPeau(nom: NomPeau): {
-  fond: string;
-  carte: string;
-  bordure: string;
-  texte: string;
-  secondaire: string;
-  accent: string;
-} {
-  const p = PEAUX[nom];
-  return {
-    fond: p.sable,
-    carte: p.carteTranslucide,
-    bordure: p.bordure,
-    texte: p.encre,
-    secondaire: p.texteSecondaire,
-    accent: p.primaire,
-  };
-}
-
 // ──────────────────────── LA BASCULE, CÔTÉ REACT ───────────────────────────
 const ContextePeau = React.createContext<NomPeau>(PEAU_PAR_DEFAUT);
 

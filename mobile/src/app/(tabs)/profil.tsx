@@ -405,7 +405,7 @@ export default function EcranProfil() {
           changer. */}
       <Carte>
         <Text style={styles.labelLangue}>{t('peau_titre')}</Text>
-        <SelecteurPeau compact />
+        <SelecteurPeau />
       </Carte>
 
       {(utilisateur || hotel) && (
