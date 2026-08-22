@@ -53,9 +53,11 @@ import { useRafraichissementAuto } from '@/lib/rafraichissementAuto';
 import { couleurs, espaces, ombres, rayons, stylesReactifs } from '@/lib/theme';
 import {
   champ,
+  dureeRouteMinutes,
   formaterDate,
   formaterMontant,
   formaterPrix,
+  kmEntreVilles,
   totalEnTzs,
   trajetExpire,
   type Chauffeur,
@@ -73,6 +75,7 @@ const CLE_STOCKAGE = 'zanzigo.cle_equipe';
 // écran d'accueil de téléphone), chaque case ouvre sa rubrique.
 type SectionEquipe =
   | 'courses'
+  | 'encours'
   | 'avenir'
   | 'partages'
   | 'paiements'
@@ -441,6 +444,11 @@ export default function EcranEquipe() {
   // jour — l'écran reste léger, l'historique se déplie à la demande.
   const dateCourse = (c: Trajet) =>
     String(champ(c, 'scheduled_at', 'scheduledAt', 'created_at', 'createdAt') ?? '');
+  // L'heure à laquelle le chauffeur a appuyé sur « Démarrer la course ».
+  // À défaut (vieille course, horodatage manquant) on retombe sur l'heure
+  // prévue : mieux vaut une estimation qu'une ligne sans repère.
+  const heureDepart = (c: Trajet) =>
+    String(champ(c, 'started_at', 'startedAt') ?? dateCourse(c));
   const coursesATraiter = courses.filter(
     (c) => champ<StatutTrajet>(c, 'status', 'statut') === 'requested' && !trajetExpire(c)
   );
@@ -467,8 +475,54 @@ export default function EcranEquipe() {
     // Chronologique CROISSANT : le prochain départ en tête, c'est celui qui
     // arrive le premier sur la route.
     .sort((a, b) => dateCourse(a).localeCompare(dateCourse(b)));
+  // « 181 min » ne se lit pas : au-delà de l'heure, on écrit « 3 h 01 ».
+  const dureeLisible = (min: number) =>
+    min < 60
+      ? t('equipe_en_cours_min', { min: String(min) })
+      : t('equipe_en_cours_heures', {
+          h: String(Math.floor(min / 60)),
+          min: String(min % 60).padStart(2, '0'),
+        });
+
+  // MINUTES ÉCOULÉES depuis que le chauffeur a démarré la course.
+  const minutesDepuisDepart = (c: Trajet) => {
+    const depart = new Date(heureDepart(c)).getTime();
+    if (!Number.isFinite(depart)) return null;
+    return Math.max(0, Math.round((maintenant - depart) / 60000));
+  };
+  // DURÉE ATTENDUE de la route, quand les deux villes sont dans la grille.
+  const dureeAttendue = (c: Trajet) => {
+    const km = kmEntreVilles(
+      String(champ(c, 'pickup_location', 'pickupLocation') ?? ''),
+      String(champ(c, 'dropoff_location', 'dropoffLocation') ?? '')
+    );
+    return km === null ? null : dureeRouteMinutes(km);
+  };
+  // COURSE QUI TRAÎNE : une demi-heure de plus que la route ne demande. Sur
+  // l'île, trente minutes absorbent un arrêt d'eau, un troupeau de chèvres et
+  // un client en retard ; au-delà, ça vaut un coup de fil au chauffeur.
+  // Itinéraire hors grille : on retient une heure et demie par défaut.
+  const courseEnRetard = (c: Trajet) => {
+    const ecoule = minutesDepuisDepart(c);
+    if (ecoule === null) return false;
+    return ecoule > (dureeAttendue(c) ?? 90) + 30;
+  };
+
+  // COURSES EN COURS : le taxi a chargé les passagers, ils sont sur la route
+  // en ce moment même. Elles tombaient jusqu'ici dans l'historique — une
+  // course qui se fait rangée avec celles qui sont finies, invisible au seul
+  // moment où l'équipe peut encore agir dessus.
+  //
+  // Tri par heure de départ CROISSANTE : celle qui roule depuis le plus
+  // longtemps en tête. C'est celle-là qui peut avoir un problème.
+  const coursesEnCours = [...courses]
+    .filter((c) => champ<StatutTrajet>(c, 'status', 'statut') === 'in_progress')
+    .sort((a, b) => heureDepart(a).localeCompare(heureDepart(b)));
   const coursesPassees = [...courses]
-    .filter((c) => !coursesATraiter.includes(c) && !coursesAVenir.includes(c))
+    .filter(
+      (c) =>
+        !coursesATraiter.includes(c) && !coursesAVenir.includes(c) && !coursesEnCours.includes(c)
+    )
     .sort((a, b) => dateCourse(b).localeCompare(dateCourse(a)));
   const localeDate = langue === 'fr' ? 'fr-FR' : langue === 'sw' ? 'sw-TZ' : 'en-GB';
   // Clé stable AAAA-MM-JJ du jour (heure de Zanzibar).
@@ -541,6 +595,9 @@ export default function EcranEquipe() {
       ecran: '/verifications',
     },
     { cle: 'courses', label: t('equipe_stat_courses'), icone: 'car-outline', n: coursesATraiter.length, action: true },
+    // Le compteur passe en ALERTE dès qu'une course roule depuis trop
+    // longtemps : le reste du temps c'est une simple veille, pas une tâche.
+    { cle: 'encours', label: t('equipe_courses_en_cours'), icone: 'navigate-outline', n: coursesEnCours.length, action: coursesEnCours.some(courseEnRetard) },
     { cle: 'avenir', label: t('equipe_courses_a_venir'), icone: 'calendar-outline', n: coursesAVenir.length, action: false },
     { cle: 'partages', label: t('equipe_partages'), icone: 'people-circle-outline', n: partagesOuverts.length, action: false },
     { cle: 'attentes', label: t('equipe_stat_attentes'), icone: 'notifications-outline', n: attentes.filter((a) => !a.matched_at).length, action: true },
@@ -1046,7 +1103,93 @@ export default function EcranEquipe() {
         </>
       )}
 
-      {/* 1 bis. COURSES À VENIR : les départs déjà programmés, du plus proche
+      {/* 1 bis. COURSES EN COURS — LA ROUTE, EN DIRECT.
+          Le taxi a chargé ses passagers ; ils roulent en ce moment. Ces
+          courses tombaient dans l'historique, avec les terminées : l'équipe
+          ne voyait donc jamais ce qui se passait à l'instant T.
+          Celle qui roule depuis le plus longtemps est en tête — c'est la
+          seule qui peut avoir besoin d'un coup de fil. */}
+      {section === 'encours' && (
+        <>
+          <Text style={styles.titreSection}>
+            🚕 {t('equipe_courses_en_cours')} ({coursesEnCours.length})
+          </Text>
+          <Text style={styles.introMenu}>{t('equipe_en_cours_intro')}</Text>
+          {coursesEnCours.length === 0 && (
+            <EncartInfo icone="navigate-outline">{t('equipe_en_cours_vide')}</EncartInfo>
+          )}
+          {coursesEnCours.map((course) => {
+            const ecoule = minutesDepuisDepart(course);
+            const attendue = dureeAttendue(course);
+            const traine = courseEnRetard(course);
+            const chauffeurCourse = champ<string>(course, 'driver_name', 'driverName');
+            const plaqueCourse = champ<string>(course, 'vehicle_plate', 'vehiclePlate');
+            const clientCourse = champ<string>(course, 'client_name', 'clientName');
+            const telCourse = champ<string>(course, 'client_phone', 'clientPhone');
+            return (
+              <Pressable
+                key={course.id}
+                onPress={() => router.push(`/trip/${course.id}`)}
+                accessibilityRole="button"
+                style={({ pressed }) => [
+                  styles.ligneEnCours,
+                  traine && styles.ligneEnCoursTraine,
+                  pressed && { opacity: 0.7 },
+                ]}
+              >
+                <View style={styles.entetePassee}>
+                  <Text style={styles.itineraire} numberOfLines={2}>
+                    {lieuCourt(String(champ(course, 'pickup_location', 'pickupLocation') ?? '?'))} →{' '}
+                    {lieuCourt(String(champ(course, 'dropoff_location', 'dropoffLocation') ?? '?'))}
+                  </Text>
+                  <Text style={styles.prixPassee}>{formaterPrix(course)}</Text>
+                </View>
+
+                {/* LE CHRONO — ce que l'équipe vient chercher ici. */}
+                <View style={styles.rangeeChrono}>
+                  <Ionicons
+                    name={traine ? 'alert-circle' : 'navigate'}
+                    size={16}
+                    color={traine ? couleurs.orange : couleurs.primaireFonce}
+                  />
+                  <Text style={[styles.chrono, traine && styles.chronoTraine]}>
+                    {ecoule === null
+                      ? t('equipe_en_cours_depart_inconnu')
+                      : t('equipe_en_cours_depuis', { duree: dureeLisible(ecoule) })}
+                    {attendue !== null
+                      ? ` · ${t('equipe_en_cours_attendu', { duree: dureeLisible(attendue) })}`
+                      : ''}
+                  </Text>
+                </View>
+
+                <Text style={styles.detailEnCours}>
+                  🚕 {chauffeurCourse ? String(chauffeurCourse) : t('equipe_sans_chauffeur')}
+                  {plaqueCourse ? ` · ${String(plaqueCourse)}` : ''}
+                </Text>
+                {!!clientCourse && (
+                  <Text style={styles.detailEnCours}>
+                    👤 {String(clientCourse)}
+                    {telCourse ? ` · ${String(telCourse)}` : ''}
+                  </Text>
+                )}
+
+                {/* Course qui traîne : on ne se contente pas de la colorer,
+                    on met le chauffeur à portée de doigt. */}
+                {traine && !!telCourse && (
+                  <Bouton
+                    titre={t('equipe_en_cours_appeler_client')}
+                    icone="call-outline"
+                    variante="secondaire"
+                    onPress={() => Linking.openURL(`tel:${String(telCourse).replace(/\s/g, '')}`)}
+                  />
+                )}
+              </Pressable>
+            );
+          })}
+        </>
+      )}
+
+      {/* 1 ter. COURSES À VENIR : les départs déjà programmés, du plus proche
           au plus lointain. Sa propre case dans le menu, dépliée d'office :
           c'est le planning qu'on regarde le matin pour préparer la journée. */}
       {section === 'avenir' && (
@@ -1098,7 +1241,7 @@ export default function EcranEquipe() {
         </>
       )}
 
-      {/* 1 ter. TAXIS PARTAGÉS — la tour de contrôle du remplissage. Les
+      {/* 1 quater. TAXIS PARTAGÉS — la tour de contrôle du remplissage. Les
           annonces encore vendables d'abord, en cartes ; les terminées en bas,
           en lignes compactes. Un siège vide au départ ne se rattrape jamais. */}
       {section === 'partages' && (
@@ -2077,6 +2220,38 @@ const styles = stylesReactifs(() => ({
     gap: espaces.s,
     paddingVertical: espaces.m,
     paddingHorizontal: espaces.s,
+  },
+  // La course qui roule : un filet turquoise à gauche, comme les autres,
+  // qui vire au corail dès qu'elle dure anormalement longtemps.
+  ligneEnCours: {
+    backgroundColor: couleurs.surface,
+    borderRadius: rayons.bouton,
+    borderLeftWidth: 3,
+    borderLeftColor: couleurs.primaire,
+    padding: espaces.m,
+    marginBottom: espaces.s,
+    gap: 6,
+  },
+  ligneEnCoursTraine: {
+    borderLeftColor: couleurs.orange,
+  },
+  rangeeChrono: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  chrono: {
+    flex: 1,
+    fontSize: 13.5,
+    fontWeight: '700',
+    color: couleurs.primaireFonce,
+  },
+  chronoTraine: {
+    color: couleurs.orange,
+  },
+  detailEnCours: {
+    fontSize: 13,
+    color: couleurs.texteSecondaire,
   },
   ligneAVenir: {
     backgroundColor: couleurs.surface,

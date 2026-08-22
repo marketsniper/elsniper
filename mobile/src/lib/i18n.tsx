@@ -2183,6 +2183,49 @@ const CHAINES = {
     en: 'Upcoming rides',
     sw: 'Safari zijazo',
   },
+  // Rubrique « Courses en cours » : ce qui roule à l'instant même.
+  equipe_courses_en_cours: {
+    fr: 'Courses en cours',
+    en: 'Rides underway',
+    sw: 'Safari zinazoendelea',
+  },
+  equipe_en_cours_intro: {
+    fr: 'Les taxis qui ont chargé leurs passagers et roulent en ce moment. Celui qui roule depuis le plus longtemps est en tête.',
+    en: 'Taxis that have picked up their passengers and are on the road right now. The one running longest is at the top.',
+    sw: 'Teksi zilizowachukua abiria na sasa ziko njiani. Iliyoanza zamani zaidi iko juu.',
+  },
+  equipe_en_cours_vide: {
+    fr: 'Aucune course sur la route en ce moment.',
+    en: 'No ride on the road right now.',
+    sw: 'Hakuna safari njiani kwa sasa.',
+  },
+  equipe_en_cours_depuis: {
+    fr: 'Sur la route depuis {duree}',
+    en: 'On the road for {duree}',
+    sw: 'Njiani kwa {duree}',
+  },
+  equipe_en_cours_attendu: {
+    fr: 'trajet estimé {duree}',
+    en: 'estimated {duree}',
+    sw: 'inakadiriwa {duree}',
+  },
+  equipe_en_cours_min: { fr: '{min} min', en: '{min} min', sw: 'dakika {min}' },
+  equipe_en_cours_heures: { fr: '{h} h {min}', en: '{h}h{min}', sw: 'saa {h}:{min}' },
+  equipe_en_cours_depart_inconnu: {
+    fr: 'Heure de départ inconnue',
+    en: 'Departure time unknown',
+    sw: 'Saa ya kuondoka haijulikani',
+  },
+  equipe_en_cours_appeler_client: {
+    fr: 'Appeler le client',
+    en: 'Call the client',
+    sw: 'Mpigie mteja',
+  },
+  equipe_sans_chauffeur: {
+    fr: 'Sans chauffeur',
+    en: 'No driver',
+    sw: 'Hakuna dereva',
+  },
   // Rubrique « Taxis partagés » : la tour de contrôle du remplissage.
   equipe_partages: { fr: 'Taxis partagés', en: 'Shared taxis', sw: 'Teksi za pamoja' },
   equipe_partages_intro: {
