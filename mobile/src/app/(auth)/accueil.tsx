@@ -22,14 +22,15 @@ function CarteProfil({
   titre,
   sousTitre,
   mention,
-  sombre = false,
+  vedette = false,
   onPress,
 }: {
   icone: React.ComponentProps<typeof Ionicons>['name'];
   titre: string;
   sousTitre: string;
   mention?: string;
-  sombre?: boolean;
+  /** Carte en aplat plein : elle ne ressemble à aucune autre de la page. */
+  vedette?: boolean;
   onPress: () => void;
 }) {
   return (
@@ -38,20 +39,22 @@ function CarteProfil({
       accessibilityRole="button"
       style={({ pressed }) => [
         styles.carte,
-        sombre && styles.carteSombre,
+        vedette && styles.carteVedette,
         pressed && { opacity: 0.8 },
       ]}
     >
-      <View style={[styles.bulleIcone, sombre && styles.bulleIconeSombre]}>
+      <View style={[styles.bulleIcone, vedette && styles.bulleIconeVedette]}>
         <Ionicons
           name={icone}
           size={26}
-          color={sombre ? couleurs.surPrimaire : couleurs.primaire}
+          color={vedette ? couleurs.chauffeurFond : couleurs.primaire}
         />
       </View>
       <View style={styles.textes}>
-        <Text style={[styles.titreCarte, sombre && { color: couleurs.surAccent }]}>{titre}</Text>
-        <Text style={[styles.sousTitreCarte, sombre && { color: couleurs.surAccentDoux }]}>
+        <Text style={[styles.titreCarte, vedette && { color: couleurs.surChauffeur }]}>
+          {titre}
+        </Text>
+        <Text style={[styles.sousTitreCarte, vedette && { color: couleurs.surChauffeurDoux }]}>
           {sousTitre}
         </Text>
         {!!mention && <Text style={styles.mention}>{mention}</Text>}
@@ -59,7 +62,7 @@ function CarteProfil({
       <Ionicons
         name="chevron-forward"
         size={22}
-        color={sombre ? couleurs.bordure : couleurs.texteSecondaire}
+        color={vedette ? couleurs.surChauffeurDoux : couleurs.texteSecondaire}
       />
     </Pressable>
   );
@@ -141,7 +144,7 @@ export default function EcranAccueil() {
             icone="car-sport-outline"
             titre={t('accueil_chauffeur_titre')}
             sousTitre={t('accueil_chauffeur_soustitre')}
-            sombre
+            vedette
             onPress={() => choisir('driver')}
           />
 
@@ -236,8 +239,12 @@ const styles = stylesReactifs(() => ({
     minHeight: 88,
     ...ombres.carte,
   },
-  carteSombre: {
-    backgroundColor: couleurs.accentFond,
+  // Un APLAT PLEIN au milieu de trois panneaux translucides. L'ancien
+  // « sombre » datait des peaux claires : sur le lagon, son fond blanc à
+  // 20 % était à un cheveu des autres cartes — la case du chauffeur
+  // disparaissait dans la page.
+  carteVedette: {
+    backgroundColor: couleurs.chauffeurFond,
   },
   bulleIcone: {
     width: 52,
@@ -247,8 +254,8 @@ const styles = stylesReactifs(() => ({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  bulleIconeSombre: {
-    backgroundColor: couleurs.primaireFonce,
+  bulleIconeVedette: {
+    backgroundColor: couleurs.surChauffeur,
   },
   textes: {
     flex: 1,
