@@ -369,7 +369,7 @@ export default function EcranReserver() {
           connecté — la page d'accueil ne se revoit jamais. Et c'est l'écran
           où l'on choisit un départ et une arrivée : montrer ce que zanziGo
           couvre y est à sa place, pas décoratif. */}
-      <IleDeZanzibar compact />
+      <IleDeZanzibar />
       {/* LE TAXI — l'écran où l'on réserve une course montre une course. */}
       <LaCourse compacte />
 

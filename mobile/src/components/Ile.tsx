@@ -17,33 +17,28 @@
 // chaque ville desservie — le même piquet que les étapes d'une course.
 // ══════════════════════════════════════════════════════════════════════════
 import React from 'react';
-import { Animated, Easing, Image, Text, View, useWindowDimensions } from 'react-native';
+import { Animated, Easing, Image, Text, View } from 'react-native';
 
 import { useT } from '@/lib/i18n';
-import { couleurs, espaces, policeMontant, stylesReactifs } from '@/lib/theme';
+import { couleurs, espaces, ombres, policeMontant, rayons, stylesReactifs } from '@/lib/theme';
 import { nombreVillesDesservies } from '@/lib/types';
 
 /** Proportions du fichier — pour que l'image ne se déforme jamais. */
 const RAPPORT = 980 / 1155;
 
-export function IleDeZanzibar({
-  hauteur,
-  compact = false,
-}: {
-  hauteur?: number;
-  /**
-   * La forme de bandeau, pour les écrans où l'île n'est PAS le sujet.
-   * L'écran de réservation s'ouvre dix fois par semaine : une île de 300 px
-   * y repousserait le formulaire sous la ligne de flottaison.
-   */
-  compact?: boolean;
-}) {
+/**
+ * LA HAUTEUR DE L'ÎLE, dans le bandeau de « Réserver ».
+ *
+ * L'écran s'ouvre dix fois par semaine : une île de 300 px y repousserait le
+ * formulaire sous la ligne de flottaison. Mais à 104 px elle passait pour une
+ * vignette posée là — le vrai relief, les routes gravées, les piquets des
+ * villes ne se lisaient plus. 144 px : le trait de côte redevient lisible,
+ * et la carte entière tient toujours au-dessus du choix de trajet.
+ */
+const HAUTEUR = 144;
+
+export function IleDeZanzibar() {
   const { t } = useT();
-  const { width } = useWindowDimensions();
-  // L'île occupe une bonne moitié de la largeur, plafonnée : sur une tablette
-  // ou un navigateur de bureau, une île de 700 px de haut serait une affiche,
-  // pas un en-tête.
-  const h = hauteur ?? (compact ? 104 : Math.min(300, Math.max(180, width * 0.72)));
 
   // LE POSÉ. L'île arrive légèrement au-dessus de sa place et descend s'y
   // asseoir. Une seule animation, au montage, en pilote natif — c'est ce qui
@@ -58,87 +53,71 @@ export function IleDeZanzibar({
     }).start();
   }, [pose]);
 
-  const image = (
-    <Animated.View
-      style={{
-        opacity: pose,
-        transform: [
-          { translateY: pose.interpolate({ inputRange: [0, 1], outputRange: [-14, 0] }) },
-          { scale: pose.interpolate({ inputRange: [0, 1], outputRange: [1.04, 1] }) },
-        ],
-      }}
-    >
-      <Image
-        source={require('../../assets/images/unguja.png')}
-        style={{ width: h * RAPPORT, height: h }}
-        resizeMode="contain"
-        accessibilityLabel={t('ile_alt')}
-      />
-    </Animated.View>
-  );
-
-  if (compact) {
-    return (
-      <View style={styles.bandeau}>
-        {image}
-        <View style={styles.textesBandeau}>
-          <Text style={styles.titreBandeau}>{t('ile_titre')}</Text>
-          <Text style={styles.legendeBandeau}>
-            {t('ile_legende', { villes: String(nombreVillesDesservies()) })}
-          </Text>
-        </View>
-      </View>
-    );
-  }
-
   return (
-    <View style={styles.bloc}>
-      {image}
-      <Text style={styles.titre}>{t('ile_titre')}</Text>
-      <Text style={styles.legende}>
-        {t('ile_legende', { villes: String(nombreVillesDesservies()) })}
-      </Text>
+    <View style={styles.carte}>
+      <Animated.View
+        style={{
+          opacity: pose,
+          transform: [
+            { translateY: pose.interpolate({ inputRange: [0, 1], outputRange: [-14, 0] }) },
+            { scale: pose.interpolate({ inputRange: [0, 1], outputRange: [1.04, 1] }) },
+          ],
+        }}
+      >
+        <Image
+          source={require('../../assets/images/unguja.png')}
+          style={styles.image}
+          resizeMode="contain"
+          accessibilityLabel={t('ile_alt')}
+        />
+      </Animated.View>
+      <View style={styles.textes}>
+        <Text style={styles.titre}>{t('ile_titre')}</Text>
+        <Text style={styles.legende}>
+          {t('ile_legende', { villes: String(nombreVillesDesservies()) })}
+        </Text>
+      </View>
     </View>
   );
 }
 
 const styles = stylesReactifs(() => ({
-  bloc: {
+  // L'île avait beau être un vrai rendu du relief, posée à nu sur le fond
+  // elle se lisait comme une vignette d'illustration. Un cadre la déclare :
+  // c'est une carte, et c'est ce que zanziGo couvre.
+  carte: {
+    flexDirection: 'row',
     alignItems: 'center',
-    gap: espaces.xs,
-    marginBottom: espaces.m,
+    gap: espaces.m,
+    backgroundColor: couleurs.carteTranslucide,
+    borderRadius: rayons.carte,
+    paddingVertical: espaces.s,
+    paddingRight: espaces.m,
+    // À gauche, presque rien : l'île touche presque le bord, et c'est ce
+    // débord qui lui donne sa place sans allonger le bandeau.
+    paddingLeft: espaces.xs,
+    marginBottom: espaces.s,
+    // Le relief de la peau du moment : c'est lui qui porte le liseré et
+    // l'ombre, chaque design ayant les siens (le trait épais du Bento, le
+    // halo doux du Lagon). Les redéclarer ici les aurait écrasés.
+    ...ombres.carte,
+  },
+  image: {
+    width: HAUTEUR * RAPPORT,
+    height: HAUTEUR,
+  },
+  textes: {
+    flex: 1,
+    gap: 3,
   },
   titre: {
     fontFamily: policeMontant(),
-    fontSize: 26,
-    color: couleurs.encre,
-    marginTop: espaces.xs,
-  },
-  bandeau: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: espaces.s,
-    marginBottom: espaces.s,
-  },
-  textesBandeau: {
-    flex: 1,
-    gap: 2,
-  },
-  titreBandeau: {
-    fontFamily: policeMontant(),
-    fontSize: 20,
+    fontSize: 22,
     color: couleurs.encre,
   },
-  legendeBandeau: {
+  legende: {
     fontSize: 13,
     lineHeight: 18,
     color: couleurs.texteSecondaire,
-  },
-  legende: {
-    fontSize: 14,
-    lineHeight: 20,
-    textAlign: 'center',
-    color: couleurs.texteSecondaire,
-    paddingHorizontal: espaces.l,
   },
 }));
