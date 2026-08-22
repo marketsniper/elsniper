@@ -77,7 +77,9 @@ function PilesNavigation() {
       <Stack.Screen name="(auth)" options={{ headerShown: false }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="(driver)" options={{ headerShown: false }} />
-      <Stack.Screen name="trip/[id]" options={{ title: t('titre_trajet'), headerLeft: retourClient }} />
+      {/* Pas de titre : l'écran s'ouvre sur « Votre taxi arrive », en gros.
+          Répéter « Trajet » au-dessus n'apprendrait rien à personne. */}
+      <Stack.Screen name="trip/[id]" options={{ title: '', headerLeft: retourClient }} />
       <Stack.Screen name="place/[id]" options={{ title: t('place_fiche_titre'), headerLeft: retourClient }} />
       <Stack.Screen name="package/nouveau" options={{ title: t('titre_nouveau_colis'), headerLeft: retourColis }} />
       <Stack.Screen name="package/[id]" options={{ title: t('titre_colis'), headerLeft: retourColis }} />

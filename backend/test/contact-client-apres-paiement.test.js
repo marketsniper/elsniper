@@ -169,3 +169,55 @@ describe('Coordonnées du client : verrouillées jusqu’au paiement validé', (
     assert.equal(Number(vueClient.body.pickup_lat), -5.7264);
   });
 });
+
+// ─── L'AUTRE SENS : LE NUMÉRO DU CHAUFFEUR, VU PAR LE CLIENT ─────────────
+//
+// L'écran de suivi propose « Appeler le chauffeur ». Le numéro ne doit donc
+// sortir qu'au moment où ce bouton a un sens : la course est réglée, le taxi
+// est en route. Avant, une course simplement demandée — ou confirmée mais
+// pas payée — ne livre rien : le client passe par l'équipe, comme avant.
+describe('Numéro du chauffeur : ouvert au client une fois la course réglée', () => {
+  it('course confirmée mais pas payée : le client ne voit pas le numéro', async () => {
+    const { id, jetonClient } = await coursePriseParChauffeur();
+    const res = await request(app).get(`/api/trips/${id}`).set(authHeaders(jetonClient));
+
+    assert.equal(res.status, 200, JSON.stringify(res.body));
+    assert.equal(res.body.status, 'driver_confirmed');
+    // Le taxi, lui, est déjà identifiable : c'est ce qui rassure.
+    assert.ok(res.body.driver_name, 'le client doit savoir qui vient le chercher');
+    assert.ok(res.body.vehicle_plate, 'la plaque doit être lisible dès la confirmation');
+    assert.equal(res.body.driver_phone ?? null, null, 'le numéro du chauffeur a filtré');
+  });
+
+  it('course réglée : le numéro s’ouvre pour que le client puisse appeler', async () => {
+    const { id, jetonClient, driver } = await coursePriseParChauffeur();
+    await equipeValideLePaiement(id, jetonClient);
+
+    const res = await request(app).get(`/api/trips/${id}`).set(authHeaders(jetonClient));
+    assert.equal(res.status, 200, JSON.stringify(res.body));
+    assert.equal(res.body.status, 'paid');
+    assert.equal(res.body.driver_phone, driver.phone, 'le client doit pouvoir appeler son taxi');
+  });
+
+  it('la liste des courses du client suit la même règle', async () => {
+    const { id, jetonClient } = await coursePriseParChauffeur();
+    const utilisateur = await request(app).get(`/api/trips/${id}`).set(authHeaders(jetonClient));
+    const userId = utilisateur.body.user_id;
+
+    const avant = await request(app)
+      .get(`/api/trips?userId=${userId}`)
+      .set(authHeaders(jetonClient));
+    assert.equal(avant.status, 200, JSON.stringify(avant.body));
+    const ligneAvant = avant.body.find((c) => c.id === id);
+    assert.ok(ligneAvant, 'la course doit figurer dans la liste du client');
+    assert.equal(ligneAvant.driver_phone ?? null, null, 'le numéro a filtré dans la liste');
+
+    await equipeValideLePaiement(id, jetonClient);
+
+    const apres = await request(app)
+      .get(`/api/trips?userId=${userId}`)
+      .set(authHeaders(jetonClient));
+    const ligneApres = apres.body.find((c) => c.id === id);
+    assert.ok(ligneApres.driver_phone, 'le numéro doit s’ouvrir une fois la course réglée');
+  });
+});

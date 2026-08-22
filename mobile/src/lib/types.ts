@@ -818,6 +818,44 @@ export function dureeRouteMinutes(km: number): number {
   return Math.max(10, Math.round((12 + km) / 5) * 5);
 }
 
+/** Coordonnées d'un lieu de la grille, sinon null. */
+export function coordonneesVille(lieu: string): [number, number] | null {
+  return COORDONNEES_VILLES[normaliserLieu(lieu)] ?? null;
+}
+
+/** Kilomètres de route estimés entre deux points GPS. */
+export function kmEntrePoints(
+  aLat: number,
+  aLng: number,
+  bLat: number,
+  bLng: number
+): number {
+  const rad = Math.PI / 180;
+  const dLat = (bLat - aLat) * rad;
+  const dLng = (bLng - aLng) * rad;
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(aLat * rad) * Math.cos(bLat * rad) * Math.sin(dLng / 2) ** 2;
+  return 2 * 6371 * Math.asin(Math.sqrt(h)) * DETOUR_ROUTIER;
+}
+
+/**
+ * LE TAXI QUI APPROCHE, en minutes.
+ *
+ * Ce n'est pas le même calcul qu'une course : le chauffeur est DÉJÀ sur la
+ * route, il n'a pas à sortir de chez lui. Deux minutes pour se garer et
+ * trouver le client, plus deux minutes par kilomètre — la moyenne réelle sur
+ * les routes de l'île, feux de Stone Town et charrettes comprises.
+ *
+ * Sous un quart d'heure on annonce la minute ; au-delà on arrondit à cinq.
+ * Dire « 23 min » quand on ne sait pas à trois minutes près est un mensonge
+ * poli ; « 25 min » est une estimation assumée.
+ */
+export function dureeApprocheMinutes(km: number): number {
+  const brut = 2 + km * 2;
+  return brut <= 15 ? Math.max(1, Math.round(brut)) : Math.round(brut / 5) * 5;
+}
+
 /**
  * MA POSITION → LA VILLE LA PLUS PROCHE.
  *

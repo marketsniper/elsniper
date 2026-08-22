@@ -5,7 +5,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
-import { Alert, Linking, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Linking, Pressable, Text, View } from 'react-native';
 
 import { CartePosition } from '@/components/CartePosition';
 import { Etoiles } from '@/components/Etoiles';
@@ -16,6 +16,7 @@ import {
   Carte,
   Champ,
   ChargementCentre,
+  Depliant,
   Ecran,
   EncartInfo,
   LigneInfo,
@@ -32,10 +33,15 @@ import { formaterDateRelativeI18n, libelleStatutTrajet, libelleTypeTrajet, useT 
 import { couleurs, espaces, stylesReactifs } from '@/lib/theme';
 import {
   champ,
+  coordonneesVille,
+  dureeApprocheMinutes,
+  dureeRouteMinutes,
   ETAPES_TRAJET,
   formaterDate,
   formaterMontant,
   formaterPrix,
+  kmEntrePoints,
+  kmEntreVilles,
   moyensPaiement,
   reglementPaiement,
   TAUX_USD_TZS,
@@ -101,18 +107,25 @@ export default function EcranTrajet() {
   // paiement validé… le client voit l'avancement sans rien toucher.
   useRafraichissementAuto(charger);
 
-  const releverTaxi = useCallback(async () => {
-    if (!id) return;
-    setChargeSuivi(true);
-    try {
-      setPositionTaxi(await api.positionDeMonChauffeur(id));
-      setErreurSuivi('');
-    } catch (e) {
-      setErreurSuivi(e instanceof ErreurApi ? e.message : t('trip_introuvable'));
-    } finally {
-      setChargeSuivi(false);
-    }
-  }, [id, t]);
+  // Le relevé de position. `visible` distingue le geste du client (bouton
+  // qui tourne, erreur affichée) du relevé automatique qui alimente les
+  // minutes du bandeau : celui-là travaille en silence — un chauffeur pas
+  // encore repéré n'est pas une erreur, c'est l'état normal des débuts.
+  const releverTaxi = useCallback(
+    async (visible = false) => {
+      if (!id) return;
+      if (visible) setChargeSuivi(true);
+      try {
+        setPositionTaxi(await api.positionDeMonChauffeur(id));
+        setErreurSuivi('');
+      } catch (e) {
+        if (visible) setErreurSuivi(e instanceof ErreurApi ? e.message : t('trip_introuvable'));
+      } finally {
+        if (visible) setChargeSuivi(false);
+      }
+    },
+    [id, t]
+  );
 
   const basculerSuivi = useCallback(() => {
     setErreurSuivi('');
@@ -121,17 +134,24 @@ export default function EcranTrajet() {
       return;
     }
     setSuiviOuvert(true);
-    releverTaxi();
+    releverTaxi(true);
   }, [suiviOuvert, releverTaxi]);
 
-  // Carte ouverte : le point du taxi se rafraîchit tout seul, sinon le client
-  // regarderait une position figée en croyant que son chauffeur n'avance pas.
-  // Fermée, on n'interroge plus rien.
+  // LE SUIVI TOURNE TOUT SEUL, carte ouverte ou non. Les minutes annoncées
+  // en haut de l'écran ne valent que si la position est fraîche : dès qu'un
+  // chauffeur est confirmé sur une course vivante, on le relève toutes les
+  // vingt secondes. C'est ce relevé qui fait le chiffre.
+  const statutCourant = trajet ? String(champ(trajet, 'status', 'statut') ?? '') : '';
+  const suitLeTaxi =
+    !!(trajet && champ(trajet, 'driver_name', 'driverName')) &&
+    ['driver_confirmed', 'paid', 'in_progress'].includes(statutCourant);
+
   useEffect(() => {
-    if (!suiviOuvert) return;
-    const minuteur = setInterval(releverTaxi, 20000);
+    if (!suitLeTaxi) return;
+    releverTaxi();
+    const minuteur = setInterval(() => releverTaxi(), 20000);
     return () => clearInterval(minuteur);
-  }, [suiviOuvert, releverTaxi]);
+  }, [suitLeTaxi, releverTaxi]);
 
   useFocusEffect(
     useCallback(() => {
@@ -201,6 +221,10 @@ export default function EcranTrajet() {
   // envoyer sa position exacte, et la renvoyer s'il s'est déplacé.
   const estPrivee = champ<TypeTrajet>(trajet, 'trip_type', 'tripType') === 'private';
   const courseVivante = !annule && statut !== 'completed';
+  // AVANT LE DÉPART : le point de rendez-vous n'a de sens que tant que le
+  // client attend son taxi. Une fois à bord, dire au chauffeur où venir le
+  // chercher n'aide plus personne.
+  const avantDepart = courseVivante && statut !== 'in_progress';
   const positionPartagee =
     Number.isFinite(Number(champ(trajet, 'pickup_lat') ?? NaN)) &&
     Number.isFinite(Number(champ(trajet, 'pickup_lng') ?? NaN));
@@ -345,155 +369,189 @@ export default function EcranTrajet() {
     }
   };
 
+  // ─── CE QUE LE CLIENT LIT EN ARRIVANT ─────────────────────────────────
+  //
+  // Le prototype tenait en trois blocs : où en est ma course, qui vient me
+  // chercher, combien j'ai payé. Tout le reste — l'itinéraire, les options,
+  // la chronologie, l'annulation — se range derrière une touche. Cet écran
+  // suit le même parcours.
+
+  const departLibelle = String(champ(trajet, 'pickup_location', 'pickupLocation') ?? '—');
+  const arriveeLibelle = String(champ(trajet, 'dropoff_location', 'dropoffLocation') ?? '—');
+  const kmCourse = kmEntreVilles(departLibelle, arriveeLibelle);
+  const departPrevu = champ<string>(trajet, 'scheduled_at', 'scheduledAt');
+  // Course payée pour dans trois jours : annoncer des minutes serait faux —
+  // le taxi n'est pas encore en route. On annonce un rendez-vous.
+  const plusTard =
+    !!departPrevu && new Date(departPrevu).getTime() - Date.now() > 2 * 3600 * 1000;
+
+  // LE POINT DE RENDEZ-VOUS pour l'estimation : la position exacte partagée
+  // par le client si elle existe, sinon le centre de sa ville de départ.
+  // Sans l'un ni l'autre, pas de chiffre — on n'invente pas des minutes.
+  const pointRdv: [number, number] | null = positionPartagee
+    ? [Number(champ(trajet, 'pickup_lat')), Number(champ(trajet, 'pickup_lng'))]
+    : coordonneesVille(departLibelle);
+  const kmDuTaxi =
+    pointRdv && positionTaxi && positionTaxi.lat !== null && positionTaxi.lng !== null
+      ? kmEntrePoints(Number(positionTaxi.lat), Number(positionTaxi.lng), pointRdv[0], pointRdv[1])
+      : null;
+  const minutesDuTaxi = kmDuTaxi !== null ? dureeApprocheMinutes(kmDuTaxi) : null;
+
+  // Le bandeau : une phrase, un chiffre quand il en existe un de vrai.
+  const bandeau: {
+    titre: string;
+    sous: string;
+    icone: React.ComponentProps<typeof Ionicons>['name'];
+    chiffre?: string;
+    unite?: string;
+  } = annule
+    ? { titre: t('trip_etat_annulee'), sous: t('trip_etat_annulee_sous'), icone: 'close-circle' }
+    : statut === 'completed'
+      ? {
+          titre: t('trip_etat_terminee'),
+          sous: t('trip_etat_terminee_sous'),
+          icone: 'checkmark-done-circle',
+        }
+      : statut === 'in_progress'
+        ? {
+            titre: t('trip_etat_en_route'),
+            sous: t('trip_etat_en_route_sous'),
+            icone: 'navigate-circle',
+          }
+        : statut === 'requested'
+          ? {
+              titre: t('trip_etat_recherche'),
+              sous: t('trip_etat_recherche_sous'),
+              icone: 'search-circle',
+            }
+          : peutPayer
+            ? {
+                titre: t('trip_etat_confirme'),
+                sous: t('trip_etat_confirme_sous'),
+                icone: 'card',
+                chiffre: formaterPrix(trajet),
+              }
+            : plusTard
+              ? {
+                  titre: t('trip_etat_programme'),
+                  sous: formaterDate(departPrevu),
+                  icone: 'calendar',
+                }
+              : {
+                  titre: t('trip_etat_arrive'),
+                  sous:
+                    minutesDuTaxi !== null && kmDuTaxi !== null
+                      ? t('trip_minutes_sous', {
+                          chauffeur: String(nomChauffeur ?? '').split(' ')[0] || t('trip_taxi_chauffeur'),
+                          km: kmDuTaxi < 10 ? kmDuTaxi.toFixed(1) : String(Math.round(kmDuTaxi)),
+                          quand: positionTaxi?.updated_at
+                            ? formaterDateRelativeI18n(positionTaxi.updated_at, t)
+                            : '—',
+                        })
+                      : t('trip_position_attente'),
+                  icone: 'car-sport',
+                  ...(minutesDuTaxi !== null
+                    ? { chiffre: String(minutesDuTaxi), unite: t('trip_minutes') }
+                    : {}),
+                };
+
+  // Le numéro du chauffeur : le serveur ne le donne qu'une fois la course
+  // payée. C'est exactement quand le client en a besoin.
+  const telChauffeur = champ<string>(trajet, 'driver_phone', 'driverPhone');
+  const initialeChauffeur = String(nomChauffeur ?? '?').trim().charAt(0).toUpperCase() || '?';
+
+  // Le trajet en une ligne, pour les dépliants et le bandeau.
+  const ligneItineraire = `${departLibelle} → ${arriveeLibelle}`;
+  const resumeDetails = [
+    kmCourse !== null
+      ? t('course_distance', {
+          km: String(Math.round(kmCourse)),
+          min: String(dureeRouteMinutes(kmCourse)),
+        })
+      : null,
+    typeTrajet ? libelleTypeTrajet(typeTrajet, t) : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+
   return (
     <Ecran fond="palmiers" onRefresh={charger}>
-      <Carte>
-        <View style={styles.enTete}>
-          <Titre>{t('trip_titre')}</Titre>
-          <BadgeStatutTrajet statut={statut} />
+      {/* 1 · OÙ EN EST MA COURSE — la question à laquelle tout le monde
+          vient répondre. Une phrase, et le chiffre qui compte. */}
+      <Carte style={styles.bandeau}>
+        <View style={styles.bandeauTete}>
+          <Ionicons name={bandeau.icone} size={26} color={couleurs.primaire} />
+          <Text style={styles.bandeauTitre}>{bandeau.titre}</Text>
         </View>
-        {typeTrajet && (
-          <LigneInfo label={t('commun_type')} valeur={libelleTypeTrajet(typeTrajet, t)} />
+        <Text style={styles.bandeauItineraire}>{ligneItineraire}</Text>
+        {!!bandeau.chiffre && (
+          <View style={styles.bandeauChiffreRangee}>
+            <Text style={styles.bandeauChiffre}>{bandeau.chiffre}</Text>
+            {!!bandeau.unite && <Text style={styles.bandeauUnite}>{bandeau.unite}</Text>}
+          </View>
         )}
-        {!!nomClient && <LigneInfo label={t('commun_client')} valeur={String(nomClient)} />}
-        <LigneInfo
-          label={t('commun_depart')}
-          valeur={String(champ(trajet, 'pickup_location', 'pickupLocation') ?? '—')}
-        />
-        <LigneInfo
-          label={t('commun_arrivee')}
-          valeur={String(champ(trajet, 'dropoff_location', 'dropoffLocation') ?? '—')}
-        />
-        {!!champ(trajet, 'scheduled_at', 'scheduledAt') && (
-          <LigneInfo
-            label={t('trip_programme_le')}
-            valeur={formaterDate(champ(trajet, 'scheduled_at', 'scheduledAt'))}
-          />
-        )}
-        {/* Transfert aéroport : n° de vol suivi par l'équipe. */}
-        {!!champ(trajet, 'flight_number', 'flightNumber') && (
-          <LigneInfo
-            label={t('trip_vol')}
-            valeur={`✈️ ${champ(trajet, 'flight_number', 'flightNumber')}`}
-          />
-        )}
-        {champ<boolean>(trajet, 'round_trip', 'roundTrip') === true && (
-          <LigneInfo label={t('trip_aller_retour')} valeur={t('trip_aller_retour_valeur')} />
-        )}
-        {(champ<boolean>(trajet, 'baby_seat', 'babySeat') === true ||
-          champ<boolean>(trajet, 'bulky_luggage', 'bulkyLuggage') === true) && (
-          <LigneInfo
-            label={t('trip_options')}
-            valeur={[
-              champ<boolean>(trajet, 'baby_seat', 'babySeat') === true
-                ? t('reserver_siege_bebe')
-                : null,
-              champ<boolean>(trajet, 'bulky_luggage', 'bulkyLuggage') === true
-                ? t('reserver_gros_bagages')
-                : null,
-            ]
-              .filter(Boolean)
-              .join(' · ')}
-          />
-        )}
-        <View style={styles.blocPrix}>
-          <Text style={styles.labelPrix}>{t('trip_prix_fige')}</Text>
-          <Text style={styles.prix}>{formaterPrix(trajet)}</Text>
-        </View>
+        <Text style={styles.bandeauSous}>{bandeau.sous}</Text>
       </Carte>
 
-      {/* Votre taxi : visible dès l'assignation, essentiel une fois la
-          course payée — le client reconnaît le véhicule au premier regard. */}
+      {/* 2 · QUI VIENT ME CHERCHER — visible dès l'assignation. Le client
+          reconnaît la voiture à la plaque, et appelle l'homme au volant
+          d'une touche dès que la course est réglée. */}
       {!annule && !!nomChauffeur && (
         <Carte>
-          <View style={styles.enTeteTaxi}>
-            <Ionicons name="car-sport" size={22} color={couleurs.primaire} />
-            <Text style={styles.titreTaxi}>{t('trip_taxi_titre')}</Text>
-          </View>
-          <LigneInfo label={t('trip_taxi_chauffeur')} valeur={String(nomChauffeur)} />
-          <LigneInfo label={t('trip_taxi_modele')} valeur={String(modeleTaxi ?? '—')} />
-          <View style={styles.blocPlaque}>
-            <Text style={styles.labelPlaque}>{t('trip_taxi_plaque')}</Text>
+          <View style={styles.fiche}>
+            <View style={styles.pastilleChauffeur}>
+              <Text style={styles.initiale}>{initialeChauffeur}</Text>
+            </View>
+            <View style={styles.textesChauffeur}>
+              <Text style={styles.nomChauffeur}>{String(nomChauffeur)}</Text>
+              {!!modeleTaxi && <Text style={styles.modeleTaxi}>{String(modeleTaxi)}</Text>}
+            </View>
             <Text style={styles.plaque}>{String(plaqueTaxi ?? '—')}</Text>
           </View>
-
-          {/* SUIVI DU TAXI — s'il le souhaite : la carte ne s'ouvre qu'à la
-              demande, et se referme d'un appui. Le client REGARDE son
-              chauffeur approcher ; il n'a aucun itinéraire à suivre, c'est le
-              taxi qui vient à lui. */}
-          {courseVivante && (
-            <>
-              <Bouton
-                titre={suiviOuvert ? t('trip_masquer_taxi') : t('trip_suivre_taxi')}
-                icone={suiviOuvert ? 'chevron-up' : 'car-outline'}
-                variante="secondaire"
-                onPress={basculerSuivi}
-                charge={chargeSuivi}
-              />
-              {suiviOuvert && positionTaxi && positionTaxi.lat !== null && positionTaxi.lng !== null && (
-                <CartePosition
-                  lat={Number(positionTaxi.lat)}
-                  lng={Number(positionTaxi.lng)}
-                  titre={`${t('trip_taxi_en_route')}${
-                    positionTaxi.updated_at
-                      ? ` — ${t('trip_taxi_position_datee', {
-                          quand: formaterDateRelativeI18n(positionTaxi.updated_at, t),
-                        })}`
-                      : ''
-                  }`}
-                  hauteur={200}
-                  lien={false}
-                  // Ce point-là est un VÉHICULE : le client doit reconnaître
-                  // une voiture qui approche, pas déchiffrer une épingle.
-                  marqueur="voiture"
-                  cadrer={
-                    positionPartagee
-                      ? {
-                          lat: Number(champ(trajet, 'pickup_lat')),
-                          lng: Number(champ(trajet, 'pickup_lng')),
-                        }
-                      : undefined
-                  }
-                />
-              )}
-              {suiviOuvert && positionTaxi && positionTaxi.lat === null && (
-                <EncartInfo icone="time-outline" ton="attente">
-                  {t('trip_taxi_pas_repere')}
-                </EncartInfo>
-              )}
-              <TexteErreur>{erreurSuivi}</TexteErreur>
-            </>
+          {!!telChauffeur && courseVivante && (
+            <Bouton
+              titre={t('trip_appeler_chauffeur')}
+              icone="call"
+              onPress={() => Linking.openURL(`tel:${String(telChauffeur).replace(/\s/g, '')}`)}
+            />
           )}
         </Carte>
       )}
 
-      <Carte>
-        <Text style={styles.titreSuivi}>{t('trip_suivi')}</Text>
-        <TimelineStatut
-          etapes={ETAPES_TRAJET.map((cle) => ({ cle, label: libelleStatutTrajet(cle, t) }))}
-          statutCourant={statut}
-          annule={annule}
-        />
-      </Carte>
-
-      {statut === 'requested' && (
-        <>
-          <EncartInfo icone="time-outline" ton="attente">
-            {t('trip_demande_envoyee')}
-          </EncartInfo>
-          {/* Le client doit savoir POURQUOI il ne peut pas encore payer. */}
-          <EncartInfo icone="card-outline">
-            {t('trip_paiement_apres_chauffeur', { montant: formaterPrix(trajet) })}
-          </EncartInfo>
-        </>
+      {/* 3 · COMBIEN — réglé ou à régler, sur une seule ligne. Sauf quand le
+          bandeau porte déjà le montant en gros : on ne dit pas deux fois le
+          même chiffre à dix centimètres d'écart. */}
+      {!annule && !peutPayer && (
+        <Carte>
+          <View style={styles.rangeePrix}>
+            <View style={styles.libellePrix}>
+              <Ionicons
+                name={statut === 'requested' || peutPayer ? 'time-outline' : 'checkmark-circle'}
+                size={20}
+                color={statut === 'requested' || peutPayer ? couleurs.texteSecondaire : couleurs.succes}
+              />
+              <Text style={styles.labelPrix}>
+                {statut === 'requested' || peutPayer ? t('trip_a_regler') : t('trip_regle')}
+              </Text>
+            </View>
+            <Text style={styles.prix}>{formaterPrix(trajet)}</Text>
+          </View>
+        </Carte>
       )}
-      {/* Chauffeur confirmé : la marche à suivre pour régler, noir sur blanc. */}
-      {peutPayer && (
-        <EncartInfo icone="cash-outline" ton="attente">
-          {t('trip_paiement_instructions', { montant: formaterPrix(trajet) })}
+
+      {/* 4 · L'ACTION DU MOMENT. Un seul geste attendu à la fois : payer,
+          donner son point de rendez-vous, ou noter. */}
+
+      {/* Remise de parrainage : le cadeau se voit AVANT le choix du moyen. */}
+      {peutPayer && remiseCourse > 0 && (
+        <EncartInfo icone="gift-outline" ton="succes">
+          {t('parrainage_remise_info', {
+            montant: formaterMontant(remiseCourse, deviseCourse),
+          })}
         </EncartInfo>
       )}
-      {/* Hôtel avec crédit suffisant : paiement en un geste, sans circuit externe. */}
+
+      {/* Hôtel avec crédit suffisant : paiement en un geste, sans détour. */}
       {peutPayer &&
         hotelId &&
         soldeCredit !== null &&
@@ -505,96 +563,66 @@ export default function EcranTrajet() {
             charge={chargeCredit}
           />
         )}
-      {/* POINT DE RENDEZ-VOUS EXACT — « Nungwi » ne dit pas devant quelle
-          porte attendre. Un geste du client, et le chauffeur le trouve sans
-          chercher. Tant que la course est vivante, il peut le renvoyer : on
-          se déplace, on change de plage. */}
-      {estPrivee && courseVivante && (
-        <Carte>
-          <SousTitre>{t('trip_point_rendez_vous')}</SousTitre>
-          {positionPartagee ? (
-            <>
-              <EncartInfo icone="checkmark-circle-outline" ton="succes">
-                {t('trip_position_partagee')}
-              </EncartInfo>
-              {/* Le client voit exactement ce que voit son chauffeur : s'il
-                  s'est trompé d'endroit, il le corrige avant qu'on parte. */}
-              <CartePosition
-                lat={Number(champ(trajet, 'pickup_lat'))}
-                lng={Number(champ(trajet, 'pickup_lng'))}
-                hauteur={150}
-                lien={false}
-                // C'est LUI, à cet endroit — turquoise, comme sur l'écran de
-                // son chauffeur. Les deux voient le même repère.
-                marqueur="client"
-              />
-            </>
-          ) : (
-            <EncartInfo icone="information-circle-outline">{t('trip_position_invite')}</EncartInfo>
-          )}
-          <Bouton
-            titre={positionPartagee ? t('trip_position_maj') : t('trip_partager_position')}
-            icone="location-outline"
-            variante={positionPartagee ? 'secondaire' : 'primaire'}
-            onPress={partagerMaPosition}
-            charge={chargePosition}
-          />
-          <TexteErreur>{erreurPosition}</TexteErreur>
-        </Carte>
-      )}
 
-      {/* LE CHOIX DU MOYEN DE PAIEMENT. Un client facturé en dollars voit les
-          deux portes avec le montant exact derrière chacune : la carte (prix
-          + frais bancaires) et le portefeuille mobile (converti en shillings,
-          sans frais). Un client facturé en shillings n'a que le portefeuille
-          mobile — un seul bouton, comme avant. */}
-      {peutPayer && remiseCourse > 0 && (
-        <EncartInfo icone="gift-outline" ton="succes">
-          {t('parrainage_remise_info', {
-            montant: formaterMontant(remiseCourse, deviseCourse),
-          })}
-        </EncartInfo>
-      )}
-      {peutPayer && moyensDisponibles.length > 1 ? (
-        <Carte>
-          <SousTitre>{t('paiement_choix_titre')}</SousTitre>
+      {/* LES DEUX PORTES DU PAIEMENT, présentées comme les deux offres de
+          l'écran de réservation : le montant EXACT est sur la ligne, pas
+          caché derrière. Un client facturé en shillings n'en voit qu'une. */}
+      {peutPayer &&
+        (moyensDisponibles.length > 1 ? (
+          <Carte>
+            <Pressable
+              onPress={() => payer('carte')}
+              disabled={chargePaiement}
+              accessibilityRole="button"
+              style={({ pressed }) => [styles.moyen, pressed && styles.moyenAppuye]}
+            >
+              <Ionicons name="card-outline" size={24} color={couleurs.primaire} />
+              <View style={styles.textesMoyen}>
+                <Text style={styles.titreMoyen}>{t('paiement_moyen_carte_court')}</Text>
+                <Text style={styles.detailMoyen}>
+                  {t('paiement_carte_detail', {
+                    prix: formaterMontant(baseAPayer, deviseCourse),
+                    frais: formaterMontant(parCarte.surcharge, parCarte.devise),
+                  })}
+                </Text>
+              </View>
+              {chargePaiement && moyenEnCours === 'carte' ? (
+                <ActivityIndicator color={couleurs.primaire} />
+              ) : (
+                <Text style={styles.prixMoyen}>
+                  {formaterMontant(parCarte.montant, parCarte.devise)}
+                </Text>
+              )}
+            </Pressable>
+            <View style={styles.filetMoyen} />
+            <Pressable
+              onPress={() => payer('mobile')}
+              disabled={chargePaiement}
+              accessibilityRole="button"
+              style={({ pressed }) => [styles.moyen, pressed && styles.moyenAppuye]}
+            >
+              <Ionicons name="phone-portrait-outline" size={24} color={couleurs.primaire} />
+              <View style={styles.textesMoyen}>
+                <Text style={styles.titreMoyen}>{t('paiement_moyen_mobile_court')}</Text>
+                <Text style={styles.detailMoyen}>{t('paiement_mobile_detail')}</Text>
+              </View>
+              {chargePaiement && moyenEnCours === 'mobile' ? (
+                <ActivityIndicator color={couleurs.primaire} />
+              ) : (
+                <Text style={styles.prixMoyen}>
+                  {formaterMontant(parMobile.montant, parMobile.devise)}
+                </Text>
+              )}
+            </Pressable>
+          </Carte>
+        ) : (
           <Bouton
-            titre={t('paiement_carte', {
-              montant: formaterMontant(parCarte.montant, parCarte.devise),
-            })}
-            icone="card-outline"
-            onPress={() => payer('carte')}
-            charge={chargePaiement && moyenEnCours === 'carte'}
-            desactive={chargePaiement && moyenEnCours !== 'carte'}
-          />
-          <Text style={styles.detailMoyen}>
-            {t('paiement_carte_detail', {
-              prix: formaterMontant(baseAPayer, deviseCourse),
-              frais: formaterMontant(parCarte.surcharge, parCarte.devise),
-            })}
-          </Text>
-          <Bouton
-            titre={t('paiement_mobile', {
-              montant: formaterMontant(parMobile.montant, parMobile.devise),
-            })}
-            icone="phone-portrait-outline"
-            variante="secondaire"
-            onPress={() => payer('mobile')}
-            charge={chargePaiement && moyenEnCours === 'mobile'}
-            desactive={chargePaiement && moyenEnCours !== 'mobile'}
-          />
-          <Text style={styles.detailMoyen}>{t('paiement_mobile_detail')}</Text>
-        </Carte>
-      ) : (
-        peutPayer && (
-          <Bouton
-            titre={t('trip_payer')}
+            titre={`${t('trip_payer')} · ${formaterMontant(parMobile.montant, parMobile.devise)}`}
             icone="phone-portrait-outline"
             onPress={() => payer('mobile')}
             charge={chargePaiement}
           />
-        )
-      )}
+        ))}
       {peutPayer && paiementId && (methodePaiement === 'paypal' || methodePaiement === 'pesapal') && (
         <Bouton
           titre={t('trip_verifier_paiement')}
@@ -612,28 +640,26 @@ export default function EcranTrajet() {
           charge={chargeConfirmation}
         />
       )}
-      {peutAnnuler && (
-        <Bouton
-          titre={t('trip_annuler')}
-          icone="close-circle-outline"
-          variante="danger"
-          onPress={annuler}
-          charge={chargeAnnulation}
-        />
-      )}
-      {statut === 'paid' && (
-        <EncartInfo icone="checkmark-circle-outline">{t('trip_paiement_recu')}</EncartInfo>
+
+      {/* POINT DE RENDEZ-VOUS — « Nungwi » ne dit pas devant quelle porte
+          attendre. Tant qu'il n'est pas donné, c'est le geste le plus utile
+          de l'écran : il reste ici, en clair. Une fois donné, il rejoint la
+          carte de suivi dans le dépliant. */}
+      {estPrivee && avantDepart && !positionPartagee && (
+        <Carte>
+          <SousTitre>{t('trip_point_rendez_vous')}</SousTitre>
+          <EncartInfo icone="information-circle-outline">{t('trip_position_invite')}</EncartInfo>
+          <Bouton
+            titre={t('trip_partager_position')}
+            icone="location-outline"
+            onPress={partagerMaPosition}
+            charge={chargePosition}
+          />
+          <TexteErreur>{erreurPosition}</TexteErreur>
+        </Carte>
       )}
 
-      {!annule && (
-        <Bouton
-          titre={t('commun_contact_whatsapp')}
-          icone="logo-whatsapp"
-          variante="secondaire"
-          onPress={() => Linking.openURL(lienWhatsapp)}
-        />
-      )}
-
+      {/* Course terminée : la note. C'est la seule chose qu'on demande. */}
       {statut === 'completed' && (
         <Carte>
           {noteEnvoyee || dejaNotee ? (
@@ -665,15 +691,166 @@ export default function EcranTrajet() {
         </Carte>
       )}
 
+      {/* Pas de numéro de chauffeur à composer : l'équipe reste joignable
+          en un geste, sans aller la chercher dans un dépliant. */}
+      {courseVivante && !telChauffeur && (
+        <Bouton
+          titre={t('commun_contact_whatsapp')}
+          icone="logo-whatsapp"
+          variante="secondaire"
+          onPress={() => Linking.openURL(lienWhatsapp)}
+        />
+      )}
+
       <TexteErreur>{erreur}</TexteErreur>
-      <Bouton
-        titre={t('commun_actualiser_statut')}
-        icone="refresh-outline"
-        variante="secondaire"
-        onPress={charger}
-      />
-      {/* Retour toujours possible depuis la fiche — course terminée
-          comprise : le client repart faire une autre action. */}
+
+      {/* 5 · CE QU'ON CONSULTE RAREMENT, à une touche. */}
+      <Depliant titre={t('trip_details_titre')} resume={resumeDetails}>
+        {typeTrajet && (
+          <LigneInfo label={t('commun_type')} valeur={libelleTypeTrajet(typeTrajet, t)} />
+        )}
+        {!!nomClient && <LigneInfo label={t('commun_client')} valeur={String(nomClient)} />}
+        <LigneInfo label={t('commun_depart')} valeur={departLibelle} />
+        <LigneInfo label={t('commun_arrivee')} valeur={arriveeLibelle} />
+        {kmCourse !== null && (
+          <LigneInfo
+            label={t('trip_distance')}
+            valeur={t('course_distance', {
+              km: String(Math.round(kmCourse)),
+              min: String(dureeRouteMinutes(kmCourse)),
+            })}
+          />
+        )}
+        {!!departPrevu && (
+          <LigneInfo label={t('trip_programme_le')} valeur={formaterDate(departPrevu)} />
+        )}
+        {!!champ(trajet, 'flight_number', 'flightNumber') && (
+          <LigneInfo
+            label={t('trip_vol')}
+            valeur={`✈️ ${champ(trajet, 'flight_number', 'flightNumber')}`}
+          />
+        )}
+        {champ<boolean>(trajet, 'round_trip', 'roundTrip') === true && (
+          <LigneInfo label={t('trip_aller_retour')} valeur={t('trip_aller_retour_valeur')} />
+        )}
+        {(champ<boolean>(trajet, 'baby_seat', 'babySeat') === true ||
+          champ<boolean>(trajet, 'bulky_luggage', 'bulkyLuggage') === true) && (
+          <LigneInfo
+            label={t('trip_options')}
+            valeur={[
+              champ<boolean>(trajet, 'baby_seat', 'babySeat') === true
+                ? t('reserver_siege_bebe')
+                : null,
+              champ<boolean>(trajet, 'bulky_luggage', 'bulkyLuggage') === true
+                ? t('reserver_gros_bagages')
+                : null,
+            ]
+              .filter(Boolean)
+              .join(' · ')}
+          />
+        )}
+        <View style={styles.chronologie}>
+          <TimelineStatut
+            etapes={ETAPES_TRAJET.map((cle) => ({ cle, label: libelleStatutTrajet(cle, t) }))}
+            statutCourant={statut}
+            annule={annule}
+          />
+        </View>
+      </Depliant>
+
+      <Depliant titre={t('trip_autres_actions')}>
+        {/* SUIVRE SON TAXI SUR LA CARTE. Le chiffre du bandeau suffit à la
+            plupart ; celui qui veut VOIR la voiture approcher ouvre ici. */}
+        {courseVivante && !!nomChauffeur && (
+          <>
+            <Bouton
+              titre={suiviOuvert ? t('trip_masquer_taxi') : t('trip_suivre_taxi')}
+              icone={suiviOuvert ? 'chevron-up' : 'car-outline'}
+              variante="secondaire"
+              onPress={basculerSuivi}
+              charge={chargeSuivi}
+            />
+            {suiviOuvert &&
+              positionTaxi &&
+              positionTaxi.lat !== null &&
+              positionTaxi.lng !== null && (
+                <CartePosition
+                  lat={Number(positionTaxi.lat)}
+                  lng={Number(positionTaxi.lng)}
+                  titre={`${t('trip_taxi_en_route')}${
+                    positionTaxi.updated_at
+                      ? ` — ${t('trip_taxi_position_datee', {
+                          quand: formaterDateRelativeI18n(positionTaxi.updated_at, t),
+                        })}`
+                      : ''
+                  }`}
+                  hauteur={200}
+                  lien={false}
+                  marqueur="voiture"
+                  cadrer={pointRdv ? { lat: pointRdv[0], lng: pointRdv[1] } : undefined}
+                />
+              )}
+            {suiviOuvert && positionTaxi && positionTaxi.lat === null && (
+              <EncartInfo icone="time-outline" ton="attente">
+                {t('trip_taxi_pas_repere')}
+              </EncartInfo>
+            )}
+            <TexteErreur>{erreurSuivi}</TexteErreur>
+          </>
+        )}
+
+        {/* Point de rendez-vous DÉJÀ donné : on peut le revoir et le
+            corriger — on se déplace, on change de plage. */}
+        {estPrivee && avantDepart && positionPartagee && (
+          <>
+            <EncartInfo icone="checkmark-circle-outline" ton="succes">
+              {t('trip_position_partagee')}
+            </EncartInfo>
+            <CartePosition
+              lat={Number(champ(trajet, 'pickup_lat'))}
+              lng={Number(champ(trajet, 'pickup_lng'))}
+              hauteur={150}
+              lien={false}
+              marqueur="client"
+            />
+            <Bouton
+              titre={t('trip_position_maj')}
+              icone="location-outline"
+              variante="secondaire"
+              onPress={partagerMaPosition}
+              charge={chargePosition}
+            />
+            <TexteErreur>{erreurPosition}</TexteErreur>
+          </>
+        )}
+
+        {!annule && (!courseVivante || !!telChauffeur) && (
+          <Bouton
+            titre={t('commun_contact_whatsapp')}
+            icone="logo-whatsapp"
+            variante="secondaire"
+            onPress={() => Linking.openURL(lienWhatsapp)}
+          />
+        )}
+        <Bouton
+          titre={t('commun_actualiser_statut')}
+          icone="refresh-outline"
+          variante="secondaire"
+          onPress={charger}
+        />
+        {peutAnnuler && (
+          <Bouton
+            titre={t('trip_annuler')}
+            icone="close-circle-outline"
+            variante="danger"
+            onPress={annuler}
+            charge={chargeAnnulation}
+          />
+        )}
+      </Depliant>
+
+      {/* Retour toujours possible — course terminée comprise : le client
+          repart faire autre chose. */}
       <Bouton
         titre={t('commun_retour_accueil')}
         icone="arrow-back-outline"
@@ -685,73 +862,88 @@ export default function EcranTrajet() {
 }
 
 const styles = stylesReactifs(() => ({
-  // Ligne d'explication sous chaque bouton de paiement (frais, sans frais).
-  detailMoyen: {
-    color: couleurs.texteSecondaire,
-    fontSize: 13,
-    lineHeight: 18,
-    marginTop: -espaces.xs,
-    marginBottom: espaces.s,
+  // ─── LE BANDEAU D'ÉTAT ───────────────────────────────────────────────
+  bandeau: {
+    alignItems: 'flex-start',
   },
-  enTete: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: espaces.m,
-  },
-  blocPrix: {
-    marginTop: espaces.s,
-    paddingTop: espaces.m,
-    borderTopWidth: 1,
-    borderTopColor: couleurs.bordure,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  labelPrix: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: couleurs.texteSecondaire,
-  },
-  prix: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: couleurs.primaire,
-  },
-  titreSuivi: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: couleurs.encre,
-    marginBottom: espaces.s,
-  },
-  enTeteTaxi: {
+  bandeauTete: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: espaces.s,
-    marginBottom: espaces.s,
   },
-  titreTaxi: {
-    fontSize: 15,
+  bandeauTitre: {
+    flex: 1,
+    fontSize: 22,
+    fontWeight: '800',
+    letterSpacing: -0.4,
+    color: couleurs.encre,
+  },
+  bandeauItineraire: {
+    fontSize: 14,
+    color: couleurs.texteSecondaire,
+    marginTop: 2,
+  },
+  // Le chiffre et son unité posés sur la même ligne de base.
+  bandeauChiffreRangee: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: espaces.xs,
+    marginTop: espaces.m,
+  },
+  bandeauChiffre: {
+    fontSize: 56,
+    lineHeight: 60,
+    fontWeight: '800',
+    letterSpacing: -2,
+    color: couleurs.primaire,
+  },
+  bandeauUnite: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: couleurs.primaire,
+  },
+  bandeauSous: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: couleurs.texteSecondaire,
+    marginTop: espaces.s,
+  },
+
+  // ─── LA FICHE DU CHAUFFEUR ───────────────────────────────────────────
+  fiche: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: espaces.m,
+  },
+  pastilleChauffeur: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: couleurs.primaireClair,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  initiale: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: couleurs.primaireFonce,
+  },
+  textesChauffeur: {
+    flex: 1,
+    gap: 2,
+  },
+  nomChauffeur: {
+    fontSize: 17,
     fontWeight: '700',
     color: couleurs.encre,
   },
-  // La plaque en évidence, façon plaque d'immatriculation.
-  blocPlaque: {
-    marginTop: espaces.s,
-    paddingTop: espaces.m,
-    borderTopWidth: 1,
-    borderTopColor: couleurs.bordure,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  labelPlaque: {
+  modeleTaxi: {
     fontSize: 14,
-    fontWeight: '600',
     color: couleurs.texteSecondaire,
   },
+  // La plaque se lit comme une plaque : encadrée, espacée, en capitales.
   plaque: {
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: '800',
     letterSpacing: 2,
     color: couleurs.encre,
@@ -759,9 +951,74 @@ const styles = stylesReactifs(() => ({
     borderWidth: 1.5,
     borderColor: couleurs.encre,
     borderRadius: 6,
-    paddingHorizontal: espaces.m,
+    paddingHorizontal: espaces.s,
     paddingVertical: 4,
     overflow: 'hidden',
+  },
+
+  // ─── LE PRIX ─────────────────────────────────────────────────────────
+  rangeePrix: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: espaces.m,
+  },
+  libellePrix: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: espaces.s,
+  },
+  labelPrix: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: couleurs.texteSecondaire,
+  },
+  prix: {
+    fontSize: 26,
+    fontWeight: '800',
+    letterSpacing: -0.6,
+    color: couleurs.encre,
+  },
+
+  // ─── LES DEUX PORTES DU PAIEMENT ─────────────────────────────────────
+  moyen: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: espaces.m,
+    paddingVertical: espaces.s,
+    minHeight: 64,
+  },
+  moyenAppuye: {
+    opacity: 0.6,
+  },
+  textesMoyen: {
+    flex: 1,
+    gap: 2,
+  },
+  titreMoyen: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: couleurs.encre,
+  },
+  detailMoyen: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: couleurs.texteSecondaire,
+  },
+  prixMoyen: {
+    fontSize: 20,
+    fontWeight: '800',
+    letterSpacing: -0.5,
+    color: couleurs.primaire,
+  },
+  filetMoyen: {
+    height: 1,
+    backgroundColor: couleurs.bordure,
+  },
+
+  // ─── LE RESTE ────────────────────────────────────────────────────────
+  chronologie: {
+    marginTop: espaces.s,
   },
   blocNote: {
     flexDirection: 'row',

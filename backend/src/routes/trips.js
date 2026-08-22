@@ -185,7 +185,14 @@ const ratingSchema = z.object({
 // Infos PUBLIQUES du taxi assigné, jointes aux courses : dès que tout est
 // réglé, le client sait qui vient le chercher (nom du chauffeur, plaque,
 // modèle du véhicule).
-const CHAMPS_CHAUFFEUR = `d.full_name AS driver_name, d.vehicle_plate, d.vehicle_model`;
+//
+// Le TÉLÉPHONE du chauffeur, lui, ne sort qu'une fois la course payée ou
+// commencée : c'est à ce moment-là, et pas avant, qu'un client a besoin
+// d'appeler l'homme qui vient le chercher — « je suis devant le portail
+// bleu ». Le CASE le laisse à null tant que ce moment n'est pas venu ; le
+// numéro ne transite donc jamais pour une course simplement demandée.
+const CHAMPS_CHAUFFEUR = `d.full_name AS driver_name, d.vehicle_plate, d.vehicle_model,
+                CASE WHEN t.status IN ('paid', 'in_progress') THEN d.phone END AS driver_phone`;
 
 async function getTrip(id) {
   const { rows } = await query(
