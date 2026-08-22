@@ -9,6 +9,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FondPlage } from '@/components/FondPlage';
 import { IleDeZanzibar } from '@/components/Ile';
+import { Colobe } from '@/components/marques/Colobe';
 import { EtiquetteVersion } from '@/components/Version';
 import { LogoZanziGo, SelecteurLangue, SelecteurPeau } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
@@ -163,6 +164,19 @@ export default function EcranAccueil() {
             <Text style={styles.texteConfiance}>{t('accueil_confiance')}</Text>
           </View>
 
+          {/* L'EMBLÈME, ET SA CONTREPARTIE. Le colobe roux n'est pas là pour
+              décorer : c'est l'animal que notre propre métier écrase, et ce
+              bloc est ce qui l'autorise à figurer ici. La consigne qu'il
+              annonce s'affiche vraiment au chauffeur, sur chaque course qui
+              traverse Jozani. */}
+          <View style={styles.blocEmbleme}>
+            <Colobe taille={34} couleur={couleurs.primaire} />
+            <View style={styles.textesEmbleme}>
+              <Text style={styles.titreEmbleme}>{t('embleme_titre')}</Text>
+              <Text style={styles.texteEmbleme}>{t('embleme_texte')}</Text>
+            </View>
+          </View>
+
           {/* LE DESIGN, AU CHOIX. Placé en bas : on vient d'abord réserver
               un taxi. Mais il est là avant même de se connecter — un client
               qui n'arrive pas à lire l'écran sous le soleil de midi ne
@@ -193,6 +207,26 @@ export default function EcranAccueil() {
 const styles = stylesReactifs(() => ({
   zone: {
     flex: 1,
+  },
+  blocEmbleme: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: espaces.s,
+    marginTop: espaces.l,
+  },
+  textesEmbleme: {
+    flex: 1,
+    gap: 3,
+  },
+  titreEmbleme: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: couleurs.encre,
+  },
+  texteEmbleme: {
+    fontSize: 13,
+    lineHeight: 19,
+    color: couleurs.texteSecondaire,
   },
   blocPeau: {
     marginTop: espaces.l,

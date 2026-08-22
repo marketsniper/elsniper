@@ -8,6 +8,7 @@ import React, { useCallback, useState } from 'react';
 import { Alert, Linking, Pressable, Text } from 'react-native';
 
 import { CartePosition } from '@/components/CartePosition';
+import { ConsigneJozani } from '@/components/marques/ConsigneJozani';
 import { TimelineStatut } from '@/components/TimelineStatut';
 import {
   BadgeStatutTrajet,
@@ -30,6 +31,7 @@ import {
   formaterDate,
   formaterMontant,
   formaterPrix,
+  traverseJozani,
   type StatutTrajet,
   type Trajet,
   type TypeTrajet,
@@ -144,8 +146,17 @@ export default function EcranDetailCourse() {
     ]);
   };
 
+  const depart = String(champ(course, 'pickup_location', 'pickupLocation') ?? '');
+  const arrivee = String(champ(course, 'dropoff_location', 'dropoffLocation') ?? '');
+  // La consigne ne s'affiche que sur les courses qui traversent VRAIMENT la
+  // forêt, et seulement tant que la course est vivante : après coup, elle
+  // n'est plus une consigne.
+  const consigneJozani =
+    traverseJozani(depart, arrivee) && ['driver_confirmed', 'paid', 'in_progress'].includes(statut ?? '');
+
   return (
     <Ecran fond="vagues" onRefresh={charger}>
+      {consigneJozani && <ConsigneJozani />}
       <Carte>
         <Titre>{t('titre_course')}</Titre>
         <BadgeStatutTrajet statut={statut} />

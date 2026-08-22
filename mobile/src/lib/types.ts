@@ -910,6 +910,39 @@ export function dureeRouteMinutes(km: number): number {
 }
 
 /** Coordonnées d'un lieu de la grille, sinon null. */
+// ───────────────────────────── JOZANI ──────────────────────────────────────
+// LA SEULE CHOSE QUE L'EMBLÈME PRODUIT DANS LE PRODUIT.
+//
+// La forêt de Jozani abrite environ la moitié des colobes roux de l'île. La
+// route la traverse, et ce sont les voitures qui tuent l'espèce : avant la
+// pose de ralentisseurs, un individu écrasé toutes les deux à trois semaines
+// — 12 à 17 % du groupe concerné par an. Les collisions ont été divisées par
+// deux depuis les ralentisseurs. La vitesse n'est donc pas un détail : c'est
+// la variable qui décide.
+//
+// La traversée se fait sur l'axe Tunguu → Bambi → Kitogani, c'est-à-dire sur
+// TOUTE liaison entre la ville (ou l'aéroport) et la côte sud-est. La liste
+// est explicite plutôt que géométrique : une droite entre deux villes n'est
+// pas une route, et le corridor routier est connu.
+const OUEST_JOZANI = ['stone town', 'stone town ferry', 'fumba'];
+const SUD_EST_JOZANI = [
+  'paje', 'bwejuu', 'dongwe', 'michamvi', 'jambiani', 'makunduchi', 'mtende', 'kizimkazi',
+];
+
+/** L'itinéraire traverse-t-il la forêt de Jozani ? */
+export function traverseJozani(depart: string, arrivee: string): boolean {
+  const cote = (v: string) => {
+    const n = normaliserLieu(v);
+    if (/a[ée]roport|airport/.test(n)) return 'ouest';
+    if (OUEST_JOZANI.includes(n)) return 'ouest';
+    if (SUD_EST_JOZANI.includes(n)) return 'sudest';
+    return null;
+  };
+  const a = cote(depart);
+  const b = cote(arrivee);
+  return !!a && !!b && a !== b;
+}
+
 /**
  * LE NOMBRE DE VILLES RÉELLEMENT DESSERVIES.
  *
