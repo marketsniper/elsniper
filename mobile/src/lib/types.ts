@@ -670,6 +670,22 @@ export const TARIF_LOCAL_TZS = 17000;
  * bouge, la phrase affichée bouge avec lui — c'est exactement la dérive qui a
  * fait promettre 10 % de remise pendant que le moteur en appliquait 5.
  */
+// Le TAXI PARTAGÉ n'est proposé que sur les trajets assez longs : course
+// privée du même trajet à 35 USD minimum. En dessous (Nungwi ↔ Kendwa,
+// aéroport ↔ Stone Town, sauts de la côte est…), course privée uniquement.
+// Même seuil que le serveur — voir sharedAllowedForRoute.
+const PARTAGE_PRIVE_MIN_USD = 35;
+
+/** Un taxi partagé peut-il exister sur cet itinéraire ? */
+export function partagePossibleItineraire(depart: string, arrivee: string): boolean {
+  const d = normaliserVille(depart);
+  const a = normaliserVille(arrivee);
+  // Stone Town et le terminal ferry sont le même endroit : aucune course.
+  if (POINTS_STONE_TOWN.map(normaliserVille).includes(d)
+    && POINTS_STONE_TOWN.map(normaliserVille).includes(a)) return false;
+  return tarifPriveItineraire(depart, arrivee) >= PARTAGE_PRIVE_MIN_USD;
+}
+
 let miniLocalMemo: number | null = null;
 
 /**
@@ -693,6 +709,12 @@ export function tarifLocalMiniTzs(): number {
   for (const depart of ORIGINES_RIDES) {
     for (const arrivee of ORIGINES_RIDES) {
       if (depart === arrivee) continue;
+      // Le prix annoncé doit être ACHETABLE. La formule sait chiffrer une
+      // place sur n'importe quel couple de villes, y compris là où aucun
+      // taxi partagé n'est jamais proposé (Nungwi ↔ Kendwa, aéroport ↔
+      // Stone Town…) : ces couples sortaient un prix plancher que personne
+      // n'aurait jamais pu réserver.
+      if (!partagePossibleItineraire(depart, arrivee)) continue;
       const tarif = tarifTrajetProfil('shared_local', 'local', { depart, arrivee });
       if (tarif && tarif.devise === 'TZS' && tarif.montant > 0 && tarif.montant < mini) {
         mini = tarif.montant;
