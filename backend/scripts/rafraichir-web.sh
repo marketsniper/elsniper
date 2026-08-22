@@ -36,7 +36,7 @@ sed -i 's|  <link rel="icon" href="/web/favicon.ico" /></head>|    <style id="za
 cp "$RACINE/backend/pwa/"* "$RACINE/backend/public/web/"
 
 # Balises PWA dans <head> : manifest, couleur de thème, icône iOS, plein écran iOS.
-sed -i 's|  <link rel="icon" href="/web/favicon.ico" /></head>|  <link rel="icon" href="/web/favicon.ico" />\n    <link rel="manifest" href="/web/manifest.webmanifest" />\n    <meta name="theme-color" content="#0E2733" />\n    <link rel="apple-touch-icon" href="/web/apple-touch-icon.png" />\n    <meta name="apple-mobile-web-app-capable" content="yes" />\n    <meta name="apple-mobile-web-app-status-bar-style" content="black" />\n    <meta name="apple-mobile-web-app-title" content="zanziGo" />\n  </head>|' "$INDEX"
+sed -i 's|  <link rel="icon" href="/web/favicon.ico" /></head>|  <link rel="icon" href="/web/favicon.ico" />\n    <link rel="manifest" href="/web/manifest.webmanifest" />\n    <meta name="theme-color" content="#09404E" />\n    <link rel="apple-touch-icon" href="/web/apple-touch-icon.png" />\n    <meta name="apple-mobile-web-app-capable" content="yes" />\n    <meta name="apple-mobile-web-app-status-bar-style" content="black" />\n    <meta name="apple-mobile-web-app-title" content="zanziGo" />\n  </head>|' "$INDEX"
 
 # Enregistrement du service worker + bouton « Installer » en fin de <body>.
 # mise-a-jour.js est appelé depuis la PAGE, qui est vérifiée à chaque
