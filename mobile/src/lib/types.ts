@@ -538,22 +538,47 @@ export function tauxCommissionPrive(prixUsd: number, depart?: string, arrivee?: 
 /** Trajets spéciaux TZS : place locale en taxi partagé (deux sens). */
 export const TRAJETS_SPECIAUX_LOCAL_TZS: { villes: [string, string]; prix: number }[] = [
   { villes: ['Nungwi', 'Paje'], prix: 22000 },
+  // PAJE VERS LA VILLE, POUR LES LOCAUX : 15 000 TZS (22/08/2026). La ligne
+  // la plus fréquentée par les habitants de la côte est — ceux qui vont
+  // travailler en ville et rentrent le soir. À tenir identique au serveur
+  // (SPECIAL_LOCAL_ROUTES_TZS dans pricingService.js) : les deux grilles sont
+  // les deux moitiés d'un même tarif, et un écart s'affiche au client avant
+  // qu'il ne se corrige au moment de payer.
+  { villes: ['Paje', 'Stone Town'], prix: 15000 },
+  { villes: ['Paje', 'Stone Town Ferry'], prix: 15000 },
+  { villes: ['Paje', 'Aéroport'], prix: 15000 },
 ];
 
 /** « Ville (précision) » → « ville », comme normCity côté serveur. */
 const normaliserVille = (s: string): string =>
   s.replace(/\s*\(.*\)\s*$/, '').trim().toLowerCase();
 
+// L'aéroport porte cinq libellés historiques. Sans ce repli sur un nom
+// canonique, une règle écrite « Aéroport » resterait sans effet sur un trajet
+// saisi « Aéroport international Abeid Amani Karume » — silencieusement.
+const ALIAS_AEROPORT = new Set([
+  'aéroport (aakia)',
+  'aéroport abeid amani karume',
+  'aéroport international abeid amani karume',
+  'aéroport',
+  'airport',
+]);
+const villeCanonique = (v: string): string => {
+  const n = normaliserVille(v);
+  return ALIAS_AEROPORT.has(n) ? 'aéroport' : n;
+};
+
 function tarifSpecialItineraire(
   liste: { villes: [string, string]; prix: number }[],
   depart: string,
   arrivee: string
 ): number | null {
-  const a = normaliserVille(depart);
-  const b = normaliserVille(arrivee);
+  const a = villeCanonique(depart);
+  const b = villeCanonique(arrivee);
   if (!a || !b) return null;
   for (const special of liste) {
-    const [v1, v2] = [special.villes[0].toLowerCase(), special.villes[1].toLowerCase()];
+    const v1 = villeCanonique(special.villes[0]);
+    const v2 = villeCanonique(special.villes[1]);
     if ((a === v1 && b === v2) || (a === v2 && b === v1)) return special.prix;
   }
   return null;

@@ -370,3 +370,53 @@ describe('Grille privée : le net du chauffeur décide, le forfait s’ajoute', 
     assert.equal(Number(creation.body.commission), 6.24);
   });
 });
+
+// PAJE VERS LA VILLE, POUR LES LOCAUX : 15 000 TZS (22/08/2026).
+//
+// La ligne la plus fréquentée par les habitants de la côte est. Trois
+// destinations, dans les deux sens, et pour TOUS les libellés de l'aéroport —
+// c'est précisément là qu'une règle tarifaire devient silencieusement
+// inopérante : elle est écrite « Aéroport », le client saisit « Aéroport
+// international Abeid Amani Karume », et personne ne voit rien.
+describe('Tarif local Paje ↔ ville', () => {
+  const LIBELLES_AEROPORT = [
+    'Aéroport',
+    'Aéroport (AAKIA)',
+    'Aéroport Abeid Amani Karume',
+    'Aéroport international Abeid Amani Karume',
+    'Airport',
+  ];
+
+  it('vaut 15 000 TZS vers Stone Town, le ferry et l’aéroport, dans les deux sens', () => {
+    const destinations = ['Stone Town', 'Stone Town Ferry', ...LIBELLES_AEROPORT];
+    for (const ville of destinations) {
+      for (const [depart, arrivee] of [
+        ['Paje', ville],
+        [ville, 'Paje'],
+      ]) {
+        const tarif = priceTrip('shared_local', 'local', { pickup: depart, dropoff: arrivee });
+        assert.equal(tarif.currency, 'TZS', `${depart} → ${arrivee}`);
+        assert.equal(tarif.price, 15000, `${depart} → ${arrivee} devrait valoir 15 000 TZS`);
+      }
+    }
+  });
+
+  it('ne déborde pas sur les villages voisins de la côte est', () => {
+    // Jambiani et Bwejuu sont à quelques kilomètres de Paje : si la règle
+    // fuyait sur la zone entière, elle les emporterait aussi.
+    for (const village of ['Jambiani', 'Bwejuu']) {
+      const tarif = priceTrip('shared_local', 'local', {
+        pickup: village,
+        dropoff: 'Stone Town',
+      });
+      assert.equal(tarif.price, 17000, `${village} → Stone Town garde le tarif de zone`);
+    }
+  });
+
+  it('laisse au chauffeur un net en compte rond', () => {
+    const tarif = priceTrip('shared_local', 'local', { pickup: 'Paje', dropoff: 'Stone Town' });
+    const net = tarif.price - tarif.commission;
+    assert.equal(net, 12000, 'le chauffeur touche 12 000 TZS nets');
+    assert.equal(net % 1000, 0, 'un chauffeur doit pouvoir vérifier son compte de tête');
+  });
+});

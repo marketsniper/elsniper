@@ -253,7 +253,18 @@ const GROUPES_NET_USD = [
 // montée à 20 %, et sans cette hausse les 3 points seraient sortis de la poche
 // du chauffeur. À 17 000 il touche 13 600 au lieu de 13 280 — il gagne PLUS
 // qu'avant, comme la dernière fois qu'on a bougé les deux ensemble.
-const SPECIAL_LOCAL_ROUTES_TZS = [{ a: 'Nungwi', b: 'Paje', tzs: 22000 }];
+// PAJE VERS LA VILLE, POUR LES LOCAUX : 15 000 TZS (22/08/2026).
+// Paje ↔ Stone Town, ↔ le ferry et ↔ l'aéroport passent de 17 000 à 15 000 la
+// place. C'est la ligne la plus fréquentée par les habitants de la côte est —
+// ceux qui vont travailler en ville et rentrent le soir. À 15 000, le
+// chauffeur touche 12 000 nets au lieu de 13 000 : la baisse sort de sa poche,
+// pas de la commission. C'est un choix commercial assumé sur ce corridor.
+const SPECIAL_LOCAL_ROUTES_TZS = [
+  { a: 'Nungwi', b: 'Paje', tzs: 22000 },
+  { a: 'Paje', b: 'Stone Town', tzs: 15000 },
+  { a: 'Paje', b: 'Stone Town Ferry', tzs: 15000 },
+  { a: 'Paje', b: 'Aéroport', tzs: 15000 },
+];
 
 // Colis : forfait par taille (Stone Town → n'importe quelle plage),
 // payé en ligne à 100 % par l'expéditeur.
@@ -407,11 +418,19 @@ export function forfaitZanzigoTrajetUsd(pickup, dropoff) {
 }
 
 function specialLocalRouteTzs(pickup, dropoff) {
-  const p = normCity(pickup);
-  const d = normCity(dropoff);
+  // L'aéroport porte cinq libellés historiques : sans ce repli sur un nom
+  // canonique, une règle écrite « Aéroport » ne s'appliquerait pas à un trajet
+  // saisi « Aéroport international Abeid Amani Karume » — la règle serait
+  // silencieusement sans effet, ce qui est le pire des deux mondes.
+  const canon = (v) => {
+    const n = normCity(v);
+    return AEROPORT_ALIAS.has(n) ? 'aéroport' : n;
+  };
+  const p = canon(pickup);
+  const d = canon(dropoff);
   const route = SPECIAL_LOCAL_ROUTES_TZS.find((r) => {
-    const a = r.a.toLowerCase();
-    const b = r.b.toLowerCase();
+    const a = canon(r.a);
+    const b = canon(r.b);
     return (p === a && d === b) || (p === b && d === a);
   });
   return route?.tzs;
