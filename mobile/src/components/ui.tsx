@@ -35,6 +35,7 @@ import {
   stylesReactifs,
   tailles,
   usePeau,
+  useSecteurSolaire,
   type NomPeau,
 } from '@/lib/theme';
 import type { StatutColis, StatutTrajet } from '@/lib/types';
@@ -78,6 +79,13 @@ export function Ecran({
   fond?: NomFond;
   onRefresh?: () => Promise<unknown> | void;
 }) {
+  // L'HEURE DU JOUR. Tous les écrans passent par ici : c'est le seul point
+  // d'abonnement nécessaire pour que la direction des ombres suive le soleil
+  // de Zanzibar. Un abonnement plus haut n'aurait rien redessiné — les
+  // feuilles de style sont lues à la volée, un écran déjà rendu ne repart pas
+  // parce qu'un contexte a changé au-dessus de lui.
+  useSecteurSolaire();
+
   const [rafraichit, setRafraichit] = React.useState(false);
   const rafraichir = async () => {
     if (!onRefresh) return;

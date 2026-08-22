@@ -784,6 +784,27 @@ const CHAINES = {
     it: 'Tutti i nostri autisti sono verificati e in regola con i documenti',
     de: 'Alle unsere Fahrer sind geprüft und vollständig zugelassen',
   },
+  ile_titre: {
+    fr: 'Toute l’île',
+    en: 'The whole island',
+    sw: 'Kisiwa chote',
+    it: 'Tutta l’isola',
+    de: 'Die ganze Insel',
+  },
+  ile_legende: {
+    fr: '{villes} villes desservies, du nord de Nungwi à la pointe de Kizimkazi.',
+    en: '{villes} towns served, from Nungwi in the north to the tip of Kizimkazi.',
+    sw: 'Miji {villes} inahudumiwa, kutoka Nungwi kaskazini hadi ncha ya Kizimkazi.',
+    it: '{villes} località servite, da Nungwi a nord fino alla punta di Kizimkazi.',
+    de: '{villes} Orte bedient, von Nungwi im Norden bis zur Spitze von Kizimkazi.',
+  },
+  ile_alt: {
+    fr: 'Unguja en relief : les villes desservies et les routes de zanziGo',
+    en: 'Unguja in relief: the towns served and zanziGo’s roads',
+    sw: 'Unguja katika mwinuko: miji inayohudumiwa na barabara za zanziGo',
+    it: 'Unguja in rilievo: le località servite e le strade di zanziGo',
+    de: 'Unguja als Relief: die bedienten Orte und die Straßen von zanziGo',
+  },
 
   // --- Téléphone / OTP -------------------------------------------------------
   tel_bienvenue: { fr: 'Bienvenue', en: 'Welcome', sw: 'Karibu' , it: 'Benvenuto', de: 'Willkommen' },

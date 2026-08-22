@@ -910,6 +910,23 @@ export function dureeRouteMinutes(km: number): number {
 }
 
 /** Coordonnées d'un lieu de la grille, sinon null. */
+/**
+ * LE NOMBRE DE VILLES RÉELLEMENT DESSERVIES.
+ *
+ * Pas `ORIGINES_RIDES.length` : la liste contient deux libellés pour un seul
+ * endroit — Stone Town et son terminal ferry sont à 100 mètres l'un de
+ * l'autre. Le chiffre affiché au client se compte donc sur les POSITIONS
+ * distinctes, pour qu'il reste vrai le jour où un libellé s'ajoute.
+ */
+export function nombreVillesDesservies(): number {
+  const vues = new Set<string>();
+  for (const lieu of ORIGINES_RIDES) {
+    const c = coordonneesVille(lieu);
+    vues.add(c ? `${c[0].toFixed(2)},${c[1].toFixed(2)}` : lieu.toLowerCase());
+  }
+  return vues.size;
+}
+
 export function coordonneesVille(lieu: string): [number, number] | null {
   return COORDONNEES_VILLES[normaliserLieu(lieu)] ?? null;
 }

@@ -15,7 +15,13 @@ import { reveillerServeur } from '@/lib/api';
 import { AuthProvider } from '@/lib/auth';
 import { LangueProvider, useT } from '@/lib/i18n';
 import { FournisseurPreferencePeau } from '@/lib/preferencePeau';
-import { couleurs, FICHIERS_POLICES, usePeau, type NomPeau } from '@/lib/theme';
+import {
+  couleurs,
+  FICHIERS_POLICES,
+  FournisseurSoleil,
+  usePeau,
+  type NomPeau,
+} from '@/lib/theme';
 
 // Flèche de retour GARANTIE sur chaque fiche : le retour natif disparaît
 // quand l'historique est vide (page web rechargée, PWA relancée…) et son
@@ -176,7 +182,12 @@ export default function LayoutRacine() {
         {/* Le design choisi par le client — Lagon ou Bento — s'applique à
             toute l'application, écrans chauffeur et équipe compris. */}
         <FournisseurPreferencePeau>
-          <CadreApplication />
+          {/* L'heure qu'il est À ZANZIBAR : elle donne la direction de toutes
+              les ombres portées de l'interface. Un relevé toutes les dix
+              minutes, un changement toutes les deux heures environ. */}
+          <FournisseurSoleil>
+            <CadreApplication />
+          </FournisseurSoleil>
         </FournisseurPreferencePeau>
       </AuthProvider>
     </LangueProvider>

@@ -8,6 +8,7 @@ import { Image, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FondPlage } from '@/components/FondPlage';
+import { IleDeZanzibar } from '@/components/Ile';
 import { EtiquetteVersion } from '@/components/Version';
 import { SelecteurLangue, SelecteurPeau } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
@@ -111,12 +112,18 @@ export default function EcranAccueil() {
             {/* Le logo porte désormais le nom « zanziGo » — plus besoin du
                 logotype texte en dessous. */}
             <Image
-              source={require('../../../assets/images/logo-app.png')}
+              source={require('../../../assets/images/logo-mot.png')}
               style={styles.logoImage}
               accessibilityLabel="zanziGo"
             />
             <Text style={styles.tagline}>{t('app_tagline')}</Text>
           </View>
+
+          {/* L'ÎLE, EN VOLUME. Avant même la question « qui êtes-vous ? »,
+              le client voit ce que zanziGo couvre : Unguja entière, ses
+              routes et ses villes. C'est la promesse de la maison, montrée
+              plutôt qu'écrite. */}
+          <IleDeZanzibar />
 
           <Text style={styles.question}>{t('accueil_question')}</Text>
 
@@ -209,12 +216,13 @@ const styles = stylesReactifs(() => ({
     paddingBottom: espaces.xl,
     gap: espaces.s,
   },
+  // Le logotype se pose SUR le sol de l'écran, sans tuile ni cadre : le
+  // carré crème d'origine appartenait à l'ancienne direction artistique et
+  // se détachait comme une vignette collée sur la pierre de l'estran.
   logoImage: {
-    width: 132,
-    height: 132,
-    borderRadius: 30,
+    width: 152,
+    height: 152,
     marginBottom: espaces.xs,
-    ...ombres.carte,
   },
   tagline: {
     fontSize: 16,

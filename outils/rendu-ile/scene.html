@@ -1,0 +1,133 @@
+<!doctype html><meta charset="utf-8">
+<style>html,body{margin:0;background:transparent}canvas{display:block}</style>
+<script type="importmap">{"imports":{"three":"./three.module.js"}}</script>
+<script type="module">
+import * as THREE from 'three';
+
+const P = new URLSearchParams(location.search);
+const L = (c, d) => (P.has(c) ? parseFloat(P.get(c)) : d);
+const G = await (await fetch('./unguja-geo.json')).json();
+
+// ── PALETTE « estran » ────────────────────────────────────────────────────
+const CORAIL  = 0xE3DACA;   // calcaire corallien : l'île EST du corail fossile
+const CORAIL2 = 0xC0B29A;   // sa tranche
+const JADE    = 0x179097;   // le lagon
+const JADE_P  = 0x115C63;   // le large
+const TERRE   = 0xD4551F;   // le réseau zanziGo
+
+const W = L('w', 1200), H = L('h', 1200), DPR = L('dpr', 2);
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.setPixelRatio(DPR);
+renderer.setSize(W, H, false);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = L('expo', 1.05);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+document.body.appendChild(renderer.domElement);
+renderer.domElement.style.width = W + 'px';
+renderer.domElement.style.height = H + 'px';
+const scene = new THREE.Scene();
+
+// x = est, z = sud (nord au fond), y = hauteur. Tout est en kilomètres réels.
+const XZ = ([x, y]) => new THREE.Vector3(x, 0, -y);
+
+function forme(anneau) {
+  const s = new THREE.Shape();
+  anneau.forEach(([x, y], i) => (i ? s.lineTo(x, y) : s.moveTo(x, y)));
+  s.closePath();
+  return s;
+}
+/** Une dalle posée à plat, base en y=`base`, sommet en y=`base+epaisseur`. */
+function dalle(anneau, base, epaisseur, biseau, couleur, mat = {}) {
+  const geo = new THREE.ExtrudeGeometry(forme(anneau), {
+    depth: epaisseur, bevelEnabled: true,
+    bevelThickness: biseau, bevelSize: biseau, bevelOffset: 0, bevelSegments: 5,
+    curveSegments: 1,
+  });
+  // (x,y,z) → (x, z, −y) : le nord part au fond, l'épaisseur devient hauteur.
+  geo.rotateX(-Math.PI / 2);
+  // Le biseau déborde de part et d'autre : la base réelle est en −biseau.
+  geo.translate(0, base + biseau, 0);
+  geo.computeVertexNormals();
+  const m = new THREE.Mesh(geo, new THREE.MeshPhysicalMaterial({
+    color: couleur, roughness: 0.66, metalness: 0, ...mat,
+  }));
+  m.castShadow = true; m.receiveShadow = true;
+  m.userData.sommet = base + epaisseur + 2 * biseau;
+  return m;
+}
+
+const ile = new THREE.Group();
+ile.add(dalle(G.recif, -0.9, 0.7, 0.25, JADE_P, { roughness: 0.3 }));
+ile.add(dalle(G.lagon, -0.3, 0.75, 0.3, JADE, { roughness: 0.16, clearcoat: 0.85, clearcoatRoughness: 0.15 }));
+ile.add(dalle(G.ile, 0.35, 0.42, 0.16, CORAIL2, { roughness: 0.92 })); // l'estran
+const plateau = dalle(G.ile, 0.85, 2.1, 0.5, CORAIL, { roughness: 0.8 }); // le plateau
+ile.add(plateau);
+const SOMMET = plateau.userData.sommet;
+
+// ── LE RÉSEAU ─────────────────────────────────────────────────────────────
+// 235 km de routes réelles : l'axe du nord vers Nungwi, la B2 vers Chwaka,
+// la descente sur Paje, la côte est, la route de Kizimkazi. C'est ce que
+// zanziGo dessert, gravé dans l'île.
+const matRoute = new THREE.MeshPhysicalMaterial({
+  color: TERRE, roughness: 0.42, metalness: 0.03, clearcoat: 0.35,
+});
+for (const r of G.routes) {
+  const courbe = new THREE.CatmullRomCurve3(r.map(XZ).map((v) => v.setY(SOMMET - 0.06)));
+  const tube = new THREE.Mesh(
+    new THREE.TubeGeometry(courbe, Math.max(24, r.length * 2), L('route', 0.3), 8, false),
+    matRoute
+  );
+  tube.castShadow = true; tube.receiveShadow = true;
+  ile.add(tube);
+}
+
+// ── LES VILLES ────────────────────────────────────────────────────────────
+// Un piquet, comme ceux que les femmes plantent dans le platier pour tenir
+// les cordes à mwani. C'est la même forme que les étapes d'une course.
+const matVille = new THREE.MeshPhysicalMaterial({
+  color: TERRE, roughness: 0.3, metalness: 0.05, clearcoat: 0.7,
+});
+const geoPiquet = new THREE.CapsuleGeometry(L('piquet', 0.34), L('hpiquet', 1.5), 6, 16);
+for (const [, xy] of Object.entries(G.villes)) {
+  const p = new THREE.Mesh(geoPiquet, matVille);
+  p.position.copy(XZ(xy)).setY(SOMMET + L('hpiquet', 1.5) / 2);
+  p.castShadow = true;
+  ile.add(p);
+}
+scene.add(ile);
+
+const sol = new THREE.Mesh(
+  new THREE.PlaneGeometry(400, 400),
+  new THREE.ShadowMaterial({ opacity: L('ombre', 0.17) })
+);
+sol.rotation.x = -Math.PI / 2;
+sol.position.y = -1.1;
+sol.receiveShadow = true;
+scene.add(sol);
+
+// ── LUMIÈRE ───────────────────────────────────────────────────────────────
+const soleil = new THREE.DirectionalLight(0xFFF2E2, L('soleil', 3.0));
+soleil.position.set(-52, 66, 44);
+soleil.castShadow = true;
+soleil.shadow.mapSize.set(4096, 4096);
+soleil.shadow.camera.near = 1; soleil.shadow.camera.far = 280;
+Object.assign(soleil.shadow.camera, { left: -72, right: 72, top: 72, bottom: -72 });
+soleil.shadow.bias = -0.0005; soleil.shadow.normalBias = 0.04;
+scene.add(soleil);
+scene.add(new THREE.HemisphereLight(0xEDF5F3, JADE, L('ciel', 1.45)));
+const appoint = new THREE.DirectionalLight(0x9FD3D6, L('appoint', 0.75));
+appoint.position.set(56, 20, -48);
+scene.add(appoint);
+
+// ── CAMÉRA ────────────────────────────────────────────────────────────────
+const camera = new THREE.PerspectiveCamera(L('fov', 19), W / H, 1, 700);
+const d = L('dist', 215), a = L('azim', 22) * Math.PI / 180, e = L('elev', 40) * Math.PI / 180;
+camera.position.set(Math.sin(a) * Math.cos(e) * d, Math.sin(e) * d, Math.cos(a) * Math.cos(e) * d);
+camera.lookAt(L('cx', 0), L('cy', 1.5), L('cz', 0));
+camera.rotateZ(L('roll', 0) * Math.PI / 180);
+
+renderer.render(scene, camera);
+window.__pret = true;
+</script>

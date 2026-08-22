@@ -22,6 +22,7 @@
 import React from 'react';
 import { Platform, StyleSheet, type TextStyle } from 'react-native';
 
+import { decalageSolaire, secteurSolaire } from './soleil';
 import type { StatutColis, StatutTrajet } from './types';
 
 export type NomPeau = 'bento' | 'nuit' | 'verre' | 'estran';
@@ -319,6 +320,23 @@ export function peauCourante(): NomPeau {
   return peauActive;
 }
 
+// ─────────────────────────── L'HEURE DU JOUR ───────────────────────────────
+// Le secteur solaire courant : la direction dans laquelle le soleil de
+// Zanzibar jette les ombres à cet instant. Comme la peau, c'est une variable
+// de module — les feuilles de style sont construites hors composant.
+let secteurActif = secteurSolaire();
+
+export function secteurCourant(): number {
+  return secteurActif;
+}
+
+/** Bascule l'heure du jour. Renvoie true si le secteur a changé. */
+export function appliquerSecteur(secteur: number): boolean {
+  if (secteurActif === secteur) return false;
+  secteurActif = secteur;
+  return true;
+}
+
 /**
  * Bascule la peau. Renvoie true si elle a changé — les feuilles réactives
  * se reconstruiront alors au prochain accès.
@@ -516,12 +534,38 @@ const OMBRES: Record<NomPeau, Ombres> = {
   },
 };
 
+/**
+ * Le relief, ORIENTÉ PAR LE SOLEIL RÉEL.
+ *
+ * Le design fixe la LONGUEUR de chaque ombre ; le ciel de Zanzibar en donne
+ * la DIRECTION. `shadowOffset` est donc recalculé à partir de sa propre
+ * norme et du secteur solaire du moment : à gauche le matin, ramassée sous la
+ * carte à midi, à droite le soir. Une peau à ombre nulle (Bento porte un
+ * décalage franc de parti pris, pas une ombre de lumière) garde la sienne :
+ * on ne touche qu'aux ombres qui prétendent venir d'une source.
+ */
+const RELIEFS_ORIENTES = new Map<string, Relief>();
+
+function reliefOriente(peau: NomPeau, cle: keyof Ombres): Relief | undefined {
+  const brut = OMBRES[peau][cle];
+  if (!brut) return brut;
+  // Bento assume une ombre « papier découpé » : pas de flou, pas de soleil.
+  if (brut.shadowRadius === 0 || brut.shadowOpacity === undefined) return brut;
+  const memo = `${peau}:${String(cle)}:${secteurActif}`;
+  let oriente = RELIEFS_ORIENTES.get(memo);
+  if (!oriente) {
+    oriente = { ...brut, shadowOffset: decalageSolaire(secteurActif, brut.shadowOffset) };
+    RELIEFS_ORIENTES.set(memo, oriente);
+  }
+  return oriente;
+}
+
 export const ombres = new Proxy({} as Ombres, {
-  get: (_cible, cle) => OMBRES[peauActive][cle as keyof Ombres],
+  get: (_cible, cle) => reliefOriente(peauActive, cle as keyof Ombres),
   has: (_cible, cle) => cle in OMBRES.bento,
   ownKeys: () => Reflect.ownKeys(OMBRES.bento),
   getOwnPropertyDescriptor: (_cible, cle) => ({
-    value: OMBRES[peauActive][cle as keyof Ombres],
+    value: reliefOriente(peauActive, cle as keyof Ombres),
     enumerable: true,
     configurable: true,
   }),
@@ -679,12 +723,15 @@ function poserLaPolice<T extends Record<string, unknown>>(feuille: T): T {
 export function stylesReactifs<
   T extends StyleSheet.NamedStyles<T> | StyleSheet.NamedStyles<Record<string, unknown>>,
 >(fabrique: () => T & StyleSheet.NamedStyles<Record<string, unknown>>): T {
-  const feuilles = new Map<NomPeau, T>();
+  // Clé : la peau ET l'heure du jour. Une feuille construite ce matin porte
+  // des ombres tournées vers l'ouest ; elle ne doit pas resservir ce soir.
+  const feuilles = new Map<string, T>();
   const feuille = (): Record<string | symbol, unknown> => {
-    let f = feuilles.get(peauActive);
+    const cle = `${peauActive}:${secteurActif}`;
+    let f = feuilles.get(cle);
     if (!f) {
       f = StyleSheet.create(poserLaPolice(fabrique()));
-      feuilles.set(peauActive, f);
+      feuilles.set(cle, f);
     }
     return f as Record<string | symbol, unknown>;
   };
@@ -814,6 +861,35 @@ export function FournisseurPeau({
 }) {
   appliquerPeau(nom);
   return React.createElement(ContextePeau.Provider, { value: nom }, children);
+}
+
+// ─────────────────────── L'HEURE DU JOUR, CÔTÉ REACT ──────────────────────
+const ContexteSoleil = React.createContext<number>(secteurActif);
+
+/** Le secteur solaire du moment, pour les écrans qui veulent s'y adapter. */
+export function useSecteurSolaire(): number {
+  return React.useContext(ContexteSoleil);
+}
+
+/**
+ * Fait suivre au thème l'heure qu'il est réellement à Zanzibar.
+ *
+ * Un relevé au montage, puis toutes les dix minutes. Le secteur ne change
+ * qu'environ toutes les deux heures : la plupart des relevés ne provoquent
+ * aucun rendu. Quand il change, la `key` remonte l'arbre — c'est le même
+ * mécanisme que la bascule de peau, et pour la même raison : les feuilles de
+ * style sont lues à la volée et ne se redessinent pas sur un simple contexte.
+ */
+export function FournisseurSoleil({ children }: { children: React.ReactNode }) {
+  const [secteur, setSecteur] = React.useState(secteurActif);
+  React.useEffect(() => {
+    const relever = () => setSecteur(secteurSolaire());
+    relever();
+    const minuterie = setInterval(relever, 600000);
+    return () => clearInterval(minuterie);
+  }, []);
+  appliquerSecteur(secteur);
+  return React.createElement(ContexteSoleil.Provider, { value: secteur }, children);
 }
 
 export type { Palette, TextStyle };

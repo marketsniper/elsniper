@@ -1,0 +1,16 @@
+import { chromium } from 'playwright-core';
+const D = new URL('.', import.meta.url).pathname;
+const q = process.argv[2] ?? '';
+const sortie = process.argv[3] ?? 'unguja.png';
+const w = Number(new URLSearchParams(q).get('w') ?? 1400);
+const h = Number(new URLSearchParams(q).get('h') ?? 1400);
+const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium', args: ['--no-proxy-server', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
+const page = await b.newPage({ viewport: { width: w, height: h }, deviceScaleFactor: 1 });
+page.on('pageerror', e => console.log('PAGEERROR', String(e).slice(0, 500)));
+page.on('console', m => { if (m.type() === 'error') console.log('ERR', m.text().slice(0, 300)); });
+await page.goto(`http://127.0.0.1:4444/scene.html?${q}`, { waitUntil: 'networkidle' });
+await page.waitForFunction(() => window.__pret === true, { timeout: 60000 }).catch(() => console.log('TIMEOUT'));
+await page.waitForTimeout(600);
+await (await page.$('canvas')).screenshot({ path: `${D}/${sortie}`, omitBackground: true });
+await b.close();
+console.log('→', sortie);
