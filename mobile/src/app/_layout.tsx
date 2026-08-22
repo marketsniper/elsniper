@@ -1,7 +1,7 @@
 // Mise en page racine : fournit la langue, le contexte d'auth et la pile de
 // navigation (titres traduits).
 import { Ionicons } from '@expo/vector-icons';
-import { DarkTheme, ThemeProvider } from '@react-navigation/native';
+import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack, useRouter, type Href } from 'expo-router';
 import { useFonts } from 'expo-font';
 import { StatusBar } from 'expo-status-bar';
@@ -14,7 +14,8 @@ import { reparerAlertesWeb } from '@/lib/alerteWeb';
 import { reveillerServeur } from '@/lib/api';
 import { AuthProvider } from '@/lib/auth';
 import { LangueProvider, useT } from '@/lib/i18n';
-import { couleurs, FICHIERS_POLICES, FournisseurPeau, PEAU_PAR_DEFAUT } from '@/lib/theme';
+import { FournisseurPreferencePeau } from '@/lib/preferencePeau';
+import { couleurs, FICHIERS_POLICES, usePeau } from '@/lib/theme';
 
 // Flèche de retour GARANTIE sur chaque fiche : le retour natif disparaît
 // quand l'historique est vide (page web rechargée, PWA relancée…) et son
@@ -94,10 +95,52 @@ function PilesNavigation() {
   );
 }
 
-const THEME_TRANSPARENT = {
+// Le thème de navigation peint SON fond derrière chaque navigateur — blanc
+// par défaut, il recouvrait le lagon sur tous les écrans à onglets.
+// Transparent, il le laisse passer. Deux variantes : les valeurs par défaut
+// de React Navigation (bordures, curseur de saisie) n'ont pas la même
+// lisibilité sur crème que sur bleu profond.
+const THEME_SOMBRE = {
   ...DarkTheme,
   colors: { ...DarkTheme.colors, background: 'transparent', card: 'transparent' },
 };
+const THEME_CLAIR = {
+  ...DefaultTheme,
+  colors: { ...DefaultTheme.colors, background: 'transparent', card: 'transparent' },
+};
+
+/**
+ * Le cadre de l'application — SOUS le fournisseur de peau.
+ *
+ * Il y vit pour une raison précise : les styles écrits directement dans le
+ * JSX (le fond, ici) sont évalués au moment où le composant se rend. Placés
+ * dans la racine, ils prenaient les couleurs de la peau PRÉCÉDENTE, et
+ * l'application s'ouvrait sur un fond crème sous un dégradé de lagon.
+ */
+function CadreApplication() {
+  const peau = usePeau();
+  return (
+    <>
+      {/* Heure et batterie du téléphone : claires sur le lagon, sombres sur
+          le crème de Bento — sinon elles disparaissent. */}
+      <StatusBar style={peau === 'bento' ? 'dark' : 'light'} />
+      {/* La `key` remonte toute la navigation à chaque changement de peau.
+          C'est volontaire : les feuilles de style sont lues À LA VOLÉE par
+          les écrans, et un écran déjà rendu ne se redessine pas parce qu'un
+          contexte a changé plus haut — il gardait donc les couleurs de
+          l'ancienne peau, texte blanc sur crème compris. */}
+      <View key={peau} style={{ flex: 1, backgroundColor: couleurs.sable }}>
+        {peau === 'verre' && <LagonDeVerre />}
+        <ThemeProvider value={peau === 'bento' ? THEME_CLAIR : THEME_SOMBRE}>
+          {/* Les fenêtres de confirmation s'affichent par-dessus tout écran. */}
+          <FournisseurDialogues>
+            <PilesNavigation />
+          </FournisseurDialogues>
+        </ThemeProvider>
+      </View>
+    </>
+  );
+}
 
 // Sur le web, les boîtes de dialogue de React Native sont des fonctions
 // vides : on les rebranche AVANT le premier rendu, sinon des boutons comme
@@ -123,21 +166,11 @@ export default function LayoutRacine() {
   return (
     <LangueProvider>
       <AuthProvider>
-        <FournisseurPeau nom={PEAU_PAR_DEFAUT}>
-          <StatusBar style="light" />
-          <View style={{ flex: 1, backgroundColor: couleurs.sable }}>
-            {PEAU_PAR_DEFAUT === 'verre' && <LagonDeVerre />}
-            {/* Le thème de navigation peint SON fond derrière chaque
-                navigateur — blanc par défaut, il recouvrait le lagon sur tous
-                les écrans à onglets. Transparent, il le laisse passer. */}
-            <ThemeProvider value={THEME_TRANSPARENT}>
-              {/* Les fenêtres de confirmation s'affichent par-dessus tout écran. */}
-              <FournisseurDialogues>
-                <PilesNavigation />
-              </FournisseurDialogues>
-            </ThemeProvider>
-          </View>
-        </FournisseurPeau>
+        {/* Le design choisi par le client — Lagon ou Bento — s'applique à
+            toute l'application, écrans chauffeur et équipe compris. */}
+        <FournisseurPreferencePeau>
+          <CadreApplication />
+        </FournisseurPreferencePeau>
       </AuthProvider>
     </LangueProvider>
   );

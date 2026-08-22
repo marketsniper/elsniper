@@ -28,10 +28,13 @@ const HALOS = [
   { teinte: '#7B4BC4', cx: 0.5, cy: 1.02, r: 0.85, opacite: 0.95 }, // violet
 ];
 
-export function LagonDeVerre() {
+export function LagonDeVerre({ fond }: { fond?: string } = {}) {
   // Les identifiants SVG sont globaux au document sur le web : deux écrans
   // montés en même temps se voleraient leurs dégradés sans ce préfixe.
   const cle = React.useId().replace(/[^a-zA-Z0-9]/g, '');
+  // `fond` sert aux APERÇUS : montrer le lagon pendant que Bento est la peau
+  // active demande d'imposer le bleu profond, que le miroir ne donne plus.
+  const bleu = fond ?? couleurs.sable;
   return (
     <View style={styles.lagon} pointerEvents="none">
       <Svg width="100%" height="100%">
@@ -43,7 +46,7 @@ export function LagonDeVerre() {
             </RadialGradient>
           ))}
         </Defs>
-        <Rect x="0" y="0" width="100%" height="100%" fill={couleurs.sable} />
+        <Rect x="0" y="0" width="100%" height="100%" fill={bleu} />
         {HALOS.map((_, i) => (
           <Rect key={i} x="0" y="0" width="100%" height="100%" fill={`url(#${cle}-${i})`} />
         ))}

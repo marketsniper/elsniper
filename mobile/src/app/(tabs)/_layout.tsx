@@ -31,7 +31,7 @@ export default function LayoutOnglets() {
         tabBarActiveTintColor: couleurs.primaire,
         tabBarInactiveTintColor: couleurs.texteSecondaire,
         tabBarStyle: {
-          backgroundColor: couleurs.voilePhotoSombre,
+          backgroundColor: couleurs.fondOnglets,
           borderTopColor: couleurs.bordure,
         },
         sceneStyle: { backgroundColor: 'transparent' },

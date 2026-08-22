@@ -15,6 +15,7 @@ import {
   EncartInfo,
   LigneInfo,
   SelecteurLangue,
+  SelecteurPeau,
   SousTitre,
 } from '@/components/ui';
 import { CarteVersion } from '@/components/Version';
@@ -382,6 +383,15 @@ export default function EcranProfil() {
       <Carte>
         <Text style={styles.labelLangue}>{t('commun_langue')}</Text>
         <SelecteurLangue compact />
+      </Carte>
+
+      {/* Le design est aussi sur la page d'accueil, mais celle-là ne se
+          revoit plus une fois connecté — et c'est justement en cours de
+          journée, quand on sort du hall d'hôtel vers la plage, qu'on veut en
+          changer. */}
+      <Carte>
+        <Text style={styles.labelLangue}>{t('peau_titre')}</Text>
+        <SelecteurPeau compact />
       </Carte>
 
       {(utilisateur || hotel) && (

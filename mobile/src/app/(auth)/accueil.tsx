@@ -9,7 +9,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FondPlage } from '@/components/FondPlage';
 import { EtiquetteVersion } from '@/components/Version';
-import { SelecteurLangue } from '@/components/ui';
+import { SelecteurLangue, SelecteurPeau } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { useT } from '@/lib/i18n';
 import { couleurs, espaces, ombres, rayons, stylesReactifs } from '@/lib/theme';
@@ -150,6 +150,16 @@ export default function EcranAccueil() {
             <Text style={styles.texteConfiance}>{t('accueil_confiance')}</Text>
           </View>
 
+          {/* LE DESIGN, AU CHOIX. Placé en bas : on vient d'abord réserver
+              un taxi. Mais il est là avant même de se connecter — un client
+              qui n'arrive pas à lire l'écran sous le soleil de midi ne
+              devrait pas avoir à créer un compte pour y remédier. */}
+          <View style={styles.blocPeau}>
+            <Text style={styles.titrePeau}>{t('peau_titre')}</Text>
+            <Text style={styles.introPeau}>{t('peau_intro')}</Text>
+            <SelecteurPeau />
+          </View>
+
           <Text style={styles.pied}>{t('accueil_pied')}</Text>
 
           <Pressable
@@ -170,6 +180,20 @@ export default function EcranAccueil() {
 const styles = stylesReactifs(() => ({
   zone: {
     flex: 1,
+  },
+  blocPeau: {
+    marginTop: espaces.l,
+    gap: espaces.s,
+  },
+  titrePeau: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: couleurs.encre,
+  },
+  introPeau: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: couleurs.texteSecondaire,
   },
   contenu: {
     padding: espaces.l,

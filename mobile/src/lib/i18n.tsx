@@ -2918,6 +2918,38 @@ const CHAINES = {
   trip_appeler_chauffeur: { fr: 'Appeler le chauffeur', en: 'Call the driver', sw: 'Piga simu kwa dereva', it: 'Chiama l\'autista', de: 'Fahrer anrufen' },
   trip_regle: { fr: 'Course réglée', en: 'Ride paid', sw: 'Safari imelipwa', it: 'Corsa pagata', de: 'Fahrt bezahlt' },
   trip_a_regler: { fr: 'À régler', en: 'To pay', sw: 'Kulipa', it: 'Da pagare', de: 'Zu zahlen' },
+  // LE CHOIX DU DESIGN. Le sous-titre dit QUAND choisir l'un ou l'autre :
+  // c'est la lumière autour du client qui décide, pas son goût.
+  peau_titre: {
+    fr: 'Apparence',
+    en: 'Appearance',
+    sw: 'Muonekano',
+    it: 'Aspetto',
+    de: 'Erscheinungsbild',
+  },
+  peau_intro: {
+    fr: 'Choisissez selon la lumière : le lagon repose les yeux à l\'ombre, le crème se lit en plein soleil.',
+    en: 'Pick the one that suits the light: the lagoon rests your eyes in the shade, the cream reads in full sun.',
+    sw: 'Chagua kulingana na mwanga: rangi ya bahari inatuliza machoni kivulini, ya krimu inasomeka juani.',
+    it: 'Scegli in base alla luce: la laguna riposa gli occhi all\'ombra, il crema si legge in pieno sole.',
+    de: 'Wählen Sie nach dem Licht: Die Lagune schont die Augen im Schatten, das Cremefarbene liest sich in der prallen Sonne.',
+  },
+  peau_lagon: { fr: 'Lagon', en: 'Lagoon', sw: 'Bahari', it: 'Laguna', de: 'Lagune' },
+  peau_lagon_quand: {
+    fr: 'À l\'ombre, le soir, dans la voiture',
+    en: 'In the shade, at night, in the car',
+    sw: 'Kivulini, usiku, ndani ya gari',
+    it: 'All\'ombra, la sera, in auto',
+    de: 'Im Schatten, abends, im Auto',
+  },
+  peau_bento: { fr: 'Bento', en: 'Bento', sw: 'Bento', it: 'Bento', de: 'Bento' },
+  peau_bento_quand: {
+    fr: 'En plein soleil, sur la plage',
+    en: 'In full sun, on the beach',
+    sw: 'Juani kali, ufukweni',
+    it: 'In pieno sole, in spiaggia',
+    de: 'In der prallen Sonne, am Strand',
+  },
   trip_distance: { fr: 'Distance', en: 'Distance', sw: 'Umbali', it: 'Distanza', de: 'Entfernung' },
   trip_details_titre: { fr: 'Détails du trajet', en: 'Ride details', sw: 'Maelezo ya safari', it: 'Dettagli della corsa', de: 'Fahrtdetails' },
   trip_autres_actions: { fr: 'Autres actions', en: 'Other actions', sw: 'Vitendo vingine', it: 'Altre azioni', de: 'Weitere Aktionen' },

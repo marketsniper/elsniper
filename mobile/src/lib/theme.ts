@@ -51,6 +51,10 @@ interface Palette {
   dangerClair: string;
   voilePhotoClair: string;
   voilePhotoSombre: string;
+  /** Fond de la barre d'onglets — la seule surface qui reste posée sur le
+   *  contenu qui défile. Sombre sur les peaux sombres, blanche sur Bento :
+   *  un voile prune sur du crème passe pour une salissure. */
+  fondOnglets: string;
   carteTranslucide: string;
   surface: string;
   surPrimaire: string;
@@ -95,6 +99,7 @@ const BENTO: Palette = {
   dangerClair: '#FCA5A5',
   voilePhotoClair: '#FFF4E8', // plus de photo : le fond est plein
   voilePhotoSombre: 'rgba(36, 16, 23, 0.55)',
+  fondOnglets: '#FFFFFF',
   carteTranslucide: '#FFFFFF', // les cartes sont BLANCHES et opaques
   surface: '#FFFFFF', // champs de saisie, menus, barre d'onglets
   surPrimaire: '#FFF4E8', // texte/icônes posés SUR le corail
@@ -138,6 +143,7 @@ const NUIT: Palette = {
   dangerClair: '#FCA5A5',
   voilePhotoClair: '#100C14',
   voilePhotoSombre: 'rgba(8, 5, 11, 0.6)',
+  fondOnglets: 'rgba(8, 5, 11, 0.6)',
   carteTranslucide: '#191320',
   surface: '#1F1726',
   surPrimaire: '#150E06', // texte posé SUR l'or : encre chaude, très lisible
@@ -183,6 +189,7 @@ const VERRE: Palette = {
   dangerClair: '#FCA5A5',
   voilePhotoClair: '#0E2733',
   voilePhotoSombre: 'rgba(6, 20, 27, 0.55)',
+  fondOnglets: 'rgba(6, 20, 27, 0.55)',
   carteTranslucide: 'rgba(255, 255, 255, 0.13)',
   surface: 'rgba(255, 255, 255, 0.14)',
   surPrimaire: '#0E2733', // l'encre posée SUR le verre blanc
@@ -549,6 +556,33 @@ export const couleursStatutColis = new Proxy({} as Record<StatutColis, Ton>, {
     configurable: true,
   }),
 }) as Record<StatutColis, Ton>;
+
+/**
+ * LES QUELQUES COULEURS D'UNE PEAU QUI N'EST PAS L'ACTIVE.
+ *
+ * Les miroirs ci-dessus renvoient toujours la peau du moment — parfait pour
+ * dessiner l'application, inutilisable pour dessiner l'APERÇU d'une autre.
+ * Le sélecteur de design a besoin de montrer les deux côte à côte : il vient
+ * les chercher ici, nommément.
+ */
+export function apercuPeau(nom: NomPeau): {
+  fond: string;
+  carte: string;
+  bordure: string;
+  texte: string;
+  secondaire: string;
+  accent: string;
+} {
+  const p = PEAUX[nom];
+  return {
+    fond: p.sable,
+    carte: p.carteTranslucide,
+    bordure: p.bordure,
+    texte: p.encre,
+    secondaire: p.texteSecondaire,
+    accent: p.primaire,
+  };
+}
 
 // ──────────────────────── LA BASCULE, CÔTÉ REACT ───────────────────────────
 const ContextePeau = React.createContext<NomPeau>(PEAU_PAR_DEFAUT);

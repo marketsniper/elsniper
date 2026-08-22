@@ -21,9 +21,11 @@ import {
 import { HeaderHeightContext } from '@react-navigation/elements';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { FondPlage, type NomFond } from '@/components/FondPlage';
+import { FondPlage, LagonDeVerre, type NomFond } from '@/components/FondPlage';
 import { LANGUES, useT, libelleStatutColis, libelleStatutTrajet } from '@/lib/i18n';
+import { PEAUX_AU_CHOIX, usePreferencePeau } from '@/lib/preferencePeau';
 import {
+  apercuPeau,
   couleurs,
   couleursStatutColis,
   couleursStatutTrajet,
@@ -201,6 +203,81 @@ export function SelecteurLangue({ compact = false }: { compact?: boolean }) {
             <Text style={[styles.textePillLangue, active && styles.textePillLangueActif]}>
               {libelle}
             </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+/**
+ * LE CHOIX DU DESIGN — Lagon ou Bento.
+ *
+ * Zanzibar, midi, sur la plage : un écran sombre devient un miroir. Le même
+ * écran sous une paillote au coucher du soleil est le plus reposant qui
+ * soit. Plutôt que de trancher à la place du client, on lui montre les deux
+ * et on le laisse choisir selon la lumière qu'il a autour de lui.
+ *
+ * L'aperçu n'est pas une pastille de couleur : c'est un écran miniature —
+ * fond, panneau, deux lignes de texte, bouton — dessiné dans les VRAIES
+ * couleurs de la peau. On choisit ce qu'on voit.
+ */
+export function SelecteurPeau({ compact = false }: { compact?: boolean }) {
+  const { peau, choisir } = usePreferencePeau();
+  const { t } = useT();
+  return (
+    <View style={styles.rangeePeaux}>
+      {PEAUX_AU_CHOIX.map((nom) => {
+        const actif = peau === nom;
+        const vue = apercuPeau(nom);
+        const bento = nom === 'bento';
+        return (
+          <Pressable
+            key={nom}
+            onPress={() => choisir(nom)}
+            accessibilityRole="radio"
+            accessibilityState={{ selected: actif }}
+            accessibilityLabel={bento ? t('peau_bento') : t('peau_lagon')}
+            style={({ pressed }) => [
+              styles.casePeau,
+              actif && styles.casePeauActive,
+              pressed && { opacity: 0.75 },
+            ]}
+          >
+            <View
+              style={[
+                styles.apercuPeau,
+                compact && styles.apercuPeauCompact,
+                { backgroundColor: vue.fond },
+              ]}
+            >
+              {nom === 'verre' && <LagonDeVerre fond={vue.fond} />}
+              <View
+                style={[
+                  styles.apercuCarte,
+                  { backgroundColor: vue.carte, borderColor: vue.bordure },
+                ]}
+              >
+                <View
+                  style={[styles.apercuBarre, { backgroundColor: vue.texte, width: '75%' }]}
+                />
+                <View
+                  style={[styles.apercuBarre, { backgroundColor: vue.secondaire, width: '50%' }]}
+                />
+              </View>
+              <View style={[styles.apercuBouton, { backgroundColor: vue.accent }]} />
+            </View>
+            <View style={styles.enTetePeau}>
+              <Text style={styles.nomPeau}>{bento ? t('peau_bento') : t('peau_lagon')}</Text>
+              {actif && (
+                <Ionicons name="checkmark-circle" size={18} color={couleurs.primaire} />
+              )}
+            </View>
+            {!compact && (
+              <Text style={styles.quandPeau}>
+                {bento ? t('peau_bento_quand') : t('peau_lagon_quand')}
+              </Text>
+            )}
           </Pressable>
         );
       })}
@@ -590,6 +667,71 @@ const styles = stylesReactifs(() => ({
     alignItems: 'center',
     justifyContent: 'center',
     ...ombres.carte,
+  },
+  // ─── LE CHOIX DU DESIGN ────────────────────────────────────────────────
+  rangeePeaux: {
+    flexDirection: 'row',
+    gap: espaces.m,
+  },
+  casePeau: {
+    flex: 1,
+    backgroundColor: couleurs.carteTranslucide,
+    borderRadius: rayons.carte,
+    borderWidth: 1,
+    borderColor: couleurs.bordure,
+    padding: espaces.s,
+    gap: 6,
+  },
+  // La case choisie porte un liseré de la couleur d'action : on voit
+  // laquelle est en service sans lire la coche.
+  casePeauActive: {
+    borderWidth: 2,
+    borderColor: couleurs.primaire,
+  },
+  // L'aperçu : un écran miniature, aux proportions d'un téléphone.
+  apercuPeau: {
+    height: 96,
+    borderRadius: 12,
+    overflow: 'hidden',
+    padding: 10,
+    justifyContent: 'space-between',
+  },
+  apercuPeauCompact: {
+    height: 64,
+    padding: 7,
+  },
+  apercuCarte: {
+    borderRadius: 8,
+    borderWidth: 1,
+    padding: 8,
+    gap: 5,
+  },
+  apercuBarre: {
+    height: 4,
+    borderRadius: 2,
+    // Les barres évoquent du texte : à pleine opacité elles feraient des
+    // traits de peinture, pas des lignes lues de loin.
+    opacity: 0.85,
+  },
+  apercuBouton: {
+    height: 14,
+    borderRadius: 7,
+  },
+  enTetePeau: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: espaces.xs,
+  },
+  nomPeau: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: couleurs.encre,
+  },
+  quandPeau: {
+    fontSize: 12,
+    lineHeight: 16,
+    color: couleurs.texteSecondaire,
   },
   rangeeLangues: {
     flexDirection: 'row',
