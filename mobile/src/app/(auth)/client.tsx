@@ -26,7 +26,7 @@ import { api, ErreurApi } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useT } from '@/lib/i18n';
 import { couleurs, espaces, rayons, stylesReactifs } from '@/lib/theme';
-import { formaterMontant, TARIF_LOCAL_TZS, type TypeCompte } from '@/lib/types';
+import { formaterMontant, tarifLocalMiniTzs, type TypeCompte } from '@/lib/types';
 
 export default function EcranClient() {
   const router = useRouter();
@@ -61,7 +61,9 @@ export default function EcranClient() {
 
   const estLocal = typeCompte === 'local';
   const documentRequis = typeCompte === 'resident' || estLocal;
-  const prixLocal = formaterMontant(TARIF_LOCAL_TZS, 'TZS');
+  // Le prix le plus bas qu'on sache vendre à un local — calculé sur la grille,
+  // pas écrit à la main. C'est ce qui donne son sens au « à partir de ».
+  const prixLocal = formaterMontant(tarifLocalMiniTzs(), 'TZS');
 
   const TYPES_COMPTE: { cle: TypeCompte; titre: string; description: string }[] = [
     { cle: 'tourist', titre: t('client_type_touriste'), description: t('client_type_touriste_desc') },

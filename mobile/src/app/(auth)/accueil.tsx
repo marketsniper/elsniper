@@ -13,7 +13,7 @@ import { SelecteurLangue, SelecteurPeau } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { useT } from '@/lib/i18n';
 import { couleurs, espaces, ombres, rayons, stylesReactifs } from '@/lib/theme';
-import { formaterMontant, TARIF_LOCAL_TZS, TARIFS_TRAJET_USD } from '@/lib/types';
+import { formaterMontant, TARIFS_TRAJET_USD } from '@/lib/types';
 
 type ProfilAccueil = 'visitor' | 'local' | 'hotel' | 'driver';
 

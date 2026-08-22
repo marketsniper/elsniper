@@ -634,6 +634,50 @@ export function reglementPaiement(
 /** Tarif local par défaut (zone inconnue) — affiché aussi sur l'accueil. */
 export const TARIF_LOCAL_TZS = 17000;
 
+/**
+ * LE PRIX LE PLUS BAS PRATIQUÉ SUR L'ÎLE, en shillings.
+ *
+ * Ce que paie un local pour la course la moins chère qu'on sache lui vendre :
+ * une place de taxi partagé sur un petit saut (Nungwi ↔ Kendwa, l'aéroport ↔
+ * Stone Town…). C'est le chiffre qui a un sens dans un « à partir de ».
+ *
+ * Il est CALCULÉ sur la grille, pas écrit à la main. Le jour où un tarif
+ * bouge, la phrase affichée bouge avec lui — c'est exactement la dérive qui a
+ * fait promettre 10 % de remise pendant que le moteur en appliquait 5.
+ */
+let miniLocalMemo: number | null = null;
+
+/**
+ * LE PRIX LE PLUS BAS PRATIQUÉ SUR L'ÎLE, en shillings.
+ *
+ * Ce que paie un local pour la course la moins chère qu'on sache lui vendre :
+ * une place de taxi partagé sur un petit saut (Nungwi ↔ Kendwa, l'aéroport ↔
+ * Stone Town…). C'est le seul chiffre qui ait un sens dans un « à partir de ».
+ *
+ * Il est CALCULÉ sur la grille, jamais écrit à la main : le jour où un tarif
+ * bouge, la phrase affichée bouge avec lui. C'est exactement la dérive qui a
+ * fait promettre 10 % de remise pendant que le moteur en appliquait 5.
+ *
+ * PARESSEUX, et ce n'est pas un détail : calculé au chargement du module, il
+ * s'exécutait avant l'initialisation de la grille des zones et faisait planter
+ * l'application au démarrage. On attend le premier appel, puis on mémorise.
+ */
+export function tarifLocalMiniTzs(): number {
+  if (miniLocalMemo !== null) return miniLocalMemo;
+  let mini = Infinity;
+  for (const depart of ORIGINES_RIDES) {
+    for (const arrivee of ORIGINES_RIDES) {
+      if (depart === arrivee) continue;
+      const tarif = tarifTrajetProfil('shared_local', 'local', { depart, arrivee });
+      if (tarif && tarif.devise === 'TZS' && tarif.montant > 0 && tarif.montant < mini) {
+        mini = tarif.montant;
+      }
+    }
+  }
+  miniLocalMemo = Number.isFinite(mini) ? mini : TARIF_LOCAL_TZS;
+  return miniLocalMemo;
+}
+
 // ---------------------------------------------------------------------------
 // Grille PAR ZONE — courses depuis/vers la ville ou l'aéroport. La zone est
 // déterminée par la ville zonée de l'itinéraire (les hubs et Stone Town ne
