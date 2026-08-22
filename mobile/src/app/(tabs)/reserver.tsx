@@ -19,7 +19,15 @@ import { Linking, Pressable, Text, View } from 'react-native';
 import { CalendrierDate } from '@/components/CalendrierDate';
 import { RidesPartages } from '@/components/RidesPartages';
 import { Selecteur } from '@/components/Selecteur';
-import { Bouton, Champ, Ecran, EncartInfo, EtatVide, TexteErreur } from '@/components/ui';
+import {
+  Bouton,
+  Champ,
+  Depliant,
+  Ecran,
+  EncartInfo,
+  EtatVide,
+  TexteErreur,
+} from '@/components/ui';
 import { api, ErreurApi } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import {
@@ -192,6 +200,20 @@ export default function EcranReserver() {
   // Course privée : aller-retour avec attente (×1,8) + option bagages.
   const [allerRetour, setAllerRetour] = useState(false);
   const [grosBagages, setGrosBagages] = useState(false);
+
+  /**
+   * Ce qui a été choisi dans les options, en une ligne — pour qu'on le voie
+   * sans avoir à déplier. Vide quand rien n'a été touché.
+   */
+  const resumeOptions = [
+    dateChoisie ? formaterDateChoisie(dateChoisie, langue) : null,
+    numeroVol ? numeroVol.toUpperCase() : null,
+    allerRetour ? t('reserver_aller_retour_court') : null,
+    grosBagages ? t('reserver_bagages_court') : null,
+    precision || null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
   // Liste d'attente du partagé : demande laissée à l'équipe.
   const [attenteEnvoyee, setAttenteEnvoyee] = useState(false);
   const [chargeAttente, setChargeAttente] = useState(false);
@@ -355,48 +377,52 @@ export default function EcranReserver() {
         </EncartInfo>
       )}
 
-      <Text style={styles.titreSection}>{t('reserver_itineraire')}</Text>
-      <Selecteur
-        label={t('commun_depart')}
-        detailOption={(option) => detailLieu(option, arrivee)}
-        valeur={depart}
-        options={[OPTION_MA_POSITION, ...lieux]}
-        libelleOption={(option) =>
-          option === OPTION_MA_POSITION ? t('position_option') : option
-        }
-        onChange={choisirDepart}
-      />
+      {/* LE TRAJET — une seule carte. On touche une ligne, la liste des
+          lieux s'ouvre. Deux questions, pas un formulaire. */}
+      <View style={styles.carteTrajet}>
+        <Selecteur
+          apparence="ligne"
+          label={t('commun_depart')}
+          detailOption={(option) => detailLieu(option, arrivee)}
+          valeur={depart}
+          options={[OPTION_MA_POSITION, ...lieux]}
+          libelleOption={(option) =>
+            option === OPTION_MA_POSITION ? t('position_option') : option
+          }
+          onChange={choisirDepart}
+        />
+        <View style={styles.filetTrajet} />
+        <Selecteur
+          apparence="ligne"
+          label={t('commun_arrivee')}
+          valeur={arrivee}
+          // Stone Town, ferry et aéroport sont à quelques minutes : aucune
+          // course entre ces trois points (même règle côté serveur).
+          options={
+            POINTS_STONE_TOWN.includes(depart)
+              ? lieux.filter((lieu) => !POINTS_STONE_TOWN.includes(lieu))
+              : lieux
+          }
+          detailOption={(option) => detailLieu(option, depart)}
+          onChange={setArrivee}
+        />
+        {!!distanceCourse && (
+          <View style={styles.ligneDistance}>
+            <Ionicons name="navigate-outline" size={14} color={couleurs.texteSecondaire} />
+            <Text style={styles.note}>{distanceCourse}</Text>
+          </View>
+        )}
+      </View>
       {!!messagePosition && (
         <Text style={[styles.messagePosition, positionDepart && styles.messagePositionOk]}>
           {chercheposition ? t('position_recherche') : messagePosition}
         </Text>
       )}
-      <Selecteur
-        label={t('commun_arrivee')}
-        valeur={arrivee}
-        // Stone Town, ferry et aéroport sont à quelques minutes : aucune
-        // course entre ces trois points (même règle côté serveur).
-        options={
-          POINTS_STONE_TOWN.includes(depart)
-            ? lieux.filter((lieu) => !POINTS_STONE_TOWN.includes(lieu))
-            : lieux
-        }
-        detailOption={(option) => detailLieu(option, depart)}
-        onChange={setArrivee}
-      />
-      <Champ
-        label={t('reserver_precision')}
-        value={precision}
-        onChangeText={setPrecision}
-        placeholder={t('reserver_precision_placeholder')}
-      />
-
-      <Text style={styles.titreSection}>{t('reserver_mode_titre')}</Text>
       {/* Trajet court (privé < 35 USD) : pas de taxi partagé du tout. */}
       {itineraireChoisi && !partageDisponible && (
         <EncartInfo icone="car-outline">{t('reserver_pas_partage')}</EncartInfo>
       )}
-      <View style={styles.rangeeModes}>
+      <View style={styles.pileModes}>
         {(
           [
             {
@@ -426,6 +452,7 @@ export default function EcranReserver() {
               key={option.cle}
               onPress={() => setMode(option.cle)}
               accessibilityRole="button"
+              accessibilityState={{ selected: actif }}
               style={[styles.carteMode, actif && styles.carteModeActive]}
             >
               <View style={[styles.bulleIcone, actif && styles.bulleIconeActive]}>
@@ -435,11 +462,14 @@ export default function EcranReserver() {
                   color={actif ? couleurs.surPrimaire : couleurs.primaire}
                 />
               </View>
-              <Text style={[styles.titreMode, actif && { color: couleurs.primaireFonce }]}>
-                {option.titre}
-              </Text>
-              <Text style={styles.descriptionMode}>{option.description}</Text>
-              <Text style={styles.sousTypeMode}>{libelleTypeTrajet(option.type, t)}</Text>
+              <View style={styles.textesMode}>
+                <Text style={[styles.titreMode, actif && { color: couleurs.primaireFonce }]}>
+                  {option.titre}
+                </Text>
+                <Text style={styles.descriptionMode}>{option.description}</Text>
+              </View>
+              {/* LE PRIX EST SUR L'OFFRE, pas trois écrans plus bas : c'est
+                  lui qui décide, il doit être là où on choisit. */}
               {itineraireChoisi && tarif !== null ? (
                 <Text style={styles.prixMode}>
                   {formaterMontant(tarif.montant, tarif.devise)}
@@ -447,16 +477,17 @@ export default function EcranReserver() {
               ) : (
                 <Text style={styles.prixModeAttente}>{t('reserver_prix_selon_trajet')}</Text>
               )}
-              {profilUsd && (
-                <View style={styles.ligneClim}>
-                  <Ionicons name="snow-outline" size={13} color={couleurs.primaireFonce} />
-                  <Text style={styles.texteClim}>{t('reserver_clim')}</Text>
-                </View>
-              )}
             </Pressable>
           );
         })}
       </View>
+
+      {profilUsd && (
+        <View style={styles.ligneClim}>
+          <Ionicons name="snow-outline" size={13} color={couleurs.texteSecondaire} />
+          <Text style={styles.texteClim}>{t('reserver_clim')}</Text>
+        </View>
+      )}
 
       {mode === 'partage' ? (
         // Partagé : pas de réservation directe — liste des trajets postés.
@@ -495,6 +526,17 @@ export default function EcranReserver() {
               {t('reserver_special_info', { depart, arrivee })}
             </EncartInfo>
           )}
+
+          {/* TOUT LE RESTE, RANGÉ. Précision d'adresse, heure, n° de vol,
+              aller-retour, bagages : neuf clients sur dix n'y touchent pas.
+              Le résumé dit ce qui a été choisi sans avoir à ouvrir. */}
+          <Depliant titre={t('reserver_options_titre')} resume={resumeOptions}>
+          <Champ
+            label={t('reserver_precision')}
+            value={precision}
+            onChangeText={setPrecision}
+            placeholder={t('reserver_precision_placeholder')}
+          />
 
           {modeHotel && (
             <>
@@ -626,33 +668,30 @@ export default function EcranReserver() {
             </Pressable>
           ))}
 
-          <View style={styles.cartePrix}>
-            <View style={styles.lignePrix}>
-              <Text style={styles.labelPrix}>
-                {allerRetour ? t('reserver_prix_aller_retour') : t('reserver_prix_course')}
-              </Text>
-              <Text style={styles.valeurPrix}>
-                {tarifAffiche !== null
-                  ? formaterMontant(tarifAffiche.montant, tarifAffiche.devise)
-                  : '—'}
-              </Text>
-            </View>
-            {!!distanceCourse && (
-              <View style={styles.ligneDistance}>
-                <Ionicons name="navigate-outline" size={15} color={couleurs.texteSecondaire} />
-                <Text style={styles.note}>{distanceCourse}</Text>
-              </View>
-            )}
-            <Text style={styles.note}>{t('reserver_note_prix')}</Text>
-          </View>
+          </Depliant>
 
           <TexteErreur>{erreur}</TexteErreur>
+          {/* LE MONTANT EST SUR LE BOUTON. Une carte « Prix de la course »
+              répétait ce que l'offre choisie affiche déjà : deux fois le même
+              chiffre, et le geste final trois centimètres plus bas. */}
           <Bouton
-            titre={modeHotel ? t('reserver_bouton_hotel') : t('reserver_bouton')}
+            titre={
+              tarifAffiche !== null
+                ? `${modeHotel ? t('reserver_bouton_hotel') : t('reserver_bouton')} · ${formaterMontant(
+                    tarifAffiche.montant,
+                    tarifAffiche.devise
+                  )}`
+                : modeHotel
+                  ? t('reserver_bouton_hotel')
+                  : t('reserver_bouton')
+            }
             icone="checkmark-circle-outline"
             onPress={reserver}
             charge={charge}
           />
+          <Text style={styles.notePied}>
+            {allerRetour ? t('reserver_prix_aller_retour') : t('reserver_note_prix')}
+          </Text>
           {/* Les annonces des chauffeurs ne s'affichent QUE dans l'onglet
               « Partagé » — les mélanger sous le formulaire privé rendait
               l'écran illisible. */}
@@ -681,19 +720,32 @@ const styles = stylesReactifs(() => ({
     color: couleurs.encre,
     marginTop: espaces.s,
   },
-  rangeeModes: {
-    flexDirection: 'row',
+  // LE TRAJET : une seule carte qui porte les deux lignes.
+  carteTrajet: {
+    backgroundColor: couleurs.carteTranslucide,
+    borderRadius: rayons.carte,
+    paddingHorizontal: espaces.l,
+    paddingVertical: espaces.xs,
+    ...ombres.carte,
+  },
+  filetTrajet: {
+    height: 1,
+    backgroundColor: couleurs.bordure,
+  },
+  // LES OFFRES : l'une SOUS l'autre, pleine largeur. Côte à côte, chaque
+  // carte n'avait plus la place d'afficher son prix en grand.
+  pileModes: {
     gap: espaces.m,
   },
   carteMode: {
-    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: espaces.m,
     backgroundColor: couleurs.carteTranslucide,
     borderRadius: rayons.carte,
-    padding: espaces.l,
-    gap: espaces.xs,
-    alignItems: 'center',
-    // Le relief pose déjà le trait ; la case choisie n'en change que la
-    // couleur, sans décaler d'un pixel le contenu.
+    paddingHorizontal: espaces.l,
+    paddingVertical: espaces.l,
+    minHeight: 84,
     ...ombres.carte,
   },
   carteModeActive: {
@@ -733,49 +785,50 @@ const styles = stylesReactifs(() => ({
   bulleIconeActive: {
     backgroundColor: couleurs.primaire,
   },
+  textesMode: {
+    flex: 1,
+    gap: 3,
+  },
   titreMode: {
     fontSize: 17,
-    fontWeight: '800',
+    fontWeight: '700',
     color: couleurs.encre,
   },
   descriptionMode: {
-    fontSize: 12,
+    fontSize: 13,
     color: couleurs.texteSecondaire,
-    textAlign: 'center',
-    lineHeight: 16,
-  },
-  sousTypeMode: {
-    fontSize: 11,
-    color: couleurs.texteSecondaire,
-    fontWeight: '600',
+    lineHeight: 17,
   },
   prixMode: {
-    fontSize: 16,
+    fontSize: 24,
     fontWeight: '800',
-    color: couleurs.primaire,
-    marginTop: espaces.xs,
+    color: couleurs.encre,
+    letterSpacing: -0.5,
   },
   // En attendant le choix du trajet : pas de montant, juste une invitation.
   prixModeAttente: {
     fontSize: 12.5,
-    fontWeight: '600',
     color: couleurs.texteSecondaire,
-    marginTop: espaces.xs,
+    maxWidth: 96,
+    textAlign: 'right',
   },
   ligneClim: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: espaces.xs,
-    backgroundColor: couleurs.primaireClair,
-    borderRadius: rayons.pastille,
-    paddingHorizontal: espaces.s,
-    paddingVertical: 2,
-    marginTop: espaces.xs,
+    marginTop: -espaces.xs,
   },
   texteClim: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: couleurs.primaireFonce,
+    fontSize: 12,
+    color: couleurs.texteSecondaire,
+  },
+  notePied: {
+    fontSize: 12,
+    lineHeight: 17,
+    color: couleurs.texteSecondaire,
+    textAlign: 'center',
+    marginTop: -espaces.xs,
   },
   cartePrix: {
     backgroundColor: couleurs.carteTranslucide,

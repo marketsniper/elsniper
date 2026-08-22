@@ -1054,6 +1054,19 @@ const CHAINES = {
     it: '{km} km · circa {min} min',
     de: '{km} km · etwa {min} Min.',
   },
+  reserver_options_titre: {
+    fr: 'Options du trajet',
+    en: 'Trip options',
+    sw: 'Chaguo za safari',
+    it: 'Opzioni del viaggio',
+    de: 'Optionen der Fahrt',
+  },
+  reserver_aller_retour_court: {
+    fr: 'Aller-retour', en: 'Round trip', sw: 'Kwenda na kurudi', it: 'Andata e ritorno', de: 'Hin und zurück',
+  },
+  reserver_bagages_court: {
+    fr: 'Gros bagages', en: 'Large luggage', sw: 'Mizigo mikubwa', it: 'Bagagli voluminosi', de: 'Großes Gepäck',
+  },
   alertes_test_vide: {
     fr: "Aucun téléphone n'est encore abonné aux alertes.",
     en: 'No phone is subscribed to alerts yet.',
@@ -1591,7 +1604,7 @@ const CHAINES = {
     de: 'z. B. Nungwi, Ocean View',
   },
   reserver_mode_titre: { fr: 'Privé ou partagé ?', en: 'Private or shared?', sw: 'Binafsi au pamoja?' , it: 'Privato o condiviso?', de: 'Privat oder geteilt?' },
-  reserver_prive: { fr: 'Privé', en: 'Private', sw: 'Binafsi' , it: 'Privato', de: 'Privat' },
+  reserver_prive: { fr: 'Taxi privé', en: 'Private taxi', sw: 'Teksi binafsi' , it: 'Taxi privato', de: 'Privattaxi' },
   reserver_prive_desc: {
     fr: 'Un véhicule rien que pour vous.',
     en: 'A vehicle just for you.',
@@ -1599,7 +1612,7 @@ const CHAINES = {
     it: 'Un veicolo solo per te.',
     de: 'Ein Fahrzeug nur für Sie.',
   },
-  reserver_partage: { fr: 'Partagé', en: 'Shared', sw: 'Pamoja' , it: 'Condiviso', de: 'Geteilt' },
+  reserver_partage: { fr: 'Taxi partagé', en: 'Shared taxi', sw: 'Teksi ya pamoja', it: 'Taxi condiviso', de: 'Sammeltaxi' },
   reserver_partage_desc: {
     fr: 'Une place dans un taxi partagé.',
     en: 'A seat in a shared taxi.',

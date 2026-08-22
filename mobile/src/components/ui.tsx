@@ -296,6 +296,47 @@ export function Carte({
   );
 }
 
+/**
+ * SECTION REPLIÉE.
+ *
+ * L'écran de réservation posait douze questions d'un coup ; on en pose trois,
+ * et on range le reste ici. Ce qui est rare ne doit pas encombrer ce qui est
+ * fréquent — mais doit rester à une touche.
+ */
+export function Depliant({
+  titre,
+  resume,
+  children,
+}: {
+  titre: string;
+  /** Ce qui a été choisi, visible sans ouvrir. */
+  resume?: string;
+  children: React.ReactNode;
+}) {
+  const [ouvert, setOuvert] = React.useState(false);
+  return (
+    <View style={styles.depliant}>
+      <Pressable
+        onPress={() => setOuvert((v) => !v)}
+        accessibilityRole="button"
+        accessibilityState={{ expanded: ouvert }}
+        style={({ pressed }) => [styles.depliantTete, pressed && { opacity: 0.7 }]}
+      >
+        <View style={styles.depliantTextes}>
+          <Text style={styles.depliantTitre}>{titre}</Text>
+          {!!resume && <Text style={styles.depliantResume}>{resume}</Text>}
+        </View>
+        <Ionicons
+          name={ouvert ? 'chevron-up' : 'chevron-down'}
+          size={20}
+          color={couleurs.texteSecondaire}
+        />
+      </Pressable>
+      {ouvert && <View style={styles.depliantCorps}>{children}</View>}
+    </View>
+  );
+}
+
 export function Titre({ children }: { children: React.ReactNode }) {
   return <Text style={styles.titre}>{children}</Text>;
 }
@@ -608,6 +649,37 @@ const styles = stylesReactifs(() => ({
     ...StyleSheet.absoluteFillObject,
     borderRadius: rayons.carte,
     overflow: 'hidden',
+  },
+  depliant: {
+    backgroundColor: couleurs.carteTranslucide,
+    borderRadius: rayons.carte,
+    ...ombres.carte,
+  },
+  depliantTete: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: espaces.m,
+    paddingHorizontal: espaces.l,
+    paddingVertical: espaces.m,
+    minHeight: tailles.champ,
+  },
+  depliantTextes: {
+    flex: 1,
+    gap: 2,
+  },
+  depliantTitre: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: couleurs.encre,
+  },
+  depliantResume: {
+    fontSize: 12.5,
+    color: couleurs.texteSecondaire,
+  },
+  depliantCorps: {
+    gap: espaces.m,
+    paddingHorizontal: espaces.l,
+    paddingBottom: espaces.l,
   },
   titre: {
     fontSize: 25,

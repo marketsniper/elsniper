@@ -19,6 +19,7 @@ export function Selecteur({
   placeholder,
   libelleOption,
   detailOption,
+  apparence = 'champ',
   onChange,
 }: {
   label: string;
@@ -36,24 +37,51 @@ export function Selecteur({
    * il n'y a rien à dire (« Ma position » avant que le GPS ait répondu).
    */
   detailOption?: (option: string) => string | null;
+  /**
+   * « champ » : un champ posé sur l'écran, avec son relief.
+   * « ligne » : une ligne nue, à glisser DANS une carte déjà existante —
+   * c'est la carte qui porte le relief, pas chacune de ses lignes.
+   */
+  apparence?: 'champ' | 'ligne';
   onChange: (valeur: string) => void;
 }) {
   const { t } = useT();
   const [ouvert, setOuvert] = useState(false);
   const texteVide = placeholder ?? t('commun_choisir');
 
+  const ligne = apparence === 'ligne';
+
   return (
-    <View style={styles.conteneur}>
-      <Text style={styles.label}>{label}</Text>
+    <View style={ligne ? styles.conteneurLigne : styles.conteneur}>
+      {!ligne && <Text style={styles.label}>{label}</Text>}
       <Pressable
         onPress={() => setOuvert(true)}
         accessibilityRole="button"
-        style={({ pressed }) => [styles.champ, pressed && { opacity: 0.7 }]}
+        accessibilityLabel={`${label} : ${valeur || texteVide}`}
+        style={({ pressed }) => [
+          ligne ? styles.ligne : styles.champ,
+          pressed && (ligne ? styles.ligneEnfoncee : { opacity: 0.7 }),
+        ]}
       >
-        <Text style={valeur ? styles.valeur : styles.placeholder}>
-          {valeur || texteVide}
-        </Text>
-        <Ionicons name="chevron-down" size={18} color={couleurs.texteSecondaire} />
+        {ligne ? (
+          <>
+            <Text style={styles.ligneLabel}>{label}</Text>
+            <Text
+              style={valeur ? styles.ligneValeur : styles.lignePlaceholder}
+              numberOfLines={1}
+            >
+              {valeur || texteVide}
+            </Text>
+          </>
+        ) : (
+          <Text style={valeur ? styles.valeur : styles.placeholder}>{valeur || texteVide}</Text>
+        )}
+        <Ionicons
+          name="chevron-down"
+          size={18}
+          color={couleurs.texteSecondaire}
+          style={ligne ? styles.ligneChevron : undefined}
+        />
       </Pressable>
 
       <Modal
@@ -117,6 +145,41 @@ const styles = stylesReactifs(() => ({
     fontSize: 13,
     fontWeight: '600',
     color: couleurs.texteSecondaire,
+  },
+  // Ligne nue, posée dans une carte : pas de fond, pas de relief — un
+  // libellé discret au-dessus de la valeur, en grand.
+  conteneurLigne: {},
+  ligne: {
+    minHeight: 58,
+    justifyContent: 'center',
+    paddingVertical: espaces.s,
+  },
+  ligneEnfoncee: {
+    opacity: 0.6,
+  },
+  ligneLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: couleurs.texteSecondaire,
+    marginBottom: 2,
+  },
+  ligneValeur: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: couleurs.encre,
+    paddingRight: espaces.xl,
+  },
+  lignePlaceholder: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: couleurs.texteSecondaire,
+    paddingRight: espaces.xl,
+  },
+  ligneChevron: {
+    position: 'absolute',
+    right: 0,
+    top: '50%',
+    marginTop: -9,
   },
   champ: {
     flexDirection: 'row',
