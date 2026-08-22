@@ -18,6 +18,7 @@ import { Linking, Pressable, Text, View } from 'react-native';
 
 import { CalendrierDate } from '@/components/CalendrierDate';
 import { IleDeZanzibar } from '@/components/Ile';
+import { LaCourse } from '@/components/LaCourse';
 import { RidesPartages } from '@/components/RidesPartages';
 import { Selecteur } from '@/components/Selecteur';
 import {
@@ -369,6 +370,8 @@ export default function EcranReserver() {
           où l'on choisit un départ et une arrivée : montrer ce que zanziGo
           couvre y est à sa place, pas décoratif. */}
       <IleDeZanzibar compact />
+      {/* LE TAXI — l'écran où l'on réserve une course montre une course. */}
+      <LaCourse compacte />
 
       {modeHotel && (
         <EncartInfo icone="business-outline">{t('reserver_mode_hotel_info')}</EncartInfo>

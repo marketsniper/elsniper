@@ -10,7 +10,9 @@ import { useRafraichissementAuto } from '@/lib/rafraichissementAuto';
 import React, { useCallback, useState } from 'react';
 import { Alert, FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
 
+import { Canopee } from '@/components/Canopee';
 import { FondPlage } from '@/components/FondPlage';
+import { LaCourse } from '@/components/LaCourse';
 import { BadgeStatutColis, Bouton, EtatVide, BoutonRafraichir } from '@/components/ui';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
@@ -96,6 +98,7 @@ export default function EcranColis() {
 
   return (
     <FondPlage fond="lagon" voile="clair">
+      <Canopee />
       <FlatList
         data={visibles}
         keyExtractor={(c) => c.id}
@@ -104,12 +107,17 @@ export default function EcranColis() {
           <RefreshControl refreshing={charge} onRefresh={rafraichir} tintColor={couleurs.primaire} />
         }
         ListHeaderComponent={
-          <Bouton
-            titre={t('colis_envoyer')}
-            icone="add-circle-outline"
-            onPress={() => router.push('/package/nouveau')}
-            style={styles.boutonNouveau}
-          />
+          <>
+            {/* LE PIKIPIKI — la moto qui porte les colis sur l'île. L'écran
+                des colis montre ce qui les transporte. */}
+            <LaCourse vehicule="pikipiki" compacte />
+            <Bouton
+              titre={t('colis_envoyer')}
+              icone="add-circle-outline"
+              onPress={() => router.push('/package/nouveau')}
+              style={styles.boutonNouveau}
+            />
+          </>
         }
         ListEmptyComponent={
           !charge ? (

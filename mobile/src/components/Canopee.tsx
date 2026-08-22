@@ -33,7 +33,7 @@
 // de lecture laisse. Opacité de 7 à 11 % : on ne la regarde pas, on la sent.
 // ══════════════════════════════════════════════════════════════════════════
 import React from 'react';
-import { Animated, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { Animated, Easing, StyleSheet, View, useWindowDimensions } from 'react-native';
 import Svg from 'react-native-svg';
 
 import { ColobeLointain, Girofle, Palme, Piquets, type Motif } from '@/components/marques/Flore';
@@ -163,8 +163,32 @@ export function Canopee() {
     return groupes;
   }, [semis]);
 
+  // L'OUVERTURE. À chaque arrivée sur un écran, la végétation s'ÉCARTE :
+  // elle entre resserrée et un peu transparente, puis s'ouvre en trois
+  // quarts de seconde. C'est ce qui donne le sentiment d'arriver quelque
+  // part plutôt que de changer de page — et comme `Ecran` se remonte à
+  // chaque navigation, ça se rejoue à chaque fois, sans rien à câbler.
+  const ouverture = React.useRef(new Animated.Value(0)).current;
+  React.useEffect(() => {
+    if (!anime) {
+      ouverture.setValue(1);
+      return;
+    }
+    ouverture.setValue(0);
+    Animated.timing(ouverture, {
+      toValue: 1,
+      duration: 760,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  }, [ouverture, anime]);
+  const echelle = ouverture.interpolate({ inputRange: [0, 1], outputRange: [0.9, 1] });
+
   return (
-    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+    <Animated.View
+      style={[StyleSheet.absoluteFill, { opacity: ouverture, transform: [{ scale: echelle }] }]}
+      pointerEvents="none"
+    >
       {bouquets.map((groupe, i) => (
         <Souffle key={i} periode={9 + i * 2.5} amplitude={0.7 + i * 0.22} retard={i * 1.6} anime={anime}>
           <Svg width="100%" height="100%">
@@ -177,7 +201,7 @@ export function Canopee() {
         </Souffle>
       ))}
       <ColobeVoyageur largeur={width} hauteur={Math.max(height, 900)} anime={anime} />
-    </View>
+    </Animated.View>
   );
 }
 

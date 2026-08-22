@@ -329,7 +329,7 @@ export default function EcranCourses() {
   };
 
   return (
-    <Ecran fond="vagues" onRefresh={rafraichir}>
+    <Ecran fond="vagues" onRefresh={rafraichir} vivant>
       {/* ------------------------------------------------------------------
           TABLEAU DE BORD CHAUFFEUR — volontairement réduit à DEUX questions :
           « qu'est-ce que je dois faire maintenant ? » et « qu'est-ce que je

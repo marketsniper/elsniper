@@ -29,7 +29,7 @@
 // personnes que le mouvement rend malades ; on ne le contourne pas.
 // ══════════════════════════════════════════════════════════════════════════
 import React from 'react';
-import { Animated, View, useWindowDimensions } from 'react-native';
+import { Animated, Easing, Pressable, View, useWindowDimensions } from 'react-native';
 import Svg, { Circle, G, Path, Rect } from 'react-native-svg';
 
 import { Cocotier, Touffe } from '@/components/marques/Flore';
@@ -159,38 +159,50 @@ function Chaussee({ largeur }: { largeur: number }) {
   );
 }
 
-/** LE TAXI — chauffeur, deux passagers, et le madafu. */
+/**
+ * LES TROIS VÉHICULES DE L'ÎLE.
+ *
+ * Chaque écran montre celui qui lui correspond — c'est ce qui dit au client
+ * OÙ il vient d'arriver, avant même qu'il lise le titre :
+ *   · le TAXI sur la réservation et chez le chauffeur ;
+ *   · le DALA-DALA, le camion-bus à banquettes, sur les trajets partagés ;
+ *   · le PIKIPIKI, la moto qui porte les colis, sur les colis.
+ *
+ * TOUS SUIVENT LA MÊME RÈGLE DE COULEUR, et elle a été vérifiée sur les
+ * quatre peaux, pas sur une :
+ *   · la carrosserie prend `primaire` — toujours contrastée avec le fond ;
+ *   · les vitres et le colis prennent `blanc` — toujours contrasté avec la
+ *     carrosserie ;
+ *   · les gens prennent `encre` — toujours contrasté avec les vitres.
+ * Et les roues sont posées dans des PASSAGES DÉCOUPÉS : sans eux, une roue
+ * claire disparaît dans une carrosserie claire sur la peau Lagon.
+ */
+export type NomVehicule = 'taxi' | 'dala' | 'pikipiki';
+
+/** LE TAXI — un chauffeur, deux passagers, et le madafu. */
 function Taxi() {
   const { primaire, blanc, encre, turquoise } = couleurs;
   return (
     <Svg width={VOITURE.l} height={VOITURE.h} viewBox="0 0 224 100">
-      {/* La carrosserie, AVEC ses passages de roue : c'est l'arc découpé
-          au-dessus de chaque roue qui la détache du corps, sur toutes les
-          peaux — sans lui, une carrosserie claire avale une roue claire. */}
       <Path
         d="M 12 82 L 12 63 C 12 58 15 55 20 54 L 44 50 L 58 25 C 61 21 65 19 70 19
            L 142 19 C 149 19 154 21 158 26 L 176 52 L 202 57 C 209 58 212 62 212 68
            L 212 82 L 192 82 A 18 18 0 0 0 156 82 L 74 82 A 18 18 0 0 0 38 82 Z"
         fill={primaire}
       />
-      {/* les vitres */}
       <Path d="M 68 26 L 120 26 L 120 51 L 52 51 Z" fill={blanc} />
       <Path d="M 127 26 L 140 26 C 144 26 147 27 149 30 L 163 51 L 127 51 Z" fill={blanc} />
       <G fill={encre}>
-        {/* les deux passagers, à l'arrière */}
         <Circle cx={70} cy={38} r={7.6} />
         <Path d="M 59 51 q 11 -11 22 0 Z" />
         <Circle cx={95} cy={38} r={7.4} />
         <Path d="M 84 51 q 11 -11 22 0 Z" />
-        {/* le bras levé, depuis l'épaule */}
         <Path d="M 102 46 L 108 37" stroke={encre} strokeWidth={3.6} strokeLinecap="round" />
-        {/* le chauffeur */}
         <Circle cx={136} cy={37} r={6.4} />
         <Path d="M 128 51 q 8 -10 17 -1 L 145 51 Z" />
       </G>
-      {/* LE MADAFU — noix de coco fraîche et sa paille. La seule tache de
-          couleur froide du dessin : c'est ce qui la fait lire comme une
-          boisson et non comme une troisième tête. */}
+      {/* LE MADAFU — la noix de coco fraîche, à la paille. La seule tache de
+          couleur froide : sans elle, elle se lisait comme une 3ᵉ tête. */}
       <Path
         d="M 104 30 q 6.5 -4.5 12 0 q 3.5 5.5 -1 10 q -5.5 4.5 -11 0 q -4.5 -4.5 0 -10 Z"
         fill={turquoise}
@@ -204,25 +216,138 @@ function Taxi() {
   );
 }
 
-export function LaCourse() {
+/** LE DALA-DALA — quatre passagers sur la banquette, le chauffeur en cabine. */
+function Dala() {
+  const { primaire, blanc, encre } = couleurs;
+  return (
+    <Svg width={VOITURE.l} height={VOITURE.h} viewBox="0 0 224 100">
+      {/* la caisse bâchée, puis la cabine */}
+      <Path d="M 16 84 L 16 32 q 0 -8 8 -8 L 128 24 q 8 0 8 8 L 136 84 Z" fill={primaire} />
+      <Path
+        d="M 136 84 L 136 42 q 0 -6 6 -6 L 176 36 q 5 0 8 5 L 198 62 q 4 4 4 9 L 202 84 Z"
+        fill={primaire}
+      />
+      {/* l'ouverture latérale : c'est par là qu'on voit les gens */}
+      <Rect x={26} y={36} width={98} height={30} rx={3} fill={blanc} />
+      <Path d="M 146 44 L 172 42 q 4 0 6 4 L 190 62 L 146 62 Z" fill={blanc} />
+      <G fill={encre}>
+        {[44, 66, 88, 110].map((x) => (
+          <G key={x}>
+            <Circle cx={x} cy={47} r={6.4} />
+            <Path d={`M ${x - 9} 66 q 9 -12 19 0 Z`} />
+          </G>
+        ))}
+        <Circle cx={160} cy={52} r={6} />
+        <Path d="M 152 66 q 8 -11 17 -1 L 169 66 Z" />
+      </G>
+      <Circle cx={56} cy={80} r={16} fill={encre} />
+      <Circle cx={56} cy={80} r={6.6} fill={blanc} />
+      <Circle cx={170} cy={80} r={16} fill={encre} />
+      <Circle cx={170} cy={80} r={6.6} fill={blanc} />
+    </Svg>
+  );
+}
+
+/** LE PIKIPIKI — la moto, et le colis sanglé sur le porte-bagages. */
+function Pikipiki() {
+  const { primaire, blanc, encre } = couleurs;
+  return (
+    <Svg width={VOITURE.l} height={VOITURE.h} viewBox="0 0 224 100">
+      {/* roues, fourche, guidon */}
+      <Circle cx={62} cy={78} r={17} fill="none" stroke={encre} strokeWidth={5.5} />
+      <Circle cx={62} cy={78} r={4} fill={encre} />
+      <Circle cx={176} cy={78} r={17} fill="none" stroke={encre} strokeWidth={5.5} />
+      <Circle cx={176} cy={78} r={4} fill={encre} />
+      <Path d="M 176 78 L 152 46" stroke={encre} strokeWidth={5} strokeLinecap="round" />
+      <Path d="M 152 46 L 150 36" stroke={encre} strokeWidth={4.5} strokeLinecap="round" />
+      <Path d="M 140 38 L 160 40" stroke={encre} strokeWidth={4.5} strokeLinecap="round" />
+      {/* cadre, selle, réservoir */}
+      <Path
+        d="M 62 78 L 96 58 L 152 48"
+        stroke={primaire}
+        strokeWidth={7}
+        fill="none"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Path d="M 96 58 L 116 74" stroke={primaire} strokeWidth={6} fill="none" strokeLinecap="round" />
+      <Path d="M 78 56 q 20 -8 34 -1 l -3 7 q -16 -4 -31 1 Z" fill={primaire} />
+      <Path d="M 116 50 q 16 -6 28 0 q -4 8 -14 8 q -11 0 -14 -8 Z" fill={primaire} />
+      {/* LE COLIS, sanglé — plus petit que le premier essai, qui rendait la
+          moto instable à l'œil, et posé plus bas sur le porte-bagages. */}
+      <Rect x={34} y={40} width={44} height={28} rx={4} fill={blanc} stroke={encre} strokeWidth={3} />
+      <Path d="M 56 40 L 56 68" stroke={encre} strokeWidth={3} />
+      <Path d="M 34 54 L 78 54" stroke={encre} strokeWidth={3} />
+      {/* le conducteur, penché sur le guidon */}
+      <G fill={encre}>
+        <Circle cx={112} cy={24} r={9.5} />
+        <Path d="M 96 56 q 2 -22 16 -22 q 13 0 12 13 l -3 9 Z" />
+        <Path d="M 122 38 Q 136 34, 148 40" stroke={encre} strokeWidth={5} fill="none" strokeLinecap="round" />
+        <Path
+          d="M 102 56 L 100 72 L 114 75"
+          stroke={encre}
+          strokeWidth={5.5}
+          fill="none"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </G>
+    </Svg>
+  );
+}
+
+const VEHICULES: Record<NomVehicule, () => React.ReactElement> = {
+  taxi: Taxi,
+  dala: Dala,
+  pikipiki: Pikipiki,
+};
+
+export function LaCourse({
+  vehicule = 'taxi',
+  compacte = false,
+}: {
+  vehicule?: NomVehicule;
+  /** La forme d'onglet : plus basse, pour ne pas voler la place au contenu. */
+  compacte?: boolean;
+} = {}) {
   const { width } = useWindowDimensions();
   const anime = useMouvementAutorise();
+  const Vehicule = VEHICULES[vehicule];
+  const echelle = compacte ? 0.74 : 1;
 
-  // La bande fait au moins une largeur d'écran, arrondie pour que les motifs
-  // ne se coupent pas au raccord.
   const bande = Math.max(360, Math.ceil(width / 40) * 40);
 
-  // LE TANGAGE. La voiture ne roule pas sur du marbre : elle monte et
-  // descend de deux pixels, sur un cycle qui ne tombe jamais en phase avec
-  // celui de la chaussée — sinon l'œil verrait un métronome.
+  // LE TANGAGE. Le véhicule ne roule pas sur du marbre : il monte et descend
+  // de deux pixels, sur un cycle qui ne tombe jamais en phase avec celui de
+  // la chaussée — sinon l'œil verrait un métronome.
   const tangage = useBoucle(1.7, anime);
-  const y = tangage.interpolate({
+  const roulis = tangage.interpolate({
     inputRange: [0, 0.25, 0.5, 0.75, 1],
     outputRange: [0, -2, 0, 1.4, 0],
   });
 
+  // LE BOND — la seule chose qui répond au doigt. On touche la scène, le
+  // véhicule saute. Rien d'autre : une animation qu'on peut déclencher en
+  // rafale doit être bornée, sinon elle devient un jouet qui mange la
+  // batterie. Le ressort revient tout seul à zéro.
+  const bond = React.useRef(new Animated.Value(0)).current;
+  const sauter = React.useCallback(() => {
+    if (!anime) return;
+    bond.setValue(0);
+    Animated.sequence([
+      Animated.timing(bond, { toValue: 1, duration: 190, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+      Animated.spring(bond, { toValue: 0, friction: 4, tension: 90, useNativeDriver: true }),
+    ]).start();
+  }, [bond, anime]);
+  const hauteurBond = bond.interpolate({ inputRange: [0, 1], outputRange: [0, -16] });
+
   return (
-    <View style={styles.cadre}>
+    <Pressable
+      onPress={sauter}
+      accessibilityRole="image"
+      accessibilityLabel={t3(vehicule)}
+      style={styles.cadre}
+    >
       {/* LA ROUTE — immobile. C'est le sol : ce sont les bandes peintes
           dessus qui défilent, pas le bitume. */}
       <View style={styles.route} />
@@ -235,11 +360,21 @@ export function LaCourse() {
       <Bande largeur={bande} secondes={2.4} active={anime}>
         <Chaussee largeur={bande} />
       </Bande>
-      <Animated.View style={[styles.voiture, { transform: [{ translateY: y }] }]}>
-        <Taxi />
+      <Animated.View
+        style={[
+          styles.voiture,
+          { transform: [{ translateY: Animated.add(roulis, hauteurBond) }, { scale: echelle }] },
+        ]}
+      >
+        <Vehicule />
       </Animated.View>
-    </View>
+    </Pressable>
   );
+}
+
+/** Le nom du véhicule, pour les lecteurs d'écran. */
+function t3(v: NomVehicule): string {
+  return v === 'dala' ? 'Dala-dala' : v === 'pikipiki' ? 'Pikipiki' : 'Taxi';
 }
 
 const styles = stylesReactifs(() => ({
@@ -261,9 +396,9 @@ const styles = stylesReactifs(() => ({
   },
   voiture: {
     alignSelf: 'center',
-    // Les roues du dessin descendent jusqu'à y = 96,5 : le repère doit
-    // aller jusqu'à 100, sinon elles sont coupées net — c'était le cas.
-    // Ensuite on cale la voiture pour qu'elles POSENT sur la chaussée.
+    // Les roues du dessin descendent jusqu'à y = 96,5 : le repère va donc
+    // jusqu'à 100, sinon elles sont coupées net — c'était le cas.
+    // Ensuite on cale le véhicule pour qu'elles POSENT sur la chaussée.
     marginBottom: 4,
   },
 }));

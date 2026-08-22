@@ -9,7 +9,9 @@ import React, { useCallback, useState } from 'react';
 import { Alert, FlatList, Linking, Pressable, RefreshControl, Text, View } from 'react-native';
 
 import { Etoiles } from '@/components/Etoiles';
+import { Canopee } from '@/components/Canopee';
 import { FondPlage } from '@/components/FondPlage';
+import { LaCourse } from '@/components/LaCourse';
 import { BadgeStatutTrajet, Bouton, BoutonRafraichir, EtatVide, TexteErreur } from '@/components/ui';
 import { api, ErreurApi } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
@@ -150,6 +152,7 @@ export default function EcranTrajets() {
 
   return (
     <FondPlage fond="palmiers" voile="clair">
+      <Canopee />
       <FlatList
         data={visibles}
         keyExtractor={(trajet) => trajet.id}
@@ -159,6 +162,10 @@ export default function EcranTrajets() {
         }
         ListHeaderComponent={
           <>
+            {/* LE DALA-DALA — le camion-bus à banquettes, c'est-à-dire le
+                taxi partagé de l'île. L'écran des trajets montre ce qu'il
+                liste. */}
+            <LaCourse vehicule="dala" compacte />
             {erreur ? <TexteErreur>{erreur}</TexteErreur> : null}
             {placesVisibles.length > 0 && (
               <View style={styles.blocPlaces}>
