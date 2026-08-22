@@ -289,7 +289,7 @@ export function compteVerifie(utilisateur: Utilisateur | null | undefined): bool
   );
 }
 
-/** Vrai si le compte est résident ET vérifié (remise de 10 % sur les prix USD). */
+/** Vrai si le compte est résident ET vérifié (remise de 5 % sur les prix USD). */
 export function residentVerifie(utilisateur: Utilisateur | null | undefined): boolean {
   return (
     champ<TypeCompte>(utilisateur, 'account_type', 'accountType') === 'resident' &&

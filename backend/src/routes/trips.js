@@ -270,7 +270,7 @@ router.post(
             "Le taxi partagé local est réservé aux locaux munis d'une carte d'identité tanzanienne"
           );
         }
-        // La remise résident (-10 %) ne s'applique qu'une fois les documents
+        // La remise résident (-5 %) ne s'applique qu'une fois les documents
         // de résidence validés — en attendant, plein tarif touriste.
         audience =
           user.account_type === 'resident' && user.verification_status === 'verified'

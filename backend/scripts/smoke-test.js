@@ -124,7 +124,7 @@ async function main() {
   );
   check('résident sans document -> 400 validation_error', residentNoDoc.status === 400 && residentNoDoc.body.error.code === 'validation_error', residentNoDoc);
 
-  console.log('— Segmentation tarifaire : résident (USD -10 %) et local (TZS)');
+  console.log('— Segmentation tarifaire : résident (USD -5 %) et local (TZS)');
   const sharedLocalResident = await call(
     'POST',
     '/trips',
@@ -145,7 +145,7 @@ async function main() {
     { userId: resident.id, tripType: 'private', pickupLocation: 'Stone Town', dropoffLocation: 'Bububu' },
     bearer(residentToken)
   );
-  check('résident vérifié : course privée à 45 USD (remise 10 %)', residentTrip.status === 201 && residentTrip.body.currency === 'USD' && Number(residentTrip.body.price) === 45, residentTrip);
+  check('résident vérifié : Stone Town → Bububu à 49,40 USD (52 moins la remise de 5 %)', residentTrip.status === 201 && residentTrip.body.currency === 'USD' && Number(residentTrip.body.price) === 49.4, residentTrip);
 
   const localToken = (await authenticate(PHONES.local)).token;
   const localUser = (
@@ -305,7 +305,7 @@ async function main() {
     },
     bearer(hotelToken)
   );
-  check('hôtel réserve un taxi pour son client (USD, grille touriste −10 %)', hotelTrip.status === 201 && hotelTrip.body.currency === 'USD' && hotelTrip.body.client_name === 'M. Dupont', hotelTrip);
+  check('hôtel réserve un taxi pour son client (USD, grille touriste −5 %)', hotelTrip.status === 201 && hotelTrip.body.currency === 'USD' && hotelTrip.body.client_name === 'M. Dupont', hotelTrip);
 
   const badSender = await call(
     'POST',
