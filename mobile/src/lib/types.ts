@@ -1121,8 +1121,8 @@ export function forfaitZanzigoTrajetUsd(depart: string, arrivee: string): number
   return tarifPriveItineraire(depart, arrivee) - netChauffeurPriveUsd(depart, arrivee);
 }
 
-// Hôtel partenaire : même grille USD que les touristes avec −5 %
-// (appliqué dans tarifTrajetProfil).
+// Hôtel partenaire : même grille USD que les touristes, avec −5 % SUR LES
+// COURSES PRIVÉES seulement (appliqué dans tarifTrajetProfil).
 
 /** Profil tarifaire d'un compte client (hors hôtel). */
 export function profilTarifaireUtilisateur(
@@ -1182,8 +1182,25 @@ export function tarifTrajetProfil(
   }
   if (plein === undefined) return null;
   // Grille touriste remisée : résident vérifié −5 %, hôtel partenaire −5 %.
+  //
+  // LA REMISE PARTENAIRE NE VAUT QUE SUR LES COURSES PRIVÉES — c'est la règle
+  // du serveur, et l'application l'ignorait : elle affichait une place de
+  // taxi partagé à 18,05 $ là où le serveur en facturait 19. Le partenaire
+  // voyait un prix et payait l'autre.
+  //
+  // La règle elle-même : une place de partagé se vend déjà au plus bas de la
+  // grille (4 à 19 USD). La remiser rognerait la part du chauffeur, qui
+  // remplit sa voiture place par place. Le partenaire garde son avantage là
+  // où il y a de la marge.
+  //
+  // La remise RÉSIDENT, elle, vaut sur tout : elle est partagée moitié-moitié
+  // entre zanziGo et le chauffeur, qui y gagne un client de toute l'année.
   const remise =
-    profil === 'resident_verifie' ? REMISE_RESIDENT : profil === 'hotel' ? REMISE_HOTEL : 0;
+    profil === 'resident_verifie'
+      ? REMISE_RESIDENT
+      : profil === 'hotel' && type === 'private'
+        ? REMISE_HOTEL
+        : 0;
   const montant = remise ? Math.round(plein * (1 - remise) * 100) / 100 : plein;
   return { montant, devise: 'USD' };
 }

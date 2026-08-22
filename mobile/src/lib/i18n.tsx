@@ -1648,6 +1648,8 @@ const CHAINES = {
   hotelins_intro: {
     fr: 'Créez le compte de votre établissement pour réserver des taxis pour vos clients et envoyer vos colis entre les villes — tarif touriste avec −5 % partenaire sur les courses privées.',
     en: 'Create your business account to book taxis for your customers and send parcels between towns — tourist rates with a 5% partner discount on private rides.',
+    it: 'Crea l\'account della tua struttura per prenotare taxi per i tuoi clienti e spedire pacchi tra le città — tariffa turistica con sconto partner del 5% sulle corse private.',
+    de: 'Erstellen Sie das Konto Ihres Betriebs, um Taxis für Ihre Gäste zu buchen und Pakete zwischen den Städten zu versenden — Touristentarif mit 5 % Partnerrabatt auf Privatfahrten.',
     sw: 'Fungua akaunti ya biashara yako kuweka teksi kwa wateja wako na kutuma mizigo kati ya miji — bei ya watalii ukiwa na punguzo la 5% kwa safari binafsi.',
   },
   // Nature de l'établissement : le compte, le crédit et la fidélité sont les

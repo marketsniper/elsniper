@@ -259,7 +259,8 @@ export function emailBienvenueHotel(hotel) {
     <p style="margin:8px 0 0;font-size:14px;line-height:21px;">
       <strong>Votre compte sera activé après vérification par notre équipe</strong>
       (nous vous contactons rapidement). Ensuite, profitez de la
-      <strong>remise partenaire −5 %</strong>, du <strong>compte crédit prépayé</strong>
+      <strong>remise partenaire −5 % sur les courses privées</strong>, du
+      <strong>compte crédit prépayé</strong>
       et de la <strong>carte de fidélité</strong> : toutes les 20 courses terminées,
       un bon à dépenser (10 $ de crédit ou un envoi de colis offert).
     </p>`;
