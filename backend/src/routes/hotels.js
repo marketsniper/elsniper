@@ -131,6 +131,167 @@ router.get(
   })
 );
 
+// ═══════════════════ LES DEMANDES DE RECHARGE DE CRÉDIT ═══════════════════
+// Ces trois routes sont déclarées AVANT toute route « /:id » : Express sert
+// la première qui correspond, et « /hotels/credit-requests » serait sinon
+// happé par « /hotels/:id » avec id = "credit-requests".
+
+/** Ce que l'équipe voit d'une demande : la demande, plus qui la fait. */
+const SELECT_DEMANDE = `
+  SELECT d.*, h.name AS hotel_name, h.phone AS hotel_phone,
+         h.partner_type, h.credit_balance
+    FROM hotel_credit_requests d
+    JOIN hotels h ON h.id = d.hotel_id`;
+
+const MOYENS_RECHARGE = {
+  mobile_money: 'portefeuille mobile (M-Pesa / Tigo Pesa / Airtel Money)',
+  cash: 'espèces',
+  bank: 'virement bancaire',
+  card: 'carte bancaire',
+};
+
+/**
+ * L'ALERTE ENVOYÉE À L'ÉQUIPE quand un partenaire demande une recharge.
+ *
+ * Fonction pure, et exportée : sans canal configuré, notifierEquipe ne
+ * journalise que le SUJET — le corps du message ne serait vérifiable par
+ * aucun test s'il restait enfoui dans la route. C'est pourtant lui qui dit
+ * quoi faire.
+ */
+export function alerteDemandeRecharge(hotel, { amount, method, note }) {
+  return {
+    sujet: `\u{1F4B0} Demande de recharge de crédit — ${hotel.name}`,
+    texte: [
+      `${libellePartenaire(hotel) === 'restaurant' ? 'Restaurant' : 'Hôtel'}: ${hotel.name}`,
+      `Montant demandé: ${amount} USD`,
+      `Moyen annoncé: ${MOYENS_RECHARGE[method] ?? method}`,
+      `Solde actuel: ${Number(hotel.credit_balance)} USD`,
+      note ? `Note: ${note}` : null,
+      `WhatsApp: ${hotel.phone}`,
+      '',
+      "À faire: vérifier que l'argent est bien arrivé, puis Créditer (ou Refuser)",
+      'dans le tableau de bord, rubrique « Recharges de crédit ».',
+    ]
+      .filter(Boolean)
+      .join('\n'),
+  };
+}
+
+// GET /hotels/credit-requests — la file de l'équipe (en attente par défaut).
+router.get(
+  '/credit-requests',
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    const { status } = z
+      .object({ status: z.enum(['pending', 'credited', 'rejected', 'all']).optional() })
+      .parse(req.query);
+    const filtre = status ?? 'pending';
+    const { rows } = await query(
+      `${SELECT_DEMANDE}
+       WHERE ($1::text = 'all' OR d.status = $1)
+       ORDER BY d.created_at ${filtre === 'pending' ? 'ASC' : 'DESC'}
+       LIMIT 100`,
+      [filtre]
+    );
+    res.json(rows);
+  })
+);
+
+const decisionSchema = z.object({
+  // L'équipe peut corriger : l'hôtel demande 100, il en arrive 95.
+  amount: z.number().gt(0).lte(10000).optional(),
+  note: z.string().max(200).optional(),
+});
+
+// POST /hotels/credit-requests/:id/credit — l'argent est arrivé : on crédite.
+//
+// Tout tient dans UNE transaction — le solde, la ligne du livre de comptes et
+// la demande soldée. Séparés, une coupure au mauvais moment laisserait soit
+// un hôtel crédité avec une demande encore en attente (recréditée le
+// lendemain), soit une demande soldée sans l'argent.
+router.post(
+  '/credit-requests/:id/credit',
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    const { amount, note } = decisionSchema.parse(req.body);
+    const resultat = await withTransaction(async (client) => {
+      const { rows } = await client.query(
+        'SELECT * FROM hotel_credit_requests WHERE id = $1 FOR UPDATE',
+        [req.params.id]
+      );
+      const demande = rows[0];
+      if (!demande) throw notFound('Demande de recharge');
+      if (demande.status !== 'pending') {
+        throw new HttpError(
+          409,
+          'request_already_decided',
+          `Demande déjà traitée (${demande.status}) — aucun double crédit`
+        );
+      }
+      const montant = amount ?? Number(demande.amount);
+      const { rows: hotelRows } = await client.query(
+        'SELECT name, credit_balance FROM hotels WHERE id = $1 FOR UPDATE',
+        [demande.hotel_id]
+      );
+      if (!hotelRows[0]) throw notFound('Hôtel');
+      const solde = Number(hotelRows[0].credit_balance) + montant;
+      await client.query('UPDATE hotels SET credit_balance = $1 WHERE id = $2', [
+        solde,
+        demande.hotel_id,
+      ]);
+      await client.query(
+        `INSERT INTO hotel_credit_transactions (hotel_id, amount, reason, reference)
+         VALUES ($1, $2, 'topup', $3)`,
+        [demande.hotel_id, montant, note ?? `Recharge ${demande.id}`]
+      );
+      const { rows: majRows } = await client.query(
+        `UPDATE hotel_credit_requests
+            SET status = 'credited', credited_amount = $2,
+                decision_note = $3, decided_at = now()
+          WHERE id = $1
+        RETURNING *`,
+        [demande.id, montant, note ?? null]
+      );
+      return { demande: majRows[0], solde, hotel: hotelRows[0].name };
+    });
+    res.json({
+      request: resultat.demande,
+      balance: resultat.solde,
+      currency: 'USD',
+    });
+  })
+);
+
+// POST /hotels/credit-requests/:id/reject — versement jamais arrivé, doublon,
+// erreur de saisie : la demande sort de la file sans toucher au solde.
+router.post(
+  '/credit-requests/:id/reject',
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    const { note } = decisionSchema.parse(req.body);
+    const { rows } = await query(
+      `UPDATE hotel_credit_requests
+          SET status = 'rejected', decision_note = $2, decided_at = now()
+        WHERE id = $1 AND status = 'pending'
+      RETURNING *`,
+      [req.params.id, note ?? null]
+    );
+    if (!rows[0]) {
+      const { rows: existe } = await query(
+        'SELECT status FROM hotel_credit_requests WHERE id = $1',
+        [req.params.id]
+      );
+      if (!existe[0]) throw notFound('Demande de recharge');
+      throw new HttpError(
+        409,
+        'request_already_decided',
+        `Demande déjà traitée (${existe[0].status})`
+      );
+    }
+    res.json(rows[0]);
+  })
+);
+
 // PATCH /hotels/:id/verify — l'équipe valide (ou bloque) un compte hôtel
 // après avoir vérifié, par téléphone ou WhatsApp au numéro officiel de
 // l'établissement, que l'inscription vient bien de l'hôtel. Un compte déjà
@@ -331,6 +492,83 @@ router.post(
       return solde;
     });
     res.json({ balance: resultat, currency: 'USD' });
+  })
+);
+
+const demandeSchema = z.object({
+  amount: z.number().gt(0).lte(10000),
+  method: z.enum(['mobile_money', 'cash', 'bank', 'card']).default('mobile_money'),
+  note: z.string().max(200).optional(),
+});
+
+// POST /hotels/:id/credit-requests — LE PARTENAIRE demande une recharge.
+//
+// C'est le geste qui manquait. Avant, le bouton « Recharger mon crédit »
+// ouvrait WhatsApp et s'arrêtait là : si le message n'était pas envoyé, ou
+// se perdait dans une conversation, la demande n'existait nulle part. Elle
+// s'enregistre maintenant, elle alerte l'équipe, et elle attend dans une
+// file jusqu'à ce que quelqu'un la solde.
+router.post(
+  '/:id/credit-requests',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    if (!isAdmin(req) && req.auth.hotelId !== req.params.id) {
+      throw new HttpError(403, 'forbidden', "Accès réservé à l'hôtel concerné");
+    }
+    const { amount, method, note } = demandeSchema.parse(req.body);
+    const { rows: hotelRows } = await query(
+      'SELECT id, name, phone, partner_type, credit_balance, verification_status FROM hotels WHERE id = $1',
+      [req.params.id]
+    );
+    const hotel = hotelRows[0];
+    if (!hotel) throw notFound('Hôtel');
+    assertHotelVerified(hotel);
+
+    let creee;
+    try {
+      const { rows } = await query(
+        `INSERT INTO hotel_credit_requests (hotel_id, amount, method, note)
+         VALUES ($1, $2, $3, $4)
+       RETURNING *`,
+        [hotel.id, amount, method, note ?? null]
+      );
+      creee = rows[0];
+    } catch (erreur) {
+      // 23505 = l'index unique « une seule demande en attente ». Deux appuis
+      // sur le bouton ne doivent pas donner deux demandes à créditer.
+      if (erreur?.code === '23505') {
+        throw new HttpError(
+          409,
+          'pending_request_exists',
+          'Une demande de recharge est déjà en attente — l\'équipe la traite'
+        );
+      }
+      throw erreur;
+    }
+
+    const alerte = alerteDemandeRecharge(hotel, { amount, method, note });
+    notifierEquipe(alerte.sujet, alerte.texte);
+
+    res.status(201).json(creee);
+  })
+);
+
+// GET /hotels/:id/credit-requests — l'historique du partenaire (lui-même ou
+// l'équipe). C'est ce qui lui permet de voir « demande de 100 $ en attente »
+// au lieu de se demander si son message est parti.
+router.get(
+  '/:id/credit-requests',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    if (!isAdmin(req) && req.auth.hotelId !== req.params.id) {
+      throw new HttpError(403, 'forbidden', "Accès réservé à l'hôtel concerné");
+    }
+    const { rows } = await query(
+      `SELECT * FROM hotel_credit_requests
+        WHERE hotel_id = $1 ORDER BY created_at DESC LIMIT 20`,
+      [req.params.id]
+    );
+    res.json(rows);
   })
 );
 

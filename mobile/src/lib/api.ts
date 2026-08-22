@@ -930,6 +930,96 @@ export async function convertirBonEnCredit(
   );
 }
 
+// ══════════════ LES DEMANDES DE RECHARGE DE CRÉDIT ══════════════
+// Avant, « Recharger mon crédit » ouvrait WhatsApp et s'arrêtait là : la
+// demande ne touchait jamais le serveur, l'équipe n'était pas alertée, et
+// rien ne restait à retrouver le lendemain.
+
+export type MoyenRecharge = 'mobile_money' | 'cash' | 'bank' | 'card';
+
+export interface DemandeRecharge {
+  id: string;
+  hotel_id: string;
+  amount: number | string;
+  currency: string;
+  method: MoyenRecharge;
+  note?: string | null;
+  status: 'pending' | 'credited' | 'rejected';
+  credited_amount?: number | string | null;
+  decision_note?: string | null;
+  decided_at?: string | null;
+  created_at?: string;
+  // Ajoutés par la file de l'équipe (jointure sur l'établissement).
+  hotel_name?: string;
+  hotel_phone?: string;
+  partner_type?: 'hotel' | 'restaurant';
+  credit_balance?: number | string;
+}
+
+/** POST /hotels/:id/credit-requests — LE PARTENAIRE demande une recharge. */
+export async function demanderRechargeCredit(
+  hotelId: string,
+  demande: { amount: number; method: MoyenRecharge; note?: string }
+): Promise<DemandeRecharge> {
+  return requete<DemandeRecharge>(`/hotels/${hotelId}/credit-requests`, {
+    methode: 'POST',
+    corps: {
+      amount: demande.amount,
+      method: demande.method,
+      ...(demande.note ? { note: demande.note } : {}),
+    },
+  });
+}
+
+/** GET /hotels/:id/credit-requests — ses propres demandes (partenaire ou équipe). */
+export async function demandesRechargeHotel(
+  hotelId: string,
+  equipe = false
+): Promise<DemandeRecharge[]> {
+  return requete<DemandeRecharge[]>(`/hotels/${hotelId}/credit-requests`, { admin: equipe });
+}
+
+/** GET /hotels/credit-requests — la file de l'équipe (en attente par défaut). */
+export async function fileRechargesCredit(
+  status: 'pending' | 'credited' | 'rejected' | 'all' = 'pending'
+): Promise<DemandeRecharge[]> {
+  return requete<DemandeRecharge[]>(`/hotels/credit-requests?status=${status}`, { admin: true });
+}
+
+/**
+ * POST /hotels/credit-requests/:id/credit — l'argent est arrivé : on crédite.
+ * `amount` absent = le montant demandé ; le préciser corrige (95 reçus sur
+ * 100 demandés). 409 request_already_decided si la demande est déjà soldée.
+ */
+export async function crediterDemandeRecharge(
+  demandeId: string,
+  options: { amount?: number; note?: string } = {}
+): Promise<{ request: DemandeRecharge; balance: number }> {
+  return requete<{ request: DemandeRecharge; balance: number }>(
+    `/hotels/credit-requests/${demandeId}/credit`,
+    {
+      methode: 'POST',
+      corps: {
+        ...(options.amount !== undefined ? { amount: options.amount } : {}),
+        ...(options.note ? { note: options.note } : {}),
+      },
+      admin: true,
+    }
+  );
+}
+
+/** POST /hotels/credit-requests/:id/reject — versement jamais arrivé, doublon. */
+export async function refuserDemandeRecharge(
+  demandeId: string,
+  note?: string
+): Promise<DemandeRecharge> {
+  return requete<DemandeRecharge>(`/hotels/credit-requests/${demandeId}/reject`, {
+    methode: 'POST',
+    corps: note ? { note } : {},
+    admin: true,
+  });
+}
+
 /** POST /hotels/:id/credit — l'ÉQUIPE crédite/corrige le solde d'un hôtel. */
 export async function crediterHotel(
   hotelId: string,
@@ -1486,6 +1576,11 @@ export const api = {
   fideliteHotel,
   creditHotel,
   crediterHotel,
+  demanderRechargeCredit,
+  demandesRechargeHotel,
+  fileRechargesCredit,
+  crediterDemandeRecharge,
+  refuserDemandeRecharge,
   convertirBonEnCredit,
   annulerTrajet,
   confirmerPaiement,

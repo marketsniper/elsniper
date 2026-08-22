@@ -14,15 +14,23 @@ import {
   Ecran,
   EncartInfo,
   LigneInfo,
+  Champ,
   SelecteurLangue,
   SelecteurPeau,
   SousTitre,
+  TexteErreur,
 } from '@/components/ui';
 import { Colobe } from '@/components/marques/Colobe';
 import { CarteVersion } from '@/components/Version';
-import { api, type CreditHotel, type FideliteHotel } from '@/lib/api';
+import {
+  api,
+  type CreditHotel,
+  type DemandeRecharge,
+  type FideliteHotel,
+  type MoyenRecharge,
+} from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import { useT } from '@/lib/i18n';
+import { useT, type CleChaine } from '@/lib/i18n';
 import { couleurs, espaces, rayons, stylesReactifs, tailles } from '@/lib/theme';
 import {
   TAUX_USD_TZS,
@@ -54,6 +62,9 @@ export default function EcranProfil() {
   // Fidélité + crédit (hôtels uniquement) — rechargés à chaque focus.
   const [fidelite, setFidelite] = useState<FideliteHotel | null>(null);
   const [credit, setCredit] = useState<CreditHotel | null>(null);
+  // La dernière demande de recharge : c'est elle qui remplace « j'ai envoyé
+  // un WhatsApp, je crois » par un état que le partenaire peut lire.
+  const [demandeRecharge, setDemandeRecharge] = useState<DemandeRecharge | null>(null);
   const hotelId = hotel?.id ?? null;
   useFocusEffect(
     useCallback(() => {
@@ -71,6 +82,7 @@ export default function EcranProfil() {
         try {
           setFidelite(await api.fideliteHotel(hotelId));
           setCredit(await api.creditHotel(hotelId));
+          setDemandeRecharge((await api.demandesRechargeHotel(hotelId))[0] ?? null);
         } catch {
           // silencieux : les cartes fidélité/crédit restent masquées
         }
@@ -78,10 +90,64 @@ export default function EcranProfil() {
     }, [hotelId, utilisateur?.id])
   );
 
-  const demanderRecharge = () => {
+  // LA DEMANDE DE RECHARGE.
+  //
+  // Ce bouton n'ouvrait que WhatsApp : la demande ne touchait jamais le
+  // serveur. Un hôtel a demandé une recharge et l'équipe ne l'a jamais su.
+  // La demande part maintenant au serveur, qui alerte l'équipe et la range
+  // dans une file — WhatsApp reste offert ENSUITE, pour la preuve de
+  // paiement, mais il n'est plus le seul canal.
+  const [montantRecharge, setMontantRecharge] = useState('');
+  const [moyenRecharge, setMoyenRecharge] = useState<MoyenRecharge>('mobile_money');
+  const [chargeRecharge, setChargeRecharge] = useState(false);
+  const [erreurRecharge, setErreurRecharge] = useState('');
+
+  const MOYENS: { cle: MoyenRecharge; mot: CleChaine }[] = [
+    { cle: 'mobile_money', mot: 'recharge_moyen_mobile' },
+    { cle: 'cash', mot: 'recharge_moyen_especes' },
+    { cle: 'bank', mot: 'recharge_moyen_virement' },
+    { cle: 'card', mot: 'recharge_moyen_carte' },
+  ];
+
+  const envoyerDemandeRecharge = async () => {
+    if (!hotelId) return;
+    // La virgule décimale est ce qu'on tape sur un clavier français.
+    const montant = Number(montantRecharge.replace(',', '.'));
+    if (!Number.isFinite(montant) || montant <= 0) {
+      setErreurRecharge(t('recharge_erreur_montant'));
+      return;
+    }
+    setErreurRecharge('');
+    setChargeRecharge(true);
+    try {
+      const creee = await api.demanderRechargeCredit(hotelId, {
+        amount: montant,
+        method: moyenRecharge,
+      });
+      setDemandeRecharge(creee);
+      setMontantRecharge('');
+    } catch (erreur) {
+      const code = (erreur as { code?: string })?.code;
+      setErreurRecharge(
+        code === 'pending_request_exists' ? t('recharge_erreur_deja') : t('recharge_erreur_envoi')
+      );
+      // Une demande déjà en attente : on la remonte pour l'afficher.
+      if (code === 'pending_request_exists') {
+        api
+          .demandesRechargeHotel(hotelId)
+          .then((liste) => setDemandeRecharge(liste[0] ?? null))
+          .catch(() => {});
+      }
+    } finally {
+      setChargeRecharge(false);
+    }
+  };
+
+  /** Envoi de la preuve de paiement — le complément utile de WhatsApp. */
+  const envoyerPreuveWhatsApp = (demande: DemandeRecharge) => {
     Linking.openURL(
       `${WHATSAPP_EQUIPE}?text=${encodeURIComponent(
-        `💰 Recharge crédit zanziGo\nÉtablissement: ${String(champ(hotel, 'name') ?? '')}\nJe souhaite recharger mon compte crédit. Montant souhaité (USD):`
+        `💰 Recharge crédit zanziGo\nÉtablissement: ${String(champ(hotel, 'name') ?? '')}\nMontant: ${Number(demande.amount)} USD\nVoici la preuve de paiement :`
       )}`
     );
   };
@@ -329,12 +395,80 @@ export default function EcranProfil() {
             <Text style={styles.valeurSolde}>{formaterMontant(credit.balance, 'USD')}</Text>
           </View>
           <Text style={styles.noteFidelite}>{t('credit_explication')}</Text>
-          <Bouton
-            titre={t('credit_recharger')}
-            icone="logo-whatsapp"
-            variante="secondaire"
-            onPress={demanderRecharge}
-          />
+
+          {/* UNE DEMANDE EN ATTENTE : le partenaire voit où elle en est.
+              C'est ce qui remplace « j'ai envoyé un message, je crois ». */}
+          {demandeRecharge?.status === 'pending' ? (
+            <>
+              <EncartInfo icone="hourglass-outline" ton="attente">
+                {t('recharge_en_attente', {
+                  montant: formaterMontant(Number(demandeRecharge.amount), 'USD'),
+                })}
+              </EncartInfo>
+              <Bouton
+                titre={t('recharge_envoyer_preuve')}
+                icone="logo-whatsapp"
+                variante="secondaire"
+                onPress={() => envoyerPreuveWhatsApp(demandeRecharge)}
+              />
+            </>
+          ) : (
+            <>
+              {demandeRecharge?.status === 'credited' && (
+                <EncartInfo icone="checkmark-circle-outline" ton="succes">
+                  {t('recharge_creditee', {
+                    montant: formaterMontant(
+                      Number(demandeRecharge.credited_amount ?? demandeRecharge.amount),
+                      'USD'
+                    ),
+                  })}
+                </EncartInfo>
+              )}
+              {demandeRecharge?.status === 'rejected' && (
+                <EncartInfo icone="close-circle-outline" ton="attente">
+                  {demandeRecharge.decision_note || t('recharge_refusee')}
+                </EncartInfo>
+              )}
+              <Champ
+                label={t('recharge_montant')}
+                value={montantRecharge}
+                onChangeText={setMontantRecharge}
+                keyboardType="decimal-pad"
+                placeholder="100"
+              />
+              <Text style={styles.labelMoyen}>{t('recharge_moyen')}</Text>
+              <View style={styles.rangeeMoyens}>
+                {MOYENS.map(({ cle, mot }) => {
+                  const actif = moyenRecharge === cle;
+                  return (
+                    <Pressable
+                      key={cle}
+                      onPress={() => setMoyenRecharge(cle)}
+                      accessibilityRole="radio"
+                      accessibilityState={{ selected: actif }}
+                      style={({ pressed }) => [
+                        styles.pastilleMoyen,
+                        actif && styles.pastilleMoyenActive,
+                        pressed && { opacity: 0.75 },
+                      ]}
+                    >
+                      <Text style={[styles.texteMoyen, actif && styles.texteMoyenActif]}>
+                        {t(mot)}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+              {!!erreurRecharge && <TexteErreur>{erreurRecharge}</TexteErreur>}
+              <Bouton
+                titre={t('credit_recharger')}
+                icone="cash-outline"
+                onPress={envoyerDemandeRecharge}
+                charge={chargeRecharge}
+              />
+              <Text style={styles.noteFidelite}>{t('recharge_explication')}</Text>
+            </>
+          )}
         </Carte>
       )}
 
@@ -549,6 +683,38 @@ const styles = stylesReactifs(() => ({
     color: couleurs.texteSecondaire,
     lineHeight: 18,
     marginTop: 2,
+  },
+  // Le moyen de paiement annoncé : quatre pastilles, pas un menu déroulant.
+  // C'est ce que l'équipe ira vérifier — autant que ce soit lisible d'un coup.
+  labelMoyen: {
+    fontSize: 12.5,
+    fontWeight: '600',
+    color: couleurs.texteSecondaire,
+    marginTop: espaces.xs,
+  },
+  rangeeMoyens: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: espaces.xs,
+  },
+  pastilleMoyen: {
+    paddingVertical: 7,
+    paddingHorizontal: espaces.s,
+    borderRadius: rayons.pastille,
+    borderWidth: 1,
+    borderColor: couleurs.bordure,
+  },
+  pastilleMoyenActive: {
+    borderColor: couleurs.primaire,
+    backgroundColor: couleurs.primaireClair,
+  },
+  texteMoyen: {
+    fontSize: 12.5,
+    color: couleurs.texteSecondaire,
+  },
+  texteMoyenActif: {
+    color: couleurs.primaireFonce,
+    fontWeight: '700',
   },
   ligneSolde: {
     flexDirection: 'row',

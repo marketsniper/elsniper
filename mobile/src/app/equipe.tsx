@@ -35,6 +35,7 @@ import {
   ChargementCentre,
   Ecran,
   EncartInfo,
+  LigneInfo,
   TexteErreur,
   Titre,
 } from '@/components/ui';
@@ -45,9 +46,10 @@ import {
   ErreurApi,
   type AnnoncePartageEquipe,
   type AttentePartage,
+  type DemandeRecharge,
   type StatsAbonnes,
 } from '@/lib/api';
-import { formaterDateRelativeI18n, libelleTypeTrajet, useT } from '@/lib/i18n';
+import { formaterDateRelativeI18n, libelleTypeTrajet, useT, type CleChaine } from '@/lib/i18n';
 import { CaseMenu, GrilleMenu } from '@/components/CaseMenu';
 import { useRafraichissementAuto } from '@/lib/rafraichissementAuto';
 import { couleurs, espaces, ombres, rayons, stylesReactifs } from '@/lib/theme';
@@ -79,6 +81,7 @@ type SectionEquipe =
   | 'avenir'
   | 'partages'
   | 'paiements'
+  | 'recharges'
   | 'candidatures'
   | 'comptes'
   | 'hotels'
@@ -86,6 +89,15 @@ type SectionEquipe =
   | 'clients'
   | 'locaux'
   | 'attentes';
+
+// Ce que le partenaire a annoncé comme moyen de paiement — c'est ce que
+// l'équipe va aller vérifier avant de créditer.
+const MOYEN_RECHARGE: Record<string, CleChaine> = {
+  mobile_money: 'recharge_moyen_mobile',
+  cash: 'recharge_moyen_especes',
+  bank: 'recharge_moyen_virement',
+  card: 'recharge_moyen_carte',
+};
 
 // Libellé d'un chauffeur dans le sélecteur d'assignation.
 function libelleChauffeur(chauffeur: Chauffeur): string {
@@ -109,6 +121,10 @@ export default function EcranEquipe() {
   // derniers paiements REÇUS (dont ceux payés par crédit hôtel).
   const [remboursements, setRemboursements] = useState<PaiementEquipe[]>([]);
   const [paiementsRecus, setPaiementsRecus] = useState<PaiementEquipe[]>([]);
+  // Les demandes de recharge de crédit des partenaires, en attente d'argent
+  // reçu. Elles n'existaient pas : « Recharger mon crédit » n'ouvrait qu'un
+  // WhatsApp, et une demande pouvait ne jamais parvenir à l'équipe.
+  const [recharges, setRecharges] = useState<DemandeRecharge[]>([]);
   const [candidats, setCandidats] = useState<Chauffeur[]>([]);
   const [clients, setClients] = useState<Utilisateur[]>([]);
   const [hotels, setHotels] = useState<Hotel[]>([]);
@@ -192,7 +208,7 @@ export default function EcranEquipe() {
   const charger = useCallback(async () => {
     setErreur('');
     try {
-      const [lesCourses, lesPaiements, lesCandidats, lesClients, lesHotels, lesChauffeurs, lesAbonnes, lesVerifies, lesRemboursements, lesRecus, lesAttentes, lesPartages] =
+      const [lesCourses, lesPaiements, lesCandidats, lesClients, lesHotels, lesChauffeurs, lesAbonnes, lesVerifies, lesRemboursements, lesRecus, lesAttentes, lesPartages, lesRecharges] =
         await Promise.all([
           api.listerCoursesEquipe(),
           api.listerPaiementsEquipe(),
@@ -206,6 +222,7 @@ export default function EcranEquipe() {
           api.listerPaiementsRecus().catch(() => []),
           api.listerAttentesPartage(true).catch(() => []),
           api.listerAnnoncesPartageEquipe().catch(() => []),
+          api.fileRechargesCredit().catch(() => []),
         ]);
       // Compteur de la case « À vérifier » : silencieux s'il échoue, la case
       // affichera 0 plutôt que de faire tomber tout le tableau de bord.
@@ -225,6 +242,7 @@ export default function EcranEquipe() {
       setPaiementsRecus(lesRecus);
       setAttentes(lesAttentes);
       setPartages(lesPartages);
+      setRecharges(lesRecharges);
     } catch (e) {
       setErreur(e instanceof ErreurApi ? e.message : t('equipe_action_erreur'));
     }
@@ -602,6 +620,7 @@ export default function EcranEquipe() {
     { cle: 'partages', label: t('equipe_partages'), icone: 'people-circle-outline', n: partagesOuverts.length, action: false },
     { cle: 'attentes', label: t('equipe_stat_attentes'), icone: 'notifications-outline', n: attentes.filter((a) => !a.matched_at).length, action: true },
     { cle: 'paiements', label: t('equipe_stat_paiements'), icone: 'cash-outline', n: paiements.length + remboursements.length, action: true },
+    { cle: 'recharges', label: t('equipe_recharges'), icone: 'wallet-outline', n: recharges.length, action: recharges.length > 0 },
     { cle: 'candidatures', label: t('equipe_stat_candidatures'), icone: 'document-text-outline', n: candidats.length, action: true },
     { cle: 'comptes', label: t('equipe_stat_comptes'), icone: 'id-card-outline', n: clients.length, action: true },
     { cle: 'hotels', label: t('equipe_stat_hotels'), icone: 'business-outline', n: hotels.length, action: true },
@@ -1585,6 +1604,70 @@ export default function EcranEquipe() {
         </>
         );
       })()}
+
+      {/* 2 bis. RECHARGES DE CRÉDIT — les demandes des partenaires.
+          Cette rubrique n'existait pas : « Recharger mon crédit » ouvrait un
+          WhatsApp et rien d'autre. Une demande pouvait donc arriver sans que
+          personne ne l'apprenne, et sans rien laisser à retrouver. */}
+      {section === 'recharges' && (
+        <>
+          <Text style={styles.titreSection}>
+            💰 {t('equipe_recharges')} ({recharges.length})
+          </Text>
+          {recharges.length === 0 ? (
+            <EncartInfo icone="checkmark-circle-outline" ton="succes">
+              {t('equipe_recharges_vide')}
+            </EncartInfo>
+          ) : (
+            <EncartInfo icone="alert-circle-outline" ton="attente">
+              {t('equipe_recharge_verifier')}
+            </EncartInfo>
+          )}
+          {recharges.map((demande) => {
+            const montant = Number(demande.amount);
+            const moyen = MOYEN_RECHARGE[demande.method] ?? demande.method;
+            return (
+              <Carte key={demande.id}>
+                <Text style={styles.itineraire}>
+                  {demande.hotel_name} · {formaterMontant(montant, 'USD')}
+                </Text>
+                <LigneInfo label={t('equipe_recharge_moyen')} valeur={t(moyen)} />
+                <LigneInfo
+                  label={t('equipe_recharge_solde')}
+                  valeur={formaterMontant(Number(demande.credit_balance ?? 0), 'USD')}
+                />
+                {!!demande.note && <LigneInfo label="Note" valeur={demande.note} />}
+                <LigneInfo
+                  label={t('commun_telephone')}
+                  valeur={demande.hotel_phone ?? '—'}
+                />
+                <Text style={styles.dateRecu}>
+                  {formaterDateRelativeI18n(demande.created_at, t)}
+                </Text>
+                <Bouton
+                  titre={t('equipe_recharge_crediter', {
+                    montant: formaterMontant(montant, 'USD'),
+                  })}
+                  icone="cash-outline"
+                  onPress={() =>
+                    agir(demande.id, () => api.crediterDemandeRecharge(demande.id))
+                  }
+                  charge={actionEnCours === demande.id}
+                />
+                <Bouton
+                  titre={t('equipe_recharge_refuser')}
+                  icone="close-circle-outline"
+                  variante="secondaire"
+                  onPress={() =>
+                    agir(demande.id, () => api.refuserDemandeRecharge(demande.id))
+                  }
+                  charge={actionEnCours === demande.id}
+                />
+              </Carte>
+            );
+          })}
+        </>
+      )}
 
       {/* 3. Candidatures chauffeurs */}
       {section === 'candidatures' && (
