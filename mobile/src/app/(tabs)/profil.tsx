@@ -18,6 +18,7 @@ import {
   SelecteurPeau,
   SousTitre,
 } from '@/components/ui';
+import { Colobe } from '@/components/marques/Colobe';
 import { CarteVersion } from '@/components/Version';
 import { api, type CreditHotel, type FideliteHotel } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
@@ -385,6 +386,19 @@ export default function EcranProfil() {
         <SelecteurLangue compact />
       </Carte>
 
+      {/* L'EMBLÈME, ET SA CONTREPARTIE. Sur l'accueil aussi — mais l'accueil
+          ne se revoit pas une fois connecté, et l'engagement doit rester
+          lisible par le client qui l'a déjà pris. */}
+      <Carte>
+        <View style={styles.blocEmbleme}>
+          <Colobe taille={34} couleur={couleurs.primaire} />
+          <View style={styles.textesEmbleme}>
+            <Text style={styles.titreEmbleme}>{t('embleme_titre')}</Text>
+            <Text style={styles.texteEmbleme}>{t('embleme_texte')}</Text>
+          </View>
+        </View>
+      </Carte>
+
       {/* Le design est aussi sur la page d'accueil, mais celle-là ne se
           revoit plus une fois connecté — et c'est justement en cours de
           journée, quand on sort du hall d'hôtel vers la plage, qu'on veut en
@@ -456,6 +470,25 @@ const styles = stylesReactifs(() => ({
   labelLangue: {
     fontSize: 13,
     fontWeight: '600',
+    color: couleurs.texteSecondaire,
+  },
+  blocEmbleme: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: espaces.s,
+  },
+  textesEmbleme: {
+    flex: 1,
+    gap: 3,
+  },
+  titreEmbleme: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: couleurs.encre,
+  },
+  texteEmbleme: {
+    fontSize: 13,
+    lineHeight: 19,
     color: couleurs.texteSecondaire,
   },
   titreBloc: {

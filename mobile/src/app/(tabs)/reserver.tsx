@@ -17,6 +17,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Linking, Pressable, Text, View } from 'react-native';
 
 import { CalendrierDate } from '@/components/CalendrierDate';
+import { IleDeZanzibar } from '@/components/Ile';
 import { RidesPartages } from '@/components/RidesPartages';
 import { Selecteur } from '@/components/Selecteur';
 import {
@@ -363,6 +364,12 @@ export default function EcranReserver() {
 
   return (
     <Ecran fond="palmiers">
+      {/* L'ÎLE, EN BANDEAU. C'est ICI que le client arrive une fois
+          connecté — la page d'accueil ne se revoit jamais. Et c'est l'écran
+          où l'on choisit un départ et une arrivée : montrer ce que zanziGo
+          couvre y est à sa place, pas décoratif. */}
+      <IleDeZanzibar compact />
+
       {modeHotel && (
         <EncartInfo icone="business-outline">{t('reserver_mode_hotel_info')}</EncartInfo>
       )}

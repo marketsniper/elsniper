@@ -26,13 +26,24 @@ import { nombreVillesDesservies } from '@/lib/types';
 /** Proportions du fichier — pour que l'image ne se déforme jamais. */
 const RAPPORT = 980 / 1155;
 
-export function IleDeZanzibar({ hauteur }: { hauteur?: number }) {
+export function IleDeZanzibar({
+  hauteur,
+  compact = false,
+}: {
+  hauteur?: number;
+  /**
+   * La forme de bandeau, pour les écrans où l'île n'est PAS le sujet.
+   * L'écran de réservation s'ouvre dix fois par semaine : une île de 300 px
+   * y repousserait le formulaire sous la ligne de flottaison.
+   */
+  compact?: boolean;
+}) {
   const { t } = useT();
   const { width } = useWindowDimensions();
   // L'île occupe une bonne moitié de la largeur, plafonnée : sur une tablette
   // ou un navigateur de bureau, une île de 700 px de haut serait une affiche,
   // pas un en-tête.
-  const h = hauteur ?? Math.min(300, Math.max(180, width * 0.72));
+  const h = hauteur ?? (compact ? 104 : Math.min(300, Math.max(180, width * 0.72)));
 
   // LE POSÉ. L'île arrive légèrement au-dessus de sa place et descend s'y
   // asseoir. Une seule animation, au montage, en pilote natif — c'est ce qui
@@ -47,24 +58,42 @@ export function IleDeZanzibar({ hauteur }: { hauteur?: number }) {
     }).start();
   }, [pose]);
 
+  const image = (
+    <Animated.View
+      style={{
+        opacity: pose,
+        transform: [
+          { translateY: pose.interpolate({ inputRange: [0, 1], outputRange: [-14, 0] }) },
+          { scale: pose.interpolate({ inputRange: [0, 1], outputRange: [1.04, 1] }) },
+        ],
+      }}
+    >
+      <Image
+        source={require('../../assets/images/unguja.png')}
+        style={{ width: h * RAPPORT, height: h }}
+        resizeMode="contain"
+        accessibilityLabel={t('ile_alt')}
+      />
+    </Animated.View>
+  );
+
+  if (compact) {
+    return (
+      <View style={styles.bandeau}>
+        {image}
+        <View style={styles.textesBandeau}>
+          <Text style={styles.titreBandeau}>{t('ile_titre')}</Text>
+          <Text style={styles.legendeBandeau}>
+            {t('ile_legende', { villes: String(nombreVillesDesservies()) })}
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.bloc}>
-      <Animated.View
-        style={{
-          opacity: pose,
-          transform: [
-            { translateY: pose.interpolate({ inputRange: [0, 1], outputRange: [-14, 0] }) },
-            { scale: pose.interpolate({ inputRange: [0, 1], outputRange: [1.04, 1] }) },
-          ],
-        }}
-      >
-        <Image
-          source={require('../../assets/images/unguja.png')}
-          style={{ width: h * RAPPORT, height: h }}
-          resizeMode="contain"
-          accessibilityLabel={t('ile_alt')}
-        />
-      </Animated.View>
+      {image}
       <Text style={styles.titre}>{t('ile_titre')}</Text>
       <Text style={styles.legende}>
         {t('ile_legende', { villes: String(nombreVillesDesservies()) })}
@@ -84,6 +113,26 @@ const styles = stylesReactifs(() => ({
     fontSize: 26,
     color: couleurs.encre,
     marginTop: espaces.xs,
+  },
+  bandeau: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: espaces.s,
+    marginBottom: espaces.s,
+  },
+  textesBandeau: {
+    flex: 1,
+    gap: 2,
+  },
+  titreBandeau: {
+    fontFamily: policeMontant(),
+    fontSize: 20,
+    color: couleurs.encre,
+  },
+  legendeBandeau: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: couleurs.texteSecondaire,
   },
   legende: {
     fontSize: 14,

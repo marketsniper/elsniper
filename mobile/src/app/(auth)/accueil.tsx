@@ -7,6 +7,7 @@ import React from 'react';
 import { Image, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Canopee } from '@/components/Canopee';
 import { FondPlage } from '@/components/FondPlage';
 import { IleDeZanzibar } from '@/components/Ile';
 import { Colobe } from '@/components/marques/Colobe';
@@ -103,6 +104,10 @@ export default function EcranAccueil() {
 
   return (
     <FondPlage fond="coucherSoleil" voile="sombre">
+      {/* LA CANOPÉE — elle pousse dans les marges que la colonne de lecture
+          laisse libres. Sur un téléphone elle affleure les bords ; sur un
+          écran large elle occupe tout le vide. */}
+      <Canopee />
       <SafeAreaView style={styles.zone} edges={['top', 'left', 'right']}>
         <ScrollView
           contentContainerStyle={styles.contenu}
