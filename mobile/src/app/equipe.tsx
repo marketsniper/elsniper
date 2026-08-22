@@ -2176,8 +2176,11 @@ const styles = stylesReactifs(() => ({
     paddingVertical: 4,
   },
   pastillePartageOk: { backgroundColor: couleurs.succes },
-  textePastillePartage: { color: '#fff', fontSize: 12, fontWeight: '800' },
-  textePastillePartageOk: { color: '#fff' },
+  // Le blanc était écrit en dur, du temps où `primaire` était le corail.
+  // Sur le lagon, `primaire` est presque blanc : la pastille « 3 à vendre »
+  // affichait du blanc sur du blanc. Chaque aplat a désormais son texte.
+  textePastillePartage: { color: couleurs.surPrimaire, fontSize: 12, fontWeight: '800' },
+  textePastillePartageOk: { color: couleurs.surSucces },
   departPartage: { fontSize: 14, fontWeight: '600', color: couleurs.primaireFonce },
   // La jauge des sièges : un carré par place. Plein = payé, cerclé = réservé
   // mais pas réglé, pâle = encore à vendre.

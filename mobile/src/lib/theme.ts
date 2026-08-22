@@ -40,6 +40,9 @@ interface Palette {
   dangerFond: string;
   dangerBordure: string;
   succes: string;
+  /** Texte posé SUR un aplat `succes` — sombre sur les verts clairs des
+   *  peaux sombres, blanc sur le vert profond de Bento. */
+  surSucces: string;
   succesFond: string;
   attente: string;
   attenteFond: string;
@@ -99,6 +102,7 @@ const BENTO: Palette = {
   dangerFond: '#FDEAEA',
   dangerBordure: '#F6C8C8',
   succes: '#1F7A3D',
+  surSucces: '#FFFFFF',
   succesFond: '#DDF0E1',
   attente: '#9A6511',
   attenteFond: '#FCEBC8',
@@ -146,6 +150,7 @@ const NUIT: Palette = {
   dangerFond: 'rgba(229, 72, 77, 0.14)',
   dangerBordure: 'rgba(229, 72, 77, 0.36)',
   succes: '#5FD08A',
+  surSucces: '#08120F',
   succesFond: 'rgba(95, 208, 138, 0.14)',
   attente: '#F2B84B',
   attenteFond: 'rgba(242, 184, 75, 0.16)',
@@ -195,6 +200,7 @@ const VERRE: Palette = {
   dangerFond: 'rgba(255, 107, 107, 0.18)',
   dangerBordure: 'rgba(255, 107, 107, 0.42)',
   succes: '#5EE6B5',
+  surSucces: '#0E2733',
   succesFond: 'rgba(94, 230, 181, 0.18)',
   attente: '#FFD08A',
   attenteFond: 'rgba(255, 208, 138, 0.18)',
