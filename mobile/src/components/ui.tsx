@@ -309,10 +309,15 @@ export function LogoZanziGo({
   taille?: number;
   surFonce?: boolean;
 }) {
+  // « Go » doit rester DISTINCT du reste du mot sur toutes les peaux. Sur le
+  // Lagon, la couleur d'action est le verre le plus clair — la même valeur que
+  // l'encre : le mot serait sorti d'un seul ton. On bascule alors sur la
+  // couleur d'action foncée, qui elle tranche toujours.
+  const accent = couleurs.primaire === couleurs.encre ? couleurs.primaireFonce : couleurs.primaire;
   return (
     <Text style={[styles.logo, { fontSize: taille }]} accessibilityRole="header">
       <Text style={{ color: surFonce ? couleurs.blanc : couleurs.encre }}>zanzi</Text>
-      <Text style={{ color: couleurs.primaire }}>Go</Text>
+      <Text style={{ color: accent }}>Go</Text>
     </Text>
   );
 }

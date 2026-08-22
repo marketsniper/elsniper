@@ -10,7 +10,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { FondPlage } from '@/components/FondPlage';
 import { IleDeZanzibar } from '@/components/Ile';
 import { EtiquetteVersion } from '@/components/Version';
-import { SelecteurLangue, SelecteurPeau } from '@/components/ui';
+import { LogoZanziGo, SelecteurLangue, SelecteurPeau } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { useT } from '@/lib/i18n';
 import { couleurs, espaces, ombres, rayons, stylesReactifs } from '@/lib/theme';
@@ -109,13 +109,16 @@ export default function EcranAccueil() {
         >
           <SelecteurLangue />
           <View style={styles.entete}>
-            {/* Le logo porte désormais le nom « zanziGo » — plus besoin du
-                logotype texte en dessous. */}
+            {/* L'ÉPINGLE seule, en image ; le nom est écrit PAR l'application,
+                dans les couleurs de la peau du moment. Le logotype gravé dans
+                le fichier sortait en encre sombre sur le Lagon — invisible.
+                Le mot appartient au thème, l'image ne porte que la marque. */}
             <Image
-              source={require('../../../assets/images/logo-mot.png')}
+              source={require('../../../assets/images/logo-epingle.png')}
               style={styles.logoImage}
               accessibilityLabel="zanziGo"
             />
+            <LogoZanziGo taille={38} />
             <Text style={styles.tagline}>{t('app_tagline')}</Text>
           </View>
 
@@ -220,9 +223,8 @@ const styles = stylesReactifs(() => ({
   // carré crème d'origine appartenait à l'ancienne direction artistique et
   // se détachait comme une vignette collée sur la pierre de l'estran.
   logoImage: {
-    width: 152,
-    height: 152,
-    marginBottom: espaces.xs,
+    width: 118,
+    height: 118,
   },
   tagline: {
     fontSize: 16,

@@ -309,7 +309,7 @@ const PEAUX: Record<NomPeau, Palette> = { bento: BENTO, nuit: NUIT, verre: VERRE
  * couleurs de la peau précédente : l'application s'ouvrait sur un fond crème
  * sous un dégradé de lagon.
  */
-export const PEAU_PAR_DEFAUT: NomPeau = 'estran';
+export const PEAU_PAR_DEFAUT: NomPeau = 'verre';
 
 // La peau active. Volontairement une variable de module : les feuilles de
 // style sont construites hors composant, elles doivent pouvoir la consulter

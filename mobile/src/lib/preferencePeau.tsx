@@ -5,9 +5,14 @@
 // soit. Aucun des deux n'a raison tout le temps — c'est au client de
 // trancher, et il change d'avis dix fois dans la journée.
 //
-// Deux peaux lui sont proposées :
-//  · « Lagon » — bleu profond, panneaux de verre. La signature de zanziGo.
-//  · « Bento » — crème et encre noire. Lisible bras tendu en plein soleil.
+// Quatre peaux lui sont proposées :
+//  · « Lagon » — bleu profond, panneaux de verre. La signature de zanziGo,
+//    et le design par défaut.
+//  · « Estran » — pierre claire, jade et terre cuite. Les ombres y suivent le
+//    vrai soleil de Zanzibar.
+//  · « Bento » — crème et encre noire, traits épais. Le plus lisible bras
+//    tendu en plein soleil de midi.
+//  · « Nuit d'épices » — presque noir, filets d'or. La nuit de Stone Town.
 //
 // Le choix est gardé sur l'appareil : on ne le redemande jamais. Il vaut pour
 // TOUTE l'application, chauffeurs et équipe compris — l'homme qui conduit
@@ -20,7 +25,7 @@ import { FournisseurPeau, PEAU_PAR_DEFAUT, type NomPeau } from './theme';
 const CLE = 'zanzigo.peau';
 
 /** Les peaux proposées au client, dans l'ordre où elles s'affichent. */
-export const PEAUX_AU_CHOIX = ['estran', 'verre', 'bento'] as const satisfies readonly NomPeau[];
+export const PEAUX_AU_CHOIX = ['verre', 'estran', 'bento', 'nuit'] as const satisfies readonly NomPeau[];
 
 function peauValide(valeur: string | null): NomPeau | null {
   return (PEAUX_AU_CHOIX as readonly string[]).includes(valeur ?? '')
