@@ -352,7 +352,7 @@ export default function EcranReserver() {
   // Local non vérifié : pas de réservation possible — écran d'attente doux.
   if (estLocalEnAttente) {
     return (
-      <Ecran fond="palmiers">
+      <Ecran fond="palmiers" vivant>
         <EtatVide
           icone="hourglass-outline"
           titre={t('reserver_local_attente_titre')}
@@ -363,7 +363,7 @@ export default function EcranReserver() {
   }
 
   return (
-    <Ecran fond="palmiers">
+    <Ecran fond="palmiers" vivant>
       {/* L'ÎLE, EN BANDEAU. C'est ICI que le client arrive une fois
           connecté — la page d'accueil ne se revoit jamais. Et c'est l'écran
           où l'on choisit un départ et une arrivée : montrer ce que zanziGo

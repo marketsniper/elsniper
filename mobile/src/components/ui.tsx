@@ -22,6 +22,7 @@ import { requireOptionalNativeModule } from 'expo-modules-core';
 import { HeaderHeightContext } from '@react-navigation/elements';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Canopee } from '@/components/Canopee';
 import { EstranDeZanzibar, FondPlage, LagonDeVerre, type NomFond } from '@/components/FondPlage';
 import { LANGUES, useT, libelleStatutColis, libelleStatutTrajet, type CleChaine } from '@/lib/i18n';
 import { PEAUX_AU_CHOIX, usePreferencePeau } from '@/lib/preferencePeau';
@@ -82,11 +83,19 @@ export function Ecran({
   defiler = true,
   fond = 'lagon',
   onRefresh,
+  vivant = false,
 }: {
   children: React.ReactNode;
   defiler?: boolean;
   fond?: NomFond;
   onRefresh?: () => Promise<unknown> | void;
+  /**
+   * La canopée derrière l'écran : palmes qui ondulent, rameaux de giroflier,
+   * et un colobe qui traverse. Réservée aux écrans où l'on ARRIVE — jamais
+   * derrière un formulaire long ou une liste de chiffres, où le mouvement
+   * volerait l'attention au lieu de la porter.
+   */
+  vivant?: boolean;
 }) {
   // L'HEURE DU JOUR. Tous les écrans passent par ici : c'est le seul point
   // d'abonnement nécessaire pour que la direction des ombres suive le soleil
@@ -133,6 +142,7 @@ export function Ecran({
       }}
     >
     <FondPlage fond={fond} voile="clair">
+      {vivant && <Canopee />}
       <SafeAreaView
         style={[styles.ecran, hauteurEntete > 0 && { paddingTop: hauteurEntete }]}
         edges={hauteurEntete > 0 ? ['left', 'right'] : ['top', 'left', 'right']}

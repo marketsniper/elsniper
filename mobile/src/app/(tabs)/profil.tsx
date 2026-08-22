@@ -184,7 +184,7 @@ export default function EcranProfil() {
   };
 
   return (
-    <Ecran fond="lagon">
+    <Ecran fond="lagon" vivant>
       <Carte style={styles.carteIdentite}>
         <View style={styles.avatar}>
           <Text style={styles.initiale}>{initiales(nomAffiche)}</Text>

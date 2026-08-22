@@ -10,6 +10,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Canopee } from '@/components/Canopee';
 import { FondPlage } from '@/components/FondPlage';
 import { IleDeZanzibar } from '@/components/Ile';
+import { LaCourse } from '@/components/LaCourse';
 import { Colobe } from '@/components/marques/Colobe';
 import { EtiquetteVersion } from '@/components/Version';
 import { LogoZanziGo, SelecteurLangue, SelecteurPeau } from '@/components/ui';
@@ -133,6 +134,11 @@ export default function EcranAccueil() {
               routes et ses villes. C'est la promesse de la maison, montrée
               plutôt qu'écrite. */}
           <IleDeZanzibar />
+
+          {/* LA COURSE — un chauffeur, deux passagers, un madafu, et la
+              route qui défile. C'est une entreprise de taxi : il fallait
+              qu'une voiture roule quelque part. */}
+          <LaCourse />
 
           <Text style={styles.question}>{t('accueil_question')}</Text>
 
