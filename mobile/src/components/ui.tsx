@@ -18,6 +18,7 @@ import {
   type TextStyle,
   type ViewStyle,
 } from 'react-native';
+import { requireOptionalNativeModule } from 'expo-modules-core';
 import { HeaderHeightContext } from '@react-navigation/elements';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -42,11 +43,23 @@ import type { StatutColis, StatutTrajet } from '@/lib/types';
 
 type NomIonicons = React.ComponentProps<typeof Ionicons>['name'];
 
-// LE VRAI FLOU, sur téléphone. `expo-blur` est un module NATIF : les
-// binaires installés avant son arrivée ne l'ont pas, et un import direct les
-// ferait planter dès l'ouverture — la mise à jour à distance pousse le
-// JavaScript, jamais le natif. On le demande donc poliment : s'il n'est pas
-// dans le binaire, on garde le voile translucide et personne ne plante.
+// LE VRAI FLOU, sur téléphone. `expo-blur` est un module NATIF : les binaires
+// installés avant son arrivée ne l'ont pas. La mise à jour à distance pousse
+// le JavaScript d'expo-blur, jamais son natif — il faut donc DEMANDER au
+// binaire s'il sait le rendre, avant de s'en servir.
+//
+// LE PIÈGE, ET IL A MORDU. La première version de ce garde était un
+// try/catch autour du require. Il n'a jamais rien gardé : `expo-blur` ne
+// passe pas par `requireNativeModule`, qui lève quand le natif manque, mais
+// par `requireNativeViewManager`, qui ne lève JAMAIS — il se contente d'un
+// avertissement, et seulement en développement (voir
+// expo-modules-core/src/NativeViewManagerAdapter.native.tsx). Le require
+// réussissait donc, et chaque Carte de chaque écran montait une vue native
+// que le binaire ne connaissait pas.
+//
+// La bonne sonde est `requireOptionalNativeModule`, qui renvoie `null` au
+// lieu de lever. « ExpoBlurView » est le nom déclaré côté natif
+// (expo-blur/android/.../BlurModule.kt : `Name("ExpoBlurView")`).
 type ComposantFlou = React.ComponentType<{
   intensity?: number;
   tint?: string;
@@ -54,13 +67,9 @@ type ComposantFlou = React.ComponentType<{
   style?: StyleProp<ViewStyle>;
 }>;
 let VueFloue: ComposantFlou | null = null;
-if (Platform.OS !== 'web') {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    VueFloue = require('expo-blur').BlurView as ComposantFlou;
-  } catch {
-    VueFloue = null; // binaire d'avant le flou : voile translucide
-  }
+if (Platform.OS !== 'web' && requireOptionalNativeModule('ExpoBlurView')) {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  VueFloue = require('expo-blur').BlurView as ComposantFlou;
 }
 
 /**

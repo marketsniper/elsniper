@@ -784,6 +784,27 @@ const CHAINES = {
     it: 'Tutti i nostri autisti sono verificati e in regola con i documenti',
     de: 'Alle unsere Fahrer sind geprüft und vollständig zugelassen',
   },
+  version_maj_recues: {
+    fr: 'Cette application reçoit bien les mises à jour.',
+    en: 'This app is receiving updates.',
+    sw: 'Programu hii inapokea masasisho.',
+    it: 'Questa app riceve gli aggiornamenti.',
+    de: 'Diese App erhält Updates.',
+  },
+  version_maj_absentes: {
+    fr: 'Cette application NE REÇOIT PLUS les mises à jour — réinstallez-la depuis le lien de l’équipe.',
+    en: 'This app is NO LONGER receiving updates — reinstall it from the team’s link.',
+    sw: 'Programu hii HAIPOKEI tena masasisho — isakinishe upya kwa kiungo cha timu.',
+    it: 'Questa app NON riceve più aggiornamenti — reinstallala dal link del team.',
+    de: 'Diese App erhält KEINE Updates mehr — installieren Sie sie über den Team-Link neu.',
+  },
+  version_socle: {
+    fr: 'Socle {socle} · canal {canal}',
+    en: 'Base {socle} · channel {canal}',
+    sw: 'Msingi {socle} · njia {canal}',
+    it: 'Base {socle} · canale {canal}',
+    de: 'Basis {socle} · Kanal {canal}',
+  },
   ile_titre: {
     fr: 'Toute l’île',
     en: 'The whole island',
