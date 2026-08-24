@@ -4,7 +4,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { Image, Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Canopee } from '@/components/Canopee';
@@ -115,16 +115,12 @@ export default function EcranAccueil() {
         >
           <SelecteurLangue />
           <View style={styles.entete}>
-            {/* L'ÉPINGLE seule, en image ; le nom est écrit PAR l'application,
-                dans les couleurs de la peau du moment. Un logotype gravé dans
-                le fichier sortirait en encre sombre sur le Lagon — invisible.
-                Le mot appartient au thème, l'image ne porte que la marque. */}
-            <Image
-              source={require('../../../assets/images/logo-epingle.png')}
-              style={styles.logoImage}
-              accessibilityLabel="zanziGo"
-            />
-            <LogoZanziGo taille={38} />
+            {/* LE NOM, ET RIEN D'AUTRE — comme Uber ou Bolt. Il n'y a plus
+                d'image au-dessus : le logotype EST le logo. Il se peint avec
+                la peau du moment, donc il ne peut pas se retrouver invisible
+                sur un fond qu'on n'avait pas prévu — c'est exactement ce qui
+                arrivait au logotype gravé dans un fichier. */}
+            <LogoZanziGo taille={54} />
             <Text style={styles.tagline}>{t('app_tagline')}</Text>
           </View>
 
@@ -260,10 +256,6 @@ const styles = stylesReactifs(() => ({
   // Le logotype se pose SUR le sol de l'écran, sans tuile ni cadre : le
   // carré crème d'origine appartenait à l'ancienne direction artistique et
   // se détachait comme une vignette collée sur la pierre de l'estran.
-  logoImage: {
-    width: 118,
-    height: 118,
-  },
   tagline: {
     fontSize: 16,
     fontWeight: '600',

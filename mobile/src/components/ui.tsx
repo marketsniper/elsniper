@@ -4,7 +4,6 @@ import React from 'react';
 import {
   ActivityIndicator,
   Animated,
-  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -300,23 +299,40 @@ export function SelecteurPeau() {
   );
 }
 
-/** Logotype texte « zanziGo » : zanzi en prune, Go en corail (Coucher de soleil). */
+/**
+ * LE LOGOTYPE zanziGo — le nom, et rien d'autre.
+ *
+ * Comme Uber, Bolt, Lyft : la marque EST le mot. Plus d'image, plus de
+ * pictogramme à faire tenir à côté. Deux conséquences qui valent mieux qu'un
+ * dessin : il se lit à n'importe quelle taille, et il se peint avec la peau
+ * du moment sans jamais qu'un fichier ne se retrouve invisible sur un fond
+ * qu'on n'avait pas prévu.
+ *
+ * La police est FIXÉE à Archivo Bold sur les quatre peaux. Un logo ne change
+ * pas de caractère quand on change de thème — c'est la seule chose de
+ * l'application qui ne bouge pas.
+ *
+ * Les couleurs viennent de la peau (marqueNom / marqueGo) : bleu océan et
+ * vert profond sur les fonds clairs, blanc et vert franc sur les sombres.
+ * Le « Go » est vert, et c'est voulu : go, c'est vert.
+ */
 export function LogoZanziGo({
   taille = 40,
   surFonce = false,
 }: {
   taille?: number;
+  /** Conservé : un en-tête sombre posé sur une peau claire (rare). */
   surFonce?: boolean;
 }) {
-  // « Go » doit rester DISTINCT du reste du mot sur toutes les peaux. Sur le
-  // Lagon, la couleur d'action est le verre le plus clair — la même valeur que
-  // l'encre : le mot serait sorti d'un seul ton. On bascule alors sur la
-  // couleur d'action foncée, qui elle tranche toujours.
-  const accent = couleurs.primaire === couleurs.encre ? couleurs.primaireFonce : couleurs.primaire;
   return (
-    <Text style={[styles.logo, { fontSize: taille }]} accessibilityRole="header">
-      <Text style={{ color: surFonce ? couleurs.blanc : couleurs.encre }}>zanzi</Text>
-      <Text style={{ color: accent }}>Go</Text>
+    // letterSpacing est en POINTS, pas en em : il doit suivre la taille,
+    // sinon le mot de 20 px de l'en-tête serait serré neuf fois trop.
+    <Text
+      style={[styles.logo, { fontSize: taille, letterSpacing: taille * -0.045 }]}
+      accessibilityRole="header"
+    >
+      <Text style={{ color: surFonce ? couleurs.blanc : couleurs.marqueNom }}>zanzi</Text>
+      <Text style={{ color: couleurs.marqueGo }}>Go</Text>
     </Text>
   );
 }
@@ -324,21 +340,18 @@ export function LogoZanziGo({
 /**
  * LA MARQUE EN TÊTE D'ÉCRAN — sur CHAQUE onglet, client comme chauffeur.
  *
- * Elle vivait jusqu'ici sur les seuls écrans d'entrée. Or personne n'y
- * retourne : une fois connecté, l'aiguillage envoie droit sur « Réserver ».
- * Un client fidèle pouvait donc ne jamais voir la marque de l'application
- * qu'il ouvre tous les jours. Elle se pose maintenant à gauche de l'en-tête,
- * qui est transparent : elle flotte au-dessus du lagon, sans barre ni couture.
+ * Elle vivait sur les seuls écrans d'entrée. Or personne n'y retourne : une
+ * fois connecté, l'aiguillage envoie droit sur « Réserver ». Un client fidèle
+ * pouvait donc ne jamais voir la marque de l'application qu'il ouvre tous les
+ * jours.
+ *
+ * Le logotype se suffit : il n'y a plus de badge à côté du mot, et donc plus
+ * rien à faire tenir dans 26 px.
  */
 export function MarqueEntete() {
   return (
     <View style={styles.marqueEntete}>
-      <Image
-        source={require('../../assets/images/logo-epingle.png')}
-        style={styles.marqueBadge}
-        accessibilityLabel="zanziGo"
-      />
-      <LogoZanziGo taille={18} />
+      <LogoZanziGo taille={20} />
     </View>
   );
 }
@@ -801,24 +814,19 @@ const styles = stylesReactifs(() => ({
     gap: espaces.m,
   },
   logo: {
-    fontWeight: '800' as TextStyle['fontWeight'],
-    letterSpacing: -1,
+    // Archivo Bold, en dur : le logo est la seule chose de l'application qui
+    // ne change pas de caractère quand on change de peau. Passer par le
+    // poids l'aurait fait basculer sur Instrument Sans trois peaux sur
+    // quatre — trois logos différents pour une seule marque.
+    fontFamily: 'Archivo-Bold',
+    fontWeight: '700' as TextStyle['fontWeight'],
   },
   marqueEntete: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    // L'en-tête flottant n'a pas de fond : sans cette marge, le badge
-    // se collait au bord de l'écran. À droite, de quoi respirer avant le
-    // titre de l'onglet, qui vient se poser juste après.
+    justifyContent: 'center',
+    // L'en-tête flotte sans fond : sans ces marges, le mot se collerait au
+    // bord de l'écran d'un côté et au titre de l'onglet de l'autre.
     marginLeft: 16,
     marginRight: 10,
-  },
-  marqueBadge: {
-    // L'épingle est détourée : pas de fond, donc pas de coins à arrondir.
-    width: 26,
-    height: 26,
-    resizeMode: 'contain' as const,
   },
   carte: {
     backgroundColor: couleurs.carteTranslucide,

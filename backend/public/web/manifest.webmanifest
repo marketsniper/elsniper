@@ -7,12 +7,12 @@
   "scope": "/web/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#0E2733",
-  "theme_color": "#0E2733",
+  "background_color": "#073B57",
+  "theme_color": "#073B57",
   "lang": "fr",
   "icons": [
-    { "src": "/web/icone-192.33b262580f.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "/web/icone-512.a1bef61fda.png", "sizes": "512x512", "type": "image/png" },
-    { "src": "/web/icone-maskable-512.3c6411f8f7.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    { "src": "/web/icone-192.7ed6082a5b.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/web/icone-512.16c623c27a.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/web/icone-maskable-512.16c623c27a.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ]
 }

@@ -25,7 +25,7 @@
     "android": {
       "package": "com.zanzigo.app",
       "adaptiveIcon": {
-        "backgroundColor": "#FBF0E4",
+        "backgroundColor": "#073B57",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
@@ -41,7 +41,7 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#0E2733",
+          "backgroundColor": "#073B57",
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 100
         }

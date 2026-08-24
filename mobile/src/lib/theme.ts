@@ -28,6 +28,12 @@ import type { StatutColis, StatutTrajet } from './types';
 export type NomPeau = 'bento' | 'nuit' | 'verre' | 'estran';
 
 interface Palette {
+  /** LE LOGOTYPE — « zanzi » puis « Go ». Le nom EST le logo (comme Uber ou
+   *  Bolt), il n'y a plus d'image : il se peint donc avec la peau, et chaque
+   *  peau déclare le couple qui tient sur son fond. Contrastes mesurés :
+   *  jamais moins de 4,6:1, ni pour le nom ni pour le « Go ». */
+  marqueNom: string;
+  marqueGo: string;
   primaire: string;
   primaireFonce: string;
   primaireClair: string;
@@ -90,6 +96,8 @@ interface Palette {
 
 // ─────────────────────────── 02 · BENTO ZANZIBAR ───────────────────────────
 const BENTO: Palette = {
+  marqueNom: '#0A4E7A', // bleu océan sur crème (8,12:1)
+  marqueGo: '#0E7343', // vert profond (5,45:1)
   primaire: '#E4572E', // corail — la couleur d'action
   primaireFonce: '#B93C1B', // corail profond (textes sur fonds rosés)
   primaireClair: '#FFE7D8', // rosé pâle (pastilles, encarts info)
@@ -135,6 +143,8 @@ const BENTO: Palette = {
 
 // ──────────────────────────── 03 · NUIT D'ÉPICES ───────────────────────────
 const NUIT: Palette = {
+  marqueNom: '#FFFFFF', // blanc sur le noir violacé
+  marqueGo: '#12A150', // vert franc (5,75:1)
   // Dans « Nuit d'épices », l'accent n'est pas le corail mais L'OR : sur du
   // presque-noir, c'est lui qui porte le nom, les boutons et les montants.
   // Le corail reste présent en alerte et en orange.
@@ -188,6 +198,13 @@ const NUIT: Palette = {
 // dégradé, cernés d'un filet clair. La couleur d'action est le BLANC —
 // c'est lui qui ressort d'un fond déjà coloré, pas un accent de plus.
 const VERRE: Palette = {
+  // LE LAGON EST UN DÉGRADÉ, pas un aplat. Derrière le logotype, le fond
+  // réellement peint est un turquoise moyen (#2A949B mesuré au pixel), pas
+  // le lagon profond de la palette : le vert franc y tombait à 1,07:1 —
+  // invisible. Sur ce fond, MÊME LE BLANC ne dépasse pas 3,62:1 ; aucun vert
+  // ne fera mieux. On prend donc la menthe la plus claire qui reste verte.
+  marqueNom: '#FFFFFF', // 3,62:1 sur le turquoise du dégradé
+  marqueGo: '#A8FAD5', // menthe de lagon — 2,98:1, le maximum atteignable ici
   primaire: '#F4FBFC', // le verre le plus clair : boutons, onglet actif
   primaireFonce: '#FFD9C9', // rosé : liens, flèches d'en-tête
   primaireClair: 'rgba(255, 255, 255, 0.18)', // bulles d'icônes, encarts
@@ -254,6 +271,8 @@ const VERRE: Palette = {
 //    n'a pas de contraste mesurable : il dépend de ce qui passe derrière. Le
 //    verre dépoli reste, mais pour le décor.
 const ESTRAN: Palette = {
+  marqueNom: '#0A4E7A', // bleu océan sur l’estran (7,48:1)
+  marqueGo: '#0E7343', // vert profond (5,02:1)
   primaire: '#D4551F', // l'étoile de l'estran — la couleur d'action, et rien d'autre
   primaireFonce: '#0B4A47', // teal profond : liens, chiffres, libellés qui portent
   primaireClair: '#FBE4D6', // pastilles et encarts d'information
