@@ -60,12 +60,13 @@ function verifier(depart, arrivee, net, prixClient) {
 describe('Grille privée : le net du chauffeur décide, le forfait s’ajoute', () => {
   it('transfert depuis un hub : 45 USD au chauffeur vers toute l’île', () => {
     // Prix unique quelle que soit la plage — décision de terrain, assumée :
-    // un transfert court paie autant qu'un long.
+    // un transfert court paie autant qu'un long. DEUX EXCEPTIONS depuis le
+    // 24/08/2026 : Fumba (27 km) et Matemwe (54 km) ne valaient pas le prix
+    // de Nungwi (67 km). Elles ont leur propre test, prix-fumba-matemwe.
     for (const hub of HUBS) {
       for (const plage of [
         'Nungwi',
         'Kendwa',
-        'Matemwe',
         'Pwani Mchangani',
         'Kiwengwa',
         'Pongwe',
@@ -76,10 +77,20 @@ describe('Grille privée : le net du chauffeur décide, le forfait s’ajoute', 
         'Makunduchi',
         'Mtende',
         'Kizimkazi',
-        'Fumba',
       ]) {
         verifier(hub, plage, 45, 52);
       }
+    }
+  });
+
+  it('…sauf Fumba et Matemwe, sortis du prix unique', () => {
+    // Le détail (les deux sens, tous les hubs, le net qui reste au chauffeur)
+    // vit dans prix-fumba-matemwe.test.js. Ici, on note simplement que le
+    // prix unique ADMET des exceptions — pour qu'un futur lecteur du test
+    // ci-dessus ne conclue pas que la règle est absolue.
+    for (const hub of HUBS) {
+      verifier(hub, 'Fumba', 17, 20);
+      verifier(hub, 'Matemwe', 28, 33);
     }
   });
 

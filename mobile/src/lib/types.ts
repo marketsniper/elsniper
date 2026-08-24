@@ -467,6 +467,18 @@ const GROUPES_NET_USD: { a: string[]; b: string[]; net: number }[] = [
 
 /** Transfert depuis/vers un hub : prix unique vers toute l'île. */
 const NET_TRANSFERT_USD = 45;
+/**
+ * LES DEUX DESTINATIONS QUI NE VALENT PAS UN TRANSFERT ENTIER (miroir exact
+ * du serveur, 24/08/2026). Le prix unique traitait Fumba comme Nungwi : 52 USD
+ * pour tout le monde, alors que Fumba est à 27 km de Stone Town quand Nungwi
+ * est à 67. Le net est posé pour retomber sur le prix client voulu, la
+ * commission de 15 % prélevée : Fumba 17 → 20 USD, Matemwe 28 → 33 USD.
+ * La table porte sur la DESTINATION, pas sur la paire.
+ */
+const NET_TRANSFERT_PAR_VILLE_USD: Record<string, number> = {
+  fumba: 17,
+  matemwe: 28,
+};
 /** L'aéroport et la ville sont à sept kilomètres : ce n'est pas un transfert,
  *  mais c'est la course la plus fréquente de l'île. */
 const NET_AEROPORT_VILLE_USD = 10;
@@ -1083,7 +1095,10 @@ export function netChauffeurPriveUsd(depart: string, arrivee: string): number {
     return NET_AEROPORT_VILLE_USD;
   }
   if (HUBS_TARIFAIRES.has(d) || HUBS_TARIFAIRES.has(a)) {
-    return versCorridorSudEst(depart, arrivee) ? NET_CORRIDOR_TZS / TAUX_USD_TZS : NET_TRANSFERT_USD;
+    if (versCorridorSudEst(depart, arrivee)) return NET_CORRIDOR_TZS / TAUX_USD_TZS;
+    // La destination, c'est le bout qui n'est pas le hub.
+    const destination = HUBS_TARIFAIRES.has(d) ? a : d;
+    return NET_TRANSFERT_PAR_VILLE_USD[destination] ?? NET_TRANSFERT_USD;
   }
   const groupe = GROUPES_NET_USD.find((g) => dansLeGroupe(g, d, a));
   if (groupe) return groupe.net;

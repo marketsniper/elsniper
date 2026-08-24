@@ -194,6 +194,27 @@ function tauxCommissionPrive(prixUsd, pickup, dropoff) {
 // Transfert depuis/vers un hub (Stone Town, terminal ferry, aéroport) : prix
 // unique vers toute l'île, quelle que soit la plage.
 const NET_TRANSFERT_USD = 45;
+
+// LES DEUX DESTINATIONS QUI NE VALENT PAS UN TRANSFERT ENTIER (24/08/2026).
+//
+// Le prix unique traitait Fumba comme Nungwi : 52 USD pour tout le monde. Or
+// Fumba est à 27 km de Stone Town quand Nungwi est à 67 — le client payait la
+// plage la plus lointaine pour aller à la plus proche. Matemwe, à 54 km, est
+// entre les deux.
+//
+// Le net est posé de façon à retomber sur le prix client demandé, la
+// commission ordinaire prélevée (15 % sous 40 USD) :
+//   Fumba   net 17 → 20 × 0,85 = 17,00 ✓  (19 donnerait 16,15, insuffisant)
+//   Matemwe net 28 → 33 × 0,85 = 28,05 ✓  (32 donnerait 27,20, insuffisant)
+//
+// La table porte sur la DESTINATION, pas sur la paire : l'aéroport est plus
+// près de Fumba que Stone Town ne l'est. Garder 52 USD au départ de
+// l'aéroport pendant que Stone Town descend à 20 aurait créé un écart que
+// n'importe quel client aurait relevé.
+const NET_TRANSFERT_PAR_VILLE_USD = {
+  fumba: 17,
+  matemwe: 28,
+};
 // L'aéroport et la ville sont à sept kilomètres : ce n'est pas un transfert de
 // plage, et son prix n'a rien à voir. C'est en revanche la course la plus
 // fréquente de l'île : 10 USD au chauffeur, 4,50 à zanziGo, 14,50 au client.
@@ -388,7 +409,10 @@ export function netChauffeurPriveUsd(pickup, dropoff) {
     return NET_AEROPORT_VILLE_USD;
   }
   if (HUBS.has(p) || HUBS.has(d)) {
-    return versCorridorSudEst(pickup, dropoff) ? NET_CORRIDOR_USD : NET_TRANSFERT_USD;
+    if (versCorridorSudEst(pickup, dropoff)) return NET_CORRIDOR_USD;
+    // La destination, c'est le bout qui n'est pas le hub.
+    const destination = HUBS.has(p) ? d : p;
+    return NET_TRANSFERT_PAR_VILLE_USD[destination] ?? NET_TRANSFERT_USD;
   }
   const groupe = GROUPES_NET_USD.find((g) => dansLeGroupe(g, p, d));
   if (groupe) return groupe.net;
