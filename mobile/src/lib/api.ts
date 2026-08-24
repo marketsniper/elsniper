@@ -1117,6 +1117,26 @@ export async function statsChauffeur(driverId: string, equipe = false): Promise<
 }
 
 /** GET /drivers/:id — fiche chauffeur (lui-même, ou l'équipe avec `equipe`). */
+/**
+ * PATCH /drivers/:id/photo — LE CHAUFFEUR pose (ou remplace) son portrait.
+ * C'est la seule image de l'application qu'un inconnu verra sur son
+ * téléphone : l'équipe est prévenue à chaque dépôt.
+ */
+export async function definirPhotoChauffeur(
+  driverId: string,
+  photoUrl: string
+): Promise<Chauffeur> {
+  return requete<Chauffeur>(`/drivers/${driverId}/photo`, {
+    methode: 'PATCH',
+    corps: { photoUrl },
+  });
+}
+
+/** DELETE /drivers/:id/photo — L'ÉQUIPE retire une photo qui ne convient pas. */
+export async function retirerPhotoChauffeur(driverId: string): Promise<Chauffeur> {
+  return requete<Chauffeur>(`/drivers/${driverId}/photo`, { methode: 'DELETE', admin: true });
+}
+
 export async function obtenirChauffeur(driverId: string, equipe = false): Promise<Chauffeur> {
   return requete<Chauffeur>(`/drivers/${driverId}`, { admin: equipe });
 }
@@ -1601,6 +1621,8 @@ export const api = {
   testerAlertesChauffeur,
   majDocumentsChauffeur,
   obtenirChauffeur,
+  definirPhotoChauffeur,
+  retirerPhotoChauffeur,
   definirMotDePasseChauffeur,
   radierDefinitivement,
   telechargerSauvegarde,

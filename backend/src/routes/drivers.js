@@ -365,6 +365,61 @@ router.get(
   })
 );
 
+const photoSchema = z.object({ photoUrl: z.string().url() });
+
+// PATCH /drivers/:id/photo — LE CHAUFFEUR pose (ou remplace) son portrait.
+//
+// C'est la seule image de l'application qu'un inconnu verra sur son
+// téléphone. L'équipe en est donc prévenue à chaque dépôt : le chauffeur
+// reste vérifié — sa pièce d'identité l'a été — mais une photo publique se
+// relit, et une seule de travers suffit à abîmer la marque.
+router.patch(
+  '/:id/photo',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    if (!isAdmin(req) && req.auth.driverId !== req.params.id) {
+      throw new HttpError(403, 'forbidden', 'Accès réservé au chauffeur concerné');
+    }
+    const { photoUrl } = photoSchema.parse(req.body);
+    const { rows } = await query(
+      `UPDATE drivers SET photo_url = $1, photo_updated_at = now()
+        WHERE id = $2 RETURNING *`,
+      [photoUrl, req.params.id]
+    );
+    if (!rows[0]) throw notFound('Chauffeur');
+    if (!isAdmin(req)) {
+      notifierEquipe(
+        `📸 Photo de chauffeur à regarder — ${rows[0].full_name}`,
+        [
+          `Chauffeur: ${rows[0].full_name}`,
+          `Plaque: ${rows[0].vehicle_plate}`,
+          `Photo: ${photoUrl}`,
+          '',
+          "C'est le visage que verront les clients. Si elle ne convient pas,",
+          'retirez-la depuis la fiche du chauffeur dans le tableau de bord.',
+        ].join('\n')
+      );
+    }
+    res.json(sanitizeDriver(rows[0]));
+  })
+);
+
+// DELETE /drivers/:id/photo — L'ÉQUIPE retire une photo qui ne convient pas.
+// Le client revient à l'initiale du chauffeur, jamais à un vide.
+router.delete(
+  '/:id/photo',
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    const { rows } = await query(
+      `UPDATE drivers SET photo_url = NULL, photo_updated_at = NULL
+        WHERE id = $1 RETURNING *`,
+      [req.params.id]
+    );
+    if (!rows[0]) throw notFound('Chauffeur');
+    res.json(sanitizeDriver(rows[0]));
+  })
+);
+
 // PATCH /drivers/:id/verify — validation d'une candidature OU radiation d'un
 // chauffeur déjà vérifié qui ne respecte plus les normes zanziGo
 // ('verified' → 'rejected'). Un chauffeur radié peut être réintégré plus

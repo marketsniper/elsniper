@@ -7,7 +7,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
-import { Linking, Pressable, Text, View } from 'react-native';
+import { Image, Linking, Pressable, Text, View } from 'react-native';
 
 import { VisionneuseDocument } from '@/components/VisionneuseDocument';
 import {
@@ -134,6 +134,25 @@ export default function EcranTaxiEquipe() {
     }
   };
 
+  // LE PORTRAIT, et son retrait. C'est la seule image de l'application qu'un
+  // inconnu verra : l'équipe doit pouvoir la faire disparaître d'un geste.
+  // Le client revient alors à l'initiale du chauffeur, jamais à un vide.
+  const photoChauffeur = champ<string>(chauffeur, 'photo_url', 'photoUrl') ?? null;
+  const [retraitEnCours, setRetraitEnCours] = useState(false);
+  const retirerPhoto = async () => {
+    if (!id) return;
+    setRetraitEnCours(true);
+    setErreur('');
+    try {
+      await api.retirerPhotoChauffeur(id);
+      await charger();
+    } catch (e) {
+      setErreur(e instanceof ErreurApi ? e.message : t('equipe_action_erreur'));
+    } finally {
+      setRetraitEnCours(false);
+    }
+  };
+
   const radier = async () => {
     setErreur('');
     setActionEnCours('radiation');
@@ -199,6 +218,28 @@ export default function EcranTaxiEquipe() {
 
       {/* --- Identité --- */}
       <Carte>
+        {/* LE PORTRAIT que voient les clients. L'équipe garde le dernier mot :
+            un chauffeur peut le changer quand il veut, et une seule photo de
+            travers suffit à abîmer la marque. */}
+        {!!photoChauffeur && (
+          <View style={styles.rangeePhoto}>
+            <Image
+              source={{ uri: photoChauffeur }}
+              style={styles.portrait}
+              accessibilityLabel={nom}
+            />
+            <View style={styles.actionPhoto}>
+              <Text style={styles.legendePhoto}>{t('photo_deja')}</Text>
+              <Bouton
+                titre={t('equipe_photo_retirer')}
+                icone="trash-outline"
+                variante="danger"
+                onPress={retirerPhoto}
+                charge={retraitEnCours}
+              />
+            </View>
+          </View>
+        )}
         <View style={styles.enTete}>
           <Text style={styles.nom}>{nom}</Text>
           <Badge
@@ -426,6 +467,26 @@ export default function EcranTaxiEquipe() {
 }
 
 const styles = stylesReactifs(() => ({
+  rangeePhoto: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: espaces.m,
+    marginBottom: espaces.xs,
+  },
+  portrait: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: couleurs.bordure,
+  },
+  actionPhoto: {
+    flex: 1,
+    gap: espaces.xs,
+  },
+  legendePhoto: {
+    fontSize: 12.5,
+    color: couleurs.texteSecondaire,
+  },
   enTete: {
     flexDirection: 'row',
     alignItems: 'center',

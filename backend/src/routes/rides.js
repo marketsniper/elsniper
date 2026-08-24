@@ -558,7 +558,8 @@ router.get(
     await cloturerRidesPartis();
     await annulerReservationsImpayees();
     const { rows } = await query(
-      `SELECT r.*, d.full_name AS driver_name, d.vehicle_plate, d.vehicle_model, d.rating_avg AS driver_rating
+      `SELECT r.*, d.full_name AS driver_name, d.vehicle_plate, d.vehicle_model, d.rating_avg AS driver_rating,
+              d.photo_url AS driver_photo_url
        FROM posted_rides r
        JOIN drivers d ON d.id = r.driver_id
        WHERE r.status = 'open' AND r.departure_at > now() AND r.seats_available > 0
@@ -731,7 +732,7 @@ router.get(
       `SELECT b.id, b.seats, b.created_at, b.paid_at, b.cancelled_at,
               r.origin, r.destination, r.departure_at, r.status AS ride_status,
               r.price_per_seat, r.currency AS ride_currency,
-              d.full_name AS driver_name, d.vehicle_plate, d.vehicle_model,
+              d.full_name AS driver_name, d.vehicle_plate, d.vehicle_model, d.photo_url AS driver_photo_url,
               p.id AS payment_id, p.amount AS payment_amount,
               p.currency AS payment_currency, p.surcharge AS payment_surcharge,
               p.method AS payment_method
@@ -768,6 +769,7 @@ router.get(
           driver_name: b.driver_name,
           vehicle_plate: b.vehicle_plate,
           vehicle_model: b.vehicle_model,
+          driver_photo_url: b.driver_photo_url,
           // Dates de la fiche de suivi (réservée → payée → départ → terminée).
           created_at: b.created_at,
           paid_at: b.paid_at,

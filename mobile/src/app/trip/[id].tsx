@@ -5,7 +5,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Linking, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Linking, Pressable, Text, View } from 'react-native';
 
 import { CartePosition } from '@/components/CartePosition';
 import { Etoiles } from '@/components/Etoiles';
@@ -459,6 +459,11 @@ export default function EcranTrajet() {
   // payée. C'est exactement quand le client en a besoin.
   const telChauffeur = champ<string>(trajet, 'driver_phone', 'driverPhone');
   const initialeChauffeur = String(nomChauffeur ?? '?').trim().charAt(0).toUpperCase() || '?';
+  // LE VISAGE. À l'aéroport, de nuit, entre dix taxis blancs, la plaque ne
+  // suffit pas : c'est le portrait qui dit « c'est bien lui ». Il arrive dès
+  // l'assignation — il sert AVANT de monter, pas après. Tant qu'il n'y en a
+  // pas, l'initiale tient sa place : jamais un rond vide.
+  const photoChauffeur = champ<string>(trajet, 'driver_photo_url', 'driverPhotoUrl');
 
   // Le trajet en une ligne, pour les dépliants et le bandeau.
   const ligneItineraire = `${departLibelle} → ${arriveeLibelle}`;
@@ -499,9 +504,17 @@ export default function EcranTrajet() {
       {!annule && !!nomChauffeur && (
         <Carte>
           <View style={styles.fiche}>
-            <View style={styles.pastilleChauffeur}>
-              <Text style={styles.initiale}>{initialeChauffeur}</Text>
-            </View>
+            {photoChauffeur ? (
+              <Image
+                source={{ uri: String(photoChauffeur) }}
+                style={styles.photoChauffeur}
+                accessibilityLabel={String(nomChauffeur)}
+              />
+            ) : (
+              <View style={styles.pastilleChauffeur}>
+                <Text style={styles.initiale}>{initialeChauffeur}</Text>
+              </View>
+            )}
             <View style={styles.textesChauffeur}>
               <Text style={styles.nomChauffeur}>{String(nomChauffeur)}</Text>
               {!!modeleTaxi && <Text style={styles.modeleTaxi}>{String(modeleTaxi)}</Text>}
@@ -918,6 +931,12 @@ const styles = stylesReactifs(() => ({
     flexDirection: 'row',
     alignItems: 'center',
     gap: espaces.m,
+  },
+  photoChauffeur: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: couleurs.primaireClair,
   },
   pastilleChauffeur: {
     width: 52,

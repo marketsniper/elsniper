@@ -191,7 +191,12 @@ const ratingSchema = z.object({
 // d'appeler l'homme qui vient le chercher — « je suis devant le portail
 // bleu ». Le CASE le laisse à null tant que ce moment n'est pas venu ; le
 // numéro ne transite donc jamais pour une course simplement demandée.
+//
+// LE PORTRAIT, lui, part dès l'assignation — comme le nom et la plaque. Il ne
+// sert à rien après la course : il sert AVANT, au moment de monter dans la
+// bonne voiture. Le retenir jusqu'au paiement le rendrait inutile.
 const CHAMPS_CHAUFFEUR = `d.full_name AS driver_name, d.vehicle_plate, d.vehicle_model,
+                d.photo_url AS driver_photo_url,
                 CASE WHEN t.status IN ('paid', 'in_progress') THEN d.phone END AS driver_phone`;
 
 async function getTrip(id) {
@@ -1118,7 +1123,7 @@ router.get(
     }
 
     const { rows } = await query(
-      `SELECT d.full_name, d.vehicle_plate, p.lat, p.lng, p.updated_at
+      `SELECT d.full_name, d.vehicle_plate, d.photo_url, p.lat, p.lng, p.updated_at
        FROM drivers d
        LEFT JOIN driver_positions p ON p.driver_id = d.id
        WHERE d.id = $1`,
@@ -1130,6 +1135,7 @@ router.get(
     res.json({
       driver_name: ligne?.full_name ?? null,
       vehicle_plate: ligne?.vehicle_plate ?? null,
+      driver_photo_url: ligne?.photo_url ?? null,
       lat: ligne?.lat ?? null,
       lng: ligne?.lng ?? null,
       updated_at: ligne?.updated_at ?? null,

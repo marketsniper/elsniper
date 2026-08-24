@@ -2,19 +2,21 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Image, Pressable, Text, View } from 'react-native';
 
 import {
   Badge,
   Carte,
   Ecran,
   LigneInfo,
+  TexteErreur,
   SelecteurLangue,
   SousTitre,
 } from '@/components/ui';
 import { CarteAlertes } from '@/components/CarteAlertes';
+import { ChoixDocument } from '@/components/ChoixDocument';
 import { CarteVersion } from '@/components/Version';
-import { api, type StatsChauffeur } from '@/lib/api';
+import { api, ErreurApi, type StatsChauffeur } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useT } from '@/lib/i18n';
 import { couleurs, espaces, rayons, stylesReactifs, tailles } from '@/lib/theme';
@@ -48,7 +50,16 @@ export default function EcranCompteChauffeur() {
   useFocusEffect(
     useCallback(() => {
       chargerStats();
-    }, [chargerStats])
+      // La session en mémoire ne se rafraîchit pas toute seule : sans ce
+      // rappel, un chauffeur qui rouvre l'écran croirait n'avoir aucune
+      // photo — et l'équipe en recevrait une deuxième.
+      if (chauffeur?.id) {
+        api
+          .obtenirChauffeur(chauffeur.id)
+          .then((frais) => setPhotoChauffeur(champ<string>(frais, 'photo_url', 'photoUrl') ?? null))
+          .catch(() => {});
+      }
+    }, [chargerStats, chauffeur?.id])
   );
 
   const statutVerif =
@@ -63,6 +74,33 @@ export default function EcranCompteChauffeur() {
   const nomAffiche = String(
     champ(chauffeur, 'full_name', 'fullName') ?? t('rides_chauffeur_defaut')
   );
+
+  // MA PHOTO. Elle part au serveur en deux temps : le fichier d'abord
+  // (redimensionné et réenregistré en JPEG par ChoixDocument — les iPhone
+  // produisent du HEIC que le serveur ne sait pas lire), puis son adresse
+  // sur la fiche. On l'affiche tout de suite, sans attendre un rechargement.
+  const [photoChauffeur, setPhotoChauffeur] = useState<string | null>(
+    champ<string>(chauffeur, 'photo_url', 'photoUrl') ?? null
+  );
+  const [erreurPhoto, setErreurPhoto] = useState('');
+  const idChauffeur = champ<string>(chauffeur, 'id') ?? null;
+
+  const enregistrerPhoto = async (uri: string) => {
+    if (!idChauffeur) return;
+    setErreurPhoto('');
+    // Optimiste : le chauffeur voit sa photo pendant que l'envoi se fait.
+    setPhotoChauffeur(uri);
+    try {
+      const { url } = await api.televerser(uri);
+      const maj = await api.definirPhotoChauffeur(idChauffeur, url);
+      setPhotoChauffeur(champ<string>(maj, 'photo_url', 'photoUrl') ?? url);
+    } catch (erreur) {
+      // L'aperçu revient à l'état d'avant : mieux vaut pas de photo qu'une
+      // photo que le client ne verra jamais.
+      setPhotoChauffeur(champ<string>(chauffeur, 'photo_url', 'photoUrl') ?? null);
+      setErreurPhoto(erreur instanceof ErreurApi ? erreur.message : t('photo_erreur'));
+    }
+  };
 
   const seDeconnecter = async () => {
     await deconnexion();
@@ -91,6 +129,37 @@ export default function EcranCompteChauffeur() {
           <Badge texte={t('compte_avis', { note: moyenne, n: nbNotes })} ton="primaire" />
         )}
       </Carte>
+
+      {/* MA PHOTO — celle que le client verra avant de monter.
+          Un chauffeur vérifié seulement : tant que le dossier n'est pas
+          validé, aucune course ne lui est confiée, la photo ne servirait à
+          personne et l'équipe aurait une image de plus à regarder. */}
+      {verifie && (
+        <Carte>
+          <Text style={styles.titreGains}>📸 {t('photo_titre')}</Text>
+          <Text style={styles.explicationPhoto}>{t('photo_explication')}</Text>
+          {!!photoChauffeur && (
+            <View style={styles.rangeePhoto}>
+              <Image
+                source={{ uri: photoChauffeur }}
+                style={styles.apercuPhoto}
+                accessibilityLabel={nomAffiche}
+              />
+              <Text style={styles.explicationPhoto}>{t('photo_deja')}</Text>
+            </View>
+          )}
+          <ChoixDocument
+            uri={photoChauffeur}
+            onFichier={enregistrerPhoto}
+            onErreur={setErreurPhoto}
+            texteAjouter={t('photo_ajouter')}
+            texteAjoute={t('photo_ajoutee')}
+            texteChanger={t('photo_changer')}
+            camera
+          />
+          {!!erreurPhoto && <TexteErreur>{erreurPhoto}</TexteErreur>}
+        </Carte>
+      )}
 
       {/* Compteur de gains — TOUT EN SHILLINGS : le gain net du jour en
           grand (les places payées en USD sont converties au taux zanziGo),
@@ -191,6 +260,22 @@ export default function EcranCompteChauffeur() {
 }
 
 const styles = stylesReactifs(() => ({
+  explicationPhoto: {
+    fontSize: 12.5,
+    lineHeight: 18,
+    color: couleurs.texteSecondaire,
+  },
+  rangeePhoto: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: espaces.s,
+  },
+  apercuPhoto: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: couleurs.bordure,
+  },
   titreGains: {
     fontSize: 15,
     fontWeight: '700',

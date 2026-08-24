@@ -756,6 +756,63 @@ const CHAINES = {
     de: 'Anfrage nicht gesendet. Bitte gleich erneut versuchen.',
     sw: 'Ombi halikutumwa. Jaribu tena baadaye kidogo.',
   },
+  // ── LA PHOTO DU CHAUFFEUR ──
+  photo_titre: {
+    fr: 'Ma photo',
+    en: 'My photo',
+    it: 'La mia foto',
+    de: 'Mein Foto',
+    sw: 'Picha yangu',
+  },
+  photo_explication: {
+    fr: 'C’est le visage que verra votre client avant de monter. Une photo nette, de face, en pleine lumière — comme une photo d’identité, mais souriante.',
+    en: 'This is the face your passenger sees before getting in. A sharp, front-facing photo in good light — like an ID photo, but smiling.',
+    it: 'È il volto che il passeggero vede prima di salire. Una foto nitida, frontale, con buona luce — come una foto tessera, ma sorridente.',
+    de: 'Das ist das Gesicht, das Ihr Fahrgast vor dem Einsteigen sieht. Ein scharfes Foto von vorn, bei gutem Licht — wie ein Passbild, aber lächelnd.',
+    sw: 'Hii ndiyo sura atakayoiona abiria kabla ya kupanda. Picha safi, ya mbele, kwenye mwanga mzuri — kama picha ya kitambulisho, lakini ukitabasamu.',
+  },
+  photo_deja: {
+    fr: 'Vos clients voient cette photo.',
+    en: 'Your passengers see this photo.',
+    it: 'I tuoi passeggeri vedono questa foto.',
+    de: 'Ihre Fahrgäste sehen dieses Foto.',
+    sw: 'Abiria wako wanaona picha hii.',
+  },
+  photo_ajouter: {
+    fr: 'Prendre ma photo',
+    en: 'Take my photo',
+    it: 'Scatta la mia foto',
+    de: 'Foto aufnehmen',
+    sw: 'Piga picha yangu',
+  },
+  photo_ajoutee: {
+    fr: 'Photo enregistrée',
+    en: 'Photo saved',
+    it: 'Foto salvata',
+    de: 'Foto gespeichert',
+    sw: 'Picha imehifadhiwa',
+  },
+  photo_changer: {
+    fr: 'Changer ma photo',
+    en: 'Change my photo',
+    it: 'Cambia la mia foto',
+    de: 'Foto ändern',
+    sw: 'Badilisha picha yangu',
+  },
+  photo_erreur: {
+    fr: 'Photo non enregistrée. Réessayez dans un instant.',
+    en: 'Photo not saved. Please try again in a moment.',
+    it: 'Foto non salvata. Riprova tra poco.',
+    de: 'Foto nicht gespeichert. Bitte gleich erneut versuchen.',
+    sw: 'Picha haikuhifadhiwa. Jaribu tena baadaye kidogo.',
+  },
+  equipe_photo_retirer: {
+    fr: 'Retirer la photo',
+    en: 'Remove photo',
+    it: 'Rimuovi la foto',
+    de: 'Foto entfernen',
+    sw: 'Ondoa picha',
+  },
   // ── LA FILE DE L'ÉQUIPE ──
   equipe_recharges: {
     fr: 'Recharges de crédit',
