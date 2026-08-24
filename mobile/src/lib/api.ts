@@ -1539,6 +1539,19 @@ export async function bannirClient(id: string, banned: boolean): Promise<Utilisa
 
 /** POST /uploads (multipart, champ `file`) → {url, size, mimeType}. */
 export async function televerser(uri: string): Promise<{ url: string }> {
+  // GARDE-FOU. Une adresse http(s) n'est PAS un fichier à envoyer : c'est un
+  // fichier DÉJÀ envoyé. Passée ici, elle tombait dans la branche « application
+  // native » et posait un objet { uri, name, type } dans le FormData — un
+  // objet, pas un fichier. Le serveur répondait « Champ "file" manquant », et
+  // on cherchait la panne du côté du téléphone alors que la photo était en
+  // ligne depuis une milliseconde. L'erreur est ici, pas là-bas.
+  if (/^https?:\/\//i.test(uri)) {
+    throw new ErreurApi(
+      0,
+      'DEJA_TELEVERSE',
+      'Ce fichier est déjà en ligne : utilisez son adresse telle quelle.'
+    );
+  }
   const brut = uri.split('/').pop() ?? 'photo.jpg';
   const extension = brut.includes('.') ? brut.split('.').pop()!.toLowerCase() : 'jpg';
   const nom = brut.includes('.') ? brut : `${brut}.jpg`;

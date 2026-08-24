@@ -85,13 +85,17 @@ export default function EcranCompteChauffeur() {
   const [erreurPhoto, setErreurPhoto] = useState('');
   const idChauffeur = champ<string>(chauffeur, 'id') ?? null;
 
-  const enregistrerPhoto = async (uri: string) => {
+  // `url` est l'adresse DÉFINITIVE sur le serveur : ChoixDocument a déjà
+  // téléversé le fichier. La renvoyer à televerser() la faisait repartir
+  // comme un objet { uri, name, type } — la branche « application native » —
+  // et le serveur ne trouvait aucun champ « file » : 400. La photo était
+  // pourtant déjà en ligne. Ici, il ne reste qu'à la poser sur la fiche.
+  const enregistrerPhoto = async (url: string) => {
     if (!idChauffeur) return;
     setErreurPhoto('');
-    // Optimiste : le chauffeur voit sa photo pendant que l'envoi se fait.
-    setPhotoChauffeur(uri);
+    // Optimiste : le chauffeur voit sa photo pendant l'enregistrement.
+    setPhotoChauffeur(url);
     try {
-      const { url } = await api.televerser(uri);
       const maj = await api.definirPhotoChauffeur(idChauffeur, url);
       setPhotoChauffeur(champ<string>(maj, 'photo_url', 'photoUrl') ?? url);
     } catch (erreur) {
@@ -155,7 +159,7 @@ export default function EcranCompteChauffeur() {
             texteAjouter={t('photo_ajouter')}
             texteAjoute={t('photo_ajoutee')}
             texteChanger={t('photo_changer')}
-            camera
+            imagesSeules
           />
           {!!erreurPhoto && <TexteErreur>{erreurPhoto}</TexteErreur>}
         </Carte>

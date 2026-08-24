@@ -114,6 +114,7 @@ function ZoneFichier({
   onErreur,
   libelle,
   camera = false,
+  imagesSeules = false,
 }: {
   children: React.ReactNode;
   onFichier: (uri: string, mime: string) => void;
@@ -121,6 +122,8 @@ function ZoneFichier({
   libelle: string;
   /** Preuve de livraison : on veut une photo prise sur le moment. */
   camera?: boolean;
+  /** Portrait : une image, mais choisie librement (galerie comprise). */
+  imagesSeules?: boolean;
 }) {
   const { t } = useT();
   const conteneur = useRef<View | null>(null);
@@ -136,10 +139,10 @@ function ZoneFichier({
 
     const champ = document.createElement('input');
     champ.type = 'file';
-    champ.accept = camera ? 'image/*' : 'image/*,application/pdf';
-    // « capture » ouvre directement l'appareil photo du téléphone : une
-    // preuve de livraison doit être prise sur place, pas ressortie de la
-    // galerie.
+    champ.accept = camera || imagesSeules ? 'image/*' : 'image/*,application/pdf';
+    // « capture » ouvre directement l'appareil photo ARRIÈRE et retire le
+    // choix « dans mes photos » : une preuve de livraison doit être prise sur
+    // place. Un PORTRAIT, non — il se choisit, et pas avec l'objectif arrière.
     if (camera) champ.setAttribute('capture', 'environment');
     champ.setAttribute('aria-label', libelle);
     Object.assign(champ.style, {
@@ -207,7 +210,7 @@ function ZoneFichier({
       etiquette.removeEventListener('click', surAppui);
       etiquette.remove();
     };
-  }, [libelle, camera]);
+  }, [libelle, camera, imagesSeules]);
 
   // Application installée : appareil photo (preuve) ou galerie du téléphone.
   //
@@ -263,10 +266,12 @@ function SecoursNatif({
   onFichier,
   onErreur,
   camera,
+  imagesSeules,
 }: {
   onFichier: (uri: string, mime: string) => void;
   onErreur: (message: string) => void;
   camera: boolean;
+  imagesSeules: boolean;
 }) {
   const hote = useRef<View | null>(null);
   const rappels = useRef({ onFichier, onErreur });
@@ -278,7 +283,7 @@ function SecoursNatif({
     if (!noeud || typeof noeud.appendChild !== 'function') return;
     const champ = document.createElement('input');
     champ.type = 'file';
-    champ.accept = camera ? 'image/*' : 'image/*,application/pdf';
+    champ.accept = camera || imagesSeules ? 'image/*' : 'image/*,application/pdf';
     if (camera) champ.setAttribute('capture', 'environment');
     Object.assign(champ.style, { fontSize: '15px', maxWidth: '100%' });
     const surChoix = async () => {
@@ -300,7 +305,7 @@ function SecoursNatif({
       champ.removeEventListener('change', surChoix);
       champ.remove();
     };
-  }, [camera]);
+  }, [camera, imagesSeules]);
 
   if (Platform.OS !== 'web') return null;
   return <View ref={hote} collapsable={false} style={styles.secours} />;
@@ -328,6 +333,7 @@ export function ChoixDocument({
   texteAjoute,
   texteChanger,
   camera = false,
+  imagesSeules = false,
 }: {
   uri: string | null;
   onFichier: (uri: string) => void;
@@ -338,6 +344,8 @@ export function ChoixDocument({
   texteChanger: string;
   /** Preuve de livraison : photo prise sur le moment. */
   camera?: boolean;
+  /** Portrait : une image, mais choisie librement (galerie comprise). */
+  imagesSeules?: boolean;
 }) {
   const { t } = useT();
   const [typeMime, setTypeMime] = useState<string | null>(null);
@@ -434,13 +442,13 @@ export function ChoixDocument({
               <Ionicons name="checkmark-circle" size={18} color={couleurs.succes} />
               <Text style={styles.documentOk}>{texteAjoute}</Text>
             </View>
-            <ZoneFichier onFichier={recevoir} onErreur={signaler} libelle={texteChanger} camera={camera}>
+            <ZoneFichier onFichier={recevoir} onErreur={signaler} libelle={texteChanger} camera={camera} imagesSeules={imagesSeules}>
               <Text style={styles.changer}>{texteChanger}</Text>
             </ZoneFichier>
           </View>
         </View>
       ) : (
-        <ZoneFichier onFichier={recevoir} onErreur={signaler} libelle={texteAjouter} camera={camera}>
+        <ZoneFichier onFichier={recevoir} onErreur={signaler} libelle={texteAjouter} camera={camera} imagesSeules={imagesSeules}>
           <Bouton
             titre={texteAjouter}
             icone="cloud-upload-outline"
@@ -458,6 +466,7 @@ export function ChoixDocument({
               signaler(code === 'trop_lourd' ? t('doc_erreur_lourd') : t('doc_erreur_lecture'))
             }
             camera={camera}
+            imagesSeules={imagesSeules}
           />
         </>
       )}
