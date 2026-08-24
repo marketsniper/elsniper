@@ -17,8 +17,8 @@ describe('Remise partenaire hôtel', () => {
   it('s’applique sur une course privée', () => {
     const client = priceTrip('private', 'tourist', route);
     const hotel = priceTrip('private', 'hotel', route);
-    assert.equal(client.price, 52);
-    assert.equal(hotel.price, 49.4, '5 % sous le prix client');
+    assert.equal(client.price, 45);
+    assert.equal(hotel.price, 42.75, '5 % sous le prix client');
   });
 
   it('NE s’applique PAS sur une place de taxi partagé', () => {
@@ -40,10 +40,10 @@ describe('Remise partenaire hôtel', () => {
   it('la remise résident, elle, reste sur les deux', () => {
     // Le résident vérifié garde ses −5 % partout : c'est une remise de
     // personne, pas de professionnel qui revend la course.
-    assert.equal(priceTrip('private', 'resident', route).price, 49.4);
+    assert.equal(priceTrip('private', 'resident', route).price, 42.75);
     assert.equal(
       priceTrip('shared_tourist', 'resident', route).price,
-      Math.round(17 * 0.95 * 100) / 100
+      Math.round(15 * 0.95 * 100) / 100
     );
   });
 

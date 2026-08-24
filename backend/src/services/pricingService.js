@@ -195,26 +195,34 @@ function tauxCommissionPrive(prixUsd, pickup, dropoff) {
 // unique vers toute l'île, quelle que soit la plage.
 const NET_TRANSFERT_USD = 45;
 
-// LES DEUX DESTINATIONS QUI NE VALENT PAS UN TRANSFERT ENTIER (24/08/2026).
+// LES TRANSFERTS QUI SORTENT DU PRIX UNIQUE (24/08/2026).
 //
 // Le prix unique traitait Fumba comme Nungwi : 52 USD pour tout le monde. Or
 // Fumba est à 27 km de Stone Town quand Nungwi est à 67 — le client payait la
-// plage la plus lointaine pour aller à la plus proche. Matemwe, à 54 km, est
-// entre les deux.
+// plage la plus lointaine pour aller à la plus proche.
 //
-// Le net est posé de façon à retomber sur le prix client demandé, la
-// commission ordinaire prélevée (15 % sous 40 USD) :
-//   Fumba   net 17 → 20 × 0,85 = 17,00 ✓  (19 donnerait 16,15, insuffisant)
-//   Matemwe net 28 → 33 × 0,85 = 28,05 ✓  (32 donnerait 27,20, insuffisant)
+// LE HUB DE DÉPART COMPTE, et pas seulement la destination : l'aéroport est
+// plus loin de Nungwi que Stone Town, et plus loin de Matemwe aussi. Chaque
+// destination porte donc son net « depuis la ville » et, quand il diffère,
+// son net « depuis l'aéroport ».
 //
-// La table porte sur la DESTINATION, pas sur la paire : l'aéroport est plus
-// près de Fumba que Stone Town ne l'est. Garder 52 USD au départ de
-// l'aéroport pendant que Stone Town descend à 20 aurait créé un écart que
-// n'importe quel client aurait relevé.
+// Les nets sont posés pour retomber EXACTEMENT sur le prix client décidé, la
+// commission ordinaire prélevée (12 % à partir de 40 USD, 15 % en dessous) :
+//
+//   Fumba            17 → 20 × 0,85 = 17,00   (19 → 16,15, insuffisant)
+//   Matemwe ville    28 → 33 × 0,85 = 28,05   (32 → 27,20)
+//   Matemwe aéroport 39 → 45 × 0,88 = 39,60   (44 → 38,72)
+//   Nungwi  ville    39 → 45 × 0,88 = 39,60   (44 → 38,72)
+//   Nungwi  aéroport 42 → 48 × 0,88 = 42,24   (47 → 41,36)
+//
+// « ville » couvre Stone Town ET son terminal ferry : cinq minutes à pied
+// séparent les deux, aucune course ne se vend entre elles.
 const NET_TRANSFERT_PAR_VILLE_USD = {
-  fumba: 17,
-  matemwe: 28,
+  fumba: { ville: 17 },
+  matemwe: { ville: 28, aeroport: 39 },
+  nungwi: { ville: 39, aeroport: 42 },
 };
+
 // L'aéroport et la ville sont à sept kilomètres : ce n'est pas un transfert de
 // plage, et son prix n'a rien à voir. C'est en revanche la course la plus
 // fréquente de l'île : 10 USD au chauffeur, 4,50 à zanziGo, 14,50 au client.
@@ -410,9 +418,16 @@ export function netChauffeurPriveUsd(pickup, dropoff) {
   }
   if (HUBS.has(p) || HUBS.has(d)) {
     if (versCorridorSudEst(pickup, dropoff)) return NET_CORRIDOR_USD;
-    // La destination, c'est le bout qui n'est pas le hub.
+    // Le hub est un bout, la destination est l'autre.
+    const hub = HUBS.has(p) ? p : d;
     const destination = HUBS.has(p) ? d : p;
-    return NET_TRANSFERT_PAR_VILLE_USD[destination] ?? NET_TRANSFERT_USD;
+    const exception = NET_TRANSFERT_PAR_VILLE_USD[destination];
+    if (!exception) return NET_TRANSFERT_USD;
+    // Depuis l'aéroport quand la destination le distingue, sinon le net de la
+    // ville — Stone Town et son ferry partagent le même.
+    return !HUBS_VILLE.has(hub) && exception.aeroport !== undefined
+      ? exception.aeroport
+      : exception.ville;
   }
   const groupe = GROUPES_NET_USD.find((g) => dansLeGroupe(g, p, d));
   if (groupe) return groupe.net;

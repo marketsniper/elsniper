@@ -468,17 +468,25 @@ const GROUPES_NET_USD: { a: string[]; b: string[]; net: number }[] = [
 /** Transfert depuis/vers un hub : prix unique vers toute l'île. */
 const NET_TRANSFERT_USD = 45;
 /**
- * LES DEUX DESTINATIONS QUI NE VALENT PAS UN TRANSFERT ENTIER (miroir exact
- * du serveur, 24/08/2026). Le prix unique traitait Fumba comme Nungwi : 52 USD
- * pour tout le monde, alors que Fumba est à 27 km de Stone Town quand Nungwi
- * est à 67. Le net est posé pour retomber sur le prix client voulu, la
- * commission de 15 % prélevée : Fumba 17 → 20 USD, Matemwe 28 → 33 USD.
- * La table porte sur la DESTINATION, pas sur la paire.
+ * LES TRANSFERTS QUI SORTENT DU PRIX UNIQUE (miroir exact du serveur).
+ *
+ * Le prix unique traitait Fumba comme Nungwi : 52 USD pour tout le monde,
+ * alors que Fumba est à 27 km de Stone Town quand Nungwi est à 67.
+ *
+ * LE HUB DE DÉPART COMPTE : l'aéroport est plus loin de Nungwi que Stone Town,
+ * et plus loin de Matemwe aussi. Chaque destination porte son net « depuis la
+ * ville » et, quand il diffère, son net « depuis l'aéroport ».
+ *
+ *   Fumba            17 → 20 USD      Matemwe ville    28 → 33 USD
+ *   Matemwe aéroport 39 → 45 USD      Nungwi  ville    39 → 45 USD
+ *   Nungwi  aéroport 42 → 48 USD
  */
-const NET_TRANSFERT_PAR_VILLE_USD: Record<string, number> = {
-  fumba: 17,
-  matemwe: 28,
+const NET_TRANSFERT_PAR_VILLE_USD: Record<string, { ville: number; aeroport?: number }> = {
+  fumba: { ville: 17 },
+  matemwe: { ville: 28, aeroport: 39 },
+  nungwi: { ville: 39, aeroport: 42 },
 };
+
 /** L'aéroport et la ville sont à sept kilomètres : ce n'est pas un transfert,
  *  mais c'est la course la plus fréquente de l'île. */
 const NET_AEROPORT_VILLE_USD = 10;
@@ -1096,9 +1104,16 @@ export function netChauffeurPriveUsd(depart: string, arrivee: string): number {
   }
   if (HUBS_TARIFAIRES.has(d) || HUBS_TARIFAIRES.has(a)) {
     if (versCorridorSudEst(depart, arrivee)) return NET_CORRIDOR_TZS / TAUX_USD_TZS;
-    // La destination, c'est le bout qui n'est pas le hub.
+    // Le hub est un bout, la destination est l'autre.
+    const hub = HUBS_TARIFAIRES.has(d) ? d : a;
     const destination = HUBS_TARIFAIRES.has(d) ? a : d;
-    return NET_TRANSFERT_PAR_VILLE_USD[destination] ?? NET_TRANSFERT_USD;
+    const exception = NET_TRANSFERT_PAR_VILLE_USD[destination];
+    if (!exception) return NET_TRANSFERT_USD;
+    // Stone Town et son ferry partagent le même net ; l'aéroport peut différer.
+    const depuisLaVille = POINTS_STONE_TOWN.map(normaliserLieu).includes(hub);
+    return !depuisLaVille && exception.aeroport !== undefined
+      ? exception.aeroport
+      : exception.ville;
   }
   const groupe = GROUPES_NET_USD.find((g) => dansLeGroupe(g, d, a));
   if (groupe) return groupe.net;

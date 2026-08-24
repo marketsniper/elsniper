@@ -60,12 +60,11 @@ function verifier(depart, arrivee, net, prixClient) {
 describe('Grille privée : le net du chauffeur décide, le forfait s’ajoute', () => {
   it('transfert depuis un hub : 45 USD au chauffeur vers toute l’île', () => {
     // Prix unique quelle que soit la plage — décision de terrain, assumée :
-    // un transfert court paie autant qu'un long. DEUX EXCEPTIONS depuis le
-    // 24/08/2026 : Fumba (27 km) et Matemwe (54 km) ne valaient pas le prix
-    // de Nungwi (67 km). Elles ont leur propre test, prix-fumba-matemwe.
+    // un transfert court paie autant qu'un long. TROIS EXCEPTIONS depuis le
+    // 24/08/2026 : Fumba, Matemwe et Nungwi ont chacune leur prix, et le hub
+    // de départ y compte. Elles ont leur propre test, prix-transferts.
     for (const hub of HUBS) {
       for (const plage of [
-        'Nungwi',
         'Kendwa',
         'Pwani Mchangani',
         'Kiwengwa',
@@ -83,15 +82,14 @@ describe('Grille privée : le net du chauffeur décide, le forfait s’ajoute', 
     }
   });
 
-  it('…sauf Fumba et Matemwe, sortis du prix unique', () => {
-    // Le détail (les deux sens, tous les hubs, le net qui reste au chauffeur)
-    // vit dans prix-fumba-matemwe.test.js. Ici, on note simplement que le
-    // prix unique ADMET des exceptions — pour qu'un futur lecteur du test
-    // ci-dessus ne conclue pas que la règle est absolue.
-    for (const hub of HUBS) {
-      verifier(hub, 'Fumba', 17, 20);
-      verifier(hub, 'Matemwe', 28, 33);
-    }
+  it('…sauf Fumba, Matemwe et Nungwi, sortis du prix unique', () => {
+    // Le détail (les deux sens, chaque hub, le net qui reste au chauffeur)
+    // vit dans prix-transferts.test.js. Ici, on note simplement que le prix
+    // unique ADMET des exceptions — pour qu'un futur lecteur du test ci-dessus
+    // ne conclue pas que la règle est absolue.
+    verifier('Stone Town', 'Fumba', 17, 20);
+    verifier('Stone Town', 'Matemwe', 28, 33);
+    verifier('Stone Town', 'Nungwi', 39, 45);
   });
 
   it('le couloir du sud-est : 105 000 TZS ronds au chauffeur, 17 % à zanziGo', () => {
@@ -109,8 +107,8 @@ describe('Grille privée : le net du chauffeur décide, le forfait s’ajoute', 
         const locale = priceTrip('private', 'local', { pickup: hub, dropoff: plage });
         assert.equal(locale.price - locale.commission, 105000, `${hub} → ${plage} en TZS`);
         assert.ok(
-          privateUsdForRoute(hub, plage) < privateUsdForRoute(hub, 'Nungwi'),
-          `${hub} → ${plage} doit coûter moins cher que ${hub} → Nungwi`
+          privateUsdForRoute(hub, plage) < privateUsdForRoute(hub, 'Kiwengwa'),
+          `${hub} → ${plage} doit coûter moins cher qu'un transfert ordinaire`
         );
       }
     }
@@ -222,9 +220,9 @@ describe('Grille privée : le net du chauffeur décide, le forfait s’ajoute', 
       pickup: 'Stone Town',
       dropoff: 'Nungwi',
     });
-    assert.equal(transfert.price, 52);
-    assert.equal(transfert.commission, 6.24);
-    assert.equal(transfert.price - transfert.commission, 45.76, 'le net promis au chauffeur');
+    assert.equal(transfert.price, 45);
+    assert.equal(transfert.commission, 5.4);
+    assert.equal(transfert.price - transfert.commission, 39.6, 'le net promis au chauffeur');
 
     const emprunte = priceTrip('private', 'tourist', { pickup: 'Stone Town', dropoff: 'Paje' });
     assert.equal(emprunte.price, 49);
@@ -356,7 +354,7 @@ describe('Grille privée : le net du chauffeur décide, le forfait s’ajoute', 
     }
     // L'exemple fondateur de la règle, à la lettre.
     const nungwi = priceTrip('private', 'local', { pickup: 'Stone Town', dropoff: 'Nungwi' });
-    assert.equal(nungwi.price - nungwi.commission, 118000);
+    assert.equal(nungwi.price - nungwi.commission, 102000);
     // La place locale et le colis en shillings suivent.
     const place = priceTrip('shared_local', 'local', { pickup: 'Stone Town', dropoff: 'Nungwi' });
     assert.equal(place.price - place.commission, 13000);
@@ -364,7 +362,7 @@ describe('Grille privée : le net du chauffeur décide, le forfait s’ajoute', 
     assert.equal((colis.price - colis.commission) % 1000, 0);
   });
 
-  it('bout en bout : une course privée Stone Town → Nungwi est créée à 49 USD', async () => {
+  it('bout en bout : une course privée Stone Town → Nungwi est créée à 45 USD', async () => {
     const { token, user } = await createTourist();
     const creation = await request(app)
       .post('/api/trips')
@@ -376,9 +374,9 @@ describe('Grille privée : le net du chauffeur décide, le forfait s’ajoute', 
         dropoffLocation: 'Nungwi',
       });
     assert.equal(creation.status, 201, JSON.stringify(creation.body));
-    assert.equal(Number(creation.body.price), 52);
+    assert.equal(Number(creation.body.price), 45);
     assert.equal(creation.body.currency, 'USD');
-    assert.equal(Number(creation.body.commission), 6.24);
+    assert.equal(Number(creation.body.commission), 5.4);
   });
 });
 
