@@ -50,7 +50,7 @@ import {
   type StatsAbonnes,
 } from '@/lib/api';
 import { formaterDateRelativeI18n, libelleTypeTrajet, useT, type CleChaine } from '@/lib/i18n';
-import { CaseMenu, GrilleMenu } from '@/components/CaseMenu';
+import { FamilleMenu, LigneMenu } from '@/components/CaseMenu';
 import { useRafraichissementAuto } from '@/lib/rafraichissementAuto';
 import { couleurs, espaces, ombres, rayons, stylesReactifs } from '@/lib/theme';
 import {
@@ -592,41 +592,74 @@ export default function EcranEquipe() {
   // Le nom complet de l'aéroport noie les cartes : « Aéroport » suffit ici.
   const lieuCourt = (lieu: string) => (/^a[ée]roport/i.test(lieu) ? 'Aéroport' : lieu);
 
-  // Les cases du menu — compteur ORANGE dès qu'une action attend
-  // (paiements pas encore encaissés compris : le vert est réservé aux
-  // paiements par crédit hôtel, déjà dans la caisse).
-  const rubriques: {
+  // LE MENU EN QUATRE FAMILLES (25/08/2026). Quatorze cases à plat, c'était
+  // sept rangées à faire défiler : les paiements côtoyaient les hôtels, les
+  // candidatures les courses. Les rubriques qui parlent de la même chose
+  // vivent désormais dans la même carte, et chaque carte annonce en tête ce
+  // qu'elle contient d'urgent — l'équipe sait où aller avant d'avoir lu une
+  // ligne. Une rubrique `action` compte dans ce badge dès que son compteur
+  // n'est pas à zéro (paiements pas encore encaissés compris).
+  type Rubrique = {
     cle: SectionEquipe | 'verifications';
     label: string;
     icone: React.ComponentProps<typeof Ionicons>['name'];
     n: number;
     action: boolean;
-    /** Case qui ouvre un ÉCRAN à part au lieu d'une rubrique du tableau. */
+    /** Rubrique qui ouvre un ÉCRAN à part au lieu d'une section du tableau. */
     ecran?: string;
-  }[] = [
+  };
+  const familles: { cle: string; emoji: string; titre: string; rubriques: Rubrique[] }[] = [
     {
-      cle: 'verifications',
-      label: t('equipe_stat_verifications'),
-      icone: 'shield-checkmark-outline',
-      n: verifsEnAttente,
-      action: true,
-      ecran: '/verifications',
+      cle: 'courses',
+      emoji: '🚕',
+      titre: t('equipe_famille_courses'),
+      rubriques: [
+        { cle: 'courses', label: t('equipe_stat_courses'), icone: 'car-outline', n: coursesATraiter.length, action: true },
+        // Le compteur passe en ALERTE dès qu'une course roule depuis trop
+        // longtemps : le reste du temps c'est une veille, pas une tâche.
+        { cle: 'encours', label: t('equipe_courses_en_cours'), icone: 'navigate-outline', n: coursesEnCours.length, action: coursesEnCours.some(courseEnRetard) },
+        { cle: 'avenir', label: t('equipe_courses_a_venir'), icone: 'calendar-outline', n: coursesAVenir.length, action: false },
+        { cle: 'partages', label: t('equipe_partages'), icone: 'people-circle-outline', n: partagesOuverts.length, action: false },
+        { cle: 'attentes', label: t('equipe_stat_attentes'), icone: 'notifications-outline', n: attentes.filter((a) => !a.matched_at).length, action: true },
+      ],
     },
-    { cle: 'courses', label: t('equipe_stat_courses'), icone: 'car-outline', n: coursesATraiter.length, action: true },
-    // Le compteur passe en ALERTE dès qu'une course roule depuis trop
-    // longtemps : le reste du temps c'est une simple veille, pas une tâche.
-    { cle: 'encours', label: t('equipe_courses_en_cours'), icone: 'navigate-outline', n: coursesEnCours.length, action: coursesEnCours.some(courseEnRetard) },
-    { cle: 'avenir', label: t('equipe_courses_a_venir'), icone: 'calendar-outline', n: coursesAVenir.length, action: false },
-    { cle: 'partages', label: t('equipe_partages'), icone: 'people-circle-outline', n: partagesOuverts.length, action: false },
-    { cle: 'attentes', label: t('equipe_stat_attentes'), icone: 'notifications-outline', n: attentes.filter((a) => !a.matched_at).length, action: true },
-    { cle: 'paiements', label: t('equipe_stat_paiements'), icone: 'cash-outline', n: paiements.length + remboursements.length, action: true },
-    { cle: 'recharges', label: t('equipe_recharges'), icone: 'wallet-outline', n: recharges.length, action: recharges.length > 0 },
-    { cle: 'candidatures', label: t('equipe_stat_candidatures'), icone: 'document-text-outline', n: candidats.length, action: true },
-    { cle: 'comptes', label: t('equipe_stat_comptes'), icone: 'id-card-outline', n: clients.length, action: true },
-    { cle: 'hotels', label: t('equipe_stat_hotels'), icone: 'business-outline', n: hotels.length, action: true },
-    { cle: 'taxis', label: t('equipe_stat_taxis'), icone: 'location-outline', n: chauffeurs.length, action: false },
-    { cle: 'clients', label: t('equipe_stat_clients'), icone: 'people-outline', n: abonnes?.clients ?? 0, action: false },
-    { cle: 'locaux', label: t('equipe_stat_locaux'), icone: 'card-outline', n: abonnes?.locals ?? 0, action: false },
+    {
+      cle: 'argent',
+      emoji: '💰',
+      titre: t('equipe_famille_argent'),
+      rubriques: [
+        { cle: 'paiements', label: t('equipe_stat_paiements'), icone: 'cash-outline', n: paiements.length + remboursements.length, action: true },
+        { cle: 'recharges', label: t('equipe_recharges'), icone: 'wallet-outline', n: recharges.length, action: recharges.length > 0 },
+      ],
+    },
+    {
+      cle: 'chauffeurs',
+      emoji: '🧑‍✈️',
+      titre: t('equipe_famille_chauffeurs'),
+      rubriques: [
+        {
+          cle: 'verifications',
+          label: t('equipe_stat_verifications'),
+          icone: 'shield-checkmark-outline',
+          n: verifsEnAttente,
+          action: true,
+          ecran: '/verifications',
+        },
+        { cle: 'candidatures', label: t('equipe_stat_candidatures'), icone: 'document-text-outline', n: candidats.length, action: true },
+        { cle: 'taxis', label: t('equipe_stat_taxis'), icone: 'location-outline', n: chauffeurs.length, action: false },
+      ],
+    },
+    {
+      cle: 'monde',
+      emoji: '🤝',
+      titre: t('equipe_famille_monde'),
+      rubriques: [
+        { cle: 'comptes', label: t('equipe_stat_comptes'), icone: 'id-card-outline', n: clients.length, action: true },
+        { cle: 'hotels', label: t('equipe_stat_hotels'), icone: 'business-outline', n: hotels.length, action: true },
+        { cle: 'clients', label: t('equipe_stat_clients'), icone: 'people-outline', n: abonnes?.clients ?? 0, action: false },
+        { cle: 'locaux', label: t('equipe_stat_locaux'), icone: 'card-outline', n: abonnes?.locals ?? 0, action: false },
+      ],
+    },
   ];
 
   // ----- Tableau de bord ----------------------------------------------------
@@ -754,25 +787,37 @@ export default function EcranEquipe() {
           )}
 
           <Text style={styles.titreSection}>{t('equipe_resume_titre')}</Text>
-          <Text style={styles.introMenu}>{t('equipe_menu_intro')}</Text>
-          <GrilleMenu>
-            {rubriques.map((rubrique, rang) => (
-              <CaseMenu
-                key={rubrique.cle}
-                index={rang}
-                compacte
-                icone={rubrique.icone}
-                label={rubrique.label}
-                n={rubrique.n}
-                action={rubrique.action}
-                onPress={() =>
-                  rubrique.ecran
-                    ? router.push(rubrique.ecran)
-                    : ouvrirSection(rubrique.cle as SectionEquipe)
-                }
-              />
-            ))}
-          </GrilleMenu>
+          {familles.map((famille, rangF) => {
+            const actions = famille.rubriques.reduce(
+              (somme, r) => somme + (r.action ? r.n : 0),
+              0
+            );
+            return (
+              <FamilleMenu
+                key={famille.cle}
+                index={rangF}
+                emoji={famille.emoji}
+                titre={famille.titre}
+                actions={actions}
+                aTraiter={t('equipe_famille_a_traiter', { n: String(actions) })}
+              >
+                {famille.rubriques.map((rubrique) => (
+                  <LigneMenu
+                    key={rubrique.cle}
+                    icone={rubrique.icone}
+                    label={rubrique.label}
+                    n={rubrique.n}
+                    action={rubrique.action}
+                    onPress={() =>
+                      rubrique.ecran
+                        ? router.push(rubrique.ecran)
+                        : ouvrirSection(rubrique.cle as SectionEquipe)
+                    }
+                  />
+                ))}
+              </FamilleMenu>
+            );
+          })}
         </>
       )}
 

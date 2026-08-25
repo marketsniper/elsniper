@@ -149,6 +149,123 @@ export function CaseMenu({
   );
 }
 
+/**
+ * UNE FAMILLE DE RUBRIQUES — le tableau de bord de l'équipe, regroupé.
+ *
+ * Quatorze cases à plat, c'était sept rangées à faire défiler en cherchant
+ * des yeux : les paiements côtoyaient les hôtels, les candidatures les
+ * courses. Ici les rubriques qui parlent de la même chose vivent dans la
+ * MÊME carte — les courses ensemble, l'argent ensemble — et la carte porte
+ * en tête la somme de ce qui attend une action : l'équipe sait où aller
+ * avant d'avoir lu une seule ligne.
+ *
+ * Quand rien n'attend, la famille l'affiche aussi : une coche verte. Le
+ * calme se lit au premier regard, pas en vérifiant quatorze compteurs.
+ */
+export function FamilleMenu({
+  emoji,
+  titre,
+  actions = 0,
+  aTraiter,
+  index = 0,
+  children,
+}: {
+  emoji: string;
+  titre: string;
+  /** La somme des compteurs qui appellent une action, toutes rubriques. */
+  actions?: number;
+  /** Le libellé du badge, déjà traduit (« 3 à traiter »). */
+  aTraiter?: string;
+  index?: number;
+  children: React.ReactNode;
+}) {
+  const reduit = useMouvementReduit();
+  const entree = React.useRef(new Animated.Value(0)).current;
+
+  React.useEffect(() => {
+    if (reduit) {
+      entree.setValue(1);
+      return;
+    }
+    Animated.timing(entree, {
+      toValue: 1,
+      duration: 340,
+      delay: Math.min(index, 6) * 80,
+      useNativeDriver: true,
+    }).start();
+  }, [entree, index, reduit]);
+
+  return (
+    <Animated.View
+      style={{
+        opacity: entree,
+        transform: [
+          { translateY: entree.interpolate({ inputRange: [0, 1], outputRange: [18, 0] }) },
+        ],
+      }}
+    >
+      <View style={styles.familleCarte}>
+        <View style={styles.familleEnTete}>
+          <Text style={styles.familleEmoji}>{emoji}</Text>
+          <Text style={styles.familleTitre}>{titre}</Text>
+          {actions > 0 ? (
+            <View style={styles.familleBadge}>
+              <Text style={styles.familleBadgeTexte}>{aTraiter ?? String(actions)}</Text>
+            </View>
+          ) : (
+            <Ionicons name="checkmark-circle" size={20} color={couleurs.succes} />
+          )}
+        </View>
+        {children}
+      </View>
+    </Animated.View>
+  );
+}
+
+/**
+ * Une rubrique DANS sa famille : une ligne dense — icône, nom, compteur,
+ * chevron. La densité est le but : quatre familles remplacent sept rangées
+ * de cases, tout le tableau tient dans un écran.
+ */
+export function LigneMenu({
+  icone,
+  label,
+  n,
+  action = false,
+  onPress,
+}: {
+  icone: NomIonicons;
+  label: string;
+  n?: number;
+  action?: boolean;
+  onPress: () => void;
+}) {
+  const appelle = action && (n ?? 0) > 0;
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`${label}, ${n ?? 0}`}
+      style={({ pressed }) => [styles.ligne, pressed && { opacity: 0.6 }]}
+    >
+      <View style={[styles.ligneBulle, appelle && styles.bulleAppel]}>
+        <Ionicons
+          name={icone}
+          size={17}
+          color={appelle ? couleurs.surPrimaire : couleurs.primaire}
+        />
+      </View>
+      <Text style={styles.ligneLabel} numberOfLines={1}>
+        {label}
+      </Text>
+      <View style={[styles.pastille, appelle && styles.pastilleAppel]}>
+        <Text style={[styles.textePastille, appelle && styles.textePastilleAppel]}>{n ?? 0}</Text>
+      </View>
+      <Ionicons name="chevron-forward" size={15} color={couleurs.texteSecondaire} />
+    </Pressable>
+  );
+}
+
 const styles = stylesReactifs(() => ({
   grille: {
     flexDirection: 'row',
@@ -216,5 +333,62 @@ const styles = stylesReactifs(() => ({
   },
   textePastilleAppel: {
     color: couleurs.surPrimaire,
+  },
+  familleCarte: {
+    backgroundColor: couleurs.carteTranslucide,
+    borderRadius: rayons.carte,
+    paddingVertical: espaces.s,
+    paddingHorizontal: espaces.m,
+    marginBottom: espaces.m,
+    ...ombres.carte,
+  },
+  familleEnTete: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: espaces.s,
+    paddingVertical: espaces.s,
+    borderBottomWidth: 1,
+    borderBottomColor: couleurs.bordure,
+    marginBottom: espaces.xs,
+  },
+  familleEmoji: {
+    fontSize: 20,
+  },
+  familleTitre: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '800',
+    color: couleurs.encre,
+  },
+  familleBadge: {
+    backgroundColor: couleurs.primaire,
+    borderRadius: rayons.pastille,
+    paddingHorizontal: espaces.s,
+    paddingVertical: 3,
+  },
+  familleBadgeTexte: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: couleurs.surPrimaire,
+  },
+  ligne: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: espaces.s,
+    paddingVertical: 9,
+  },
+  ligneBulle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: couleurs.primaireClair,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ligneLabel: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '600',
+    color: couleurs.encre,
   },
 }));

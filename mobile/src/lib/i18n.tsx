@@ -364,6 +364,25 @@ const CHAINES = {
   },
   equipe_radier_confirmer: { fr: 'Radier', en: 'Remove', sw: 'Ondoa' },
   equipe_resume_titre: { fr: "Vue d'ensemble", en: 'Overview', sw: 'Muhtasari' },
+  // LES QUATRE FAMILLES du tableau de bord : les rubriques qui parlent de la
+  // même chose vivent dans la même carte.
+  equipe_famille_courses: { fr: 'Les courses', en: 'Rides', sw: 'Safari', it: 'Le corse', de: 'Fahrten' },
+  equipe_famille_argent: { fr: "L'argent", en: 'Money', sw: 'Pesa', it: 'I soldi', de: 'Geld' },
+  equipe_famille_chauffeurs: { fr: 'Les chauffeurs', en: 'Drivers', sw: 'Madereva', it: 'Gli autisti', de: 'Fahrer' },
+  equipe_famille_monde: {
+    fr: 'Clients & partenaires',
+    en: 'Clients & partners',
+    sw: 'Wateja na washirika',
+    it: 'Clienti e partner',
+    de: 'Kunden & Partner',
+  },
+  equipe_famille_a_traiter: {
+    fr: '{n} à traiter',
+    en: '{n} to handle',
+    sw: '{n} kushughulikia',
+    it: '{n} da gestire',
+    de: '{n} zu erledigen',
+  },
   equipe_abonnes_titre: { fr: 'Nos abonnés', en: 'Our subscribers', sw: 'Wanachama wetu' },
   equipe_abonnes_clients: { fr: 'Clients', en: 'Clients', sw: 'Wateja' },
   equipe_abonnes_locaux: { fr: 'Locaux', en: 'Locals', sw: 'Wazawa' },
