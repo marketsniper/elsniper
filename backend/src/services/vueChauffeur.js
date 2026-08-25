@@ -45,6 +45,8 @@
  * Et dans tous les cas : le message du groupe chauffeurs reste à l'équipe.
  */
 
+import { estAeroportVille } from './pricingService.js';
+
 /** Statuts à partir desquels l'équipe a validé l'argent. */
 const STATUTS_PAYES = new Set(['paid', 'in_progress', 'completed']);
 
@@ -55,10 +57,17 @@ const round2 = (n) => Math.round(n * 100) / 100;
  *
  * Elle se déduit de la course elle-même, et elle n'est pas la même partout :
  * 12 % sur un transfert, 15 % sur une petite course, 17 % sur le couloir du
- * sud-est, et sur l'aéroport ↔ Stone Town c'est un FORFAIT de 4,50 $ — soit
- * 31 % d'une course à 14,50. On affiche le taux réel de CETTE course-là, pas
- * une moyenne rassurante : un chiffre qui ne correspond pas à ce que le
- * chauffeur peut recalculer coûte plus de confiance qu'il n'en gagne.
+ * sud-est, 25 % sur une place partagée. On affiche le taux réel de CETTE
+ * course-là, pas une moyenne rassurante : un chiffre qui ne correspond pas à
+ * ce que le chauffeur peut recalculer coûte plus de confiance qu'il n'en
+ * gagne.
+ *
+ * L'EXCEPTION : l'aéroport ↔ Stone Town. La commission y est un FORFAIT de
+ * 4,50 $, pas un pourcentage — rapporté à une course de 14,50, ça ferait
+ * « 31 % » à l'écran. Vrai, mais lu comme une agression, et faux dans
+ * l'esprit : zanziGo n'y « prend » pas 31 %, elle vend ce trajet-là comme un
+ * produit à part. Sur ce trajet, le portail n'écrit PAS de pourcentage : il
+ * écrit « Special trip » (voir tarifSpecial + le drapeau tarif_special).
  *
  * @returns {number|null} le pourcentage arrondi, ou null si incalculable.
  */
@@ -67,6 +76,19 @@ export function partZanziGoPct(prix, commission) {
   const c = Number(commission);
   if (!Number.isFinite(p) || !Number.isFinite(c) || p <= 0) return null;
   return Math.round((c / p) * 100);
+}
+
+/**
+ * Le trajet dont la part zanziGo ne se dit pas en pourcentage.
+ *
+ * Uniquement la COURSE PRIVÉE aéroport ↔ Stone Town : les colis et les places
+ * partagées du même trajet gardent leur taux ordinaire.
+ */
+export function tarifSpecial(objet) {
+  return (
+    String(objet?.trip_type) === 'private' &&
+    estAeroportVille(objet.pickup_location, objet.dropoff_location)
+  );
 }
 
 /**
@@ -89,14 +111,15 @@ export function gainsSeuls(objet, champs = {}) {
     net = 'net_chauffeur',
   } = champs;
   const { [prix]: montantPrix, [commission]: montantCommission, ...reste } = objet;
-  const pct = partZanziGoPct(montantPrix, montantCommission);
+  const special = tarifSpecial(objet);
+  const pct = special ? null : partZanziGoPct(montantPrix, montantCommission);
   const dejaCalcule = Number(reste[net]);
   const gain = Number.isFinite(dejaCalcule)
     ? dejaCalcule
     : Number.isFinite(Number(montantPrix)) && Number.isFinite(Number(montantCommission))
       ? round2(Number(montantPrix) - Number(montantCommission))
       : null;
-  return { ...reste, [net]: gain, part_zanzigo_pct: pct };
+  return { ...reste, [net]: gain, part_zanzigo_pct: pct, tarif_special: special };
 }
 
 export function coursePayee(trip) {

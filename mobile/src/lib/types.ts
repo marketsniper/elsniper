@@ -440,12 +440,37 @@ export function netPlacePartageeTzs(prixParPlace: number): number {
 export function partZanziGoPct(
   objet: Record<string, unknown> | null | undefined
 ): number | null {
+  if (tarifSpecialChauffeur(objet)) return null;
   const envoye = Number(champ(objet, 'part_zanzigo_pct', 'partZanzigoPct'));
   if (Number.isFinite(envoye)) return envoye;
   const prix = Number(champ(objet, 'price', 'prix'));
   const commission = Number(champ(objet, 'commission'));
   if (!Number.isFinite(prix) || !Number.isFinite(commission) || prix <= 0) return null;
   return Math.round((commission / prix) * 100);
+}
+
+/**
+ * Le trajet dont la part zanziGo ne se dit pas en pourcentage : la course
+ * privée aéroport ↔ Stone Town, où la commission est un forfait de 4,50 $.
+ * « 31 % » à l'écran serait vrai et pourtant trompeur — le portail écrit
+ * « Special trip » à la place.
+ *
+ * Le serveur envoie le drapeau `tarif_special` ; le repli recalcule sur le
+ * trajet lui-même pour les réponses restées en mémoire d'un téléphone qui
+ * n'a pas encore la mise à jour.
+ */
+export function tarifSpecialChauffeur(
+  objet: Record<string, unknown> | null | undefined
+): boolean {
+  const envoye = champ<boolean>(objet, 'tarif_special', 'tarifSpecial');
+  if (envoye !== undefined) return envoye === true;
+  return (
+    champ<string>(objet, 'trip_type', 'tripType') === 'private' &&
+    estAeroportVille(
+      String(champ(objet, 'pickup_location', 'pickupLocation') ?? ''),
+      String(champ(objet, 'dropoff_location', 'dropoffLocation') ?? '')
+    )
+  );
 }
 
 // NB : la date relative traduite vit dans i18n.tsx (formaterDateRelativeI18n).

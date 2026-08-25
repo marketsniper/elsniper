@@ -32,6 +32,7 @@ import {
   formaterMontant,
   gainNetChauffeur,
   partZanziGoPct,
+  tarifSpecialChauffeur,
   totalEnTzs,
   traverseJozani,
   type StatutTrajet,
@@ -186,6 +187,9 @@ export default function EcranDetailCourse() {
         {(() => {
           const gain = gainNetChauffeur(course);
           const pct = partZanziGoPct(course);
+          // Aéroport ↔ Stone Town : la part zanziGo est un forfait, pas un
+          // pourcentage — on écrit « Special trip » au lieu d'un chiffre.
+          const special = tarifSpecialChauffeur(course);
           if (!gain) return null;
           return (
             <>
@@ -193,8 +197,12 @@ export default function EcranDetailCourse() {
                 label={t('gain_net')}
                 valeur={formaterMontant(totalEnTzs({ [gain.devise]: gain.montant }), 'TZS')}
               />
-              {pct !== null && (
-                <LigneInfo label={t('gain_part_zanzigo_ligne')} valeur={`${pct} %`} />
+              {special ? (
+                <LigneInfo label={t('gain_part_zanzigo_ligne')} valeur={t('gain_part_special')} />
+              ) : (
+                pct !== null && (
+                  <LigneInfo label={t('gain_part_zanzigo_ligne')} valeur={`${pct} %`} />
+                )
               )}
             </>
           );

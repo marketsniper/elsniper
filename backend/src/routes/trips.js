@@ -24,7 +24,12 @@ import {
   alerterNouvelleCourse,
   diffuserCourseAuxChauffeurs,
 } from '../services/alertesChauffeur.js';
-import { CHAMPS_CLIENT_POUR_CHAUFFEUR, vueChauffeur, partZanziGoPct } from '../services/vueChauffeur.js';
+import {
+  CHAMPS_CLIENT_POUR_CHAUFFEUR,
+  partZanziGoPct,
+  tarifSpecial,
+  vueChauffeur,
+} from '../services/vueChauffeur.js';
 import { libelleMoyen, moyensPour, reglement } from '../services/moyenPaiement.js';
 
 const router = Router();
@@ -482,7 +487,10 @@ function courseSansIdentiteClient(trip) {
     currency: trip.currency,
     // Ce que le chauffeur touche réellement — la seule ligne qui l'intéresse.
     net_chauffeur: Number((Number(trip.price) - Number(trip.commission)).toFixed(2)),
-    part_zanzigo_pct: partZanziGoPct(trip.price, trip.commission),
+    // Aéroport ↔ Stone Town : la part est un forfait, pas un pourcentage —
+    // le portail écrit « Special trip » (services/vueChauffeur.js).
+    part_zanzigo_pct: tarifSpecial(trip) ? null : partZanziGoPct(trip.price, trip.commission),
+    tarif_special: tarifSpecial(trip),
     flight_number: trip.flight_number,
     round_trip: trip.round_trip,
     baby_seat: trip.baby_seat,

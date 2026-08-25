@@ -170,7 +170,11 @@ function estEntreVillages(pickup, dropoff) {
   return !HUBS.has(normCity(pickup)) && !HUBS.has(normCity(dropoff));
 }
 
-function estAeroportVille(pickup, dropoff) {
+// Exporté : la vue chauffeur en a besoin — sur ce trajet-là, la part zanziGo
+// est un FORFAIT (4,50 $), et l'afficher en pourcentage donnerait 31 % sur une
+// course à 14,50 — vrai, mais lu comme une agression. Le portail écrit
+// « Special trip » à la place (voir services/vueChauffeur.js).
+export function estAeroportVille(pickup, dropoff) {
   const p = normCity(pickup);
   const d = normCity(dropoff);
   return (HUBS.has(p) && HUBS_VILLE.has(d)) || (HUBS_VILLE.has(p) && HUBS.has(d));

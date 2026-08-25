@@ -4043,6 +4043,17 @@ const CHAINES = {
     it: 'Quota zanziGo',
     de: 'zanziGo-Anteil',
   },
+  // Aéroport ↔ Stone Town : la part zanziGo y est un forfait, pas un
+  // pourcentage — « 31 % » à l'écran serait vrai et pourtant trompeur. On
+  // écrit « Special trip » à la place, dans toutes les langues : c'est un nom
+  // de produit, pas une phrase.
+  gain_part_special: {
+    fr: 'Special trip',
+    en: 'Special trip',
+    sw: 'Special trip',
+    it: 'Special trip',
+    de: 'Special trip',
+  },
   // L'annonce d'un chauffeur : ce qu'une place lui RAPPORTE, pas ce que le
   // passager paie.
   annonce_net_place: {

@@ -43,6 +43,7 @@ import {
   formaterMontant,
   gainNetChauffeur,
   partZanziGoPct,
+  tarifSpecialChauffeur,
   totalEnTzs,
   type StatutColis,
   type StatutTrajet,
@@ -669,7 +670,9 @@ export function TexteErreur({ children }: { children: React.ReactNode }) {
  *
  * `pourcentage` ajoute la part zanziGo de CETTE course. On la met sur les
  * fiches, pas dans les listes : répétée à chaque ligne, elle devient du bruit
- * et le regard ne trouve plus les montants.
+ * et le regard ne trouve plus les montants. Sur l'aéroport ↔ Stone Town, où
+ * la part est un forfait, l'étiquette « Special trip » remplace le
+ * pourcentage.
  */
 export function GainChauffeur({
   objet,
@@ -683,13 +686,17 @@ export function GainChauffeur({
   const { t } = useT();
   const gain = gainNetChauffeur(objet);
   const pct = partZanziGoPct(objet);
+  const special = tarifSpecialChauffeur(objet);
   if (!gain) return null;
   return (
     <View style={styles.blocGain}>
       <Text style={[styles.montantGain, { fontSize: taille }]}>
         {formaterMontant(totalEnTzs({ [gain.devise]: gain.montant }), 'TZS')}
       </Text>
-      {pourcentage && pct !== null && (
+      {pourcentage && special && (
+        <Text style={styles.partZanziGo}>{t('gain_part_special')}</Text>
+      )}
+      {pourcentage && !special && pct !== null && (
         <Text style={styles.partZanziGo}>{t('gain_part_zanzigo', { pct: String(pct) })}</Text>
       )}
     </View>

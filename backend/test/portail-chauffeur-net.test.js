@@ -34,7 +34,7 @@ import {
   createVerifiedDriver,
   useTestDb,
 } from './setup.js';
-import { partZanziGoPct } from '../src/services/vueChauffeur.js';
+import { partZanziGoPct, tarifSpecial } from '../src/services/vueChauffeur.js';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -97,11 +97,44 @@ describe('Le pourcentage zanziGo, calculé sur la course elle-même', () => {
     assert.equal(partZanziGoPct(45, 5.4), 12);
   });
 
-  it('l’aéroport ↔ Stone Town : le forfait de 4,50 $ fait 31 % d’une course à 14,50', () => {
-    // Ce chiffre-là surprend, et il est VRAI : la commission y est un forfait,
-    // pas un pourcentage. On affiche le taux réel plutôt qu'une moyenne
-    // rassurante — un chauffeur qui refait le calcul doit tomber juste.
+  it('l’aéroport ↔ Stone Town : le calcul brut donne bien 31 %…', () => {
+    // La fonction pure dit la vérité arithmétique : 4,50 de forfait sur une
+    // course à 14,50, c'est 31 %. Mais ce chiffre-là ne S'AFFICHE pas — sur
+    // ce trajet le portail écrit « Special trip » (voir le test suivant et
+    // la vérification de bout en bout plus bas).
     assert.equal(partZanziGoPct(14.5, 4.5), 31);
+  });
+
+  it('…mais le trajet est marqué « Special trip », et le pourcentage se tait', () => {
+    // La commission y est un FORFAIT vendu comme un produit à part, pas un
+    // pourcentage : l'afficher en % serait vrai et pourtant trompeur.
+    const aeroport = {
+      trip_type: 'private',
+      pickup_location: 'Aéroport (AAKIA)',
+      dropoff_location: 'Stone Town',
+    };
+    assert.equal(tarifSpecial(aeroport), true);
+    // Dans les deux sens, et sous tous les noms de l'aéroport.
+    assert.equal(
+      tarifSpecial({
+        trip_type: 'private',
+        pickup_location: 'Stone Town Ferry',
+        dropoff_location: 'Aéroport international Abeid Amani Karume',
+      }),
+      true
+    );
+    // Un transfert ordinaire garde son pourcentage…
+    assert.equal(
+      tarifSpecial({
+        trip_type: 'private',
+        pickup_location: 'Stone Town',
+        dropoff_location: 'Nungwi',
+      }),
+      false
+    );
+    // …et une place PARTAGÉE du même trajet aéroport aussi : le forfait ne
+    // vaut que pour la course privée.
+    assert.equal(tarifSpecial({ ...aeroport, trip_type: 'shared_tourist' }), false);
   });
 
   it('une place de taxi partagé : 25 %', () => {
@@ -137,6 +170,46 @@ describe('Portail chauffeur : aucun prix client ne sort du serveur', () => {
     assert.deepEqual(champsInterdits(bourse.body), []);
     assert.equal(Number(bourse.body[0].net_chauffeur), 39.6);
     assert.equal(Number(bourse.body[0].part_zanzigo_pct), 12);
+  });
+
+  it('une course aéroport ↔ Stone Town arrive marquée « Special trip », sans pourcentage', async () => {
+    const { token, user } = await createTourist();
+    const creation = await request(app)
+      .post('/api/trips')
+      .set(authHeaders(token))
+      .send({
+        userId: user.id,
+        tripType: 'private',
+        pickupLocation: 'Aéroport (AAKIA)',
+        dropoffLocation: 'Stone Town',
+      });
+    assert.equal(creation.status, 201, JSON.stringify(creation.body));
+    const { token: jetonChauffeur, driver } = await createVerifiedDriver();
+
+    // Sur la bourse…
+    const bourse = await request(app)
+      .get('/api/trips/disponibles')
+      .set(authHeaders(jetonChauffeur));
+    assert.equal(bourse.status, 200);
+    const vue = bourse.body.find((c) => c.id === creation.body.id);
+    assert.ok(vue, 'la course aéroport doit être sur la bourse');
+    assert.deepEqual(champsInterdits([vue]), []);
+    assert.equal(Number(vue.net_chauffeur), 10, 'le net promis sur ce trajet');
+    assert.equal(vue.tarif_special, true, 'marquée « Special trip »');
+    assert.equal(vue.part_zanzigo_pct, null, 'aucun pourcentage à afficher');
+
+    // …et sur la fiche du chauffeur qui l'a prise.
+    await request(app)
+      .patch(`/api/trips/${creation.body.id}/assign-driver`)
+      .set(adminHeaders())
+      .send({ driverId: driver.id });
+    const fiche = await request(app)
+      .get(`/api/trips/${creation.body.id}`)
+      .set(authHeaders(jetonChauffeur));
+    assert.equal(fiche.status, 200);
+    assert.equal(fiche.body.tarif_special, true);
+    assert.equal(fiche.body.part_zanzigo_pct, null);
+    assert.equal(Number(fiche.body.net_chauffeur), 10);
   });
 
   it('la fiche d’une course, AVANT et APRÈS la validation du paiement', async () => {
