@@ -2,8 +2,9 @@
 //
 // Il a longtemps porté une photo de plage sous un voile de lisibilité. Les
 // directions retenues depuis travaillent sans photo : un aplat (Bento, Nuit
-// d'épices) ou — pour « Lagon de verre », la direction en service — un
-// dégradé de lagon sur lequel les panneaux translucides viennent flotter.
+// d'épices), un dégradé de lagon sous des panneaux translucides, un relevé
+// bathymétrique, ou — pour « Girofle », la direction en service — un
+// presque-noir que deux halos très faibles viennent orienter.
 //
 // Le dégradé est dessiné en SVG : trois halos radiaux posés sur le bleu
 // profond, exactement comme sur la planche. React Native n'a pas de dégradé
@@ -189,6 +190,55 @@ export function EstranDeZanzibar({ fond }: { fond?: string } = {}) {
   );
 }
 
+// ─────────────────────────── LA NUIT DE GIROFLE ────────────────────────────
+//
+// LE FOND DE LA PEAU DE MARQUE.
+//
+// Un aplat presque noir suffirait à être lisible, mais il n'a pas de haut ni
+// de bas : l'écran devient un trou, et les cartes flottent dans le vide.
+// Deux halos très faibles lui donnent une direction — le vert vif du
+// logotype qui entre par en haut, un vert de sous-bois beaucoup plus profond
+// qui s'accumule en bas.
+//
+// DEUX VERTS, PAS UN VERT ET UN BLEU. Le premier jet mettait en bas le bleu
+// pétrole du fond de l'icône : à l'écran, le coin inférieur virait
+// franchement au marine et l'application n'était plus « verte et noire »,
+// elle était verte, noire ET bleue. Une couleur de plus qui ne sert à rien
+// est une couleur en trop.
+//
+// Les opacités sont BASSES à dessein. Un halo qu'on remarque est un halo
+// raté : celui-ci ne doit se voir que quand on retire la carte qui était
+// posée dessus.
+const HALOS_GIROFLE = [
+  { teinte: '#2ECC71', cx: 0.2, cy: 0.0, r: 0.85, opacite: 0.15 }, // le vert du « Go »
+  { teinte: '#0E5C3C', cx: 0.88, cy: 1.02, r: 0.8, opacite: 0.34 }, // le vert de sous-bois
+];
+
+export function NuitDeGirofle({ fond }: { fond?: string } = {}) {
+  // Comme pour le lagon : les identifiants SVG sont globaux au document sur
+  // le web, deux écrans montés ensemble se voleraient leurs dégradés.
+  const cle = React.useId().replace(/[^a-zA-Z0-9]/g, '');
+  const noir = fond ?? couleurs.sable;
+  return (
+    <View style={styles.lagon} pointerEvents="none">
+      <Svg width="100%" height="100%">
+        <Defs>
+          {HALOS_GIROFLE.map((halo, i) => (
+            <RadialGradient key={i} id={`${cle}-${i}`} cx={halo.cx} cy={halo.cy} r={halo.r}>
+              <Stop offset="0" stopColor={halo.teinte} stopOpacity={halo.opacite} />
+              <Stop offset="0.7" stopColor={halo.teinte} stopOpacity={0} />
+            </RadialGradient>
+          ))}
+        </Defs>
+        <Rect x="0" y="0" width="100%" height="100%" fill={noir} />
+        {HALOS_GIROFLE.map((_, i) => (
+          <Rect key={i} x="0" y="0" width="100%" height="100%" fill={`url(#${cle}-${i})`} />
+        ))}
+      </Svg>
+    </View>
+  );
+}
+
 export function FondPlage({
   children,
 }: {
@@ -208,6 +258,7 @@ export function FondPlage({
     <View style={styles.fond}>
       {peau === 'verre' && <LagonDeVerre />}
       {peau === 'estran' && <EstranDeZanzibar />}
+      {peau === 'girofle' && <NuitDeGirofle />}
       {children}
     </View>
   );

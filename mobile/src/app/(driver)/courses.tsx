@@ -921,11 +921,18 @@ const styles = stylesReactifs(() => ({
     fontSize: 15,
     lineHeight: 21,
   },
+  // « Activer maintenant » : posé SUR l'aplat `primaire`, il doit donc se
+  // peindre en `surPrimaire` comme le reste du bandeau. Il était en `or` :
+  // 1,17:1 sur le vert de Girofle, 1,38 sur l'orange de l'estran, et
+  // exactement 1,00:1 en Nuit d'épices — où l'accent EST l'or, ce qui rendait
+  // la seule action du bandeau littéralement invisible. Ce qui le détache du
+  // texte au-dessus, c'est le soulignement, pas une deuxième couleur.
   bandeauAlertesBouton: {
-    color: couleurs.or,
+    color: couleurs.surPrimaire,
     fontWeight: '800',
     fontSize: 15,
     marginTop: 6,
+    textDecorationLine: 'underline',
   },
   bandeauAlertesMsg: {
     color: couleurs.surPrimaire,

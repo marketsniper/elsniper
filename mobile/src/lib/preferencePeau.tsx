@@ -5,9 +5,10 @@
 // soit. Aucun des deux n'a raison tout le temps — c'est au client de
 // trancher, et il change d'avis dix fois dans la journée.
 //
-// Quatre peaux lui sont proposées :
-//  · « Lagon » — bleu profond, panneaux de verre. La signature de zanziGo,
+// Cinq peaux lui sont proposées :
+//  · « Girofle » — le noir et le vert du logotype. Les couleurs de la marque,
 //    et le design par défaut.
+//  · « Lagon » — bleu profond, panneaux de verre.
 //  · « Estran » — pierre claire, jade et terre cuite. Les ombres y suivent le
 //    vrai soleil de Zanzibar.
 //  · « Bento » — crème et encre noire, traits épais. Le plus lisible bras
@@ -25,7 +26,13 @@ import { FournisseurPeau, PEAU_PAR_DEFAUT, type NomPeau } from './theme';
 const CLE = 'zanzigo.peau';
 
 /** Les peaux proposées au client, dans l'ordre où elles s'affichent. */
-export const PEAUX_AU_CHOIX = ['verre', 'estran', 'bento', 'nuit'] as const satisfies readonly NomPeau[];
+export const PEAUX_AU_CHOIX = [
+  'girofle',
+  'verre',
+  'estran',
+  'bento',
+  'nuit',
+] as const satisfies readonly NomPeau[];
 
 function peauValide(valeur: string | null): NomPeau | null {
   return (PEAUX_AU_CHOIX as readonly string[]).includes(valeur ?? '')

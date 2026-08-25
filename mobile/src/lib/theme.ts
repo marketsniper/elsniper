@@ -12,8 +12,11 @@
 //  · « verre » — Lagon de verre. Des panneaux translucides posés sur un
 //    lagon : turquoise en haut à gauche, corail à droite, violet en bas.
 //    Le fond ne bouge pas, les cartes flottent au-dessus — c'est la
-//    profondeur qui donne la hiérarchie, pas les traits. C'est la peau de
-//    l'application (21/08/2026).
+//    profondeur qui donne la hiérarchie, pas les traits.
+//
+//  · « girofle » — LES COULEURS DE LA MARQUE. Le noir du clou de girofle et
+//    le vert du logotype, et rien d'autre. C'est la peau de l'application
+//    (25/08/2026).
 //
 // Les deux peaux exposent EXACTEMENT les mêmes noms de couleurs. Aucun écran
 // n'a besoin de savoir laquelle est active : `couleurs.encre` donne l'encre
@@ -25,7 +28,7 @@ import { Platform, StyleSheet, type TextStyle } from 'react-native';
 import { decalageSolaire, secteurSolaire } from './soleil';
 import type { StatutColis, StatutTrajet } from './types';
 
-export type NomPeau = 'bento' | 'nuit' | 'verre' | 'estran';
+export type NomPeau = 'bento' | 'nuit' | 'verre' | 'estran' | 'girofle';
 
 interface Palette {
   /** LE LOGOTYPE — « zanzi » puis « Go ». Le nom EST le logo (comme Uber ou
@@ -129,7 +132,13 @@ const BENTO: Palette = {
   surPrimaire: '#FFF4E8', // texte/icônes posés SUR le corail
   or: '#F2B84B',
   nuit: '#241017',
-  vertFeu: '#15A34A', // « l'argent est arrivé, tu peux y aller »
+  // « L'argent est arrivé, tu peux y aller ». Un vert PROFOND, pas le vert
+  // vif des autres peaux : sur le crème, le vif avait exactement la même
+  // luminance que le corail de « en course » (1,12:1). Deux pastilles que
+  // seule la teinte séparait — c'est-à-dire, pour un chauffeur daltonien,
+  // deux pastilles identiques. En le fonçant, l'écart passe à 1,80:1 et le
+  // blanc posé dessus gagne au passage (3,30 → 6,63:1).
+  vertFeu: '#0F6B32',
   surVertFeu: '#FFFFFF',
   turquoise: '#0E9AA7', // LE CLIENT sur une carte
   surVoile: '#FFFFFF',
@@ -316,10 +325,102 @@ const ESTRAN: Palette = {
   surChauffeurDoux: 'rgba(58, 28, 12, 0.74)',
 };
 
-const PEAUX: Record<NomPeau, Palette> = { bento: BENTO, nuit: NUIT, verre: VERRE, estran: ESTRAN };
+// ──────────────────────────── 06 · GIROFLE ────────────────────────────────
+//
+// LE NOIR ET LE VERT DU LOGOTYPE, ET RIEN D'AUTRE.
+//
+// L'icône de zanziGo tient en trois couleurs : un fond presque noir, le vert
+// `#2ECC71` du « Go », et du blanc. Cette peau-là ne fait qu'étendre ces
+// trois couleurs à l'écran entier — c'est la seule des cinq dont on puisse
+// dire qu'elle EST la marque, et pas une ambiance à côté.
+//
+// Le noir n'est pas un gris désaturé : il est tiré vers le vert (#07120D).
+// C'est ce qui fait que le vert du logo a l'air d'appartenir au fond au lieu
+// d'être collé dessus — un accent posé sur un noir neutre se voit toujours
+// comme une pièce rapportée. Et ce n'est pas non plus du noir PUR : sur un
+// écran OLED, le noir absolu traîne derrière le doigt quand la liste défile,
+// et il supprime toute possibilité d'ombre.
+//
+// LE PARTAGE DES RÔLES, qui n'est pas celui des autres peaux :
+//  · VERT — ce sur quoi on appuie. Les boutons, les liens, « en course ».
+//  · BLANC PLEIN — « payée, tu peux y aller ». C'est le seul aplat blanc de
+//    l'écran : rien d'autre ne crie aussi fort sur du presque noir. Ailleurs
+//    le feu vert est vert ; ici le vert est déjà pris par les boutons, et
+//    deux pastilles vertes côte à côte ne se distinguent plus au coup d'œil —
+//    or c'est exactement ce que le chauffeur lit sans s'arrêter.
+//  · AMBRE — l'argent et les étoiles.
+//  · ROUGE — le danger.
+//  · BLEU PÉTROLE — le client sur une carte. C'est le bleu du fond de
+//    l'icône, éclairci pour tenir sur le noir.
+//
+// Contrastes mesurés sur le fond (#07120D) et sur les cartes (#101E17) :
+// encre 16,8 / 15,2 · secondaire 7,6 / 6,9 · vert 9,1 / 8,2 · ambre 9,6 ·
+// menthe 12,7 / 11,5 · danger 6,2. Rien sous 4,5:1.
+const GIROFLE: Palette = {
+  marqueNom: '#FFFFFF', // le logotype, à la lettre : blanc…
+  marqueGo: '#2ECC71', // …et le vert du « Go » (9,07:1 sur le fond)
+  primaire: '#2ECC71', // LE VERT DE LA MARQUE — la couleur d'action
+  primaireFonce: '#7CE8AC', // menthe claire : liens, flèches, chiffres qui portent
+  primaireClair: 'rgba(46, 204, 113, 0.14)', // pastilles d'icônes, encarts d'information
+  sable: '#07120D', // le fond de tous les écrans — un noir tiré vers le vert
+  blanc: '#101E17', // « blanc » = la surface la plus claire de la peau : les cartes
+  encre: '#E9F3EC', // texte principal — un blanc à peine verdi
+  texteSecondaire: '#93A99D',
+  bordure: 'rgba(46, 204, 113, 0.24)', // LE FILET VERT — la signature de la peau
+  danger: '#FF6B6B',
+  dangerFonce: '#FFC2C2',
+  dangerFond: 'rgba(255, 107, 107, 0.15)',
+  dangerBordure: 'rgba(255, 107, 107, 0.38)',
+  succes: '#8FE3B8', // le vert DOUX : « terminée », en pastille teintée
+  surSucces: '#06180F',
+  succesFond: 'rgba(46, 204, 113, 0.15)',
+  attente: '#F2B84B',
+  attenteFond: 'rgba(242, 184, 75, 0.16)',
+  orange: '#FF9E6E',
+  orangeFond: 'rgba(255, 158, 110, 0.16)',
+  etoile: '#F2B84B',
+  voile: 'rgba(3, 9, 6, 0.84)',
+  succesClair: '#7BE3A3',
+  dangerClair: '#FCA5A5',
+  voilePhotoClair: '#07120D',
+  voilePhotoSombre: 'rgba(3, 9, 6, 0.6)',
+  fondOnglets: 'rgba(3, 9, 6, 0.62)',
+  carteTranslucide: '#101E17', // OPAQUE : un panneau translucide n'a pas de contraste mesurable
+  surface: '#16281F', // champs de saisie, menus
+  surPrimaire: '#06180F', // l'encre posée SUR le vert (9,07:1)
+  or: '#F2B84B',
+  nuit: '#030906',
+  // « Payée » : voir plus haut — ici le feu vert est BLANC. Le nom de la clé
+  // dit le rôle (le signal qui autorise à partir), pas la teinte.
+  vertFeu: '#F4FBF6',
+  surVertFeu: '#06180F',
+  turquoise: '#4CB8E8', // le bleu du fond de l'icône, éclairci — LE CLIENT sur une carte
+  surVoile: '#FFFFFF',
+  accentFond: '#0C2A1B', // le bloc de mise en avant : un vert-noir plus profond que les cartes
+  surAccent: '#EAF6EF',
+  surAccentDoux: 'rgba(234, 246, 239, 0.7)',
+  // La carte « chauffeur » : le seul aplat de couleur PLEINE de l'accueil.
+  // Un vert profond — même teinte que les boutons, deux crans plus bas : on
+  // voit tout de suite que c'est un bloc, pas une chose sur quoi appuyer.
+  chauffeurFond: '#116B41',
+  surChauffeur: '#FFFFFF',
+  surChauffeurDoux: 'rgba(255, 255, 255, 0.8)',
+};
+
+const PEAUX: Record<NomPeau, Palette> = {
+  bento: BENTO,
+  nuit: NUIT,
+  verre: VERRE,
+  estran: ESTRAN,
+  girofle: GIROFLE,
+};
 
 /**
- * LA PEAU DE L'APPLICATION — « Lagon de verre » (21/08/2026).
+ * LA PEAU DE L'APPLICATION — « Girofle » (25/08/2026).
+ *
+ * Le noir et le vert du logotype. Une application se reconnaît à ses
+ * couleurs avant de se lire : celles de l'écran doivent être celles de
+ * l'icône sur laquelle le client vient d'appuyer.
  *
  * C'est ici, et nulle part ailleurs, qu'on en change : le layout racine la
  * lit, et la variable de module démarre déjà dessus. Le jour où elle était
@@ -328,7 +429,7 @@ const PEAUX: Record<NomPeau, Palette> = { bento: BENTO, nuit: NUIT, verre: VERRE
  * couleurs de la peau précédente : l'application s'ouvrait sur un fond crème
  * sous un dégradé de lagon.
  */
-export const PEAU_PAR_DEFAUT: NomPeau = 'verre';
+export const PEAU_PAR_DEFAUT: NomPeau = 'girofle';
 
 // La peau active. Volontairement une variable de module : les feuilles de
 // style sont construites hors composant, elles doivent pouvoir la consulter
@@ -393,6 +494,9 @@ const RAYONS: Record<NomPeau, Rayons> = {
   // galets — et un arrondi uniforme partout est l'un des tics du design
   // fabriqué à la chaîne.
   estran: { carte: 14, bouton: 10, pastille: 999 },
+  // Girofle : entre le verre et la nuit. Assez d'arrondi pour que le filet
+  // vert fasse le tour sans casser, pas assez pour faire galet.
+  girofle: { carte: 16, bouton: 14, pastille: 999 },
 };
 
 export const rayons = new Proxy({} as Rayons, {
@@ -551,6 +655,48 @@ const OMBRES: Record<NomPeau, Ombres> = {
       elevation: 1,
     },
   },
+  // ─── GIROFLE : LE FILET VERT ─────────────────────────────────────────────
+  //
+  // Sur un fond presque noir, une ombre ne sépare plus rien : du noir sur du
+  // noir ne se voit pas. Ce qui détache une carte, c'est son BORD. Le filet
+  // vert joue donc ici le rôle que le trait d'encre joue en Bento et le filet
+  // d'or en Nuit d'épices — sauf qu'il est de la couleur de la marque, ce qui
+  // fait que le vert du logo revient sur chaque bloc de chaque écran sans
+  // qu'on ait eu à colorer quoi que ce soit.
+  //
+  // L'ombre reste, et elle est franche : elle ne se voit pas SOUS la carte,
+  // elle se voit là où elle mange le halo vert du fond. C'est ce qui empêche
+  // deux cartes empilées de fusionner en un seul bloc.
+  girofle: {
+    carte: {
+      borderWidth: 1,
+      borderColor: 'rgba(46, 204, 113, 0.22)',
+      shadowColor: '#000000',
+      shadowOpacity: 0.55,
+      shadowRadius: 14,
+      shadowOffset: { width: 0, height: 6 },
+      elevation: 3,
+    },
+    douce: {
+      borderWidth: 1,
+      borderColor: 'rgba(46, 204, 113, 0.34)',
+      shadowColor: '#000000',
+      shadowOpacity: 0.65,
+      shadowRadius: 22,
+      shadowOffset: { width: 0, height: 12 },
+      elevation: 6,
+    },
+    // La petite ombre dense qui POSE la carte, sous celle qui la décolle.
+    contact: {
+      borderWidth: 0,
+      borderColor: 'transparent',
+      shadowColor: '#000000',
+      shadowOpacity: 0.5,
+      shadowRadius: 3,
+      shadowOffset: { width: 0, height: 2 },
+      elevation: 1,
+    },
+  },
 };
 
 /**
@@ -638,6 +784,18 @@ const POLICES_PAR_PEAU: Record<NomPeau, { 400: string; 500: string; 600: string;
     700: 'InstrumentSans-Bold',
   },
   estran: {
+    400: 'Archivo',
+    500: 'Archivo-Medium',
+    600: 'Archivo-SemiBold',
+    700: 'Archivo-Bold',
+  },
+  // Girofle prend ARCHIVO pour la même raison que l'estran : à corps égal, sa
+  // très grande hauteur d'x rend plus de millimètres de glyphe. Sur un fond
+  // presque noir ça compte double — le texte clair sur fond sombre gonfle
+  // optiquement, et une grotesque large encaisse mieux ce gonflement qu'une
+  // étroite. En revanche PAS de serif pour les montants : les déliés de
+  // Faustina s'empâtent en blanc sur noir.
+  girofle: {
     400: 'Archivo',
     500: 'Archivo-Medium',
     600: 'Archivo-SemiBold',
@@ -797,12 +955,14 @@ const TONS_TRAJET: Record<NomPeau, Record<StatutTrajet, Ton>> = {
   nuit: tonsTrajet(NUIT),
   verre: tonsTrajet(VERRE),
   estran: tonsTrajet(ESTRAN),
+  girofle: tonsTrajet(GIROFLE),
 };
 const TONS_COLIS: Record<NomPeau, Record<StatutColis, Ton>> = {
   bento: tonsColis(BENTO),
   nuit: tonsColis(NUIT),
   verre: tonsColis(VERRE),
   estran: tonsColis(ESTRAN),
+  girofle: tonsColis(GIROFLE),
 };
 
 /** Couleurs de pastille par statut de trajet (fond doux + texte lisible). */

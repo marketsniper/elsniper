@@ -241,6 +241,7 @@ export function SelecteurLangue({ compact = false }: { compact?: boolean }) {
 // ternaire : le sélecteur était écrit pour exactement deux peaux, et une
 // troisième se serait affichée sous le nom de la première.
 const LIBELLES_PEAU: Record<NomPeau, { nom: CleChaine; quand: CleChaine }> = {
+  girofle: { nom: 'peau_girofle', quand: 'peau_girofle_quand' },
   verre: { nom: 'peau_lagon', quand: 'peau_lagon_quand' },
   bento: { nom: 'peau_bento', quand: 'peau_bento_quand' },
   nuit: { nom: 'peau_nuit', quand: 'peau_nuit_quand' },
@@ -308,7 +309,7 @@ export function SelecteurPeau() {
  * du moment sans jamais qu'un fichier ne se retrouve invisible sur un fond
  * qu'on n'avait pas prévu.
  *
- * La police est FIXÉE à Archivo Bold sur les quatre peaux. Un logo ne change
+ * La police est FIXÉE à Archivo Bold sur toutes les peaux. Un logo ne change
  * pas de caractère quand on change de thème — c'est la seule chose de
  * l'application qui ne bouge pas.
  *

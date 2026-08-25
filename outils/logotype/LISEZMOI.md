@@ -11,10 +11,16 @@ Les couleurs vivent dans `mobile/src/lib/theme.ts`, deux par peau :
 
 | peau | « zanzi » | « Go » | contraste mesuré |
 |---|---|---|---|
+| **Girofle (noir)** | `#FFFFFF` | `#2ECC71` — le vert DE L'ICÔNE | 19,1 / 9,07 |
 | Bento (crème) | `#0A4E7A` bleu océan | `#0E7343` vert profond | 8,12 / 5,45 |
 | Estran (clair) | `#0A4E7A` | `#0E7343` | 7,48 / 5,02 |
 | Nuit (noir) | `#FFFFFF` | `#12A150` vert franc | 19,4 / 5,75 |
 | Lagon (dégradé) | `#FFFFFF` | `#A8FAD5` menthe | 3,62 / 2,98 |
+
+« Girofle » est le cas particulier dans l'autre sens : c'est la seule peau qui
+reprend EXACTEMENT les trois couleurs du fichier d'icône — le presque-noir,
+le `#2ECC71`, le blanc. Le logotype n'y est donc pas adapté à un fond, il
+est chez lui. C'est la peau par défaut depuis le 25/08/2026.
 
 Le Lagon est le cas particulier : c'est un DÉGRADÉ, pas un aplat. Derrière le
 logotype, le fond réellement peint est un turquoise moyen (`#2A949B`, mesuré

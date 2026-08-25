@@ -3206,11 +3206,27 @@ const CHAINES = {
     de: 'Erscheinungsbild',
   },
   peau_intro: {
-    fr: 'Quatre designs, un par lumière. Le lagon repose les yeux à l\'ombre, le crème se lit en plein soleil de midi. Vous changez d\'avis quand vous voulez.',
-    en: 'Four designs, one per kind of light. The lagoon rests your eyes in the shade, the cream reads in the midday sun. Change your mind whenever you like.',
-    sw: 'Miundo minne, kila mmoja kwa mwanga wake. Bahari inatuliza machoni kivulini, krimu inasomeka juani kali. Badilisha wakati wowote.',
-    it: 'Quattro design, uno per ogni luce. La laguna riposa gli occhi all\'ombra, il crema si legge in pieno sole. Cambia idea quando vuoi.',
-    de: 'Vier Designs, eines für jedes Licht. Die Lagune schont die Augen im Schatten, das Cremefarbene liest sich in der Mittagssonne. Ändern Sie es jederzeit.',
+    fr: 'Cinq designs, un par lumière. Le girofle porte les couleurs de la marque, le crème se lit en plein soleil de midi. Vous changez d\'avis quand vous voulez.',
+    en: 'Five designs, one per kind of light. Clove carries the brand colours, the cream reads in the midday sun. Change your mind whenever you like.',
+    sw: 'Miundo mitano, kila mmoja kwa mwanga wake. Karafuu ina rangi za chapa, krimu inasomeka juani kali. Badilisha wakati wowote.',
+    it: 'Cinque design, uno per ogni luce. Il chiodo di garofano porta i colori del marchio, il crema si legge in pieno sole. Cambia idea quando vuoi.',
+    de: 'Fünf Designs, eines für jedes Licht. Nelke trägt die Markenfarben, das Cremefarbene liest sich in der Mittagssonne. Ändern Sie es jederzeit.',
+  },
+  // « Girofle » : le noir du clou et le vert du logotype. Zanzibar EST l'île
+  // aux girofles — le nom dit à la fois la couleur et d'où l'on vient.
+  peau_girofle: {
+    fr: 'Girofle',
+    en: 'Clove',
+    sw: 'Karafuu',
+    it: 'Garofano',
+    de: 'Nelke',
+  },
+  peau_girofle_quand: {
+    fr: 'Le vert et le noir du logo',
+    en: 'The logo\'s green and black',
+    sw: 'Kijani na nyeusi za nembo',
+    it: 'Il verde e il nero del logo',
+    de: 'Das Grün und Schwarz des Logos',
   },
   peau_lagon: { fr: 'Lagon', en: 'Lagoon', sw: 'Bahari', it: 'Laguna', de: 'Lagune' },
   peau_lagon_quand: {
