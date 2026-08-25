@@ -6,7 +6,7 @@
 // Stone Town.
 //
 //   Stone Town / ferry → Fumba     20 USD      (aéroport aussi)
-//   Stone Town / ferry → Matemwe   33 USD      aéroport → Matemwe  45 USD
+//   Matemwe : 45 USD depuis tous les hubs (aligné le 25/08/2026)
 //   Stone Town / ferry → Nungwi    45 USD      aéroport → Nungwi   48 USD
 //
 // Ces montants sont des décisions commerciales, pas des calculs : ce test les
@@ -59,8 +59,8 @@ describe('Prix de transfert — les exceptions au prix unique', () => {
     [AEROPORT, 'Kiwengwa', 31, 26],
     ['Stone Town', 'Pwani Mchangani', 30, 25],
     [AEROPORT, 'Pwani Mchangani', 33, 28],
-    ['Stone Town', 'Matemwe', 33, 28],
-    ['Stone Town Ferry', 'Matemwe', 33, 28],
+    ['Stone Town', 'Matemwe', 45, 39],
+    ['Stone Town Ferry', 'Matemwe', 45, 39],
     [AEROPORT, 'Matemwe', 45, 39],
     ['Stone Town', 'Paje', 45, 39],
     [AEROPORT, 'Paje', 45, 39],
@@ -97,9 +97,9 @@ describe('Prix de transfert — les exceptions au prix unique', () => {
   it('le hub de départ compte : l’aéroport est plus loin que la ville', () => {
     // C'est le sens de toute la table. Si ces deux écarts disparaissaient,
     // c'est que le net serait redevenu commun à tous les hubs.
-    const villeMatemwe = priceTrip('private', 'tourist', { pickup: 'Stone Town', dropoff: 'Matemwe' }).price;
-    const aeroMatemwe = priceTrip('private', 'tourist', { pickup: AEROPORT, dropoff: 'Matemwe' }).price;
-    assert.ok(aeroMatemwe > villeMatemwe, `Matemwe : aéroport ${aeroMatemwe} ≤ ville ${villeMatemwe}`);
+    const villeKiwengwa = priceTrip('private', 'tourist', { pickup: 'Stone Town', dropoff: 'Kiwengwa' }).price;
+    const aeroKiwengwa = priceTrip('private', 'tourist', { pickup: AEROPORT, dropoff: 'Kiwengwa' }).price;
+    assert.ok(aeroKiwengwa > villeKiwengwa, `Kiwengwa : aéroport ${aeroKiwengwa} ≤ ville ${villeKiwengwa}`);
 
     const villeNungwi = priceTrip('private', 'tourist', { pickup: 'Stone Town', dropoff: 'Nungwi' }).price;
     const aeroNungwi = priceTrip('private', 'tourist', { pickup: AEROPORT, dropoff: 'Nungwi' }).price;

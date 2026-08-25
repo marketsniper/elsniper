@@ -576,9 +576,7 @@ const NET_TRANSFERT_USD = 45;
  *
  * GRILLE PAR BANDES KILOMÉTRIQUES (25/08/2026) — le prix suit la route,
  * partout entre 0,67 et 0,86 USD/km. Nets → prix client :
- * 17 → 20 ; 23 → 28 ; 24 → 29 ; 25 → 30 ; 26 → 31 ; 28 → 33 ; 39 → 45 ;
- * 42 → 48. Matemwe ville (33 USD à 54 km) est le seul point sous la pente :
- * le prix d'appel de la côte nord-est, volontaire.
+ * 17 → 20 ; 23 → 28 ; 24 → 29 ; 25 → 30 ; 26 → 31 ; 39 → 45 ; 42 → 48.
  */
 const NET_TRANSFERT_PAR_VILLE_USD: Record<string, { ville: number; aeroport?: number }> = {
   fumba: { ville: 17 },
@@ -587,7 +585,7 @@ const NET_TRANSFERT_PAR_VILLE_USD: Record<string, { ville: number; aeroport?: nu
   pongwe: { ville: 23 },
   kiwengwa: { ville: 24, aeroport: 26 },
   'pwani mchangani': { ville: 25, aeroport: 28 },
-  matemwe: { ville: 28, aeroport: 39 },
+  matemwe: { ville: 39 },
   paje: { ville: 39 },
   bwejuu: { ville: 39 },
   jambiani: { ville: 39 },

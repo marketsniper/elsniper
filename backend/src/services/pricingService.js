@@ -194,9 +194,8 @@ const NET_TRANSFERT_USD = 45;
 //   36 km  Chwaka, Uroa, Pongwe               28     (0,78)
 //   38 km  Kiwengwa                           29     (0,76)
 //   43 km  Pwani Mchangani                    30     (0,70)
-//   54 km  Matemwe                            33     (0,61 — le prix d'appel
-//          de la côte nord-est, décidé le 24/08 ; c'est le seul point de la
-//          grille sous la pente, et il est volontaire)
+//   54 km  Matemwe                            45     (aligné le 25/08 — il
+//          avait été lancé à 33 comme prix d'appel, une journée)
 //   52-58  Paje, Bwejuu, Jambiani             45     (le couloir du sud-est
 //          rejoint le prix de Nungwi — décision du 25/08 ; sa règle à part,
 //          105 000 TZS nets et 17 %, disparaît avec lui)
@@ -207,8 +206,8 @@ const NET_TRANSFERT_USD = 45;
 //          par Paje puis retour à vide — la route réelle dépasse Nungwi)
 //
 // LE HUB DE DÉPART COMPTE : l'aéroport rallonge les trajets vers le NORD
-// (Kiwengwa +4 km, Pwani +6, Matemwe +6, Nungwi +8) — ces destinations
-// portent un net « aeroport ». Vers l'est et le sud, l'aéroport est aussi
+// (Kiwengwa +4 km, Pwani +6, Nungwi +8) — ces destinations portent un net
+// « aeroport ». Matemwe, aligné à 45 des deux hubs, n'en a plus besoin. Vers l'est et le sud, l'aéroport est aussi
 // proche ou plus proche que la ville : même prix, pas de champ.
 //
 // Les NETS sont posés pour retomber EXACTEMENT sur le prix client visé, la
@@ -223,7 +222,7 @@ const NET_TRANSFERT_PAR_VILLE_USD = {
   pongwe: { ville: 23 },
   kiwengwa: { ville: 24, aeroport: 26 },
   'pwani mchangani': { ville: 25, aeroport: 28 },
-  matemwe: { ville: 28, aeroport: 39 },
+  matemwe: { ville: 39 },
   paje: { ville: 39 },
   bwejuu: { ville: 39 },
   jambiani: { ville: 39 },

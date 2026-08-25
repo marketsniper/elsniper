@@ -71,7 +71,7 @@ describe('Grille privée : le net du chauffeur décide, le forfait s’ajoute', 
     verifier('Stone Town', 'Pongwe', 23, 28);
     verifier('Stone Town', 'Kiwengwa', 24, 29);
     verifier('Stone Town', 'Pwani Mchangani', 25, 30);
-    verifier('Stone Town', 'Matemwe', 28, 33);
+    verifier('Stone Town', 'Matemwe', 39, 45);
     verifier('Stone Town', 'Paje', 39, 45);
     verifier('Stone Town', 'Bwejuu', 39, 45);
     verifier('Stone Town', 'Jambiani', 39, 45);
@@ -88,13 +88,11 @@ describe('Grille privée : le net du chauffeur décide, le forfait s’ajoute', 
 
   it('la grille est COHÉRENTE : jamais plus cher pour aller moins loin', () => {
     // La règle que le client vérifie sur une carte : deux plages, la plus
-    // proche ne coûte jamais plus. Deux absents assumés : Michamvi et Dongwe
-    // (leur kilométrage à vol d'oiseau ment, la route passe par Paje), et
-    // Matemwe — le prix d'appel de la côte nord-est, posé SOUS la pente : à
-    // un kilomètre près de Paje, il coûte 12 USD de moins, et c'est voulu.
+    // proche ne coûte jamais plus. Deux absents assumés : Michamvi et Dongwe,
+    // dont le kilométrage à vol d'oiseau ment — la route passe par Paje.
     const plages = [
       'Fumba', 'Chwaka', 'Uroa', 'Pongwe', 'Kiwengwa', 'Pwani Mchangani',
-      'Paje', 'Bwejuu', 'Jambiani', 'Kizimkazi', 'Makunduchi',
+      'Matemwe', 'Paje', 'Bwejuu', 'Jambiani', 'Kizimkazi', 'Makunduchi',
       'Mtende', 'Kendwa', 'Nungwi',
     ];
     const mesures = plages.map((v) => ({
