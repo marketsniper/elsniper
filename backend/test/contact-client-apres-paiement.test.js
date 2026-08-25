@@ -94,7 +94,13 @@ describe('Coordonnées du client : verrouillées jusqu’au paiement validé', (
     // Le travail, lui, reste entièrement lisible — sinon il ne peut rien faire.
     assert.equal(vue.pickup_location, 'Nungwi');
     assert.equal(vue.dropoff_location, 'Paje');
-    assert.ok(Number(vue.price) > 0);
+    // L'argent qu'il voit est le SIEN : son gain net et la part zanziGo en
+    // pourcentage. Le prix payé par le client ne lui parvient jamais — ni
+    // avant, ni après la validation du paiement.
+    assert.ok(Number(vue.net_chauffeur) > 0, 'son gain net');
+    assert.ok(Number(vue.part_zanzigo_pct) > 0, 'la part zanziGo en %');
+    assert.equal(vue.price, undefined, 'le prix client ne part pas');
+    assert.equal(vue.commission, undefined, 'la commission en argent non plus');
   });
 
   it('paiement validé par l’équipe : nom, numéro et position s’ouvrent', async () => {

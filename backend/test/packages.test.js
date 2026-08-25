@@ -579,7 +579,15 @@ describe('Colis — bourse aux colis (mode chauffeur)', () => {
     assert.equal(prise.body.qr_code, undefined, 'pas de QR à la réservation');
     assert.ok(prise.body.recipient_phone, 'téléphone du destinataire fourni pour la remise');
     assert.ok(prise.body.sender_phone, "téléphone de l'expéditeur fourni pour la ramasse");
-    assert.ok(prise.body.whatsapp_link, "lien WhatsApp d'information équipe");
+    // Le message d'ÉQUIPE ne revient plus au chauffeur : il porte le prix payé
+    // par l'expéditeur, que le chauffeur n'a pas à lire. `notifierEquipe` l'a
+    // déjà envoyé à qui de droit (services/vueChauffeur.js).
+    assert.equal(prise.body.whatsapp_link, undefined, "le message d'équipe reste à l'équipe");
+    // Ce que le chauffeur voit du colis : son gain, et le pourcentage.
+    assert.equal(prise.body.price, undefined, "le prix payé par l'expéditeur ne part pas");
+    assert.equal(prise.body.commission, undefined);
+    assert.ok(Number(prise.body.net_chauffeur) > 0, 'son gain net');
+    assert.ok(Number(prise.body.part_zanzigo_pct) > 0, 'la part zanziGo en %');
 
     // Le colis disparaît de la bourse ; le second chauffeur arrive trop tard.
     const bourse = await request(app).get('/api/packages').set(authHeaders(driverB));

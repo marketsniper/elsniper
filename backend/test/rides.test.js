@@ -256,10 +256,14 @@ describe('Trajets partagés — réservation de places dans l\'app', () => {
     assert.equal(mine.body[0].bookings.length, 1);
     assert.equal(mine.body[0].bookings[0].seats, 2);
     assert.equal(mine.body[0].bookings[0].client_type, 'tourist');
-    assert.equal(mine.body[0].bookings[0].price_per_seat, 16); // Nungwi depuis l'aéroport : privé 48 → place 16
     assert.equal(mine.body[0].bookings[0].currency, 'USD');
-    assert.equal(mine.body[0].bookings[0].commission_per_seat, 4); // 25 % de 16
-    assert.equal(mine.body[0].bookings[0].net_per_seat, 12); // le chauffeur garde 75 %
+    // Le chauffeur voit ce qu'il TOUCHE (75 % de la place à 16 USD) et le
+    // pourcentage — ni le prix payé par le passager, ni la commission en
+    // argent (services/vueChauffeur.js).
+    assert.equal(mine.body[0].bookings[0].net_per_seat, 12);
+    assert.equal(mine.body[0].bookings[0].part_zanzigo_pct, 25);
+    assert.equal(mine.body[0].bookings[0].price_per_seat, undefined);
+    assert.equal(mine.body[0].bookings[0].commission_per_seat, undefined);
   });
 
   it('surréservation → 409 not_enough_seats, places inchangées', async () => {

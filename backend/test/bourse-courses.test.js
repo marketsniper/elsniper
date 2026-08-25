@@ -53,9 +53,13 @@ describe('Bourse aux courses', () => {
     // Ce que le chauffeur DOIT voir pour décider.
     assert.equal(vue.pickup_location, 'Stone Town');
     assert.equal(vue.dropoff_location, 'Nungwi');
-    assert.equal(Number(vue.price), 45);
     assert.equal(Number(vue.net_chauffeur), 39.6, 'son gain net, commission déduite');
+    assert.equal(Number(vue.part_zanzigo_pct), 12, 'la part zanziGo, en pourcentage');
     assert.equal(vue.flight_number, 'TK123');
+    // …et ce qu'il ne voit PLUS : on choisit une course sur ce qu'elle
+    // rapporte, pas sur ce que le client paie (services/vueChauffeur.js).
+    assert.equal(vue.price, undefined, 'le prix client ne part pas vers un chauffeur');
+    assert.equal(vue.commission, undefined, 'la commission en argent non plus');
 
     // Ce qu'il ne doit PAS voir avant d'avoir pris la course.
     assert.equal(vue.client_name, undefined, 'le nom du client ne doit pas fuiter');

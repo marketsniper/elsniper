@@ -80,16 +80,21 @@ describe('Devises taxi partagé (parcours local complet)', () => {
     assert.equal(Number(resa.body.price_per_seat), 17000);
     assert.equal(resa.body.price_per_seat_usd, undefined);
 
-    // Fiche chauffeur : la réservation du local est étiquetée local + TZS,
-    // et l'annonce elle-même porte les deux prix (TZS locaux, USD touristes).
+    // Fiche chauffeur : la réservation du local est étiquetée local + TZS, et
+    // l'annonce porte ce que CHAQUE place lui rapporte dans les deux devises —
+    // jamais ce que le passager paie (services/vueChauffeur.js).
     const mine = await request(app).get('/api/rides/mine').set(authHeaders(tokenChauffeur));
     const annonce = mine.body[0];
-    assert.equal(Number(annonce.price_per_seat), 17000);
-    assert.equal(Number(annonce.price_per_seat_usd), 16);
+    assert.equal(annonce.price_per_seat, undefined, 'le prix de la place ne part pas');
+    assert.equal(annonce.price_per_seat_usd, undefined);
+    assert.equal(Number(annonce.net_par_place_tzs), 13000, '20 % de commission, arrondi au millier');
+    assert.equal(Number(annonce.net_par_place_usd), 12, '25 % de commission sur 16 USD');
+    assert.equal(Number(annonce.part_zanzigo_pct), 25);
     const booking = annonce.bookings[0];
     assert.equal(booking.client_type, 'local');
     assert.equal(booking.currency, 'TZS');
-    assert.equal(Number(booking.price_per_seat), 17000);
+    assert.equal(booking.price_per_seat, undefined);
+    assert.equal(booking.commission_per_seat, undefined);
     // Commission partagé local 17 % : le chauffeur touche 83 % de 16 000,
     // soit PLUS que les 12 750 d'avant (15 % de 15 000) — la hausse de la
     // place a été décidée pour ça.

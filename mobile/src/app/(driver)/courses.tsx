@@ -23,6 +23,7 @@ import {
   Bouton,
   Ecran,
   EncartInfo,
+  GainChauffeur,
   TexteErreur,
 } from '@/components/ui';
 import { api, ErreurApi, type StatsChauffeur } from '@/lib/api';
@@ -43,7 +44,6 @@ import {
   champ,
   formaterDate,
   formaterMontant,
-  formaterPrix,
   totalEnTzs,
   trajetExpire,
   type Colis,
@@ -475,7 +475,7 @@ export default function EcranCourses() {
             </Text>
             <View style={styles.pied}>
               <Text style={[styles.date, presse && styles.departTexteFort]}>{depart.texte}</Text>
-              <Text style={styles.prix}>{formaterPrix(item)}</Text>
+              <GainChauffeur objet={item} />
             </View>
             {/* Les coordonnées du client ne s'ouvrent qu'au paiement validé
                 par l'équipe. Une fois ouvertes, le numéro s'appelle d'ici —
@@ -890,7 +890,7 @@ export default function EcranCourses() {
                       t
                     )}
               </Text>
-              <Text style={styles.prix}>{formaterPrix(item)}</Text>
+              <GainChauffeur objet={item} />
             </View>
           </Pressable>
         );

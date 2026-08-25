@@ -72,8 +72,11 @@ export default function EcranAnnonce() {
   }
 
   const statut = champ<StatutRide>(ride, 'status', 'statut');
-  const prixTzs = champ<number | string>(ride, 'price_per_seat', 'pricePerSeat');
-  const prixUsd = champ<number | string>(ride, 'price_per_seat_usd', 'pricePerSeatUsd');
+  // Le chauffeur voit ce qu'une place lui RAPPORTE, dans les deux devises —
+  // le prix payé par le passager ne lui est plus envoyé (vueChauffeur.js).
+  const netTzs = champ<number | string>(ride, 'net_par_place_tzs');
+  const netUsd = champ<number | string>(ride, 'net_par_place_usd');
+  const partPct = champ<number | string>(ride, 'part_zanzigo_pct');
   const total = Number(champ(ride, 'seats_total', 'seatsTotal') ?? 0);
   const restantes = Number(champ(ride, 'seats_available', 'seatsAvailable') ?? 0);
   const reservations = champ<ReservationRide[]>(ride, 'bookings') ?? [];
@@ -139,14 +142,17 @@ export default function EcranAnnonce() {
           label={t('sel_date')}
           valeur={formaterDate(champ(ride, 'departure_at', 'departureAt'))}
         />
-        {prixTzs !== undefined && prixUsd !== undefined && (
+        {netTzs !== undefined && netUsd !== undefined && (
           <LigneInfo
-            label={t('annonce_prix_label')}
+            label={t('annonce_net_place')}
             valeur={t('annonces_prix_deux', {
-              tzs: formaterMontant(prixTzs, 'TZS'),
-              usd: formaterMontant(prixUsd, 'USD'),
+              tzs: formaterMontant(netTzs, 'TZS'),
+              usd: formaterMontant(netUsd, 'USD'),
             })}
           />
+        )}
+        {partPct !== undefined && (
+          <LigneInfo label={t('gain_part_zanzigo_ligne')} valeur={`${partPct} %`} />
         )}
         {!!notes && <LigneInfo label={t('annonces_notes')} valeur={String(notes)} />}
       </Carte>
@@ -166,10 +172,9 @@ export default function EcranAnnonce() {
             <View key={index} style={styles.ligneResa}>
               <Ionicons name="person-circle-outline" size={20} color={couleurs.primaire} />
               <Text style={styles.texteResa}>
-                {resa.client_name ?? '—'} — {resa.seats} × {t(`resa_type_${resa.client_type}`)} ·{' '}
-                {formaterMontant(resa.price_per_seat, resa.currency)} {t('rides_par_place')}
+                {resa.client_name ?? '—'} — {resa.seats} × {t(`resa_type_${resa.client_type}`)}
                 {resa.net_per_seat !== undefined
-                  ? ` (${formaterMontant(resa.net_per_seat, resa.currency)} ${t('gain_net_par_place')})`
+                  ? ` · ${formaterMontant(resa.net_per_seat, resa.currency)} ${t('gain_net_par_place')}`
                   : ''}
                 {resa.paid ? ` · ✔ ${t('resa_payee')}` : ` · ⏳ ${t('resa_impayee')}`}
               </Text>

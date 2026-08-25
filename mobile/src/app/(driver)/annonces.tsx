@@ -21,10 +21,12 @@ import { useAuth } from '@/lib/auth';
 import { HEURES_CHOIX, isoDepuisChoix, libellesDates, useT } from '@/lib/i18n';
 import { couleurs, espaces, stylesReactifs } from '@/lib/theme';
 import {
-  champ,
   DESTINATIONS_RIDES,
-  formaterMontant,
   ORIGINES_RIDES,
+  champ,
+  formaterMontant,
+  netPlacePartageeTzs,
+  netPlacePartageeUsd,
   tarifTrajetProfil,
   type StatutVerification,
 } from '@/lib/types';
@@ -60,9 +62,16 @@ export default function EcranAnnonces() {
   const tarifTouristeProjete = itineraireChoisi
     ? tarifTrajetProfil('shared_tourist', 'tourist', itineraireChoisi)
     : null;
-  const prixProjetes =
+  // CE QUE LE CHAUFFEUR TOUCHERA, pas ce que le passager paiera : le portail
+  // chauffeur n'affiche que du net (voir backend/src/services/vueChauffeur.js).
+  // Les shillings passent par l'arrondi au millier inférieur — la promesse
+  // « comptes ronds » — exactement comme sur la fiche de l'annonce.
+  const netProjetes =
     tarifLocalProjete && tarifTouristeProjete
-      ? { tzs: tarifLocalProjete.montant, usd: tarifTouristeProjete.montant }
+      ? {
+          tzs: netPlacePartageeTzs(tarifLocalProjete.montant),
+          usd: netPlacePartageeUsd(tarifTouristeProjete.montant),
+        }
       : null;
   const [erreur, setErreur] = useState('');
   const [messageOk, setMessageOk] = useState('');
@@ -170,11 +179,11 @@ export default function EcranAnnonces() {
           placeholder={t('annonces_destination_placeholder')}
           onChange={setDestination}
         />
-        {!!origine && !!destination && prixProjetes && (
+        {!!origine && !!destination && netProjetes && (
           <EncartInfo icone="cash-outline">
-            {t('annonce_prix_label')} : {t('annonces_prix_deux', {
-              tzs: formaterMontant(prixProjetes.tzs, 'TZS'),
-              usd: formaterMontant(prixProjetes.usd, 'USD'),
+            {t('annonce_net_place')} : {t('annonces_prix_deux', {
+              tzs: formaterMontant(netProjetes.tzs, 'TZS'),
+              usd: formaterMontant(netProjetes.usd, 'USD'),
             })}
           </EncartInfo>
         )}

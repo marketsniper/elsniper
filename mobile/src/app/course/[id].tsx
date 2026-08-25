@@ -30,7 +30,9 @@ import {
   ETAPES_TRAJET,
   formaterDate,
   formaterMontant,
-  formaterPrix,
+  gainNetChauffeur,
+  partZanziGoPct,
+  totalEnTzs,
   traverseJozani,
   type StatutTrajet,
   type Trajet,
@@ -177,23 +179,23 @@ export default function EcranDetailCourse() {
             valeur={formaterDate(champ(course, 'scheduled_at', 'scheduledAt'))}
           />
         )}
-        <LigneInfo label={t('commun_prix')} valeur={formaterPrix(course)} />
+        {/* L'ARGENT DU CHAUFFEUR : ce qu'il touche, et le pourcentage que
+            zanziGo retient. Ni le prix payé par le client, ni la commission
+            en argent — le serveur ne les envoie même plus sur cette fiche
+            (backend/src/services/vueChauffeur.js). */}
         {(() => {
-          // Transparence chauffeur : commission zanziGo et gain net.
-          const prix = Number(champ(course, 'price') ?? NaN);
-          const commission = Number(champ(course, 'commission') ?? NaN);
-          const devise = String(champ(course, 'currency') ?? '');
-          if (!Number.isFinite(prix) || !Number.isFinite(commission)) return null;
+          const gain = gainNetChauffeur(course);
+          const pct = partZanziGoPct(course);
+          if (!gain) return null;
           return (
             <>
               <LigneInfo
-                label={t('gain_commission')}
-                valeur={`− ${formaterMontant(commission, devise)}`}
-              />
-              <LigneInfo
                 label={t('gain_net')}
-                valeur={formaterMontant(Math.round((prix - commission) * 100) / 100, devise)}
+                valeur={formaterMontant(totalEnTzs({ [gain.devise]: gain.montant }), 'TZS')}
               />
+              {pct !== null && (
+                <LigneInfo label={t('gain_part_zanzigo_ligne')} valeur={`${pct} %`} />
+              )}
             </>
           );
         })()}

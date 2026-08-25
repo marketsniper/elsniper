@@ -39,7 +39,14 @@ import {
   useSecteurSolaire,
   type NomPeau,
 } from '@/lib/theme';
-import type { StatutColis, StatutTrajet } from '@/lib/types';
+import {
+  formaterMontant,
+  gainNetChauffeur,
+  partZanziGoPct,
+  totalEnTzs,
+  type StatutColis,
+  type StatutTrajet,
+} from '@/lib/types';
 
 type NomIonicons = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -646,6 +653,49 @@ export function TexteErreur({ children }: { children: React.ReactNode }) {
 }
 
 /** Encart d'information doux (pédagogie, confirmations, attentes). */
+/**
+ * CE QUE LE CHAUFFEUR MET DANS SA POCHE.
+ *
+ * LA SEULE façon d'afficher de l'argent sur le portail chauffeur. Elle ne
+ * sait montrer qu'un net — il n'y a pas de variante « prix client », et c'est
+ * volontaire : le jour où quelqu'un voudra en remettre un, il devra le
+ * demander ici et lire pourquoi on ne le fait pas (voir
+ * backend/src/services/vueChauffeur.js).
+ *
+ * Le montant est ramené en SHILLINGS : c'est la monnaie dans laquelle le
+ * chauffeur est payé et dans laquelle il compte. Une course facturée 45 USD à
+ * un touriste lui rapporte 102 960 TSh, et c'est ce chiffre-là qu'il veut
+ * lire — pas 39,60 d'une devise qu'il devra convertir.
+ *
+ * `pourcentage` ajoute la part zanziGo de CETTE course. On la met sur les
+ * fiches, pas dans les listes : répétée à chaque ligne, elle devient du bruit
+ * et le regard ne trouve plus les montants.
+ */
+export function GainChauffeur({
+  objet,
+  pourcentage = false,
+  taille = 15,
+}: {
+  objet: Record<string, unknown> | null | undefined;
+  pourcentage?: boolean;
+  taille?: number;
+}) {
+  const { t } = useT();
+  const gain = gainNetChauffeur(objet);
+  const pct = partZanziGoPct(objet);
+  if (!gain) return null;
+  return (
+    <View style={styles.blocGain}>
+      <Text style={[styles.montantGain, { fontSize: taille }]}>
+        {formaterMontant(totalEnTzs({ [gain.devise]: gain.montant }), 'TZS')}
+      </Text>
+      {pourcentage && pct !== null && (
+        <Text style={styles.partZanziGo}>{t('gain_part_zanzigo', { pct: String(pct) })}</Text>
+      )}
+    </View>
+  );
+}
+
 export function EncartInfo({
   children,
   icone = 'information-circle',
@@ -712,6 +762,20 @@ export function ChargementCentre({ message }: { message?: string }) {
 }
 
 const styles = stylesReactifs(() => ({
+  // Le gain du chauffeur : le montant, et sous lui la part zanziGo en tout
+  // petit. C'est le seul argent qui s'affiche sur son portail.
+  blocGain: {
+    alignItems: 'flex-end',
+  },
+  montantGain: {
+    fontWeight: '700',
+    color: couleurs.primaire,
+  },
+  partZanziGo: {
+    fontSize: 11,
+    color: couleurs.texteSecondaire,
+    marginTop: 1,
+  },
   ecran: {
     flex: 1,
     backgroundColor: 'transparent',

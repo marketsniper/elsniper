@@ -14,6 +14,7 @@ import { notifierEquipe } from '../services/emailService.js';
 import { alertePaiementColis, aValiderALaMain } from '../services/paiementManuel.js';
 import { assertHotelVerified, libellePartenaire } from './hotels.js';
 import { libelleMoyen, moyensPour, reglement } from '../services/moyenPaiement.js';
+import { gainsSeuls } from '../services/vueChauffeur.js';
 
 const router = Router();
 
@@ -218,7 +219,9 @@ router.get(
        ORDER BY COALESCE(p.pickup_at, p.created_at) ASC
        LIMIT 100`
     );
-    res.json(rows);
+    // La bourse s'adresse aux chauffeurs : ils y comparent des GAINS, pas des
+    // prix. L'équipe, elle, a son tableau de bord pour tout voir.
+    res.json(isAdmin(req) ? rows : rows.map((pkg) => gainsSeuls(pkg)));
   })
 );
 
@@ -233,12 +236,15 @@ function sansSecretsChauffeur(pkg) {
   // le ramasser et repartir avec le numéro d'un tiers qui n'a rien demandé.
   // Même principe que vueChauffeur sur les courses : l'identité se mérite
   // par le paiement.
+  //
+  // L'ARGENT suit lui aussi la règle des courses : le chauffeur voit son gain
+  // net et le pourcentage zanziGo, jamais le prix payé par l'expéditeur.
   const { qr_code, ...reste } = pkg;
   const paye = ['paid', 'picked_up', 'delivered'].includes(String(pkg.status));
   if (!paye) {
-    return { ...reste, recipient_phone: null, sender_phone: null };
+    return gainsSeuls({ ...reste, recipient_phone: null, sender_phone: null });
   }
-  return reste;
+  return gainsSeuls(reste);
 }
 
 // GET /packages/mine — les colis du chauffeur connecté : réservés (à
@@ -256,7 +262,10 @@ router.get(
        ORDER BY COALESCE(pickup_at, created_at) ASC`,
       [req.auth.driverId]
     );
-    res.json(rows.map((pkg) => (pkg.status === 'paid' ? sansSecretsChauffeur(pkg) : pkg)));
+    // La route est réservée au chauffeur : le filtre s'applique aux DEUX
+    // statuts. Il ne portait que sur « paid » — un colis déjà ramassé
+    // repartait donc avec son QR et le prix payé par l'expéditeur.
+    res.json(rows.map((pkg) => sansSecretsChauffeur(pkg)));
   })
 );
 
@@ -309,16 +318,11 @@ router.post(
         `Réf : ${pkg.id}`,
       ].join('\n')
     );
-    const whatsappLink = buildTeamNotificationLink(
-      [
-        '🚚 Livraison prise par un chauffeur zanziGo',
-        `Chauffeur: ${chauffeur.full_name} (${chauffeur.phone})`,
-        `Trajet: ${pkg.pickup_location} → ${pkg.dropoff_location}`,
-        `Taille: ${pkg.size} — ${pkg.price} ${pkg.currency}`,
-        `Réf: ${pkg.id}`,
-      ].join('\n')
-    );
-    res.json({ ...sansSecretsChauffeur(pkg), whatsapp_link: whatsappLink });
+    // Le message d'équipe N'EST PAS RENVOYÉ au chauffeur : `notifierEquipe`
+    // ci-dessus l'a déjà porté à qui de droit, et son texte contient le prix
+    // payé par l'expéditeur — que le chauffeur n'a pas à lire. Même règle que
+    // sur les courses, où `vueChauffeur` met `whatsapp_link` à null.
+    res.json(sansSecretsChauffeur(pkg));
   })
 );
 
@@ -350,14 +354,13 @@ router.get(
     if (!allowed) {
       throw new HttpError(403, 'forbidden', "Accès réservé à l'expéditeur, au chauffeur ou à l'équipe");
     }
-    // Chauffeur assigné mais colis pas encore ramassé : détail SANS le QR ni
-    // le téléphone du destinataire (ils arrivent au scan du colis).
-    const chauffeurAvantRamassage =
-      !isAdmin(req) &&
-      !isSender(pkg, req.auth) &&
-      pkg.driver_id === req.auth.driverId &&
-      pkg.status === 'paid';
-    res.json(chauffeurAvantRamassage ? sansSecretsChauffeur(pkg) : pkg);
+    // Chauffeur assigné : détail SANS le QR (il arrive au scan du colis) et
+    // sans le prix payé par l'expéditeur. La condition portait en plus sur le
+    // statut « paid » — une fois le colis ramassé, le chauffeur récupérait
+    // donc le QR ET le prix client.
+    const vuChauffeur =
+      !isAdmin(req) && !isSender(pkg, req.auth) && pkg.driver_id === req.auth.driverId;
+    res.json(vuChauffeur ? sansSecretsChauffeur(pkg) : pkg);
   })
 );
 

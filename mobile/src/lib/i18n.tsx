@@ -4027,6 +4027,31 @@ const CHAINES = {
   annonce_retour: { fr: 'Retour à mes trajets', en: 'Back to my rides', sw: 'Rudi kwenye safari zangu' },
   gain_commission: { fr: 'Commission zanziGo', en: 'zanziGo commission', sw: 'Kamisheni ya zanziGo' , it: 'Commissione zanziGo', de: 'zanziGo-Provision' },
   gain_net: { fr: 'Votre gain net', en: 'Your net earnings', sw: 'Mapato yako halisi' , it: 'Il tuo guadagno netto', de: 'Ihr Nettoverdienst' },
+  // La part zanziGo, en POURCENTAGE — le portail chauffeur n'affiche jamais
+  // la commission en argent, ni le prix payé par le client.
+  gain_part_zanzigo: {
+    fr: 'zanziGo {pct} %',
+    en: 'zanziGo {pct}%',
+    sw: 'zanziGo {pct}%',
+    it: 'zanziGo {pct}%',
+    de: 'zanziGo {pct} %',
+  },
+  gain_part_zanzigo_ligne: {
+    fr: 'Part zanziGo',
+    en: 'zanziGo share',
+    sw: 'Sehemu ya zanziGo',
+    it: 'Quota zanziGo',
+    de: 'zanziGo-Anteil',
+  },
+  // L'annonce d'un chauffeur : ce qu'une place lui RAPPORTE, pas ce que le
+  // passager paie.
+  annonce_net_place: {
+    fr: 'Vous touchez par place',
+    en: 'You earn per seat',
+    sw: 'Unapata kwa kiti',
+    it: 'Guadagni per posto',
+    de: 'Sie verdienen pro Platz',
+  },
   annonce_gain_total: {
     fr: 'Gain net (places payées)',
     en: 'Net earnings (paid seats)',

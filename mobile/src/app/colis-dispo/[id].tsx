@@ -23,7 +23,16 @@ import { useAuth } from '@/lib/auth';
 import { masquerColis } from '@/lib/colisLocal';
 import { formaterDateRelativeI18n, libelleTailleColis, useT } from '@/lib/i18n';
 import { couleurs, espaces, stylesReactifs } from '@/lib/theme';
-import { champ, formaterDate, formaterMontant, type Colis, type TailleColis } from '@/lib/types';
+import {
+  champ,
+  formaterDate,
+  formaterMontant,
+  gainNetChauffeur,
+  partZanziGoPct,
+  totalEnTzs,
+  type Colis,
+  type TailleColis,
+} from '@/lib/types';
 
 export default function EcranColisDispo() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -72,13 +81,10 @@ export default function EcranColisDispo() {
   const nomHotel = champ<string>(colis, 'sender_hotel_name');
   const nomClient = champ<string>(colis, 'sender_user_name');
   const description = champ<string>(colis, 'description');
-  const prix = Number(champ(colis, 'price') ?? NaN);
-  const commission = Number(champ(colis, 'commission') ?? NaN);
-  const devise = String(champ(colis, 'currency') ?? '');
-  const net =
-    Number.isFinite(prix) && Number.isFinite(commission)
-      ? Math.round((prix - commission) * 100) / 100
-      : null;
+  // L'argent d'un colis, côté chauffeur : son gain et le pourcentage zanziGo.
+  // Le prix payé par l'expéditeur ne lui parvient plus (vueChauffeur.js).
+  const gain = gainNetChauffeur(colis);
+  const pct = partZanziGoPct(colis);
 
   const pasInteresse = () => {
     if (!chauffeurId) return;
@@ -161,19 +167,16 @@ export default function EcranColisDispo() {
       </Carte>
 
       <Carte>
-        <LigneInfo
-          label={t('colis_dispo_prix')}
-          valeur={Number.isFinite(prix) ? formaterMontant(prix, devise) : '—'}
-        />
-        <LigneInfo
-          label={t('gain_commission')}
-          valeur={Number.isFinite(commission) ? `− ${formaterMontant(commission, devise)}` : '—'}
-        />
-        {net !== null && (
+        {gain && (
           <View style={styles.ligneNet}>
             <Text style={styles.labelNet}>{t('gain_net')}</Text>
-            <Text style={styles.valeurNet}>{formaterMontant(net, devise)}</Text>
+            <Text style={styles.valeurNet}>
+              {formaterMontant(totalEnTzs({ [gain.devise]: gain.montant }), 'TZS')}
+            </Text>
           </View>
+        )}
+        {pct !== null && (
+          <LigneInfo label={t('gain_part_zanzigo_ligne')} valeur={`${pct} %`} />
         )}
       </Carte>
 

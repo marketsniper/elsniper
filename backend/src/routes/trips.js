@@ -24,7 +24,7 @@ import {
   alerterNouvelleCourse,
   diffuserCourseAuxChauffeurs,
 } from '../services/alertesChauffeur.js';
-import { CHAMPS_CLIENT_POUR_CHAUFFEUR, vueChauffeur } from '../services/vueChauffeur.js';
+import { CHAMPS_CLIENT_POUR_CHAUFFEUR, vueChauffeur, partZanziGoPct } from '../services/vueChauffeur.js';
 import { libelleMoyen, moyensPour, reglement } from '../services/moyenPaiement.js';
 
 const router = Router();
@@ -465,6 +465,11 @@ router.get(
 // gagne et les contraintes (siège bébé, gros bagages, vol) — mais NI le nom NI
 // le téléphone du client, ni sa position exacte. Il les obtient en prenant la
 // course, comme pour un colis.
+//
+// ARGENT : ce qu'il gagne, et rien d'autre. Ni le prix payé par le client, ni
+// la commission en argent — seulement son net et le pourcentage zanziGo (voir
+// services/vueChauffeur.js). Sur la bourse c'est ce qui compte le plus : on
+// choisit une course en comparant des gains, pas des prix.
 function courseSansIdentiteClient(trip) {
   return {
     id: trip.id,
@@ -474,11 +479,10 @@ function courseSansIdentiteClient(trip) {
     dropoff_location: trip.dropoff_location,
     scheduled_at: trip.scheduled_at,
     created_at: trip.created_at,
-    price: trip.price,
-    commission: trip.commission,
     currency: trip.currency,
     // Ce que le chauffeur touche réellement — la seule ligne qui l'intéresse.
     net_chauffeur: Number((Number(trip.price) - Number(trip.commission)).toFixed(2)),
+    part_zanzigo_pct: partZanziGoPct(trip.price, trip.commission),
     flight_number: trip.flight_number,
     round_trip: trip.round_trip,
     baby_seat: trip.baby_seat,

@@ -376,6 +376,78 @@ export function formaterPrix(objet: Record<string, unknown> | null | undefined):
   return formaterMontant(prix, devise);
 }
 
+// ─────────────────── CE QUE LE CHAUFFEUR MET DANS SA POCHE ─────────────────
+//
+// Sur le portail chauffeur, l'argent affiché est TOUJOURS le net — jamais le
+// prix payé par le client. Le serveur ne l'envoie même plus (voir
+// backend/src/services/vueChauffeur.js) ; ces deux fonctions sont l'unique
+// porte par laquelle un montant entre sur un écran de chauffeur.
+
+/**
+ * Le gain net du chauffeur sur une course, un colis ou une place.
+ *
+ * Le serveur envoie `net_chauffeur` (ou `net_per_seat`) tout calculé. Le repli
+ * `prix − commission` ne sert plus qu'aux réponses anciennes, gardées en
+ * mémoire par un téléphone qui n'a pas encore reçu la mise à jour.
+ */
+export function gainNetChauffeur(
+  objet: Record<string, unknown> | null | undefined
+): { montant: number; devise: string } | null {
+  const devise = champ<string>(objet, 'currency', 'devise') ?? '';
+  const net = Number(champ(objet, 'net_chauffeur', 'netChauffeur', 'net_per_seat'));
+  if (Number.isFinite(net)) return { montant: net, devise };
+  const prix = Number(champ(objet, 'price', 'prix'));
+  const commission = Number(champ(objet, 'commission'));
+  if (!Number.isFinite(prix) || !Number.isFinite(commission)) return null;
+  return { montant: Math.round((prix - commission) * 100) / 100, devise };
+}
+
+/**
+ * La part zanziGo de CETTE course-là, en pourcentage entier.
+ *
+ * Elle varie : 12 % sur un transfert, 15 % sur une petite course, 17 % sur le
+ * couloir du sud-est, 25 % sur une place partagée — et sur l'aéroport ↔ Stone
+ * Town, c'est un forfait de 4,50 $, soit 31 % d'une course à 14,50. On affiche
+ * le taux réel, pas une moyenne : un chauffeur qui refait le calcul doit
+ * tomber juste.
+ */
+/**
+ * LE NET DU CHAUFFEUR SUR UNE PLACE DE TAXI PARTAGÉ — miroir exact du
+ * serveur (backend/src/routes/rides.js).
+ *
+ * Sert à l'écran de publication d'annonce, qui doit annoncer le gain AVANT
+ * que l'annonce existe : il n'y a donc rien à demander au serveur.
+ */
+const TAUX_PLACE_USD = 0.25;
+const TAUX_PLACE_LOCALE = 0.2;
+
+/** Le gain d'une place en dollars, au centime. */
+export function netPlacePartageeUsd(prixParPlace: number): number {
+  return Math.round(prixParPlace * (1 - TAUX_PLACE_USD) * 100) / 100;
+}
+
+/**
+ * Le gain d'une place en shillings, ARRONDI AU MILLIER INFÉRIEUR.
+ *
+ * La promesse « comptes ronds » faite aux chauffeurs : 13 600 devient 13 000,
+ * et les shillings restants rejoignent la commission. Un chauffeur vérifie
+ * son portefeuille de tête ; personne ne compte 600 shillings.
+ */
+export function netPlacePartageeTzs(prixParPlace: number): number {
+  return Math.floor((prixParPlace * (1 - TAUX_PLACE_LOCALE)) / 1000) * 1000;
+}
+
+export function partZanziGoPct(
+  objet: Record<string, unknown> | null | undefined
+): number | null {
+  const envoye = Number(champ(objet, 'part_zanzigo_pct', 'partZanzigoPct'));
+  if (Number.isFinite(envoye)) return envoye;
+  const prix = Number(champ(objet, 'price', 'prix'));
+  const commission = Number(champ(objet, 'commission'));
+  if (!Number.isFinite(prix) || !Number.isFinite(commission) || prix <= 0) return null;
+  return Math.round((commission / prix) * 100);
+}
+
 // NB : la date relative traduite vit dans i18n.tsx (formaterDateRelativeI18n).
 
 /** Formate une date ISO en français court, ou '' si absente/invalide. */

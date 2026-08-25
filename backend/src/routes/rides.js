@@ -28,6 +28,7 @@ import {
   sharedSeatUsdForRoute,
 } from '../services/pricingService.js';
 import { libelleMoyen, moyensPour, reglement } from '../services/moyenPaiement.js';
+import { gainsSeuls } from '../services/vueChauffeur.js';
 import { createPaymentOrder, isStubMode } from '../services/pesapalService.js';
 import { RIDE_DESTINATIONS, RIDE_ORIGINS, RIDE_ORIGINS_ACCEPTES } from '../services/locations.js';
 import { randomUUID } from 'node:crypto';
@@ -509,7 +510,6 @@ router.get(
     const parRide = {};
     for (const b of reservations) (parRide[b.ride_id] ??= []).push(b);
 
-    const round2 = (n) => Math.round(n * 100) / 100;
     res.json(
       rows.map((r) => {
         const places = parRide[r.id] ?? [];
@@ -571,10 +571,46 @@ router.get(
   })
 );
 
+const round2 = (n) => Math.round(n * 100) / 100;
+
+/**
+ * L'ANNONCE, VUE PAR LE CHAUFFEUR QUI L'A POSTÉE.
+ *
+ * Les deux prix de place (TZS pour les locaux, USD pour les visiteurs) sortent
+ * de l'objet ; à leur place, ce que CHAQUE place lui rapporte, dans les deux
+ * devises, et le pourcentage zanziGo. Le chauffeur n'encaisse pas le passager
+ * — le prix affiché ne lui servait qu'à faire une soustraction de tête.
+ *
+ * Le net en shillings passe par l'arrondi au millier inférieur : c'est la
+ * promesse « comptes ronds » faite aux chauffeurs, et elle doit se lire ici
+ * exactement comme sur la fiche d'une réservation.
+ */
+function sansPrixDePlace(annonce, usd) {
+  const { price_per_seat: localTzs, price_per_seat_usd: touristeUsd, ...reste } = annonce;
+  const netTzs = Number.isFinite(Number(localTzs))
+    ? arrondiMillierTzs(Number(localTzs) * (1 - TAUX_PLACE_LOCALE))
+    : null;
+  const netUsd = Number.isFinite(Number(touristeUsd))
+    ? round2(Number(touristeUsd) * (1 - TAUX_PLACE_USD))
+    : Number.isFinite(Number(usd))
+      ? round2(Number(usd) * (1 - TAUX_PLACE_USD))
+      : null;
+  return {
+    ...reste,
+    net_par_place_tzs: netTzs,
+    net_par_place_usd: netUsd,
+    // Le taux affiché est celui des places en devise : c'est la très grande
+    // majorité des réservations, et l'écart avec le taux local (20 %) tient
+    // en cinq points.
+    part_zanzigo_pct: Math.round(TAUX_PLACE_USD * 100),
+  };
+}
+
 // GET /rides/mine — les trajets du chauffeur connecté (tous statuts), avec le
-// détail des réservations : qui a réservé, combien de places, et le PRIX PAR
-// PLACE SELON LE TYPE DE CLIENT (touriste/résident/hôtel en USD, local en
-// TZS) — c'est ainsi que le chauffeur connaît la valeur de chaque place.
+// détail des réservations : qui a réservé, combien de places, et CE QU'IL
+// TOUCHE sur chacune (en USD pour touriste/résident/hôtel, en TZS pour un
+// local) — le prix payé par le passager ne lui est pas montré. Voir la règle
+// et ses raisons dans services/vueChauffeur.js.
 router.get(
   '/mine',
   requireAuth,
@@ -589,7 +625,6 @@ router.get(
       [req.auth.driverId]
     );
 
-    const round2 = (n) => Math.round(n * 100) / 100;
     const parRide = {};
     if (rows.length > 0) {
       const { rows: reservations } = await query(
@@ -610,8 +645,8 @@ router.get(
 
     res.json(
       rows.map((r) => {
-        // Les deux prix (TZS locaux + USD touristes) : le chauffeur voit que
-        // chaque client paie dans sa devise.
+        // `mode: 'both'` sert à calculer les gains dans les deux devises ; les
+        // prix eux-mêmes sont retirés juste après.
         const out = serializeRide(r, { mode: 'both' });
         const usd = sharedSeatUsdForRoute(r.origin, r.destination);
         // Commission zanziGo par place : taux local (TZS) ou taux touriste
@@ -620,19 +655,29 @@ router.get(
         // chauffeur est arrondi au millier inférieur, le reste rejoint la
         // commission. Les places en dollars gardent le calcul au centime.
         const avecGain = (base, taux) => {
-          if (base.currency === 'TZS') {
-            const netRond = arrondiMillierTzs(base.price_per_seat * (1 - taux));
-            return {
-              ...base,
-              commission_per_seat: round2(base.price_per_seat - netRond),
-              net_per_seat: netRond,
-            };
-          }
-          return {
-            ...base,
-            commission_per_seat: round2(base.price_per_seat * taux),
-            net_per_seat: round2(base.price_per_seat * (1 - taux)),
-          };
+          const brut =
+            base.currency === 'TZS'
+              ? (() => {
+                  const netRond = arrondiMillierTzs(base.price_per_seat * (1 - taux));
+                  return {
+                    ...base,
+                    commission_per_seat: round2(base.price_per_seat - netRond),
+                    net_per_seat: netRond,
+                  };
+                })()
+              : {
+                  ...base,
+                  commission_per_seat: round2(base.price_per_seat * taux),
+                  net_per_seat: round2(base.price_per_seat * (1 - taux)),
+                };
+          // Le prix de la place et la commission en argent ne sortent pas :
+          // il reste le net (déjà arrondi au millier pour les shillings) et
+          // le pourcentage.
+          return gainsSeuls(brut, {
+            prix: 'price_per_seat',
+            commission: 'commission_per_seat',
+            net: 'net_per_seat',
+          });
         };
         // Chaque réservation indique si la place a été payée — et le NOM du
         // passager n'apparaît qu'à ce moment-là : même règle que pour les
@@ -706,7 +751,9 @@ router.get(
             )
           );
         });
-        return out;
+        // Le trajet lui-même : le chauffeur voit ce qu'une place lui RAPPORTE,
+        // dans les deux devises, jamais ce que le passager paie.
+        return sansPrixDePlace(out, usd);
       })
     );
   })
