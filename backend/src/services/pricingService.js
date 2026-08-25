@@ -136,19 +136,6 @@ const CITY_ZONES = {
 const COMMISSION_PRIVE = { grand: 0.12, petit: 0.15 };
 const COMMISSION_PRIVE_SEUIL_USD = 40;
 
-// LE COULOIR DU SUD-EST : Stone Town et l'aéroport vers Paje, Bwejuu et
-// Jambiani, la liaison la plus demandée de l'île. Décision du 21/08/2026 :
-// le chauffeur y touche 105 000 TZS tout rond — moins que le transfert
-// ordinaire, c'est le trajet le plus court et le plus roulé — et zanziGo y
-// prend 17 % : c'est le volume qui finance l'infrastructure.
-//
-// Bwejuu suit Paje et Jambiani sans avoir été nommé : le village est ENTRE les
-// deux, sur la même route et souvent dans la même voiture.
-const CORRIDOR_SUD_EST = new Set(['paje', 'bwejuu', 'jambiani']);
-const COMMISSION_CORRIDOR = 0.17;
-const NET_CORRIDOR_TZS = 105000;
-const NET_CORRIDOR_USD = NET_CORRIDOR_TZS / config.usdToTzsRate; // ≈ 40,38
-
 // AÉROPORT ↔ STONE TOWN : commission fixée en DOLLARS, pas en pourcentage.
 // Sept kilomètres seulement, mais la course la plus fréquente de l'île — celle
 // qui tourne toute la journée. Un pourcentage y rapportait 1,95 USD, moins que
@@ -180,17 +167,10 @@ export function estAeroportVille(pickup, dropoff) {
   return (HUBS.has(p) && HUBS_VILLE.has(d)) || (HUBS_VILLE.has(p) && HUBS.has(d));
 }
 
-function versCorridorSudEst(pickup, dropoff) {
-  const p = normCity(pickup);
-  const d = normCity(dropoff);
-  return (HUBS.has(p) && CORRIDOR_SUD_EST.has(d)) || (HUBS.has(d) && CORRIDOR_SUD_EST.has(p));
-}
-
 /** Taux de commission d'une course privée, selon le prix ET l'itinéraire. */
 function tauxCommissionPrive(prixUsd, pickup, dropoff) {
-  if (pickup !== undefined) {
-    if (estAeroportVille(pickup, dropoff)) return COMMISSION_AEROPORT_VILLE_USD / prixUsd;
-    if (versCorridorSudEst(pickup, dropoff)) return COMMISSION_CORRIDOR;
+  if (pickup !== undefined && estAeroportVille(pickup, dropoff)) {
+    return COMMISSION_AEROPORT_VILLE_USD / prixUsd;
   }
   return prixUsd >= COMMISSION_PRIVE_SEUIL_USD ? COMMISSION_PRIVE.grand : COMMISSION_PRIVE.petit;
 }
@@ -199,32 +179,61 @@ function tauxCommissionPrive(prixUsd, pickup, dropoff) {
 // unique vers toute l'île, quelle que soit la plage.
 const NET_TRANSFERT_USD = 45;
 
-// LES TRANSFERTS QUI SORTENT DU PRIX UNIQUE (24/08/2026).
+// LA GRILLE DES TRANSFERTS, PAR BANDES KILOMÉTRIQUES (25/08/2026).
 //
-// Le prix unique traitait Fumba comme Nungwi : 52 USD pour tout le monde. Or
-// Fumba est à 27 km de Stone Town quand Nungwi est à 67 — le client payait la
-// plage la plus lointaine pour aller à la plus proche.
+// Le « prix unique » est mort : il faisait payer 52 USD la côte est à 36 km
+// (1,44 USD/km) quand Nungwi, à 67 km, en coûtait 45 (0,67). Le client qui
+// comparait deux plages sur une carte voyait la plus proche au prix le plus
+// fort — indéfendable. Chaque destination est désormais dans la table, et le
+// prix suit la route : partout entre 0,67 et 0,83 USD/km.
 //
-// LE HUB DE DÉPART COMPTE, et pas seulement la destination : l'aéroport est
-// plus loin de Nungwi que Stone Town, et plus loin de Matemwe aussi. Chaque
-// destination porte donc son net « depuis la ville » et, quand il diffère,
-// son net « depuis l'aéroport ».
+// Les kilomètres sont ceux de kmEntreVilles (routes réelles approchées) ; les
+// prix, ceux qui en découlent au dollar entier :
 //
-// Les nets sont posés pour retomber EXACTEMENT sur le prix client décidé, la
+//   27 km  Fumba                              20 USD (0,74/km)
+//   36 km  Chwaka, Uroa, Pongwe               28     (0,78)
+//   38 km  Kiwengwa                           29     (0,76)
+//   43 km  Pwani Mchangani                    30     (0,70)
+//   54 km  Matemwe                            33     (0,61 — le prix d'appel
+//          de la côte nord-est, décidé le 24/08 ; c'est le seul point de la
+//          grille sous la pente, et il est volontaire)
+//   52-58  Paje, Bwejuu, Jambiani             45     (le couloir du sud-est
+//          rejoint le prix de Nungwi — décision du 25/08 ; sa règle à part,
+//          105 000 TZS nets et 17 %, disparaît avec lui)
+//   61-67  Kizimkazi, Makunduchi, Mtende      45     (0,67-0,74)
+//   63-67  Kendwa, Nungwi                     45     (Kendwa suit Nungwi :
+//          cinq kilomètres les séparent)
+//   ~65    Michamvi, Dongwe                   48     (le bout de la presqu'île,
+//          par Paje puis retour à vide — la route réelle dépasse Nungwi)
+//
+// LE HUB DE DÉPART COMPTE : l'aéroport rallonge les trajets vers le NORD
+// (Kiwengwa +4 km, Pwani +6, Matemwe +6, Nungwi +8) — ces destinations
+// portent un net « aeroport ». Vers l'est et le sud, l'aéroport est aussi
+// proche ou plus proche que la ville : même prix, pas de champ.
+//
+// Les NETS sont posés pour retomber EXACTEMENT sur le prix client visé, la
 // commission ordinaire prélevée (12 % à partir de 40 USD, 15 % en dessous) :
-//
-//   Fumba            17 → 20 × 0,85 = 17,00   (19 → 16,15, insuffisant)
-//   Matemwe ville    28 → 33 × 0,85 = 28,05   (32 → 27,20)
-//   Matemwe aéroport 39 → 45 × 0,88 = 39,60   (44 → 38,72)
-//   Nungwi  ville    39 → 45 × 0,88 = 39,60   (44 → 38,72)
-//   Nungwi  aéroport 42 → 48 × 0,88 = 42,24   (47 → 41,36)
-//
-// « ville » couvre Stone Town ET son terminal ferry : cinq minutes à pied
-// séparent les deux, aucune course ne se vend entre elles.
+// net 17 → 20 ; 23 → 28 ; 24 → 29 ; 25 → 30 ; 26 → 31 ; 28 → 33 ; 39 → 45 ;
+// 42 → 48. « ville » couvre Stone Town ET son terminal ferry : cinq minutes
+// à pied séparent les deux, aucune course ne se vend entre elles.
 const NET_TRANSFERT_PAR_VILLE_USD = {
   fumba: { ville: 17 },
+  chwaka: { ville: 23 },
+  uroa: { ville: 23 },
+  pongwe: { ville: 23 },
+  kiwengwa: { ville: 24, aeroport: 26 },
+  'pwani mchangani': { ville: 25, aeroport: 28 },
   matemwe: { ville: 28, aeroport: 39 },
+  paje: { ville: 39 },
+  bwejuu: { ville: 39 },
+  jambiani: { ville: 39 },
+  kizimkazi: { ville: 39 },
+  makunduchi: { ville: 39 },
+  mtende: { ville: 39 },
+  kendwa: { ville: 39, aeroport: 42 },
   nungwi: { ville: 39, aeroport: 42 },
+  michamvi: { ville: 42 },
+  dongwe: { ville: 42 },
 };
 
 // L'aéroport et la ville sont à sept kilomètres : ce n'est pas un transfert de
@@ -421,7 +430,6 @@ export function netChauffeurPriveUsd(pickup, dropoff) {
     return NET_AEROPORT_VILLE_USD;
   }
   if (HUBS.has(p) || HUBS.has(d)) {
-    if (versCorridorSudEst(pickup, dropoff)) return NET_CORRIDOR_USD;
     // Le hub est un bout, la destination est l'autre.
     const hub = HUBS.has(p) ? p : d;
     const destination = HUBS.has(p) ? d : p;
@@ -604,25 +612,13 @@ export function sharedSeatUsdForRoute(pickup, dropoff) {
   return sharedSeatUsd(privateUsdForRoute(pickup, dropoff));
 }
 
-// Le TARIF LOCAL (place à 16 000 TZS, spéciaux inclus, ex. Nungwi ↔ Paje
-// 21 000) ne s'applique que sur les GRANDS AXES — définis par : le taxi
-// privé du même trajet coûte au moins 40 USD. Sur les petits trajets
-// (privé sous les 40 USD), pas de tarif local : la place se paie au prix
-// touriste de la zone, converti en shillings.
-//
-// Ce seuil suit la grille : quand les transferts vers Nungwi sont passés de
-// 50 à 40 USD, le laisser à 45 aurait sorti les grands axes du nord du tarif
-// local — un Zanzibarite aurait payé 46 800 TZS sa place au lieu de 16 000.
-const GRAND_AXE_PRIVE_MIN_USD = 40;
-
-function estGrandAxe(pickup, dropoff) {
-  return privateUsdForRoute(pickup, dropoff) >= GRAND_AXE_PRIVE_MIN_USD;
-}
-
 // Le TAXI PARTAGÉ n'existe que sur les trajets assez longs : course privée
-// du même trajet à 35 USD minimum. En dessous (petits sauts de la côte est,
-// villages voisins…), course privée uniquement.
-const PARTAGE_PRIVE_MIN_USD = 35;
+// du même trajet à 28 USD minimum — le prix de la côte est depuis la grille
+// kilométrique du 25/08 ; le seuil historique de 35 aurait fait disparaître
+// les places partagées de Chwaka, Kiwengwa et Pwani Mchangani le jour où
+// leurs courses privées ont retrouvé un prix honnête. En dessous (sauts de
+// village, liaisons courtes), course privée uniquement.
+const PARTAGE_PRIVE_MIN_USD = 28;
 
 export function sharedAllowedForRoute(pickup, dropoff) {
   return privateUsdForRoute(pickup, dropoff) >= PARTAGE_PRIVE_MIN_USD;
@@ -640,10 +636,15 @@ export function hubToHubRoute(pickup, dropoff) {
 // pas son prix).
 export function localSeatTzsForRoute(pickup, dropoff) {
   const tier = tierForRoute(pickup, dropoff);
-  if (!estGrandAxe(pickup, dropoff)) {
-    return Math.round(sharedSeatUsdForRoute(pickup, dropoff) * config.usdToTzsRate);
-  }
-  return specialLocalRouteTzs(pickup, dropoff) ?? tier.localTzs;
+  // LE LOCAL PAIE LE MOINS CHER DES DEUX : le tarif plat de la zone (17 000,
+  // spéciaux inclus) ou la place touriste convertie en shillings. C'est ce
+  // que visait l'ancien seuil « grand axe = privé ≥ 40 USD » — protéger le
+  // local du tarif plat sur les petits trajets — sans son défaut : quand la
+  // côte est est passée de 52 à 28 USD, le seuil aurait fait payer 23 400 TZS
+  // une place qui en coûtait 17 000 la veille.
+  const plat = specialLocalRouteTzs(pickup, dropoff) ?? tier.localTzs;
+  const converti = Math.round(sharedSeatUsdForRoute(pickup, dropoff) * config.usdToTzsRate);
+  return Math.min(plat, converti);
 }
 
 // audience : 'tourist' | 'resident' | 'local' | 'hotel'

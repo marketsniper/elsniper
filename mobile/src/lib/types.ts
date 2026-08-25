@@ -574,14 +574,30 @@ const NET_TRANSFERT_USD = 45;
  * et plus loin de Matemwe aussi. Chaque destination porte son net « depuis la
  * ville » et, quand il diffère, son net « depuis l'aéroport ».
  *
- *   Fumba            17 → 20 USD      Matemwe ville    28 → 33 USD
- *   Matemwe aéroport 39 → 45 USD      Nungwi  ville    39 → 45 USD
- *   Nungwi  aéroport 42 → 48 USD
+ * GRILLE PAR BANDES KILOMÉTRIQUES (25/08/2026) — le prix suit la route,
+ * partout entre 0,67 et 0,86 USD/km. Nets → prix client :
+ * 17 → 20 ; 23 → 28 ; 24 → 29 ; 25 → 30 ; 26 → 31 ; 28 → 33 ; 39 → 45 ;
+ * 42 → 48. Matemwe ville (33 USD à 54 km) est le seul point sous la pente :
+ * le prix d'appel de la côte nord-est, volontaire.
  */
 const NET_TRANSFERT_PAR_VILLE_USD: Record<string, { ville: number; aeroport?: number }> = {
   fumba: { ville: 17 },
+  chwaka: { ville: 23 },
+  uroa: { ville: 23 },
+  pongwe: { ville: 23 },
+  kiwengwa: { ville: 24, aeroport: 26 },
+  'pwani mchangani': { ville: 25, aeroport: 28 },
   matemwe: { ville: 28, aeroport: 39 },
+  paje: { ville: 39 },
+  bwejuu: { ville: 39 },
+  jambiani: { ville: 39 },
+  kizimkazi: { ville: 39 },
+  makunduchi: { ville: 39 },
+  mtende: { ville: 39 },
+  kendwa: { ville: 39, aeroport: 42 },
   nungwi: { ville: 39, aeroport: 42 },
+  michamvi: { ville: 42 },
+  dongwe: { ville: 42 },
 };
 
 /** L'aéroport et la ville sont à sept kilomètres : ce n'est pas un transfert,
@@ -593,17 +609,6 @@ const NET_AEROPORT_VILLE_USD = 10;
  */
 const COMMISSION_PRIVE = { grand: 0.12, petit: 0.15 };
 const COMMISSION_PRIVE_SEUIL_USD = 40;
-
-/**
- * LE COULOIR DU SUD-EST : Stone Town et l'aéroport vers Paje, Bwejuu et
- * Jambiani — la liaison la plus demandée de l'île. zanziGo y prend 15 % au
- * lieu de 12 ; le chauffeur, lui, touche la même chose qu'ailleurs.
- */
-const CORRIDOR_SUD_EST = ['paje', 'bwejuu', 'jambiani'];
-const COMMISSION_CORRIDOR = 0.17;
-/** Le couloir paie le chauffeur 105 000 TZS tout rond — miroir du serveur.
- *  (Divisé à l'appel : TAUX_USD_TZS est déclaré plus bas dans le fichier.) */
-const NET_CORRIDOR_TZS = 105000;
 
 /**
  * AÉROPORT ↔ STONE TOWN : commission fixée en DOLLARS, pas en pourcentage.
@@ -634,20 +639,10 @@ function estAeroportVille(depart: string, arrivee: string): boolean {
   );
 }
 
-function versCorridorSudEst(depart: string, arrivee: string): boolean {
-  const d = normaliserLieu(depart);
-  const a = normaliserLieu(arrivee);
-  return (
-    (HUBS_TARIFAIRES.has(d) && CORRIDOR_SUD_EST.includes(a)) ||
-    (HUBS_TARIFAIRES.has(a) && CORRIDOR_SUD_EST.includes(d))
-  );
-}
-
 /** Taux de commission d'une course privée, selon le prix ET l'itinéraire. */
 export function tauxCommissionPrive(prixUsd: number, depart?: string, arrivee?: string): number {
-  if (depart !== undefined && arrivee !== undefined) {
-    if (estAeroportVille(depart, arrivee)) return COMMISSION_AEROPORT_VILLE_USD / prixUsd;
-    if (versCorridorSudEst(depart, arrivee)) return COMMISSION_CORRIDOR;
+  if (depart !== undefined && arrivee !== undefined && estAeroportVille(depart, arrivee)) {
+    return COMMISSION_AEROPORT_VILLE_USD / prixUsd;
   }
   return prixUsd >= COMMISSION_PRIVE_SEUIL_USD ? COMMISSION_PRIVE.grand : COMMISSION_PRIVE.petit;
 }
@@ -788,10 +783,11 @@ export const TARIF_LOCAL_TZS = 17000;
  * fait promettre 10 % de remise pendant que le moteur en appliquait 5.
  */
 // Le TAXI PARTAGÉ n'est proposé que sur les trajets assez longs : course
-// privée du même trajet à 35 USD minimum. En dessous (Nungwi ↔ Kendwa,
-// aéroport ↔ Stone Town, sauts de la côte est…), course privée uniquement.
-// Même seuil que le serveur — voir sharedAllowedForRoute.
-const PARTAGE_PRIVE_MIN_USD = 35;
+// privée du même trajet à 28 USD minimum — le prix de la côte est depuis la
+// grille kilométrique du 25/08. En dessous (Nungwi ↔ Kendwa, aéroport ↔
+// Stone Town, sauts de village), course privée uniquement. Même seuil que le
+// serveur — voir sharedAllowedForRoute.
+const PARTAGE_PRIVE_MIN_USD = 28;
 
 /** Un taxi partagé peut-il exister sur cet itinéraire ? */
 export function partagePossibleItineraire(depart: string, arrivee: string): boolean {
@@ -1200,7 +1196,6 @@ export function netChauffeurPriveUsd(depart: string, arrivee: string): number {
     return NET_AEROPORT_VILLE_USD;
   }
   if (HUBS_TARIFAIRES.has(d) || HUBS_TARIFAIRES.has(a)) {
-    if (versCorridorSudEst(depart, arrivee)) return NET_CORRIDOR_TZS / TAUX_USD_TZS;
     // Le hub est un bout, la destination est l'autre.
     const hub = HUBS_TARIFAIRES.has(d) ? d : a;
     const destination = HUBS_TARIFAIRES.has(d) ? a : d;
@@ -1283,17 +1278,19 @@ export function tarifTrajetProfil(
         : zone.priveUsd;
       return { montant: Math.round(usd * TAUX_USD_TZS), devise: 'TZS' };
     }
-    // Place en taxi partagé : le tarif local (17 000, spéciaux inclus) ne
-    // vaut que sur les GRANDS AXES — privé du même trajet à 40 USD minimum.
-    // Ailleurs, la place se paie au prix touriste converti en shillings.
-    if (itineraire && tarifPriveItineraire(itineraire.depart, itineraire.arrivee) < 40) {
-      const prive = tarifPriveItineraire(itineraire.depart, itineraire.arrivee);
-      return { montant: Math.round(tarifPlacePartagee(prive) * TAUX_USD_TZS), devise: 'TZS' };
-    }
+    // Place en taxi partagé : LE LOCAL PAIE LE MOINS CHER DES DEUX — le tarif
+    // plat de la zone (17 000, spéciaux inclus) ou la place touriste
+    // convertie en shillings. Miroir de localSeatTzsForRoute côté serveur.
     const specialLocal = itineraire
       ? tarifSpecialLocal(itineraire.depart, itineraire.arrivee)
       : null;
-    return { montant: specialLocal ?? zone.localTzs, devise: 'TZS' };
+    const plat = specialLocal ?? zone.localTzs;
+    if (itineraire) {
+      const prive = tarifPriveItineraire(itineraire.depart, itineraire.arrivee);
+      const converti = Math.round(tarifPlacePartagee(prive) * TAUX_USD_TZS);
+      return { montant: Math.min(plat, converti), devise: 'TZS' };
+    }
+    return { montant: plat, devise: 'TZS' };
   }
   let plein: number | undefined;
   if (type === 'private') {

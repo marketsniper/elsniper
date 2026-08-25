@@ -15,6 +15,7 @@ import {
   privateUsdForRoute,
   netChauffeurPriveUsd,
   forfaitZanzigoTrajetUsd,
+  kmEntreVilles,
   priceTrip,
   sharedSeatUsdForRoute,
   sharedAllowedForRoute,
@@ -58,57 +59,84 @@ function verifier(depart, arrivee, net, prixClient) {
 }
 
 describe('Grille privée : le net du chauffeur décide, le forfait s’ajoute', () => {
-  it('transfert depuis un hub : 45 USD au chauffeur vers toute l’île', () => {
-    // Prix unique quelle que soit la plage — décision de terrain, assumée :
-    // un transfert court paie autant qu'un long. TROIS EXCEPTIONS depuis le
-    // 24/08/2026 : Fumba, Matemwe et Nungwi ont chacune leur prix, et le hub
-    // de départ y compte. Elles ont leur propre test, prix-transferts.
-    for (const hub of HUBS) {
-      for (const plage of [
-        'Kendwa',
-        'Pwani Mchangani',
-        'Kiwengwa',
-        'Pongwe',
-        'Uroa',
-        'Chwaka',
-        'Michamvi',
-        'Dongwe',
-        'Makunduchi',
-        'Mtende',
-        'Kizimkazi',
-      ]) {
-        verifier(hub, plage, 45, 52);
+  it('transfert depuis la ville : chaque destination porte son prix, posé sur les kilomètres', () => {
+    // LE PRIX UNIQUE EST MORT (25/08/2026). Il faisait payer 52 USD la côte
+    // est à 36 km (1,44 USD/km) quand Nungwi, à 67 km, en coûtait 45 (0,67).
+    // Chaque destination porte désormais son net, et le prix suit la route.
+    // Le détail hub par hub vit dans prix-transferts.test.js ; ici, la grille
+    // depuis Stone Town, du plus proche au plus loin.
+    verifier('Stone Town', 'Fumba', 17, 20);
+    verifier('Stone Town', 'Chwaka', 23, 28);
+    verifier('Stone Town', 'Uroa', 23, 28);
+    verifier('Stone Town', 'Pongwe', 23, 28);
+    verifier('Stone Town', 'Kiwengwa', 24, 29);
+    verifier('Stone Town', 'Pwani Mchangani', 25, 30);
+    verifier('Stone Town', 'Matemwe', 28, 33);
+    verifier('Stone Town', 'Paje', 39, 45);
+    verifier('Stone Town', 'Bwejuu', 39, 45);
+    verifier('Stone Town', 'Jambiani', 39, 45);
+    verifier('Stone Town', 'Kizimkazi', 39, 45);
+    verifier('Stone Town', 'Makunduchi', 39, 45);
+    verifier('Stone Town', 'Mtende', 39, 45);
+    verifier('Stone Town', 'Kendwa', 39, 45);
+    verifier('Stone Town', 'Nungwi', 39, 45);
+    // Michamvi et Dongwe sont au bout de la presqu'île, par Paje puis retour
+    // à vide : leur route réelle dépasse Nungwi, leur prix aussi.
+    verifier('Stone Town', 'Michamvi', 42, 48);
+    verifier('Stone Town', 'Dongwe', 42, 48);
+  });
+
+  it('la grille est COHÉRENTE : jamais plus cher pour aller moins loin', () => {
+    // La règle que le client vérifie sur une carte : deux plages, la plus
+    // proche ne coûte jamais plus. Deux absents assumés : Michamvi et Dongwe
+    // (leur kilométrage à vol d'oiseau ment, la route passe par Paje), et
+    // Matemwe — le prix d'appel de la côte nord-est, posé SOUS la pente : à
+    // un kilomètre près de Paje, il coûte 12 USD de moins, et c'est voulu.
+    const plages = [
+      'Fumba', 'Chwaka', 'Uroa', 'Pongwe', 'Kiwengwa', 'Pwani Mchangani',
+      'Paje', 'Bwejuu', 'Jambiani', 'Kizimkazi', 'Makunduchi',
+      'Mtende', 'Kendwa', 'Nungwi',
+    ];
+    const mesures = plages.map((v) => ({
+      ville: v,
+      km: kmEntreVilles('Stone Town', v),
+      prix: privateUsdForRoute('Stone Town', v),
+    }));
+    for (const a of mesures) {
+      for (const b of mesures) {
+        if (a.km >= b.km) continue;
+        assert.ok(
+          a.prix <= b.prix,
+          `${a.ville} (${a.km.toFixed(0)} km, ${a.prix} USD) coûte plus cher ` +
+            `que ${b.ville} (${b.km.toFixed(0)} km, ${b.prix} USD), pourtant plus loin`
+        );
       }
+      // Et le prix au kilomètre reste dans une bande serrée : entre 0,60 et
+      // 0,90 USD/km. C'est ce qui empêche la grille de re-dériver vers les
+      // 1,44 USD/km que payait la côte est.
+      const parKm = a.prix / a.km;
+      assert.ok(
+        parKm >= 0.6 && parKm <= 0.9,
+        `${a.ville} : ${parKm.toFixed(2)} USD/km, hors de la bande 0,60-0,90`
+      );
     }
   });
 
-  it('…sauf Fumba, Matemwe et Nungwi, sortis du prix unique', () => {
-    // Le détail (les deux sens, chaque hub, le net qui reste au chauffeur)
-    // vit dans prix-transferts.test.js. Ici, on note simplement que le prix
-    // unique ADMET des exceptions — pour qu'un futur lecteur du test ci-dessus
-    // ne conclue pas que la règle est absolue.
-    verifier('Stone Town', 'Fumba', 17, 20);
-    verifier('Stone Town', 'Matemwe', 28, 33);
-    verifier('Stone Town', 'Nungwi', 39, 45);
-  });
-
-  it('le couloir du sud-est : 105 000 TZS ronds au chauffeur, 17 % à zanziGo', () => {
-    // Stone Town et l'aéroport vers Paje, Bwejuu et Jambiani : la liaison la
-    // plus demandée de l'île, et la plus courte des transferts. Le chauffeur y
-    // touche 105 000 TZS tout rond ; zanziGo prend 17 % — c'est le volume qui
-    // finance l'infrastructure. Client : 49 USD, sous le transfert ordinaire.
+  it('le couloir du sud-est a rejoint le prix de Nungwi', () => {
+    // Décision du 25/08/2026 : Paje, Bwejuu et Jambiani au même prix que
+    // Nungwi — 45 USD, commission ordinaire de 12 %. Leur règle à part
+    // (105 000 TZS nets, 17 %) n'existe plus ; la promesse des comptes ronds
+    // en shillings, elle, demeure.
     for (const hub of HUBS) {
       for (const plage of ['Paje', 'Bwejuu', 'Jambiani']) {
-        assert.equal(privateUsdForRoute(hub, plage), 49, `prix ${hub} → ${plage}`);
+        assert.equal(privateUsdForRoute(hub, plage), 45, `prix ${hub} → ${plage}`);
         const course = priceTrip('private', 'tourist', { pickup: hub, dropoff: plage });
-        assert.equal(course.commission, 8.33, `${hub} → ${plage} : 17 % de 49`);
-        // La promesse en shillings, à la lettre : une course locale rend
-        // exactement 105 000 au chauffeur.
+        assert.equal(course.commission, 5.4, `${hub} → ${plage} : 12 % de 45`);
         const locale = priceTrip('private', 'local', { pickup: hub, dropoff: plage });
-        assert.equal(locale.price - locale.commission, 105000, `${hub} → ${plage} en TZS`);
-        assert.ok(
-          privateUsdForRoute(hub, plage) < privateUsdForRoute(hub, 'Kiwengwa'),
-          `${hub} → ${plage} doit coûter moins cher qu'un transfert ordinaire`
+        assert.equal(
+          (locale.price - locale.commission) % 1000,
+          0,
+          `${hub} → ${plage} : le net local n'est pas un compte rond`
         );
       }
     }
@@ -224,11 +252,11 @@ describe('Grille privée : le net du chauffeur décide, le forfait s’ajoute', 
     assert.equal(transfert.commission, 5.4);
     assert.equal(transfert.price - transfert.commission, 39.6, 'le net promis au chauffeur');
 
-    const emprunte = priceTrip('private', 'tourist', { pickup: 'Stone Town', dropoff: 'Paje' });
-    assert.equal(emprunte.price, 49);
-    assert.equal(emprunte.commission, 8.33, '17 % sur le couloir du sud-est');
-    // La promesse du couloir est 105 000 TZS (40,3846 USD) : tenue, arrondie.
-    assert.ok(emprunte.price - emprunte.commission >= 105000 / 2600, 'promesse tenue');
+    // Une destination à 15 % : la côte est, sous les 40 USD.
+    const courte = priceTrip('private', 'tourist', { pickup: 'Stone Town', dropoff: 'Chwaka' });
+    assert.equal(courte.price, 28);
+    assert.equal(courte.commission, 4.2, '15 % de 28');
+    assert.equal(courte.price - courte.commission, 23.8, 'au moins les 23 promis');
   });
 
   const COINS = [

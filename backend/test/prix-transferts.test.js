@@ -44,17 +44,38 @@ function prixApplication(routes) {
 }
 
 describe('Prix de transfert — les exceptions au prix unique', () => {
-  // [départ, arrivée, prix client, net chauffeur]
+  // [départ, arrivée, prix client, net chauffeur] — LA GRILLE ENTIÈRE du
+  // 25/08/2026 : plus d'exceptions à un prix unique, chaque destination
+  // porte son prix, posé sur les kilomètres.
   const EXCEPTIONS = [
     ['Stone Town', 'Fumba', 20, 17],
     ['Stone Town Ferry', 'Fumba', 20, 17],
     [AEROPORT, 'Fumba', 20, 17],
+    ['Stone Town', 'Chwaka', 28, 23],
+    [AEROPORT, 'Chwaka', 28, 23],
+    ['Stone Town', 'Uroa', 28, 23],
+    ['Stone Town', 'Pongwe', 28, 23],
+    ['Stone Town', 'Kiwengwa', 29, 24],
+    [AEROPORT, 'Kiwengwa', 31, 26],
+    ['Stone Town', 'Pwani Mchangani', 30, 25],
+    [AEROPORT, 'Pwani Mchangani', 33, 28],
     ['Stone Town', 'Matemwe', 33, 28],
     ['Stone Town Ferry', 'Matemwe', 33, 28],
     [AEROPORT, 'Matemwe', 45, 39],
+    ['Stone Town', 'Paje', 45, 39],
+    [AEROPORT, 'Paje', 45, 39],
+    ['Stone Town', 'Bwejuu', 45, 39],
+    ['Stone Town', 'Jambiani', 45, 39],
+    ['Stone Town', 'Kizimkazi', 45, 39],
+    ['Stone Town', 'Makunduchi', 45, 39],
+    ['Stone Town', 'Mtende', 45, 39],
+    ['Stone Town', 'Kendwa', 45, 39],
+    [AEROPORT, 'Kendwa', 48, 42],
     ['Stone Town', 'Nungwi', 45, 39],
     ['Stone Town Ferry', 'Nungwi', 45, 39],
     [AEROPORT, 'Nungwi', 48, 42],
+    ['Stone Town', 'Michamvi', 48, 42],
+    ['Stone Town', 'Dongwe', 48, 42],
   ];
 
   it('chaque couple hub → plage porte le prix décidé, dans les deux sens', () => {
@@ -108,20 +129,11 @@ describe('Prix de transfert — les exceptions au prix unique', () => {
     }
   });
 
-  it('le reste de la grille n’a pas bougé', () => {
-    // Les transferts ordinaires gardent leur prix unique.
-    for (const plage of ['Kendwa', 'Kiwengwa', 'Kizimkazi', 'Pwani Mchangani']) {
-      for (const hub of ['Stone Town', AEROPORT]) {
-        assert.equal(
-          priceTrip('private', 'tourist', { pickup: hub, dropoff: plage }).price,
-          52,
-          `${hub} → ${plage} a changé de prix sans qu'on le demande`
-        );
-      }
-    }
-    // Le couloir du sud-est garde le sien, et l'aéroport ↔ ville aussi.
-    assert.equal(priceTrip('private', 'tourist', { pickup: 'Stone Town', dropoff: 'Paje' }).price, 49);
+  it('l’aéroport ↔ ville et les trajets ville ↔ ville n’ont pas bougé', () => {
+    // La grille des transferts a changé ; le forfait aéroport ↔ Stone Town et
+    // la grille au kilomètre entre villes, eux, restent ce qu'ils étaient.
     assert.equal(priceTrip('private', 'tourist', { pickup: AEROPORT, dropoff: 'Stone Town' }).price, 14.5);
+    assert.equal(priceTrip('private', 'tourist', { pickup: 'Nungwi', dropoff: 'Kendwa' }).price, 13);
   });
 
   it('l’application affiche exactement les mêmes prix que le serveur', () => {
