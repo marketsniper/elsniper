@@ -353,8 +353,13 @@ const ESTRAN: Palette = {
 //  · BLEU PÉTROLE — le client sur une carte. C'est le bleu du fond de
 //    l'icône, éclairci pour tenir sur le noir.
 //
+// PLUS DE BLANC (25/08/2026, demande du client) : l'encre passe au blanc
+// PUR — le blanc verdi (#E9F3EC) du premier jet tirait tout l'écran vers le
+// vert — et le texte secondaire s'éclaircit de trois crans. Le vert reste la
+// couleur des actions ; le blanc, celle de ce qu'on lit.
+//
 // Contrastes mesurés sur le fond (#07120D) et sur les cartes (#101E17) :
-// encre 16,8 / 15,2 · secondaire 7,6 / 6,9 · vert 9,1 / 8,2 · ambre 9,6 ·
+// encre 19,1 / 17,2 · secondaire 11,7 / 10,6 · vert 9,1 / 8,2 · ambre 9,6 ·
 // menthe 12,7 / 11,5 · danger 6,2. Rien sous 4,5:1.
 const GIROFLE: Palette = {
   marqueNom: '#FFFFFF', // le logotype, à la lettre : blanc…
@@ -364,8 +369,8 @@ const GIROFLE: Palette = {
   primaireClair: 'rgba(46, 204, 113, 0.14)', // pastilles d'icônes, encarts d'information
   sable: '#07120D', // le fond de tous les écrans — un noir tiré vers le vert
   blanc: '#101E17', // « blanc » = la surface la plus claire de la peau : les cartes
-  encre: '#E9F3EC', // texte principal — un blanc à peine verdi
-  texteSecondaire: '#93A99D',
+  encre: '#FFFFFF', // texte principal — blanc PUR
+  texteSecondaire: '#C3CDC7',
   bordure: 'rgba(46, 204, 113, 0.24)', // LE FILET VERT — la signature de la peau
   danger: '#FF6B6B',
   dangerFonce: '#FFC2C2',
@@ -397,8 +402,8 @@ const GIROFLE: Palette = {
   turquoise: '#4CB8E8', // le bleu du fond de l'icône, éclairci — LE CLIENT sur une carte
   surVoile: '#FFFFFF',
   accentFond: '#0C2A1B', // le bloc de mise en avant : un vert-noir plus profond que les cartes
-  surAccent: '#EAF6EF',
-  surAccentDoux: 'rgba(234, 246, 239, 0.7)',
+  surAccent: '#FFFFFF',
+  surAccentDoux: 'rgba(255, 255, 255, 0.72)',
   // La carte « chauffeur » : le seul aplat de couleur PLEINE de l'accueil.
   // Un vert profond — même teinte que les boutons, deux crans plus bas : on
   // voit tout de suite que c'est un bloc, pas une chose sur quoi appuyer.
