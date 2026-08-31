@@ -3,3 +3,8 @@
 # vivent sous un dossier nomme node_modules - ne pas les ignorer.
 !backend/public/web/
 !backend/public/web/**
+
+# Hooks graphify locaux (non commites : le binaire graphify absent des
+# conteneurs neufs ferait echouer chaque hook — les instructions utiles
+# vivent dans CLAUDE.md et .claude/skills/, eux commites).
+.claude/settings.json
