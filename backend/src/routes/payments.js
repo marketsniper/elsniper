@@ -50,6 +50,7 @@ router.get(
               rv.plate             AS rental_plate,
               rvb.start_date       AS rental_start_date,
               rvb.end_date         AS rental_end_date,
+              COALESCE(rvb.pickup_location, rv.pickup_location) AS rental_pickup,
               ru.full_name         AS rental_client_name
        FROM payments p
        LEFT JOIN trips t ON t.id = p.trip_id
@@ -97,6 +98,7 @@ router.get(
               rv.plate             AS rental_plate,
               rvb.start_date       AS rental_start_date,
               rvb.end_date         AS rental_end_date,
+              COALESCE(rvb.pickup_location, rv.pickup_location) AS rental_pickup,
               ru.full_name         AS rental_client_name
        FROM payments p
        LEFT JOIN trips t ON t.id = p.trip_id

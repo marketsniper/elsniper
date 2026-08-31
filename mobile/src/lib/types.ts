@@ -109,6 +109,8 @@ export interface PaiementEquipe extends Paiement {
   rental_plate?: string | null;
   rental_start_date?: string | null;
   rental_end_date?: string | null;
+  /** Lieu de remise (choix du client, sinon celui de la fiche du véhicule). */
+  rental_pickup?: string | null;
   rental_client_name?: string | null;
   /** Remboursement dû après annulation client (barème 24/48 h). */
   refund_amount?: string | number | null;
@@ -205,12 +207,15 @@ export interface ReservationVehicule {
   paid_at: string | null;
   cancelled_at: string | null;
   created_at: string;
+  /** Lieu de remise choisi PAR LE CLIENT à la réservation (optionnel). */
+  pickup_location?: string | null;
   /** GET /rental-vehicles/bookings/mine et /bookings (équipe) enrichissent avec le véhicule. */
   make?: string;
   model?: string;
   plate?: string;
   category?: string;
-  pickup_location?: string;
+  /** Le lieu de retrait de la FICHE du véhicule (repli si le client n'a rien demandé). */
+  vehicle_pickup_location?: string;
   /** Équipe seulement (GET /bookings). */
   client_name?: string;
   client_phone?: string;

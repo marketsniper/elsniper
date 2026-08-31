@@ -15,6 +15,7 @@ import {
   Badge,
   Bouton,
   Carte,
+  Champ,
   ChargementCentre,
   Ecran,
   LigneInfo,
@@ -42,6 +43,9 @@ export default function EcranFicheVehiculeLocation() {
 
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  // Où le client veut récupérer le véhicule (optionnel — sinon le lieu de
+  // retrait de la fiche).
+  const [lieuRemise, setLieuRemise] = useState('');
   const [ouvertDepart, setOuvertDepart] = useState(false);
   const [ouvertRetour, setOuvertRetour] = useState(false);
   const [reservationEnCours, setReservationEnCours] = useState(false);
@@ -97,7 +101,13 @@ export default function EcranFicheVehiculeLocation() {
     }
     setReservationEnCours(true);
     try {
-      const booking = await api.reserverVehicule(vehicule.id, startDate, endDate);
+      const booking = await api.reserverVehicule(
+        vehicule.id,
+        startDate,
+        endDate,
+        undefined,
+        lieuRemise.trim() || undefined
+      );
       router.replace(`/location/${booking.id}`);
     } catch (e) {
       setErreur(e instanceof ErreurApi ? e.message : t('vehicule_erreur'));
@@ -216,6 +226,16 @@ export default function EcranFicheVehiculeLocation() {
             }}
           />
         )}
+
+        {/* OÙ REMETTRE LE VÉHICULE (demande du client) : l'hôtel, une
+            adresse… Optionnel — vide, la remise se fait au lieu de retrait
+            de la fiche, affiché juste au-dessus. */}
+        <Champ
+          label={t('location_champ_lieu_remise')}
+          value={lieuRemise}
+          onChangeText={setLieuRemise}
+          placeholder={vehicule.pickup_location}
+        />
 
         {jours > 0 && (
           <View style={styles.blocPrix}>

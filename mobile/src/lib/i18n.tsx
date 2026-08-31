@@ -310,6 +310,12 @@ const CHAINES = {
   equipe_marquer_paye: { fr: 'Marquer payé ✓', en: 'Mark as paid ✓', sw: 'Weka imelipwa ✓' },
   equipe_paiement_course: { fr: 'Course', en: 'Ride', sw: 'Safari' },
   equipe_paiement_colis: { fr: 'Colis', en: 'Parcel', sw: 'Mzigo' },
+  equipe_paiement_location: { fr: 'Location', en: 'Rental', sw: 'Kukodisha' },
+  equipe_location_dates: {
+    fr: 'Du {debut} au {fin}',
+    en: 'From {debut} to {fin}',
+    sw: 'Kuanzia {debut} hadi {fin}',
+  },
   equipe_candidatures: {
     fr: 'Candidatures chauffeurs',
     en: 'Driver applications',
@@ -4441,6 +4447,22 @@ const CHAINES = {
   location_titre: { fr: 'Location de véhicules', en: 'Vehicle rentals', sw: 'Kukodisha magari', it: 'Noleggio veicoli', de: 'Fahrzeugvermietung' },
   // Titre de la fiche d'une réservation de location (en-tête de pile).
   location_reservation_titre: { fr: 'Ma location', en: 'My rental', sw: 'Kukodisha kwangu', it: 'Il mio noleggio', de: 'Meine Miete' },
+  // Le lieu de remise : où le véhicule est remis au client — son choix à la
+  // réservation, sinon le lieu de retrait de la fiche.
+  location_lieu_remise: {
+    fr: 'Remise du véhicule',
+    en: 'Vehicle handover',
+    sw: 'Makabidhiano ya gari',
+    it: 'Consegna del veicolo',
+    de: 'Fahrzeugübergabe',
+  },
+  location_champ_lieu_remise: {
+    fr: 'Où souhaitez-vous récupérer le véhicule ? (optionnel)',
+    en: 'Where would you like to pick up the vehicle? (optional)',
+    sw: 'Ungependa kupokea gari wapi? (hiari)',
+    it: 'Dove vuoi ritirare il veicolo? (facoltativo)',
+    de: 'Wo möchten Sie das Fahrzeug übernehmen? (optional)',
+  },
   location_sous_titre: {
     fr: "zanziGo est votre intermédiaire de confiance : véhicule vérifié, assurance et road licence contrôlées par notre équipe.",
     en: 'zanziGo is your trusted go-between: vehicle verified, insurance and road licence checked by our team.',

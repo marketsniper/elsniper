@@ -258,7 +258,11 @@ router.get(
       throw new HttpError(403, 'forbidden', 'Réservé aux clients');
     }
     const { rows } = await query(
-      `SELECT b.*, v.make, v.model, v.plate, v.category, v.pickup_location,
+      // Le lieu du VÉHICULE porte son propre nom : b.pickup_location est
+      // désormais le lieu choisi par le client, et une colonne homonyme du
+      // véhicule l'aurait écrasé dans le JSON.
+      `SELECT b.*, v.make, v.model, v.plate, v.category,
+              v.pickup_location AS vehicle_pickup_location,
               p.id AS payment_id, p.status AS payment_status
          FROM rental_bookings b
          JOIN rental_vehicles v ON v.id = b.vehicle_id
@@ -534,6 +538,9 @@ const bookSchema = z
     startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
     endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
     method: z.enum(['carte', 'mobile']).optional(),
+    // Où le CLIENT veut récupérer le véhicule (son hôtel, une adresse…).
+    // Optionnel : à défaut, la remise se fait au lieu de retrait de la fiche.
+    pickupLocation: z.string().trim().min(2).max(160).optional(),
   })
   .refine((d) => d.endDate >= d.startDate, {
     message: 'La date de retour doit être après la date de départ',
@@ -585,9 +592,19 @@ router.post(
         );
       }
       const { rows } = await client.query(
-        `INSERT INTO rental_bookings (vehicle_id, user_id, start_date, end_date, days, price, commission, currency)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
-        [vehicule.id, req.auth.userId, data.startDate, data.endDate, jours, prix, commission, vehicule.currency]
+        `INSERT INTO rental_bookings (vehicle_id, user_id, start_date, end_date, days, price, commission, currency, pickup_location)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
+        [
+          vehicule.id,
+          req.auth.userId,
+          data.startDate,
+          data.endDate,
+          jours,
+          prix,
+          commission,
+          vehicule.currency,
+          data.pickupLocation ?? null,
+        ]
       );
       return rows[0];
     });
@@ -598,6 +615,8 @@ router.post(
       '💳 Paiement location de véhicule zanziGo',
       `Véhicule: ${vehicule.make} ${vehicule.model} (${vehicule.plate})`,
       `Du ${booking.start_date} au ${booking.end_date} (${booking.days} j)`,
+      // Le lieu voulu par le client d'abord ; sinon celui de la fiche.
+      `Remise: ${booking.pickup_location ?? vehicule.pickup_location}`,
     ];
 
     const paypal =

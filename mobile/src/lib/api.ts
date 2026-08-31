@@ -1716,11 +1716,18 @@ export async function reserverVehicule(
   id: string,
   startDate: string,
   endDate: string,
-  moyen?: MoyenPaiement
+  moyen?: MoyenPaiement,
+  /** Où le client veut récupérer le véhicule (son hôtel…) — optionnel. */
+  pickupLocation?: string
 ): Promise<ReservationVehiculeAvecPaiement> {
   return requete<ReservationVehiculeAvecPaiement>(`/rental-vehicles/${id}/book`, {
     methode: 'POST',
-    corps: moyen ? { startDate, endDate, method: moyen } : { startDate, endDate },
+    corps: {
+      startDate,
+      endDate,
+      ...(moyen ? { method: moyen } : {}),
+      ...(pickupLocation ? { pickupLocation } : {}),
+    },
   });
 }
 

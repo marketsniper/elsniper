@@ -160,8 +160,13 @@ export default function EcranLocation() {
           )}
         </View>
         {!!location.plate && <LigneInfo label={t('vehicule_champ_plaque')} valeur={location.plate} />}
-        {!!location.pickup_location && (
-          <LigneInfo label={t('vehicule_champ_lieu_retrait')} valeur={location.pickup_location} />
+        {/* La remise : l'endroit CHOISI par le client s'il en a demandé un,
+            sinon le lieu de retrait de la fiche du véhicule. */}
+        {!!(location.pickup_location ?? location.vehicle_pickup_location) && (
+          <LigneInfo
+            label={t('location_lieu_remise')}
+            valeur={String(location.pickup_location ?? location.vehicle_pickup_location)}
+          />
         )}
         <LigneInfo label={t('vehicule_date_depart')} valeur={formaterDate(location.start_date)} />
         <LigneInfo label={t('vehicule_date_retour')} valeur={formaterDate(location.end_date)} />

@@ -316,8 +316,10 @@ describe('Location de véhicules — réservation et paiement (moteur commun)', 
     const res = await request(app)
       .post(`/api/rental-vehicles/${vehicule.id}/book`)
       .set(authHeaders(token))
-      .send({ startDate: dansNJours(5), endDate: dansNJours(7) });
+      // Le client choisit OÙ récupérer le véhicule (son hôtel…) — optionnel.
+      .send({ startDate: dansNJours(5), endDate: dansNJours(7), pickupLocation: 'Hôtel Baraka, Nungwi' });
     assert.equal(res.status, 201, JSON.stringify(res.body));
+    assert.equal(res.body.pickup_location, 'Hôtel Baraka, Nungwi', 'le lieu de remise choisi est gardé');
     assert.equal(res.body.days, 3, 'du 1er au 3e jour = 3 jours pleins, inclusifs');
     assert.equal(Number(res.body.price), 120);
     // La commission zanziGo ne sort JAMAIS vers le client — même règle que
@@ -334,6 +336,8 @@ describe('Location de véhicules — réservation et paiement (moteur commun)', 
     assert.equal(mine.body.length, 1);
     assert.equal(mine.body[0].make, 'Toyota');
     assert.equal(mine.body[0].commission, undefined, 'commission cachée aussi dans « mes locations »');
+    assert.equal(mine.body[0].pickup_location, 'Hôtel Baraka, Nungwi', 'le lieu CHOISI, pas celui de la fiche');
+    assert.ok(mine.body[0].vehicle_pickup_location, 'le lieu de la fiche reste disponible en repli');
   });
 
   it('mêmes dates de départ et de retour = 1 jour', async () => {

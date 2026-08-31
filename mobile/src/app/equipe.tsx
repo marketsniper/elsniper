@@ -1526,6 +1526,9 @@ export default function EcranEquipe() {
         const corpsPaiement = (paiement: PaiementEquipe) => {
           const estColis = !!paiement.package_id;
           const estPlace = !!paiement.ride_booking_id;
+          // La QUATRIÈME branche : une location de véhicule n'a ni départ ni
+          // arrivée — sans elle, la carte affichait « Course » et « ? → ? ».
+          const estLocation = !!paiement.rental_booking_id;
           const depart = estColis
             ? paiement.package_pickup
             : estPlace
@@ -1551,24 +1554,49 @@ export default function EcranEquipe() {
                       ? t('equipe_paiement_colis')
                       : estPlace
                         ? t('equipe_paiement_place', { n: paiement.ride_seats ?? 1 })
-                        : t('equipe_paiement_course')
+                        : estLocation
+                          ? t('equipe_paiement_location')
+                          : t('equipe_paiement_course')
                   }
                   ton="primaire"
                 />
                 <Text style={styles.prix}>{montant}</Text>
               </View>
-              <Text style={styles.itineraire}>
-                {depart ?? '?'}{'  '}
-                <Text style={styles.fleche}>→</Text>{'  '}
-                {arrivee ?? '?'}
-              </Text>
+              {estLocation ? (
+                // Une location se reconnaît à son VÉHICULE, pas à un trajet.
+                <Text style={styles.itineraire}>
+                  🚗 {paiement.rental_make} {paiement.rental_model}
+                  {paiement.rental_plate ? ` (${paiement.rental_plate})` : ''}
+                </Text>
+              ) : (
+                <Text style={styles.itineraire}>
+                  {depart ?? '?'}{'  '}
+                  <Text style={styles.fleche}>→</Text>{'  '}
+                  {arrivee ?? '?'}
+                </Text>
+              )}
+              {estLocation && !!paiement.rental_start_date && (
+                <Text style={styles.detail}>
+                  📅{' '}
+                  {t('equipe_location_dates', {
+                    debut: String(paiement.rental_start_date).slice(0, 10),
+                    fin: String(paiement.rental_end_date ?? '').slice(0, 10),
+                  })}
+                </Text>
+              )}
+              {estLocation && !!paiement.rental_pickup && (
+                <Text style={styles.detail}>📍 {paiement.rental_pickup}</Text>
+              )}
+              {estLocation && !!paiement.rental_client_name && (
+                <Text style={styles.detail}>{paiement.rental_client_name}</Text>
+              )}
               {estColis && !!paiement.package_qr && (
                 <Text style={styles.detail}>{paiement.package_qr}</Text>
               )}
               {estPlace && !!paiement.ride_client_name && (
                 <Text style={styles.detail}>{paiement.ride_client_name}</Text>
               )}
-              {!estColis && !estPlace && !!paiement.trip_client_name && (
+              {!estColis && !estPlace && !estLocation && !!paiement.trip_client_name && (
                 <Text style={styles.detail}>{paiement.trip_client_name}</Text>
               )}
               {/* PAR QUEL MOYEN l'argent arrive : un virement Tigo en
@@ -1591,9 +1619,12 @@ export default function EcranEquipe() {
                 🕐 {t('equipe_paiement_demande')} {formaterDate(champ(paiement, 'created_at'))}
               </Text>
               {(() => {
+                // La location a déjà sa ligne 📅 du… au… : pas de doublon.
                 const depart = estPlace
                   ? champ(paiement, 'ride_departure_at')
-                  : champ(paiement, 'trip_scheduled_at');
+                  : estLocation
+                    ? null
+                    : champ(paiement, 'trip_scheduled_at');
                 return depart ? (
                   <Text style={styles.detail}>
                     🚗 {t('equipe_paiement_depart')} {formaterDate(depart)}
