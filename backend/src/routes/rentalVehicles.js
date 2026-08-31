@@ -41,8 +41,13 @@ const router = Router();
 
 const round2 = (n) => Math.round(n * 100) / 100;
 
+// Catégories figées (migration 043) : le client choisit sa catégorie
+// souhaitée au catalogue, l'équipe la choisit à la création — jamais de
+// texte libre, pour que le filtre reste fiable.
+const RENTAL_CATEGORIES = ['tourisme', '4x4', 'luxe', 'scooter', 'moto', 'enduro'];
+
 const champsVehicule = {
-  category: z.string().min(2),
+  category: z.enum(RENTAL_CATEGORIES),
   make: z.string().min(1),
   model: z.string().min(1),
   year: z.number().int().min(1980).max(new Date().getFullYear() + 1).nullable().optional(),
@@ -322,21 +327,29 @@ router.post(
 );
 
 // GET /rental-vehicles — le CATALOGUE (client : vérifiés, disponibles, non
-// archivés uniquement) ou LA LISTE COMPLÈTE (équipe, avec filtre optionnel
-// sur le statut de vérification — pour la file « à vérifier »).
+// archivés uniquement, filtrable par catégorie souhaitée) ou LA LISTE
+// COMPLÈTE (équipe, avec filtres optionnels sur le statut de vérification —
+// pour la file « à vérifier » — et sur la catégorie).
 router.get(
   '/',
   requireAuth,
   asyncHandler(async (req, res) => {
     if (isAdmin(req)) {
-      const { verificationStatus } = z
-        .object({ verificationStatus: z.enum(['pending', 'verified', 'rejected']).optional() })
+      const { verificationStatus, category } = z
+        .object({
+          verificationStatus: z.enum(['pending', 'verified', 'rejected']).optional(),
+          category: z.enum(RENTAL_CATEGORIES).optional(),
+        })
         .parse(req.query);
       const conditions = ['archived_at IS NULL'];
       const params = [];
       if (verificationStatus) {
         params.push(verificationStatus);
         conditions.push(`verification_status = $${params.length}`);
+      }
+      if (category) {
+        params.push(category);
+        conditions.push(`category = $${params.length}`);
       }
       const { rows } = await query(
         `SELECT * FROM rental_vehicles WHERE ${conditions.join(' AND ')} ORDER BY created_at DESC LIMIT 200`,
@@ -347,11 +360,16 @@ router.get(
       );
       return res.json(vehicules);
     }
+    const { category } = z.object({ category: z.enum(RENTAL_CATEGORIES).optional() }).parse(req.query);
+    const conditions = ["verification_status = 'verified'", 'available = true', 'archived_at IS NULL'];
+    const params = [];
+    if (category) {
+      params.push(category);
+      conditions.push(`category = $${params.length}`);
+    }
     const { rows } = await query(
-      `SELECT * FROM rental_vehicles
-        WHERE verification_status = 'verified' AND available = true AND archived_at IS NULL
-        ORDER BY created_at DESC
-        LIMIT 200`
+      `SELECT * FROM rental_vehicles WHERE ${conditions.join(' AND ')} ORDER BY created_at DESC LIMIT 200`,
+      params
     );
     const vehicules = await Promise.all(
       rows.map(async (v) => sanitizeVehicle(v, await getPhotos(v.id), { admin: false }))

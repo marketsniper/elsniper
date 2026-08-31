@@ -12,7 +12,7 @@ import { GaleriePhotos } from '@/components/GaleriePhotos';
 import { Selecteur } from '@/components/Selecteur';
 import { Bouton, Carte, Champ, Ecran, TexteErreur, Titre } from '@/components/ui';
 import { api, definirCleEquipe, ErreurApi, type DonneesVehicule } from '@/lib/api';
-import { useT } from '@/lib/i18n';
+import { CATEGORIES_VEHICULE, libelleCategorieVehicule, useT } from '@/lib/i18n';
 import { lireStockage } from '@/lib/stockage';
 import { couleurs, espaces, stylesReactifs } from '@/lib/theme';
 import type { Devise } from '@/lib/types';
@@ -24,7 +24,7 @@ export default function EcranNouveauVehicule() {
   const router = useRouter();
   const { t } = useT();
 
-  const [category, setCategory] = useState('');
+  const [category, setCategory] = useState<string>('tourisme');
   const [make, setMake] = useState('');
   const [model, setModel] = useState('');
   const [year, setYear] = useState('');
@@ -126,7 +126,13 @@ export default function EcranNouveauVehicule() {
       <TexteErreur>{erreur}</TexteErreur>
 
       <Carte>
-        <Champ label={t('vehicule_champ_categorie')} value={category} onChangeText={setCategory} placeholder="SUV, berline, scooter…" />
+        <Selecteur
+          label={t('vehicule_champ_categorie')}
+          valeur={category}
+          options={[...CATEGORIES_VEHICULE]}
+          libelleOption={(c) => libelleCategorieVehicule(c, t)}
+          onChange={setCategory}
+        />
         <Champ label={t('vehicule_champ_marque')} value={make} onChangeText={setMake} />
         <Champ label={t('vehicule_champ_modele')} value={model} onChangeText={setModel} />
         <Champ label={t('vehicule_champ_annee')} value={year} onChangeText={setYear} keyboardType="number-pad" />

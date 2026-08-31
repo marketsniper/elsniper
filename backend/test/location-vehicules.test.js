@@ -27,7 +27,7 @@ useTestDb();
 
 function vehiculePayload(extra = {}) {
   return {
-    category: 'SUV',
+    category: '4x4',
     make: 'Toyota',
     model: 'RAV4',
     year: 2021,
@@ -119,6 +119,23 @@ describe('Location de véhicules — création réservée à l’équipe', () =>
     assert.equal(res.status, 400);
   });
 
+  it('catégorie hors de la liste figée → 400 ; les six valeurs sont acceptées', async () => {
+    const invalide = await request(app)
+      .post('/api/rental-vehicles')
+      .set(adminHeaders())
+      .send(vehiculePayload({ category: 'SUV', plate: nextPlate() }));
+    assert.equal(invalide.status, 400);
+
+    for (const category of ['tourisme', '4x4', 'luxe', 'scooter', 'moto', 'enduro']) {
+      const res = await request(app)
+        .post('/api/rental-vehicles')
+        .set(adminHeaders())
+        .send(vehiculePayload({ category, plate: nextPlate() }));
+      assert.equal(res.status, 201, `${category} : ${JSON.stringify(res.body)}`);
+      assert.equal(res.body.category, category);
+    }
+  });
+
   it('PATCH corrige un champ, sans toucher aux autres', async () => {
     const vehicule = await creerVehicule();
     const res = await request(app)
@@ -154,6 +171,43 @@ describe('Location de véhicules — catalogue et visibilité', () => {
       .get('/api/rental-vehicles?verificationStatus=verified')
       .set(adminHeaders());
     assert.equal(filtre.body.length, 0);
+  });
+
+  it('le catalogue client se filtre par catégorie souhaitée', async () => {
+    await creerEtVerifier({ category: '4x4' });
+    await creerEtVerifier({ category: 'scooter', plate: nextPlate() });
+    const { token } = await createTourist();
+
+    const tout = await request(app).get('/api/rental-vehicles').set(authHeaders(token));
+    assert.equal(tout.body.length, 2);
+
+    const seulement4x4 = await request(app)
+      .get('/api/rental-vehicles?category=4x4')
+      .set(authHeaders(token));
+    assert.equal(seulement4x4.status, 200);
+    assert.equal(seulement4x4.body.length, 1);
+    assert.equal(seulement4x4.body[0].category, '4x4');
+
+    const seulementMoto = await request(app)
+      .get('/api/rental-vehicles?category=moto')
+      .set(authHeaders(token));
+    assert.equal(seulementMoto.body.length, 0);
+
+    const invalide = await request(app)
+      .get('/api/rental-vehicles?category=SUV')
+      .set(authHeaders(token));
+    assert.equal(invalide.status, 400);
+  });
+
+  it('la liste équipe se filtre aussi par catégorie', async () => {
+    await creerVehicule({ category: 'luxe' });
+    await creerVehicule({ category: 'enduro', plate: nextPlate() });
+    const filtre = await request(app)
+      .get('/api/rental-vehicles?category=luxe')
+      .set(adminHeaders());
+    assert.equal(filtre.status, 200);
+    assert.equal(filtre.body.length, 1);
+    assert.equal(filtre.body[0].category, 'luxe');
   });
 
   it('vérifié et disponible : sort au catalogue, SANS le loueur ni les documents', async () => {

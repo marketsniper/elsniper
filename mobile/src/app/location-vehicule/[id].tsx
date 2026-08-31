@@ -20,7 +20,7 @@ import {
   Titre,
 } from '@/components/ui';
 import { api, ErreurApi } from '@/lib/api';
-import { useT } from '@/lib/i18n';
+import { libelleCategorieVehicule, useT } from '@/lib/i18n';
 import { couleurs, espaces, rayons, stylesReactifs } from '@/lib/theme';
 import { formaterMontant, type VehiculeLocation } from '@/lib/types';
 
@@ -119,7 +119,7 @@ export default function EcranFicheVehiculeLocation() {
           </Titre>
           {vehicule.documents_verified && <Badge texte={t('location_verifie')} ton="succes" />}
         </View>
-        <Text style={styles.categorie}>{vehicule.category}</Text>
+        <Text style={styles.categorie}>{libelleCategorieVehicule(vehicule.category, t)}</Text>
         {!!vehicule.seats && (
           <LigneInfo label={t('vehicule_champ_places')} valeur={String(vehicule.seats)} />
         )}

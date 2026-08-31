@@ -4284,6 +4284,16 @@ const CHAINES = {
   equipe_famille_location: { fr: 'Location de véhicules', en: 'Vehicle rentals', sw: 'Kukodisha magari', it: 'Noleggio veicoli', de: 'Fahrzeugvermietung' },
   equipe_stat_vehicules: { fr: 'Véhicules', en: 'Vehicles', sw: 'Magari', it: 'Veicoli', de: 'Fahrzeuge' },
 
+  // Catégories figées (migration 043) : le client choisit la sienne au
+  // catalogue, l'équipe la choisit à la création — jamais de texte libre.
+  vehicule_categorie_tourisme: { fr: 'Voiture de tourisme', en: 'Standard car', sw: 'Gari la kawaida', it: 'Auto turistica', de: 'Standard-Pkw' },
+  vehicule_categorie_4x4: { fr: '4x4', en: '4x4', sw: '4x4', it: '4x4', de: '4x4' },
+  vehicule_categorie_luxe: { fr: 'Véhicule de luxe', en: 'Luxury vehicle', sw: 'Gari la kifahari', it: 'Veicolo di lusso', de: 'Luxusfahrzeug' },
+  vehicule_categorie_scooter: { fr: 'Scooter', en: 'Scooter', sw: 'Skuta', it: 'Scooter', de: 'Roller' },
+  vehicule_categorie_moto: { fr: 'Moto', en: 'Motorcycle', sw: 'Pikipiki', it: 'Moto', de: 'Motorrad' },
+  vehicule_categorie_enduro: { fr: 'Enduro', en: 'Enduro', sw: 'Enduro', it: 'Enduro', de: 'Enduro' },
+  location_categorie_toutes: { fr: 'Toutes', en: 'All', sw: 'Zote', it: 'Tutte', de: 'Alle' },
+
   // Statuts d'un véhicule (badges).
   vehicule_statut_pending: { fr: 'À vérifier', en: 'To verify', sw: 'Kuthibitishwa', it: 'Da verificare', de: 'Zu prüfen' },
   vehicule_statut_verified: { fr: 'Publié', en: 'Published', sw: 'Imechapishwa', it: 'Pubblicato', de: 'Veröffentlicht' },
@@ -4523,6 +4533,19 @@ export function libelleTailleColis(taille: TailleColis | undefined, t: FonctionT
   if (taille === 'medium') return t('ncolis_taille_moyen');
   if (taille === 'large') return t('ncolis_taille_grand');
   return '';
+}
+
+/** Les six catégories figées de location de véhicule (migration 043). */
+export const CATEGORIES_VEHICULE = ['tourisme', '4x4', 'luxe', 'scooter', 'moto', 'enduro'] as const;
+export type CategorieVehicule = (typeof CATEGORIES_VEHICULE)[number];
+
+/** Libellé traduit d'une catégorie de véhicule ; la valeur brute en secours. */
+export function libelleCategorieVehicule(categorie: string | undefined, t: FonctionT): string {
+  if (!categorie) return '';
+  if ((CATEGORIES_VEHICULE as readonly string[]).includes(categorie)) {
+    return t(`vehicule_categorie_${categorie}` as CleChaine);
+  }
+  return categorie;
 }
 
 /**

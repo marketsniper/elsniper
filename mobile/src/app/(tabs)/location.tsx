@@ -4,7 +4,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
-import { Image, Pressable, Text, View } from 'react-native';
+import { Image, Pressable, ScrollView, Text, View } from 'react-native';
 
 import {
   Badge,
@@ -17,16 +17,19 @@ import {
   Titre,
 } from '@/components/ui';
 import { api, ErreurApi } from '@/lib/api';
-import { useT } from '@/lib/i18n';
+import { CATEGORIES_VEHICULE, libelleCategorieVehicule, useT } from '@/lib/i18n';
 import { couleurs, espaces, rayons, stylesReactifs } from '@/lib/theme';
 import { formaterDate, formaterMontant, type ReservationVehicule, type VehiculeLocation } from '@/lib/types';
 
 type Onglet = 'catalogue' | 'mine';
+// null = « Toutes » : aucun filtre de catégorie.
+type FiltreCategorie = (typeof CATEGORIES_VEHICULE)[number] | null;
 
 export default function EcranLocationOnglet() {
   const router = useRouter();
   const { t } = useT();
   const [onglet, setOnglet] = useState<Onglet>('catalogue');
+  const [categorie, setCategorie] = useState<FiltreCategorie>(null);
   const [vehicules, setVehicules] = useState<VehiculeLocation[]>([]);
   const [mesLocations, setMesLocations] = useState<ReservationVehicule[]>([]);
   const [charge, setCharge] = useState(true);
@@ -35,7 +38,7 @@ export default function EcranLocationOnglet() {
   const charger = useCallback(async () => {
     try {
       const [catalogue, locations] = await Promise.all([
-        api.listerVehicules(),
+        api.listerVehicules(false, undefined, categorie ?? undefined),
         api.listerMesLocations().catch(() => []),
       ]);
       setVehicules(catalogue);
@@ -46,7 +49,7 @@ export default function EcranLocationOnglet() {
     } finally {
       setCharge(false);
     }
-  }, [t]);
+  }, [t, categorie]);
 
   useFocusEffect(
     useCallback(() => {
@@ -91,6 +94,34 @@ export default function EcranLocationOnglet() {
 
       <TexteErreur>{erreur}</TexteErreur>
 
+      {onglet === 'catalogue' && (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsDefil}>
+          <View style={styles.chips}>
+            <Pressable
+              onPress={() => setCategorie(null)}
+              accessibilityRole="button"
+              style={[styles.chip, categorie === null && styles.chipActif]}
+            >
+              <Text style={[styles.chipTexte, categorie === null && styles.chipTexteActif]}>
+                {t('location_categorie_toutes')}
+              </Text>
+            </Pressable>
+            {CATEGORIES_VEHICULE.map((c) => (
+              <Pressable
+                key={c}
+                onPress={() => setCategorie(c)}
+                accessibilityRole="button"
+                style={[styles.chip, categorie === c && styles.chipActif]}
+              >
+                <Text style={[styles.chipTexte, categorie === c && styles.chipTexteActif]}>
+                  {libelleCategorieVehicule(c, t)}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        </ScrollView>
+      )}
+
       {onglet === 'catalogue' ? (
         vehicules.length === 0 ? (
           <EtatVide
@@ -120,7 +151,7 @@ export default function EcranLocationOnglet() {
                       {v.make} {v.model}
                     </Text>
                     <Text style={styles.sousTitreCarte}>
-                      {v.category}
+                      {libelleCategorieVehicule(v.category, t)}
                       {v.seats ? ` · ${t('location_places', { n: v.seats })}` : ''}
                     </Text>
                     <Text style={styles.prixCarte}>
@@ -190,6 +221,22 @@ const styles = stylesReactifs(() => ({
   },
   pillTexte: { fontSize: 14, fontWeight: '700', color: couleurs.texteSecondaire },
   pillTexteActif: { color: couleurs.surPrimaire },
+  chipsDefil: { marginBottom: espaces.s },
+  chips: { flexDirection: 'row', gap: espaces.xs },
+  chip: {
+    paddingHorizontal: espaces.m,
+    paddingVertical: espaces.xs,
+    borderRadius: rayons.pastille,
+    backgroundColor: couleurs.surface,
+    borderWidth: 1,
+    borderColor: couleurs.bordure,
+  },
+  chipActif: {
+    backgroundColor: couleurs.primaireClair,
+    borderColor: couleurs.primaire,
+  },
+  chipTexte: { fontSize: 13, fontWeight: '600', color: couleurs.texteSecondaire },
+  chipTexteActif: { color: couleurs.primaireFonce },
   ligneCarte: { flexDirection: 'row', gap: espaces.m, alignItems: 'center' },
   vignette: { width: 88, height: 72, borderRadius: rayons.bouton, backgroundColor: couleurs.surface },
   vignetteVide: { alignItems: 'center', justifyContent: 'center' },

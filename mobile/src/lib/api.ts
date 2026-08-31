@@ -1636,10 +1636,14 @@ export async function creerVehicule(donnees: DonneesVehicule): Promise<VehiculeL
  */
 export async function listerVehicules(
   equipe = false,
-  verificationStatus?: StatutVerification
+  verificationStatus?: StatutVerification,
+  category?: string
 ): Promise<VehiculeLocation[]> {
-  const params = verificationStatus ? `?verificationStatus=${verificationStatus}` : '';
-  const reponse = await requete<unknown>(`/rental-vehicles${params}`, { admin: equipe });
+  const params = new URLSearchParams();
+  if (verificationStatus) params.set('verificationStatus', verificationStatus);
+  if (category) params.set('category', category);
+  const suffixe = params.toString() ? `?${params.toString()}` : '';
+  const reponse = await requete<unknown>(`/rental-vehicles${suffixe}`, { admin: equipe });
   return commeListe<VehiculeLocation>(reponse, 'vehicules');
 }
 

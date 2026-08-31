@@ -10,7 +10,7 @@ import { Pressable, Text, View } from 'react-native';
 
 import { Badge, Bouton, Carte, ChargementCentre, Ecran, EtatVide, TexteErreur } from '@/components/ui';
 import { api, definirCleEquipe, ErreurApi } from '@/lib/api';
-import { useT, type CleChaine } from '@/lib/i18n';
+import { libelleCategorieVehicule, useT, type CleChaine } from '@/lib/i18n';
 import { lireStockage } from '@/lib/stockage';
 import { couleurs, espaces, stylesReactifs } from '@/lib/theme';
 import type { VehiculeLocation } from '@/lib/types';
@@ -98,7 +98,7 @@ export default function EcranVehicules() {
                 />
               </View>
               <Text style={styles.details}>
-                {vehicule.category} · {vehicule.plate}
+                {libelleCategorieVehicule(vehicule.category, t)} · {vehicule.plate}
                 {vehicule.archived_at ? ` · ${t('vehicule_statut_archive')}` : ''}
               </Text>
               <Text style={styles.prix}>

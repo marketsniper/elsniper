@@ -19,7 +19,7 @@ import {
   Titre,
 } from '@/components/ui';
 import { api, definirCleEquipe, ErreurApi } from '@/lib/api';
-import { useT, type CleChaine } from '@/lib/i18n';
+import { CATEGORIES_VEHICULE, libelleCategorieVehicule, useT, type CleChaine } from '@/lib/i18n';
 import { lireStockage } from '@/lib/stockage';
 import { couleurs, espaces, stylesReactifs } from '@/lib/theme';
 import type { Devise, VehiculeLocation } from '@/lib/types';
@@ -276,7 +276,13 @@ export default function EcranFicheVehicule() {
       </Carte>
 
       <Carte>
-        <Champ label={t('vehicule_champ_categorie')} value={category} onChangeText={setCategory} />
+        <Selecteur
+          label={t('vehicule_champ_categorie')}
+          valeur={category}
+          options={[...CATEGORIES_VEHICULE]}
+          libelleOption={(c) => libelleCategorieVehicule(c, t)}
+          onChange={setCategory}
+        />
         <Champ label={t('vehicule_champ_marque')} value={make} onChangeText={setMake} />
         <Champ label={t('vehicule_champ_modele')} value={model} onChangeText={setModel} />
         <Champ label={t('vehicule_champ_annee')} value={year} onChangeText={setYear} keyboardType="number-pad" />
