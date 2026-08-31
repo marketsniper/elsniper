@@ -55,6 +55,10 @@ export default function LayoutOnglets() {
         options={{ title: t('onglet_colis'), tabBarIcon: icone('cube-outline') }}
       />
       <Tabs.Screen
+        name="location"
+        options={{ title: t('onglet_location'), tabBarIcon: icone('car-sport-outline') }}
+      />
+      <Tabs.Screen
         name="profil"
         options={{ title: t('onglet_profil'), tabBarIcon: icone('person-outline') }}
       />

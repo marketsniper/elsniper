@@ -119,7 +119,7 @@ describe('File de vérification : ce qu\'elle contient', () => {
     await createHotel({ verify: false });
     const f = await file();
     assert.equal(f.total, 3);
-    assert.deepEqual(f.par_type, { chauffeur: 1, client: 1, hotel: 1 });
+    assert.deepEqual(f.par_type, { chauffeur: 1, client: 1, hotel: 1, vehicule: 0 });
   });
 });
 

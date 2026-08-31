@@ -13,6 +13,7 @@ import tripsRouter from './routes/trips.js';
 import packagesRouter from './routes/packages.js';
 import paymentsRouter from './routes/payments.js';
 import ridesRouter from './routes/rides.js';
+import rentalVehiclesRouter from './routes/rentalVehicles.js';
 import { uploadsRouter } from './routes/uploads.js';
 import statsRouter from './routes/stats.js';
 import verificationsRouter from './routes/verifications.js';
@@ -580,6 +581,7 @@ p{color:#8A7168;max-width:44ch;margin:8px auto}</style>
   app.use('/api/packages', packagesRouter);
   app.use('/api/payments', paymentsRouter);
   app.use('/api/rides', ridesRouter);
+  app.use('/api/rental-vehicles', rentalVehiclesRouter);
   app.use('/api/notifications', notificationsRouter);
   app.use('/api/uploads', uploadsRouter);
   app.use('/api/stats', statsRouter);

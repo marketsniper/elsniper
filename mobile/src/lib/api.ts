@@ -3,6 +3,7 @@
 // Les erreurs backend arrivent au format { error: { code, message, details? } }.
 
 import type {
+  AnnulationVehicule,
   Chauffeur,
   Devise,
   Colis,
@@ -12,15 +13,19 @@ import type {
   PaiementEquipe,
   ReponseVerifieOtp,
   ReservationPlace,
+  ReservationVehicule,
+  ReservationVehiculeAvecPaiement,
   Ride,
   StatutColis,
   StatutTrajet,
+  StatutVerification,
   TailleColis,
   Trajet,
   TypeCompte,
   TypePartenaire,
   TypeTrajet,
   Utilisateur,
+  VehiculeLocation,
 } from './types';
 
 export const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000/api';
@@ -1436,6 +1441,8 @@ export interface FenetreCa {
   colis: number;
   /** Places de taxi partagé payées. */
   places?: number;
+  /** Locations de véhicule payées. */
+  locations?: number;
   /** CA encaissé (prix payés) par devise. */
   ca: Record<string, number>;
   /** Net zanziGo (commissions) par devise. */
@@ -1469,7 +1476,7 @@ export async function assignerChauffeur(tripId: string, driverId: string): Promi
 
 /** Un dossier de la file de vérification (GET /verifications). */
 export interface DossierVerification {
-  type: 'chauffeur' | 'client' | 'hotel';
+  type: 'chauffeur' | 'client' | 'hotel' | 'vehicule';
   id: string;
   nom: string;
   contact: string | null;
@@ -1483,7 +1490,7 @@ export interface DossierVerification {
 
 export interface FileVerification {
   total: number;
-  par_type: { chauffeur: number; client: number; hotel: number };
+  par_type: { chauffeur: number; client: number; hotel: number; vehicule: number };
   dossiers: DossierVerification[];
 }
 
@@ -1578,6 +1585,156 @@ export async function televerser(uri: string): Promise<{ url: string }> {
     throw new ErreurApi(0, 'UPLOAD_INVALIDE', "Le serveur n'a pas renvoyé d'URL de fichier.");
   }
   return { url };
+}
+
+// ---------------------------------------------------------------------------
+// Location de véhicules (backend/src/routes/rentalVehicles.js)
+//
+// Même principe que les taxis : L'ÉQUIPE saisit chaque véhicule (jamais le
+// loueur, qui n'a pas de compte), le VÉRIFIE comme un dossier chauffeur, puis
+// le catalogue s'ouvre aux clients — réservation et paiement dans l'app, avec
+// le même moteur que les courses et les places de taxi partagé.
+// ---------------------------------------------------------------------------
+
+/** Champs d'un véhicule à la création ou l'édition (équipe uniquement). */
+export interface DonneesVehicule {
+  category: string;
+  make: string;
+  model: string;
+  year?: number | null;
+  plate: string;
+  seats?: number | null;
+  transmission?: string | null;
+  description?: string | null;
+  pickupLocation: string;
+  loueurName: string;
+  loueurPhone: string;
+  dailyPrice: number;
+  dailyCommission: number;
+  currency: Devise;
+  insuranceDocumentUrl: string;
+  insuranceExpiresOn?: string | null;
+  roadLicenceDocumentUrl: string;
+  roadLicenceExpiresOn?: string | null;
+  /** Premières photos, à la création seulement (12 maximum). */
+  photoUrls?: string[];
+}
+
+/** POST /rental-vehicles — l'équipe saisit un nouveau véhicule (démarre 'pending'). */
+export async function creerVehicule(donnees: DonneesVehicule): Promise<VehiculeLocation> {
+  return requete<VehiculeLocation>('/rental-vehicles', {
+    methode: 'POST',
+    corps: donnees,
+    admin: true,
+  });
+}
+
+/**
+ * GET /rental-vehicles — le catalogue (client : vérifiés, disponibles, non
+ * archivés) ou la liste complète (équipe, avec filtre optionnel sur le
+ * statut de vérification — pour la file « à vérifier »).
+ */
+export async function listerVehicules(
+  equipe = false,
+  verificationStatus?: StatutVerification
+): Promise<VehiculeLocation[]> {
+  const params = verificationStatus ? `?verificationStatus=${verificationStatus}` : '';
+  const reponse = await requete<unknown>(`/rental-vehicles${params}`, { admin: equipe });
+  return commeListe<VehiculeLocation>(reponse, 'vehicules');
+}
+
+/** GET /rental-vehicles/:id — détail (client ou équipe, selon les champs renvoyés). */
+export async function obtenirVehicule(id: string, equipe = false): Promise<VehiculeLocation> {
+  return requete<VehiculeLocation>(`/rental-vehicles/${id}`, { admin: equipe });
+}
+
+/** PATCH /rental-vehicles/:id — l'équipe corrige un ou plusieurs champs. */
+export async function majVehicule(
+  id: string,
+  donnees: Partial<DonneesVehicule> & { available?: boolean }
+): Promise<VehiculeLocation> {
+  return requete<VehiculeLocation>(`/rental-vehicles/${id}`, {
+    methode: 'PATCH',
+    corps: donnees,
+    admin: true,
+  });
+}
+
+/** PATCH /rental-vehicles/:id/verify — comme un dossier chauffeur : assurance + road licence contrôlées. */
+export async function verifierVehicule(
+  id: string,
+  statut: 'verified' | 'rejected'
+): Promise<VehiculeLocation> {
+  return requete<VehiculeLocation>(`/rental-vehicles/${id}/verify`, {
+    methode: 'PATCH',
+    corps: { status: statut },
+    admin: true,
+  });
+}
+
+/** POST /rental-vehicles/:id/archive — retrait définitif du catalogue. */
+export async function archiverVehicule(id: string): Promise<VehiculeLocation> {
+  return requete<VehiculeLocation>(`/rental-vehicles/${id}/archive`, {
+    methode: 'POST',
+    admin: true,
+  });
+}
+
+/** POST /rental-vehicles/:id/photos {url} — ajoute une photo (envoyée dès qu'elle est choisie). */
+export async function ajouterPhotoVehicule(id: string, url: string) {
+  return requete<{ id: string; url: string; position: number }>(`/rental-vehicles/${id}/photos`, {
+    methode: 'POST',
+    corps: { url },
+    admin: true,
+  });
+}
+
+/** DELETE /rental-vehicles/:id/photos/:photoId */
+export async function supprimerPhotoVehicule(id: string, photoId: string): Promise<void> {
+  await requete<void>(`/rental-vehicles/${id}/photos/${photoId}`, {
+    methode: 'DELETE',
+    admin: true,
+  });
+}
+
+/**
+ * POST /rental-vehicles/:id/book — réservation ET paiement dans l'app, comme
+ * une place de taxi partagé. Le prix est figé (jour × tarif du véhicule) ;
+ * durée inclusive (du 1er au 3e = 3 jours).
+ */
+export async function reserverVehicule(
+  id: string,
+  startDate: string,
+  endDate: string,
+  moyen?: MoyenPaiement
+): Promise<ReservationVehiculeAvecPaiement> {
+  return requete<ReservationVehiculeAvecPaiement>(`/rental-vehicles/${id}/book`, {
+    methode: 'POST',
+    corps: moyen ? { startDate, endDate, method: moyen } : { startDate, endDate },
+  });
+}
+
+/** GET /rental-vehicles/bookings/mine — les locations du client connecté. */
+export async function listerMesLocations(): Promise<ReservationVehicule[]> {
+  const reponse = await requete<unknown>('/rental-vehicles/bookings/mine');
+  return commeListe<ReservationVehicule>(reponse, 'bookings');
+}
+
+/** GET /rental-vehicles/bookings — toutes les locations (équipe), les plus récentes d'abord. */
+export async function listerLocations(): Promise<ReservationVehicule[]> {
+  const reponse = await requete<unknown>('/rental-vehicles/bookings', { admin: true });
+  return commeListe<ReservationVehicule>(reponse, 'bookings');
+}
+
+/**
+ * POST /rental-vehicles/bookings/:id/cancel — annulation par le réservateur
+ * (ou l'équipe, sans condition). Barème 24/48 h identique aux places de taxi
+ * partagé et aux courses.
+ */
+export async function annulerLocation(id: string): Promise<AnnulationVehicule> {
+  return requete<AnnulationVehicule>(`/rental-vehicles/bookings/${id}/cancel`, {
+    methode: 'POST',
+  });
 }
 
 // Regroupement pratique pour l'import : `import { api } from '@/lib/api'`.
@@ -1687,6 +1844,18 @@ export const api = {
   rechercherProfils,
   bannirClient,
   televerser,
+  creerVehicule,
+  listerVehicules,
+  obtenirVehicule,
+  majVehicule,
+  verifierVehicule,
+  archiverVehicule,
+  ajouterPhotoVehicule,
+  supprimerPhotoVehicule,
+  reserverVehicule,
+  listerMesLocations,
+  listerLocations,
+  annulerLocation,
 };
 
 export type { Chauffeur, Colis, Hotel, Paiement, Trajet, Utilisateur };

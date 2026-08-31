@@ -133,6 +133,8 @@ export default function EcranEquipe() {
   const [abonnes, setAbonnes] = useState<StatsAbonnes | null>(null);
   // Nombre de dossiers en attente de contrôle humain (file de vérification).
   const [verifsEnAttente, setVerifsEnAttente] = useState(0);
+  // Véhicules de location pas encore vérifiés (même logique que verifsEnAttente).
+  const [vehiculesPendants, setVehiculesPendants] = useState(0);
   // Rubrique ouverte (null = menu en grille de cases).
   const [section, setSection] = useState<SectionEquipe | null>(null);
   // Case chiffre d'affaires : repliée (jour seul) ou dépliée (7 j / 30 j).
@@ -230,6 +232,12 @@ export default function EcranEquipe() {
         .fileVerification()
         .then((file) => setVerifsEnAttente(file.total))
         .catch(() => setVerifsEnAttente(0));
+      // Compteur de la case « Véhicules » : véhicules encore 'pending', même
+      // logique silencieuse — la case affiche 0 plutôt que de tout bloquer.
+      api
+        .listerVehicules(true, 'pending')
+        .then((vehicules) => setVehiculesPendants(vehicules.length))
+        .catch(() => setVehiculesPendants(0));
       setCourses(lesCourses);
       setPaiements(lesPaiements);
       setCandidats(lesCandidats);
@@ -600,7 +608,7 @@ export default function EcranEquipe() {
   // ligne. Une rubrique `action` compte dans ce badge dès que son compteur
   // n'est pas à zéro (paiements pas encore encaissés compris).
   type Rubrique = {
-    cle: SectionEquipe | 'verifications';
+    cle: SectionEquipe | 'verifications' | 'vehicules';
     label: string;
     icone: React.ComponentProps<typeof Ionicons>['name'];
     n: number;
@@ -658,6 +666,21 @@ export default function EcranEquipe() {
         { cle: 'hotels', label: t('equipe_stat_hotels'), icone: 'business-outline', n: hotels.length, action: true },
         { cle: 'clients', label: t('equipe_stat_clients'), icone: 'people-outline', n: abonnes?.clients ?? 0, action: false },
         { cle: 'locaux', label: t('equipe_stat_locaux'), icone: 'card-outline', n: abonnes?.locals ?? 0, action: false },
+      ],
+    },
+    {
+      cle: 'location',
+      emoji: '🚗',
+      titre: t('equipe_famille_location'),
+      rubriques: [
+        {
+          cle: 'vehicules',
+          label: t('equipe_stat_vehicules'),
+          icone: 'car-sport-outline',
+          n: vehiculesPendants,
+          action: vehiculesPendants > 0,
+          ecran: '/vehicules',
+        },
       ],
     },
   ];

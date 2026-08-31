@@ -44,7 +44,13 @@ router.get(
               r.destination       AS ride_destination,
               r.departure_at      AS ride_departure_at,
               rb.seats            AS ride_seats,
-              COALESCE(u.full_name, h.name) AS ride_client_name
+              COALESCE(u.full_name, h.name) AS ride_client_name,
+              rv.make              AS rental_make,
+              rv.model             AS rental_model,
+              rv.plate             AS rental_plate,
+              rvb.start_date       AS rental_start_date,
+              rvb.end_date         AS rental_end_date,
+              ru.full_name         AS rental_client_name
        FROM payments p
        LEFT JOIN trips t ON t.id = p.trip_id
        LEFT JOIN packages pk ON pk.id = p.package_id
@@ -52,6 +58,9 @@ router.get(
        LEFT JOIN posted_rides r ON r.id = rb.ride_id
        LEFT JOIN users u ON u.id = rb.user_id
        LEFT JOIN hotels h ON h.id = rb.hotel_id
+       LEFT JOIN rental_bookings rvb ON rvb.id = p.rental_booking_id
+       LEFT JOIN rental_vehicles rv ON rv.id = rvb.vehicle_id
+       LEFT JOIN users ru ON ru.id = rvb.user_id
        WHERE p.status = $1
        ORDER BY p.created_at DESC
        LIMIT 200`,
@@ -82,7 +91,13 @@ router.get(
               r.destination       AS ride_destination,
               r.departure_at      AS ride_departure_at,
               rb.seats            AS ride_seats,
-              COALESCE(u.full_name, h.name) AS ride_client_name
+              COALESCE(u.full_name, h.name) AS ride_client_name,
+              rv.make              AS rental_make,
+              rv.model             AS rental_model,
+              rv.plate             AS rental_plate,
+              rvb.start_date       AS rental_start_date,
+              rvb.end_date         AS rental_end_date,
+              ru.full_name         AS rental_client_name
        FROM payments p
        LEFT JOIN trips t ON t.id = p.trip_id
        LEFT JOIN packages pk ON pk.id = p.package_id
@@ -90,6 +105,9 @@ router.get(
        LEFT JOIN posted_rides r ON r.id = rb.ride_id
        LEFT JOIN users u ON u.id = rb.user_id
        LEFT JOIN hotels h ON h.id = rb.hotel_id
+       LEFT JOIN rental_bookings rvb ON rvb.id = p.rental_booking_id
+       LEFT JOIN rental_vehicles rv ON rv.id = rvb.vehicle_id
+       LEFT JOIN users ru ON ru.id = rvb.user_id
        WHERE p.refund_due_at IS NOT NULL AND p.refunded_at IS NULL
        ORDER BY p.refund_due_at ASC
        LIMIT 200`
@@ -151,6 +169,13 @@ async function isPayer(payment, auth) {
       (rows[0].user_id !== null && rows[0].user_id === auth.userId) ||
       (rows[0].hotel_id !== null && rows[0].hotel_id === auth.hotelId)
     );
+  }
+  if (payment.rental_booking_id) {
+    const { rows } = await query('SELECT user_id FROM rental_bookings WHERE id = $1', [
+      payment.rental_booking_id,
+    ]);
+    if (!rows[0]) return false;
+    return rows[0].user_id !== null && rows[0].user_id === auth.userId;
   }
   const { rows } = await query(
     'SELECT sender_user_id, sender_hotel_id FROM packages WHERE id = $1',
@@ -242,7 +267,7 @@ router.post(
         `QR: ${rows[0].qr_code}`,
         `Trajet: ${rows[0].pickup_location} → ${rows[0].dropoff_location}`,
       ];
-    } else {
+    } else if (payment.ride_booking_id) {
       // La facture FIGÉE au moment de la réservation (migration 037) fait
       // foi : si la grille a bougé depuis, le client garde son prix. Le
       // recalcul depuis la grille ne sert que de secours pour les paiements
@@ -262,6 +287,22 @@ router.post(
         '💳 Paiement place(s) taxi partagé zanziGo',
         `Trajet: ${rows[0].origin} → ${rows[0].destination}`,
         `Places: ${rows[0].seats}`,
+      ];
+    } else {
+      // Le prix de la location est FIGÉ à la réservation (routes/rentalVehicles.js) :
+      // toujours celui-là, jamais un recalcul depuis le tarif courant du véhicule.
+      const { rows } = await query(
+        `SELECT b.price, b.currency, b.start_date, b.end_date, b.days, v.make, v.model, v.plate
+           FROM rental_bookings b JOIN rental_vehicles v ON v.id = b.vehicle_id
+          WHERE b.id = $1`,
+        [payment.rental_booking_id]
+      );
+      if (!rows[0]) throw notFound('Réservation');
+      base = { montant: Number(rows[0].price), devise: rows[0].currency };
+      entete = [
+        '💳 Paiement location de véhicule zanziGo',
+        `Véhicule: ${rows[0].make} ${rows[0].model} (${rows[0].plate})`,
+        `Du ${rows[0].start_date} au ${rows[0].end_date} (${rows[0].days} j)`,
       ];
     }
 
@@ -289,7 +330,7 @@ router.post(
             ? [`(dont ${regle.surcharge} ${regle.devise} de frais bancaires carte)`]
             : []),
           `Prix: ${base.montant} ${base.devise}`,
-          `Réf: ${payment.trip_id ?? payment.package_id ?? payment.ride_booking_id}`,
+          `Réf: ${payment.trip_id ?? payment.package_id ?? payment.ride_booking_id ?? payment.rental_booking_id}`,
           'Bonjour, je souhaite régler — merci de me confirmer la marche à suivre.',
         ].join('\n')
       );
@@ -464,6 +505,21 @@ async function appliquerConfirmation(payment) {
         );
         if (rows[0]?.cancelled_at) cibleAnnulee = 'réservation annulée (paiement arrivé trop tard)';
       }
+    } else if (payment.rental_booking_id) {
+      // Même garde que pour une place partagée : jamais sur une location déjà
+      // annulée — ses dates sont peut-être déjà reprises par une autre réservation.
+      const { rowCount } = await client.query(
+        `UPDATE rental_bookings SET paid_at = now()
+          WHERE id = $1 AND paid_at IS NULL AND cancelled_at IS NULL`,
+        [payment.rental_booking_id]
+      );
+      if (rowCount === 0) {
+        const { rows } = await client.query(
+          'SELECT cancelled_at FROM rental_bookings WHERE id = $1',
+          [payment.rental_booking_id]
+        );
+        if (rows[0]?.cancelled_at) cibleAnnulee = 'location annulée (paiement arrivé trop tard)';
+      }
     }
 
     if (cibleAnnulee) {
@@ -496,8 +552,9 @@ async function appliquerConfirmation(payment) {
        WHERE id <> $1 AND status = 'pending'
          AND ((trip_id IS NOT NULL AND trip_id = $2)
            OR (package_id IS NOT NULL AND package_id = $3)
-           OR (ride_booking_id IS NOT NULL AND ride_booking_id = $4))`,
-      [payment.id, payment.trip_id, payment.package_id, payment.ride_booking_id]
+           OR (ride_booking_id IS NOT NULL AND ride_booking_id = $4)
+           OR (rental_booking_id IS NOT NULL AND rental_booking_id = $5))`,
+      [payment.id, payment.trip_id, payment.package_id, payment.ride_booking_id, payment.rental_booking_id]
     );
 
     return { confirme: paymentRows[0], cibleAnnulee };
@@ -570,6 +627,22 @@ async function notifierPaiementConfirme(p) {
     if (rows[0]) {
       lignes.push(
         `Trajet : ${rows[0].origin} → ${rows[0].destination} — ${rows[0].seats} place(s)`
+      );
+      lignes.push(`Client : ${rows[0].full_name ?? '—'}`);
+    }
+  } else if (p.rental_booking_id) {
+    sujet = '💰 Paiement confirmé — location de véhicule';
+    const { rows } = await query(
+      `SELECT v.make, v.model, v.plate, b.start_date, b.end_date, u.full_name
+         FROM rental_bookings b
+         JOIN rental_vehicles v ON v.id = b.vehicle_id
+         LEFT JOIN users u ON u.id = b.user_id
+        WHERE b.id = $1`,
+      [p.rental_booking_id]
+    );
+    if (rows[0]) {
+      lignes.push(
+        `Véhicule : ${rows[0].make} ${rows[0].model} (${rows[0].plate}) — du ${rows[0].start_date} au ${rows[0].end_date}`
       );
       lignes.push(`Client : ${rows[0].full_name ?? '—'}`);
     }

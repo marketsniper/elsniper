@@ -89,6 +89,9 @@ const TABLES_A_VIDER = [
   'ride_waitlist',
   'ride_bookings',
   'posted_rides',
+  'rental_bookings',
+  'rental_vehicle_photos',
+  'rental_vehicles',
   'payments',
   'packages',
   'trips',
@@ -158,8 +161,15 @@ router.get(
       month: new Date(minuitEat - 29 * JOUR_MS),
     };
 
-    const [{ rows: parType }, { rows: hotels }, { rows: drivers }, { rows: courses }, { rows: colis }, { rows: places }] =
-      await Promise.all([
+    const [
+      { rows: parType },
+      { rows: hotels },
+      { rows: drivers },
+      { rows: courses },
+      { rows: colis },
+      { rows: places },
+      { rows: locations },
+    ] = await Promise.all([
         query('SELECT account_type, COUNT(*)::int AS n FROM users GROUP BY account_type'),
         query(
           `SELECT COUNT(*)::int AS total,
@@ -193,10 +203,19 @@ router.get(
            WHERE b.paid_at IS NOT NULL AND b.cancelled_at IS NULL AND b.paid_at >= $1`,
           [debuts.month]
         ),
+        // Locations de véhicule PAYÉES : acquises dès le paiement, même
+        // logique que les places de taxi partagé (pas de statut « terminée »
+        // à suivre pour une location, contrairement à une course).
+        query(
+          `SELECT paid_at AS quand, price, commission, currency
+             FROM rental_bookings
+            WHERE paid_at IS NOT NULL AND cancelled_at IS NULL AND paid_at >= $1`,
+          [debuts.month]
+        ),
       ]);
 
     const round2 = (x) => Math.round(x * 100) / 100;
-    const fenetreVide = () => ({ courses: 0, colis: 0, places: 0, ca: {}, gains: {} });
+    const fenetreVide = () => ({ courses: 0, colis: 0, places: 0, locations: 0, ca: {}, gains: {} });
     const revenue = { today: fenetreVide(), week: fenetreVide(), month: fenetreVide() };
     const ajouter = (ligne, type, increment = 1) => {
       const quand = new Date(ligne.quand).getTime();
@@ -219,6 +238,7 @@ router.get(
       const valeur = valeurReservationPlace(ligne);
       ajouter({ quand: ligne.quand, ...valeur }, 'places', ligne.seats);
     }
+    for (const ligne of locations) ajouter(ligne, 'locations');
 
     const n = (type) => parType.find((ligne) => ligne.account_type === type)?.n ?? 0;
     res.json({

@@ -52,7 +52,7 @@ router.get(
   '/',
   requireAdmin,
   asyncHandler(async (_req, res) => {
-    const [chauffeurs, clients, hotels] = await Promise.all([
+    const [chauffeurs, clients, hotels, vehicules] = await Promise.all([
       query(
         `SELECT id, full_name, phone, zone, license_number, vehicle_plate, vehicle_model,
                 license_document_url, insurance_document_url, vehicle_photo_url,
@@ -79,6 +79,19 @@ router.get(
         `SELECT id, name, contact_name, phone, zone, address, created_at
            FROM hotels
           WHERE verification_status = 'pending'
+          ORDER BY created_at ASC
+          LIMIT 100`
+      ),
+      // Un véhicule saisi par l'équipe elle-même reste 'pending' : c'est le
+      // contrôle qualité avant publication, pas une candidature à approuver
+      // (voir routes/rentalVehicles.js).
+      query(
+        `SELECT id, category, make, model, plate, seats, daily_price, daily_commission,
+                currency, loueur_name, loueur_phone, insurance_document_url,
+                insurance_expires_on, road_licence_document_url, road_licence_expires_on,
+                created_at
+           FROM rental_vehicles
+          WHERE verification_status = 'pending' AND archived_at IS NULL
           ORDER BY created_at ASC
           LIMIT 100`
       ),
@@ -144,6 +157,31 @@ router.get(
           ['Adresse', h.address]
         ),
       })),
+      ...vehicules.rows.map((v) => ({
+        type: 'vehicule',
+        id: v.id,
+        nom: `${v.make} ${v.model} (${v.plate})`,
+        // Le loueur, pas le client : c'est lui que l'équipe rappelle si un
+        // document pose question — le client n'a pas encore réservé.
+        contact: v.loueur_phone,
+        depuis: v.created_at,
+        heures_attente: heuresDepuis(v.created_at),
+        documents: pieces(
+          ['Assurance', v.insurance_document_url],
+          ['Road licence', v.road_licence_document_url]
+        ),
+        infos: infos(
+          ['Catégorie', v.category],
+          ['Plaque', v.plate],
+          ['Places', v.seats],
+          ['Prix/jour', `${v.daily_price} ${v.currency}`],
+          ['Commission/jour', `${v.daily_commission} ${v.currency}`],
+          ['Loueur', v.loueur_name],
+          ['Téléphone loueur', v.loueur_phone],
+          ['Assurance valable jusqu’au', v.insurance_expires_on],
+          ['Road licence valable jusqu’au', v.road_licence_expires_on]
+        ),
+      })),
     ].sort((a, b) => new Date(a.depuis) - new Date(b.depuis));
 
     res.json({
@@ -152,6 +190,7 @@ router.get(
         chauffeur: chauffeurs.rows.length,
         client: clients.rows.length,
         hotel: hotels.rows.length,
+        vehicule: vehicules.rows.length,
       },
       dossiers,
     });

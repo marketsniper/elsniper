@@ -78,6 +78,7 @@ export default function EcranVerifications() {
     try {
       if (dossier.type === 'chauffeur') await api.verifierChauffeur(dossier.id, statut);
       else if (dossier.type === 'client') await api.verifierClient(dossier.id, statut);
+      else if (dossier.type === 'vehicule') await api.verifierVehicule(dossier.id, statut);
       else await api.verifierHotel(dossier.id, statut);
       setDossiers((liste) => liste.slice(1));
       setTraites((n) => n + 1);
@@ -130,7 +131,9 @@ export default function EcranVerifications() {
       ? t('verif_type_chauffeur')
       : dossier.type === 'client'
         ? t('verif_type_client')
-        : t('verif_type_hotel');
+        : dossier.type === 'vehicule'
+          ? t('verif_type_vehicule')
+          : t('verif_type_hotel');
 
   // Le temps d'attente en clair : c'est lui qui dit l'urgence.
   const attente =

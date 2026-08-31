@@ -4269,6 +4269,154 @@ const CHAINES = {
   date_demain: { fr: 'demain', en: 'tomorrow', sw: 'kesho' , it: 'domani', de: 'morgen' },
   date_jours_passe: { fr: 'il y a {n} jours', en: '{n} days ago', sw: 'siku {n} zilizopita' , it: '{n} giorni fa', de: 'vor {n} Tagen' },
   date_jours_futur: { fr: 'dans {n} jours', en: 'in {n} days', sw: 'baada ya siku {n}' , it: 'tra {n} giorni', de: 'in {n} Tagen' },
+
+  // --- Location de véhicules ---------------------------------------------------------
+  onglet_location: { fr: 'Location', en: 'Rentals', sw: 'Kukodisha', it: 'Noleggio', de: 'Vermietung' },
+  verif_type_vehicule: { fr: 'Véhicule', en: 'Vehicle', sw: 'Gari', it: 'Veicolo', de: 'Fahrzeug' },
+
+  // Galerie de photos (GaleriePhotos.tsx) — réutilisée équipe (fiche véhicule).
+  galerie_ajouter: { fr: 'Ajouter une photo', en: 'Add a photo', sw: 'Ongeza picha', it: 'Aggiungi una foto', de: 'Foto hinzufügen' },
+  galerie_retirer: { fr: 'Retirer cette photo', en: 'Remove this photo', sw: 'Ondoa picha hii', it: 'Rimuovi questa foto', de: 'Foto entfernen' },
+  galerie_compteur: { fr: '{n}/{max} photos', en: '{n}/{max} photos', sw: 'picha {n}/{max}', it: '{n}/{max} foto', de: '{n}/{max} Fotos' },
+  galerie_erreur_envoi: { fr: "Échec de l'envoi — réessayez", en: 'Upload failed — try again', sw: 'Kutuma kumeshindikana — jaribu tena', it: "Invio non riuscito — riprova", de: 'Upload fehlgeschlagen — erneut versuchen' },
+
+  // Menu équipe.
+  equipe_famille_location: { fr: 'Location de véhicules', en: 'Vehicle rentals', sw: 'Kukodisha magari', it: 'Noleggio veicoli', de: 'Fahrzeugvermietung' },
+  equipe_stat_vehicules: { fr: 'Véhicules', en: 'Vehicles', sw: 'Magari', it: 'Veicoli', de: 'Fahrzeuge' },
+
+  // Statuts d'un véhicule (badges).
+  vehicule_statut_pending: { fr: 'À vérifier', en: 'To verify', sw: 'Kuthibitishwa', it: 'Da verificare', de: 'Zu prüfen' },
+  vehicule_statut_verified: { fr: 'Publié', en: 'Published', sw: 'Imechapishwa', it: 'Pubblicato', de: 'Veröffentlicht' },
+  vehicule_statut_rejected: { fr: 'Refusé', en: 'Rejected', sw: 'Imekataliwa', it: 'Rifiutato', de: 'Abgelehnt' },
+  vehicule_statut_archive: { fr: 'Archivé', en: 'Archived', sw: 'Imehifadhiwa', it: 'Archiviato', de: 'Archiviert' },
+  vehicule_disponible: { fr: 'Disponible', en: 'Available', sw: 'Inapatikana', it: 'Disponibile', de: 'Verfügbar' },
+  vehicule_indisponible: { fr: 'Indisponible', en: 'Unavailable', sw: 'Haipatikani', it: 'Non disponibile', de: 'Nicht verfügbar' },
+
+  // Écran équipe : liste des véhicules (vehicules.tsx).
+  vehicules_titre: { fr: 'Véhicules en location', en: 'Rental vehicles', sw: 'Magari ya kukodisha', it: 'Veicoli a noleggio', de: 'Mietfahrzeuge' },
+  vehicules_ajouter: { fr: 'Ajouter un véhicule', en: 'Add a vehicle', sw: 'Ongeza gari', it: 'Aggiungi un veicolo', de: 'Fahrzeug hinzufügen' },
+  vehicules_vide_titre: { fr: 'Aucun véhicule', en: 'No vehicles', sw: 'Hakuna magari', it: 'Nessun veicolo', de: 'Keine Fahrzeuge' },
+  vehicules_vide_message: {
+    fr: 'Ajoutez le premier véhicule du catalogue de location.',
+    en: 'Add the first vehicle to the rental catalogue.',
+    sw: 'Ongeza gari la kwanza kwenye orodha ya kukodisha.',
+    it: 'Aggiungi il primo veicolo al catalogo noleggio.',
+    de: 'Fügen Sie das erste Fahrzeug zum Mietkatalog hinzu.',
+  },
+  vehicules_erreur: { fr: 'Impossible de charger les véhicules.', en: 'Could not load vehicles.', sw: 'Imeshindikana kupakia magari.', it: 'Impossibile caricare i veicoli.', de: 'Fahrzeuge konnten nicht geladen werden.' },
+
+  // Formulaire véhicule (nouveau.tsx / [id].tsx, équipe).
+  vehicule_champ_categorie: { fr: 'Catégorie', en: 'Category', sw: 'Aina', it: 'Categoria', de: 'Kategorie' },
+  vehicule_champ_marque: { fr: 'Marque', en: 'Make', sw: 'Chapa', it: 'Marca', de: 'Marke' },
+  vehicule_champ_modele: { fr: 'Modèle', en: 'Model', sw: 'Modeli', it: 'Modello', de: 'Modell' },
+  vehicule_champ_annee: { fr: 'Année', en: 'Year', sw: 'Mwaka', it: 'Anno', de: 'Baujahr' },
+  vehicule_champ_plaque: { fr: "Plaque d'immatriculation", en: 'Licence plate', sw: 'Namba ya usajili', it: 'Targa', de: 'Kennzeichen' },
+  vehicule_champ_places: { fr: 'Nombre de places', en: 'Number of seats', sw: 'Idadi ya viti', it: 'Numero di posti', de: 'Anzahl der Sitze' },
+  vehicule_champ_transmission: { fr: 'Transmission', en: 'Transmission', sw: 'Gia', it: 'Cambio', de: 'Getriebe' },
+  vehicule_champ_description: { fr: 'Description', en: 'Description', sw: 'Maelezo', it: 'Descrizione', de: 'Beschreibung' },
+  vehicule_champ_lieu_retrait: { fr: 'Lieu de retrait', en: 'Pickup location', sw: 'Mahali pa kuchukua', it: 'Luogo di ritiro', de: 'Abholort' },
+  vehicule_champ_loueur_nom: { fr: 'Nom du loueur', en: "Owner's name", sw: 'Jina la mmiliki', it: 'Nome del noleggiatore', de: 'Name des Vermieters' },
+  vehicule_champ_loueur_telephone: { fr: 'Téléphone du loueur', en: "Owner's phone", sw: 'Simu ya mmiliki', it: 'Telefono del noleggiatore', de: 'Telefon des Vermieters' },
+  vehicule_champ_prix_jour: { fr: 'Prix par jour', en: 'Price per day', sw: 'Bei kwa siku', it: 'Prezzo al giorno', de: 'Preis pro Tag' },
+  vehicule_champ_commission_jour: { fr: 'Commission zanziGo par jour', en: 'zanziGo commission per day', sw: 'Kamisheni ya zanziGo kwa siku', it: 'Commissione zanziGo al giorno', de: 'zanziGo-Provision pro Tag' },
+  vehicule_champ_devise: { fr: 'Devise', en: 'Currency', sw: 'Sarafu', it: 'Valuta', de: 'Währung' },
+  vehicule_champ_assurance_expiration: { fr: "Assurance valable jusqu'au", en: 'Insurance valid until', sw: 'Bima inaisha tarehe', it: "Assicurazione valida fino al", de: 'Versicherung gültig bis' },
+  vehicule_champ_road_licence_expiration: { fr: "Road licence valable jusqu'au", en: 'Road licence valid until', sw: 'Leseni ya barabara inaisha tarehe', it: 'Road licence valida fino al', de: 'Fahrzeugschein gültig bis' },
+
+  vehicule_doc_assurance: { fr: 'Assurance', en: 'Insurance', sw: 'Bima', it: 'Assicurazione', de: 'Versicherung' },
+  vehicule_doc_assurance_ajouter: { fr: "Ajouter l'assurance", en: 'Add insurance', sw: 'Ongeza bima', it: "Aggiungi l'assicurazione", de: 'Versicherung hinzufügen' },
+  vehicule_doc_assurance_ajoute: { fr: 'Assurance jointe', en: 'Insurance added', sw: 'Bima imeongezwa', it: 'Assicurazione allegata', de: 'Versicherung hinzugefügt' },
+  vehicule_doc_road_licence: { fr: 'Road licence', en: 'Road licence', sw: 'Leseni ya barabara', it: 'Road licence', de: 'Fahrzeugschein' },
+  vehicule_doc_road_licence_ajouter: { fr: 'Ajouter la road licence', en: 'Add the road licence', sw: 'Ongeza leseni ya barabara', it: 'Aggiungi la road licence', de: 'Fahrzeugschein hinzufügen' },
+  vehicule_doc_road_licence_ajoute: { fr: 'Road licence jointe', en: 'Road licence added', sw: 'Leseni ya barabara imeongezwa', it: 'Road licence allegata', de: 'Fahrzeugschein hinzugefügt' },
+  vehicule_doc_changer: { fr: 'Changer', en: 'Change', sw: 'Badilisha', it: 'Cambia', de: 'Ändern' },
+  vehicule_photos_titre: { fr: 'Photos du véhicule', en: 'Vehicle photos', sw: 'Picha za gari', it: 'Foto del veicolo', de: 'Fahrzeugfotos' },
+
+  vehicule_creer: { fr: 'Créer le véhicule', en: 'Create the vehicle', sw: 'Tengeneza gari', it: 'Crea il veicolo', de: 'Fahrzeug anlegen' },
+  vehicule_enregistrer: { fr: 'Enregistrer', en: 'Save', sw: 'Hifadhi', it: 'Salva', de: 'Speichern' },
+  vehicule_erreur: { fr: "Une erreur s'est produite.", en: 'Something went wrong.', sw: 'Hitilafu imetokea.', it: 'Si è verificato un errore.', de: 'Es ist ein Fehler aufgetreten.' },
+  vehicule_champs_requis: {
+    fr: 'Complétez au moins la catégorie, la marque, le modèle, la plaque, le lieu de retrait, le loueur et les deux documents.',
+    en: 'Fill in at least the category, make, model, plate, pickup location, owner and both documents.',
+    sw: 'Jaza angalau aina, chapa, modeli, namba, mahali pa kuchukua, mmiliki na nyaraka mbili.',
+    it: 'Compila almeno categoria, marca, modello, targa, luogo di ritiro, noleggiatore e i due documenti.',
+    de: 'Füllen Sie mindestens Kategorie, Marke, Modell, Kennzeichen, Abholort, Vermieter und beide Dokumente aus.',
+  },
+  vehicule_cree_confirmation: {
+    fr: 'Véhicule créé — vérifiez-le pour le publier au catalogue.',
+    en: 'Vehicle created — verify it to publish it to the catalogue.',
+    sw: 'Gari limetengenezwa — lithibitishe ili lichapishwe kwenye orodha.',
+    it: 'Veicolo creato — verificalo per pubblicarlo nel catalogo.',
+    de: 'Fahrzeug angelegt — prüfen Sie es, um es im Katalog zu veröffentlichen.',
+  },
+
+  vehicule_verifier_titre: { fr: 'Vérification du véhicule', en: 'Vehicle verification', sw: 'Uthibitisho wa gari', it: 'Verifica del veicolo', de: 'Fahrzeugprüfung' },
+  vehicule_valider: { fr: 'Valider — publier au catalogue', en: 'Approve — publish to catalogue', sw: 'Idhinisha — chapisha kwenye orodha', it: 'Approva — pubblica nel catalogo', de: 'Freigeben — im Katalog veröffentlichen' },
+  vehicule_refuser: { fr: 'Refuser', en: 'Reject', sw: 'Kataa', it: 'Rifiuta', de: 'Ablehnen' },
+  vehicule_archiver: { fr: 'Archiver définitivement', en: 'Archive permanently', sw: 'Hifadhi kabisa', it: 'Archivia definitivamente', de: 'Endgültig archivieren' },
+  vehicule_archiver_confirmation: {
+    fr: 'Ce véhicule sera retiré du catalogue définitivement. Continuer ?',
+    en: 'This vehicle will be permanently removed from the catalogue. Continue?',
+    sw: 'Gari hili litaondolewa kabisa kwenye orodha. Endelea?',
+    it: 'Questo veicolo sarà rimosso definitivamente dal catalogo. Continuare?',
+    de: 'Dieses Fahrzeug wird dauerhaft aus dem Katalog entfernt. Fortfahren?',
+  },
+
+  // Écran client : catalogue + mes locations (tabs/location.tsx).
+  location_titre: { fr: 'Location de véhicules', en: 'Vehicle rentals', sw: 'Kukodisha magari', it: 'Noleggio veicoli', de: 'Fahrzeugvermietung' },
+  location_sous_titre: {
+    fr: "zanziGo est votre intermédiaire de confiance : véhicule vérifié, assurance et road licence contrôlées par notre équipe.",
+    en: 'zanziGo is your trusted go-between: vehicle verified, insurance and road licence checked by our team.',
+    sw: 'zanziGo ni mpatanishi wako wa kuaminika: gari limethibitishwa, bima na leseni ya barabara zimekaguliwa na timu yetu.',
+    it: 'zanziGo è il tuo intermediario di fiducia: veicolo verificato, assicurazione e road licence controllate dal nostro team.',
+    de: 'zanziGo ist Ihr vertrauenswürdiger Vermittler: Fahrzeug geprüft, Versicherung und Fahrzeugschein von unserem Team kontrolliert.',
+  },
+  location_onglet_catalogue: { fr: 'Catalogue', en: 'Catalogue', sw: 'Orodha', it: 'Catalogo', de: 'Katalog' },
+  location_onglet_mes_locations: { fr: 'Mes locations', en: 'My rentals', sw: 'Kodi zangu', it: 'I miei noleggi', de: 'Meine Mietungen' },
+  location_vide_titre: { fr: 'Aucun véhicule disponible', en: 'No vehicles available', sw: 'Hakuna gari linalopatikana', it: 'Nessun veicolo disponibile', de: 'Keine Fahrzeuge verfügbar' },
+  location_vide_message: {
+    fr: 'Revenez bientôt — de nouveaux véhicules arrivent régulièrement.',
+    en: 'Check back soon — new vehicles are added regularly.',
+    sw: 'Rudi hivi karibuni — magari mapya yanaongezwa mara kwa mara.',
+    it: 'Torna presto — nuovi veicoli arrivano regolarmente.',
+    de: 'Schauen Sie bald wieder vorbei — regelmäßig kommen neue Fahrzeuge hinzu.',
+  },
+  location_erreur: { fr: 'Impossible de charger le catalogue.', en: 'Could not load the catalogue.', sw: 'Imeshindikana kupakia orodha.', it: 'Impossibile caricare il catalogo.', de: 'Katalog konnte nicht geladen werden.' },
+  location_par_jour: { fr: '/ jour', en: '/ day', sw: '/ siku', it: '/ giorno', de: '/ Tag' },
+  location_verifie: { fr: 'Documents vérifiés', en: 'Documents verified', sw: 'Nyaraka zimethibitishwa', it: 'Documenti verificati', de: 'Dokumente geprüft' },
+  location_places: { fr: '{n} places', en: '{n} seats', sw: 'viti {n}', it: '{n} posti', de: '{n} Sitze' },
+
+  mes_locations_vide_titre: { fr: 'Aucune location', en: 'No rentals', sw: 'Hakuna kukodisha', it: 'Nessun noleggio', de: 'Keine Mietungen' },
+  mes_locations_vide_message: {
+    fr: 'Vos réservations de véhicule apparaîtront ici.',
+    en: 'Your vehicle bookings will appear here.',
+    sw: 'Kodi zako za magari zitaonekana hapa.',
+    it: 'Le tue prenotazioni di veicoli appariranno qui.',
+    de: 'Ihre Fahrzeugbuchungen erscheinen hier.',
+  },
+  mes_locations_statut_payee: { fr: 'Payée', en: 'Paid', sw: 'Imelipwa', it: 'Pagato', de: 'Bezahlt' },
+  mes_locations_statut_attente: { fr: 'Paiement en attente', en: 'Payment pending', sw: 'Malipo yanasubiriwa', it: 'Pagamento in attesa', de: 'Zahlung ausstehend' },
+  mes_locations_statut_annulee: { fr: 'Annulée', en: 'Cancelled', sw: 'Imeghairiwa', it: 'Annullato', de: 'Storniert' },
+
+  // Fiche véhicule + réservation (location-vehicule/[id].tsx, client).
+  vehicule_fiche_erreur: { fr: 'Impossible de charger ce véhicule.', en: 'Could not load this vehicle.', sw: 'Imeshindikana kupakia gari hili.', it: 'Impossibile caricare questo veicolo.', de: 'Fahrzeug konnte nicht geladen werden.' },
+  vehicule_reserver_titre: { fr: 'Réserver ce véhicule', en: 'Book this vehicle', sw: 'Kodisha gari hili', it: 'Prenota questo veicolo', de: 'Dieses Fahrzeug buchen' },
+  vehicule_date_depart: { fr: 'Date de départ', en: 'Start date', sw: 'Tarehe ya kuanza', it: 'Data di inizio', de: 'Abholdatum' },
+  vehicule_date_retour: { fr: 'Date de retour', en: 'Return date', sw: 'Tarehe ya kurudisha', it: 'Data di ritorno', de: 'Rückgabedatum' },
+  vehicule_jours: { fr: '{n} jour(s)', en: '{n} day(s)', sw: 'siku {n}', it: '{n} giorno/i', de: '{n} Tag(e)' },
+  vehicule_prix_total: { fr: 'Prix total', en: 'Total price', sw: 'Bei jumla', it: 'Prezzo totale', de: 'Gesamtpreis' },
+  vehicule_reserver_bouton: { fr: 'Réserver et payer', en: 'Book and pay', sw: 'Kodisha na ulipe', it: 'Prenota e paga', de: 'Buchen und bezahlen' },
+  vehicule_erreur_dates: { fr: 'Choisissez vos dates de départ et de retour.', en: 'Choose your start and return dates.', sw: 'Chagua tarehe ya kuanza na ya kurudisha.', it: 'Scegli le date di inizio e ritorno.', de: 'Wählen Sie Abhol- und Rückgabedatum.' },
+  vehicule_reservation_confirmee: {
+    fr: 'Réservation créée — finalisez le paiement pour confirmer.',
+    en: 'Booking created — complete payment to confirm.',
+    sw: 'Kodi imetengenezwa — kamilisha malipo kuthibitisha.',
+    it: 'Prenotazione creata — completa il pagamento per confermare.',
+    de: 'Buchung erstellt — Zahlung abschließen, um zu bestätigen.',
+  },
+  vehicule_annuler: { fr: 'Annuler cette location', en: 'Cancel this rental', sw: 'Ghairi kukodisha huku', it: 'Annulla questo noleggio', de: 'Diese Miete stornieren' },
+  vehicule_remboursement: { fr: 'Remboursement : {montant} {devise} ({pct} %)', en: 'Refund: {montant} {devise} ({pct}%)', sw: 'Marejesho: {montant} {devise} ({pct}%)', it: 'Rimborso: {montant} {devise} ({pct}%)', de: 'Rückerstattung: {montant} {devise} ({pct} %)' },
+  vehicule_pas_remboursement: { fr: 'Aucun remboursement pour cette annulation.', en: 'No refund for this cancellation.', sw: 'Hakuna marejesho kwa kughairi huku.', it: 'Nessun rimborso per questa cancellazione.', de: 'Keine Rückerstattung für diese Stornierung.' },
 } satisfies Record<string, Traductions>;
 
 export type CleChaine = keyof typeof CHAINES;

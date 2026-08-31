@@ -107,8 +107,11 @@ async function preparerFichierWeb(fichier: File): Promise<{ uri: string; mime: s
  * Zone tactile qui ouvre le choix du document. Sur le web, un vrai champ
  * fichier transparent est posé par-dessus les enfants ; sur l'application
  * installée, c'est le sélecteur de photos du téléphone.
+ *
+ * Exportée : GaleriePhotos.tsx la réutilise telle quelle pour sa tuile
+ * « ajouter » — même mécanisme éprouvé, sans le dupliquer.
  */
-function ZoneFichier({
+export function ZoneFichier({
   children,
   onFichier,
   onErreur,

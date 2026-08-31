@@ -102,6 +102,14 @@ export interface PaiementEquipe extends Paiement {
   ride_destination?: string | null;
   ride_seats?: number | null;
   ride_client_name?: string | null;
+  /** Location de véhicule (rental_bookings). */
+  rental_booking_id?: string | null;
+  rental_make?: string | null;
+  rental_model?: string | null;
+  rental_plate?: string | null;
+  rental_start_date?: string | null;
+  rental_end_date?: string | null;
+  rental_client_name?: string | null;
   /** Remboursement dû après annulation client (barème 24/48 h). */
   refund_amount?: string | number | null;
   refund_due_at?: string | null;
@@ -138,6 +146,97 @@ export interface ReservationPlace {
   reglement_surcharge?: number | null;
   reglement_moyen?: MoyenPaiement | null;
   moyens_disponibles?: MoyenPaiement[];
+}
+
+/** Une photo de la galerie d'un véhicule (rental_vehicle_photos). */
+export interface PhotoVehicule {
+  id: string;
+  url: string;
+  position: number;
+}
+
+/**
+ * Véhicule en location (GET /rental-vehicles, /rental-vehicles/:id). Le
+ * CLIENT ne reçoit jamais le loueur ni les documents — seulement
+ * `documents_verified` ; l'équipe voit tout (plate, loueur, documents,
+ * verification_status, available…), voir sanitizeVehicle côté serveur.
+ */
+export interface VehiculeLocation {
+  id: string;
+  category: string;
+  make: string;
+  model: string;
+  year?: number | null;
+  seats?: number | null;
+  transmission?: string | null;
+  description?: string | null;
+  pickup_location: string;
+  daily_price: number | string;
+  currency: Devise;
+  photos: PhotoVehicule[];
+  /** Côté client uniquement. */
+  documents_verified?: boolean;
+  /** Côté équipe uniquement. */
+  plate?: string;
+  loueur_name?: string;
+  loueur_phone?: string;
+  daily_commission?: number | string;
+  insurance_document_url?: string;
+  insurance_expires_on?: string | null;
+  road_licence_document_url?: string;
+  road_licence_expires_on?: string | null;
+  verification_status?: StatutVerification;
+  available?: boolean;
+  archived_at?: string | null;
+  created_at?: string;
+}
+
+/** Réservation de véhicule (rental_bookings) — même logique paid_at/cancelled_at qu'une place de taxi partagé. */
+export interface ReservationVehicule {
+  id: string;
+  vehicle_id: string;
+  user_id: string;
+  start_date: string;
+  end_date: string;
+  days: number;
+  price: number | string;
+  commission: number | string;
+  currency: Devise;
+  paid_at: string | null;
+  cancelled_at: string | null;
+  created_at: string;
+  /** GET /rental-vehicles/bookings/mine et /bookings (équipe) enrichissent avec le véhicule. */
+  make?: string;
+  model?: string;
+  plate?: string;
+  category?: string;
+  pickup_location?: string;
+  /** Équipe seulement (GET /bookings). */
+  client_name?: string;
+  client_phone?: string;
+  /** GET /bookings/mine seulement. */
+  payment_id?: string | null;
+  payment_status?: string | null;
+}
+
+/** Réponse de POST /rental-vehicles/:id/book : la réservation + son paiement. */
+export interface ReservationVehiculeAvecPaiement extends ReservationVehicule {
+  payment: Paiement & {
+    rental_booking_id: string;
+    payment_method?: string;
+    prix_location?: number;
+    devise_location?: string;
+    mention_surcharge?: string;
+    moyen?: MoyenPaiement;
+    moyens_disponibles?: MoyenPaiement[];
+  };
+}
+
+/** Réponse de POST /rental-vehicles/bookings/:id/cancel. */
+export interface AnnulationVehicule {
+  id: string;
+  cancelled: boolean;
+  refund: { amount: number; currency: string; rate: number } | null;
 }
 
 /** Session authentifiée persistée dans SecureStore. */
