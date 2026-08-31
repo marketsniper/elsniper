@@ -1,0 +1,1 @@
+{"nodes": [{"id": "$graphify-root$_backend_db_migrations_006_local_account_type_sql", "label": "006_local_account_type.sql", "file_type": "code", "source_file": "backend/db/migrations/006_local_account_type.sql", "source_location": null}], "edges": []}
