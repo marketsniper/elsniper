@@ -3,8 +3,8 @@
 // Il a longtemps porté une photo de plage sous un voile de lisibilité. Les
 // directions retenues depuis travaillent sans photo : un aplat (Bento, Nuit
 // d'épices), un dégradé de lagon sous des panneaux translucides, un relevé
-// bathymétrique, ou — pour « Girofle », la direction en service — un
-// presque-noir que deux halos très faibles viennent orienter.
+// bathymétrique, ou — pour « Girofle », la direction en service — un blanc
+// d'écume que deux halos très faibles viennent orienter.
 //
 // Le dégradé est dessiné en SVG : trois halos radiaux posés sur le bleu
 // profond, exactement comme sur la planche. React Native n'a pas de dégradé
@@ -190,33 +190,32 @@ export function EstranDeZanzibar({ fond }: { fond?: string } = {}) {
   );
 }
 
-// ─────────────────────────── LA NUIT D'OCÉAN ───────────────────────────────
+// ─────────────────────────────── L'ÉCUME ───────────────────────────────────
 //
-// LE FOND DE LA PEAU DE L'APPLICATION (clé 'girofle', direction « Océan »).
+// LE FOND DE LA PEAU DE L'APPLICATION (clé 'girofle', direction « Écume »).
 //
-// Un aplat presque noir suffirait à être lisible, mais il n'a pas de haut ni
-// de bas : l'écran devient un trou, et les cartes flottent dans le vide.
-// Deux halos très faibles lui donnent une direction — le cyan du lagon qui
-// entre par en haut, un bleu de grand fond beaucoup plus profond qui
-// s'accumule en bas.
+// Un aplat blanc suffirait à être lisible, mais il n'a pas de haut ni de
+// bas : l'écran devient une feuille, et les cartes flottent dans le vide.
+// Deux halos très faibles lui donnent une direction — le vert de la marque
+// qui entre par en haut, une menthe d'eau peu profonde qui s'accumule en bas.
 //
-// DEUX BLEUS, PAS UN BLEU ET UN VERT — même règle qu'avant la bascule du
-// 31/08/2026, teinte inversée : une couleur de plus qui ne sert à rien est
-// une couleur en trop.
+// DEUX VERTS, PAS UN VERT ET UN BLEU — même règle qu'aux directions
+// précédentes : une couleur de plus qui ne sert à rien est une couleur en
+// trop. Et c'est la demande du client à la lettre : du blanc, un peu de vert.
 //
 // Les opacités sont BASSES à dessein. Un halo qu'on remarque est un halo
 // raté : celui-ci ne doit se voir que quand on retire la carte qui était
 // posée dessus.
 const HALOS_GIROFLE = [
-  { teinte: '#2EC0D4', cx: 0.2, cy: 0.0, r: 0.85, opacite: 0.15 }, // le cyan du lagon
-  { teinte: '#0C3D5C', cx: 0.88, cy: 1.02, r: 0.8, opacite: 0.34 }, // le bleu de grand fond
+  { teinte: '#2ECC71', cx: 0.2, cy: 0.0, r: 0.85, opacite: 0.12 }, // le vert zanziGo
+  { teinte: '#9FD8BC', cx: 0.88, cy: 1.02, r: 0.8, opacite: 0.42 }, // la menthe des hauts-fonds
 ];
 
-export function NuitDeGirofle({ fond }: { fond?: string } = {}) {
+export function EcumeDeZanzibar({ fond }: { fond?: string } = {}) {
   // Comme pour le lagon : les identifiants SVG sont globaux au document sur
   // le web, deux écrans montés ensemble se voleraient leurs dégradés.
   const cle = React.useId().replace(/[^a-zA-Z0-9]/g, '');
-  const noir = fond ?? couleurs.sable;
+  const blanc = fond ?? couleurs.sable;
   return (
     <View style={styles.lagon} pointerEvents="none">
       <Svg width="100%" height="100%">
@@ -228,7 +227,7 @@ export function NuitDeGirofle({ fond }: { fond?: string } = {}) {
             </RadialGradient>
           ))}
         </Defs>
-        <Rect x="0" y="0" width="100%" height="100%" fill={noir} />
+        <Rect x="0" y="0" width="100%" height="100%" fill={blanc} />
         {HALOS_GIROFLE.map((_, i) => (
           <Rect key={i} x="0" y="0" width="100%" height="100%" fill={`url(#${cle}-${i})`} />
         ))}
@@ -256,7 +255,7 @@ export function FondPlage({
     <View style={styles.fond}>
       {peau === 'verre' && <LagonDeVerre />}
       {peau === 'estran' && <EstranDeZanzibar />}
-      {peau === 'girofle' && <NuitDeGirofle />}
+      {peau === 'girofle' && <EcumeDeZanzibar />}
       {children}
     </View>
   );

@@ -1568,6 +1568,29 @@ const CHAINES = {
     it: 'Apri in Google Maps (indicazioni)',
     de: 'In Google Maps öffnen (Route)',
   },
+  // La carte interactive de l'écran Réserver (web) : l'aide dit toujours le
+  // PROCHAIN toucher utile — poser le départ, poser l'arrivée, recommencer.
+  carte_aide_depart: {
+    fr: 'Touchez une ville sur la carte : c\'est votre départ',
+    en: 'Tap a town on the map: that\'s your pickup',
+    sw: 'Gusa mji kwenye ramani: hapo ndipo unapoanzia',
+    it: 'Tocca una località sulla mappa: è la tua partenza',
+    de: 'Tippen Sie auf einen Ort auf der Karte: Ihr Startpunkt',
+  },
+  carte_aide_arrivee: {
+    fr: 'Et maintenant, touchez votre arrivée',
+    en: 'Now tap your destination',
+    sw: 'Sasa gusa unakoenda',
+    it: 'Ora tocca la tua destinazione',
+    de: 'Tippen Sie jetzt auf Ihr Ziel',
+  },
+  carte_aide_recommencer: {
+    fr: 'Trajet posé — touchez une autre ville pour recommencer',
+    en: 'Route set — tap another town to start over',
+    sw: 'Safari imewekwa — gusa mji mwingine kuanza upya',
+    it: 'Percorso impostato — tocca un\'altra località per ricominciare',
+    de: 'Strecke gesetzt — tippen Sie auf einen anderen Ort für neu',
+  },
   equipe_annonce_groupe: {
     fr: 'Annoncer au groupe des chauffeurs',
     en: 'Post to the drivers group',
@@ -3234,21 +3257,21 @@ const CHAINES = {
     it: 'Cinque design, uno per ogni luce. Il chiodo di garofano porta i colori del marchio, il crema si legge in pieno sole. Cambia idea quando vuoi.',
     de: 'Fünf Designs, eines für jedes Licht. Nelke trägt die Markenfarben, das Cremefarbene liest sich in der Mittagssonne. Ändern Sie es jederzeit.',
   },
-  // « Girofle » : le noir du clou et le vert du logotype. Zanzibar EST l'île
-  // aux girofles — le nom dit à la fois la couleur et d'où l'on vient.
+  // « Girofle », direction « Écume » (31/08/2026) : le blanc de l'écume et le
+  // vert du logotype — les deux couleurs de la marque, à la lettre.
   peau_girofle: {
-    fr: 'Océan',
-    en: 'Ocean',
-    sw: 'Bahari kuu',
-    it: 'Oceano',
-    de: 'Ozean',
+    fr: 'Écume',
+    en: 'Sea foam',
+    sw: 'Povu la bahari',
+    it: 'Schiuma',
+    de: 'Gischt',
   },
   peau_girofle_quand: {
-    fr: 'Le bleu du lagon, la nuit',
-    en: 'The lagoon\'s blue, at night',
-    sw: 'Bluu ya bahari, usiku',
-    it: 'Il blu della laguna, di notte',
-    de: 'Das Blau der Lagune, bei Nacht',
+    fr: 'Le blanc d\'écume, le vert zanziGo',
+    en: 'Foam white, zanziGo green',
+    sw: 'Nyeupe ya povu, kijani ya zanziGo',
+    it: 'Bianco schiuma, verde zanziGo',
+    de: 'Gischtweiß, zanziGo-Grün',
   },
   peau_lagon: { fr: 'Lagon', en: 'Lagoon', sw: 'Bahari', it: 'Laguna', de: 'Lagune' },
   peau_lagon_quand: {

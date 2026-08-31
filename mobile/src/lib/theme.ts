@@ -14,10 +14,11 @@
 //    Le fond ne bouge pas, les cartes flottent au-dessus — c'est la
 //    profondeur qui donne la hiérarchie, pas les traits.
 //
-//  · « girofle » — OCÉAN (31/08/2026). Le bleu du lagon la nuit : noir tiré
-//    vers l'océan, cyan lagon pour les actions, le vert replié sur le logo.
-//    C'est la peau de l'application. (La clé garde son ancien nom pour ne
-//    pas casser les préférences enregistrées.)
+//  · « girofle » — ÉCUME (31/08/2026). Blanc d'écume et vert zanziGo : un
+//    fond quasi blanc, des cartes blanches, et le vert de la marque en
+//    accent — sur les actions, les liens et le filet des cartes, jamais en
+//    aplat sur tout l'écran. C'est la peau de l'application. (La clé garde
+//    son ancien nom pour ne pas casser les préférences enregistrées.)
 //
 // Les deux peaux exposent EXACTEMENT les mêmes noms de couleurs. Aucun écran
 // n'a besoin de savoir laquelle est active : `couleurs.encre` donne l'encre
@@ -326,104 +327,92 @@ const ESTRAN: Palette = {
   surChauffeurDoux: 'rgba(58, 28, 12, 0.74)',
 };
 
-// ──────────────────────────── 06 · OCÉAN ──────────────────────────────────
+// ──────────────────────────── 06 · ÉCUME ──────────────────────────────────
 //
-// LE BLEU DU LAGON, LA NUIT. (31/08/2026 — « la couleur principale est trop
-// verte », demande du client : quelque chose de plus agréable, fondé sur la
-// science des préférences.)
+// BLANC D'ÉCUME, VERT ZANZIGO. (31/08/2026 — troisième et dernière passe de
+// la couleur : le vert partout était « trop vert », le bleu sombre n'était
+// « pas les couleurs de l'application ». Demande finale du client : « plus
+// clair, avec un peu de blanc et du vert ».)
 //
-// POURQUOI LE BLEU-CYAN, ET PAS UN AUTRE. Les études de préférence de
-// couleurs (Palmer & Schloss, PNAS 2010, répliquées à travers les cultures)
-// donnent le même résultat partout : les bleus et les cyans saturés sont les
-// teintes les plus aimées, chez les hommes comme chez les femmes, d'un pays
-// à l'autre. L'explication dite « écologique » : on aime les couleurs des
-// choses qui nous font du bien — le ciel dégagé, l'eau propre. Pour une
-// application dont le décor RÉEL est le lagon de Zanzibar, c'est doublement
-// juste : la couleur préférée du monde est aussi celle du produit. Et le
-// bleu porte la confiance — ce qu'on demande à un service où l'on monte dans
-// la voiture d'un inconnu et où l'on paie d'avance.
+// POURQUOI UNE PEAU CLAIRE. Même science que l'estran : le texte sombre sur
+// fond clair se lit mieux (la pupille se contracte, moins d'aberrations
+// optiques), et une application qu'on ouvre sur une plage en plein soleil
+// gagne tout à un fond qui renvoie la lumière au lieu de la boire. Le blanc
+// est aussi la moitié du logotype — la peau EST la marque.
 //
-// LE VERT N'A PAS DISPARU : il se replie sur le logotype (« Go » reste vert,
-// go = feu vert) et sur les statuts de succès — son rôle sémantique
-// universel. En cessant d'être PARTOUT, il redevient un signal : une
-// pastille verte veut à nouveau dire quelque chose.
-//
-// Le noir n'est pas un gris désaturé : il est tiré vers l'océan (#071018),
-// pour que le cyan des boutons ait l'air d'appartenir au fond au lieu d'être
-// collé dessus. Pas de noir PUR non plus : sur un écran OLED, le noir absolu
-// traîne derrière le doigt quand la liste défile, et il supprime toute
-// possibilité d'ombre.
+// POURQUOI LE VERT EN ACCENT, PAS EN APLAT. C'est la leçon de la première
+// version : quand le vert couvre l'écran, il n'est plus un signal, il est un
+// mur. Ici il vit exactement là où la marque vit — le « Go » du logo, les
+// boutons, les liens, le filet des cartes — et nulle part ailleurs. « Un peu
+// de vert », à la lettre : l'écran est blanc, le vert le signe.
 //
 // LE PARTAGE DES RÔLES :
-//  · CYAN LAGON — ce sur quoi on appuie. Les boutons, les liens, « en course ».
-//  · BLANC PLEIN — « payée, tu peux y aller ». Le seul aplat blanc de
-//    l'écran : rien d'autre ne crie aussi fort sur du presque noir.
-//  · VERT — le logo, et les statuts « terminée » / « vérifié ».
-//  · AMBRE — l'argent et les étoiles (le complément chaud du bleu : c'est le
-//    contraste chaud/froid qui fait la hiérarchie, pas la taille des textes).
+//  · VERT ZANZIGO — ce sur quoi on appuie. Les boutons, les liens, le filet.
+//  · VERT PROFOND — « payée, tu peux y aller » : plus sombre que le vert
+//    d'action, à 1,97:1 de lui (le test des peaux exige 1,5).
+//  · AMBRE FONCÉ — l'argent et les étoiles (l'or clair disparaît sur blanc).
 //  · ROUGE — le danger.
-//  · BLEU CIEL — le client sur une carte, décalé vers le bleu franc pour ne
-//    pas se confondre avec le cyan des actions.
+//  · SARCELLE — le client sur une carte, décalé du vert des actions.
 //
-// Contrastes mesurés sur le fond (#071018) et sur les cartes (#0F1D28) :
-// encre 19,2 / 17,1 · secondaire 11,9 / 10,6 · cyan 8,8 / 7,8 · liens
-// 12,7 / 11,4 · vert du logo 9,1 · menthe 12,6 · ambre 10,7 · danger 6,9.
-// Rien sous 4,5:1. (Script : contrastes.js, mêmes formules que WCAG.)
+// Contrastes mesurés sur le fond (#F2F8F4) et les cartes blanches : encre
+// 14,2 / 15,3 · secondaire 6,3 / 6,8 · liens 5,9 · vert du logo 5,5 ·
+// blanc sur bouton vert 3,4 (gras, 3,0 exigés) · danger 5,6 · attente 5,9.
+// Rien sous les seuils. (Garde-fou : backend/test/peaux-contraste.test.js.)
 const GIROFLE: Palette = {
   // La clé interne reste « girofle » : c'est la valeur enregistrée sur les
   // téléphones des clients qui ont déjà choisi leur peau — la renommer les
   // aurait tous fait retomber sur une autre. Seuls le contenu et le libellé
-  // (i18n : peau_girofle → « Océan ») ont changé.
-  marqueNom: '#FFFFFF', // le logotype, à la lettre : blanc…
-  marqueGo: '#2ECC71', // …et le vert du « Go » (9,07:1 sur le fond) — le vert vit ICI
-  primaire: '#2EC0D4', // LE CYAN LAGON — la couleur d'action
-  primaireFonce: '#8EDFF0', // aqua claire : liens, flèches, chiffres qui portent
-  primaireClair: 'rgba(46, 192, 212, 0.14)', // pastilles d'icônes, encarts d'information
-  sable: '#071018', // le fond de tous les écrans — un noir tiré vers l'océan
-  blanc: '#0F1D28', // « blanc » = la surface la plus claire de la peau : les cartes
-  encre: '#FFFFFF', // texte principal — blanc PUR
-  texteSecondaire: '#C2CDD6',
-  bordure: 'rgba(46, 192, 212, 0.24)', // LE FILET CYAN — la signature de la peau
-  danger: '#FF6B6B',
-  dangerFonce: '#FFC2C2',
-  dangerFond: 'rgba(255, 107, 107, 0.15)',
-  dangerBordure: 'rgba(255, 107, 107, 0.38)',
-  succes: '#8FE3B8', // le vert DOUX : « terminée », en pastille teintée
-  surSucces: '#06180F',
-  succesFond: 'rgba(46, 204, 113, 0.15)',
-  attente: '#F2B84B',
-  attenteFond: 'rgba(242, 184, 75, 0.16)',
-  orange: '#FF9E6E',
-  orangeFond: 'rgba(255, 158, 110, 0.16)',
-  etoile: '#F2B84B',
-  voile: 'rgba(2, 8, 12, 0.84)',
+  // (i18n : peau_girofle → « Écume ») ont changé.
+  marqueNom: '#122A1D', // le logotype sur fond clair : l'encre verte…
+  marqueGo: '#0E7343', // …et le vert profond du « Go » (5,49:1) — le vert vif vit sur les boutons
+  primaire: '#12A150', // LE VERT ZANZIGO — la couleur d'action (blanc dessus : 3,37:1)
+  primaireFonce: '#0E7343', // vert profond : liens, flèches, chiffres qui portent (5,91:1)
+  primaireClair: '#E2F3E9', // pastilles d'icônes, encarts d'information — la menthe pâle
+  sable: '#F2F8F4', // le fond de tous les écrans — un blanc à peine teinté de vert
+  blanc: '#FFFFFF',
+  encre: '#122A1D', // texte principal — une encre tirée vers le vert, pas un noir neutre
+  texteSecondaire: '#476152',
+  bordure: '#D9E7DE', // filet doux : séparateurs, pastilles neutres
+  danger: '#C62828',
+  dangerFonce: '#8F1616',
+  dangerFond: '#FBE9E9',
+  dangerBordure: '#F1C7C7',
+  succes: '#0E6E34',
+  surSucces: '#FFFFFF',
+  succesFond: '#DCF0E2',
+  attente: '#8A5A12',
+  attenteFond: '#F7ECD0',
+  orange: '#B4541B',
+  orangeFond: '#FAE6D5',
+  etoile: '#C9891A', // l'or clair disparaît sur un fond clair : on l'assombrit
+  voile: 'rgba(12, 32, 22, 0.74)',
   succesClair: '#7BE3A3',
   dangerClair: '#FCA5A5',
-  voilePhotoClair: '#071018',
-  voilePhotoSombre: 'rgba(2, 8, 12, 0.6)',
-  fondOnglets: 'rgba(2, 8, 12, 0.62)',
-  carteTranslucide: '#0F1D28', // OPAQUE : un panneau translucide n'a pas de contraste mesurable
-  surface: '#152838', // champs de saisie, menus
-  surPrimaire: '#04212B', // l'encre posée SUR le cyan (7,64:1)
-  or: '#F2B84B',
-  nuit: '#020810',
-  // « Payée » : le feu vert reste BLANC — rien ne crie aussi fort sur du
-  // presque noir. Le nom de la clé dit le rôle, pas la teinte.
-  vertFeu: '#F2FAFC',
-  surVertFeu: '#04212B',
-  // LE CLIENT sur une carte : décalé du cyan des actions vers le bleu franc,
+  voilePhotoClair: '#F2F8F4',
+  voilePhotoSombre: 'rgba(12, 32, 22, 0.55)',
+  fondOnglets: '#FFFFFF',
+  carteTranslucide: '#FFFFFF', // OPAQUE : la profondeur vient de l'ombre, pas de la transparence
+  surface: '#FFFFFF', // champs de saisie, menus
+  surPrimaire: '#FFFFFF', // le texte posé SUR le vert d'action
+  or: '#C9891A',
+  nuit: '#0C2016',
+  // « Payée » : un vert PROFOND, nettement plus sombre que le vert d'action
+  // (1,97:1 entre eux) — le chauffeur distingue « payée » d'« en course »
+  // sans lire le mot.
+  vertFeu: '#0F6B32',
+  surVertFeu: '#FFFFFF',
+  // LE CLIENT sur une carte : une sarcelle décalée du vert des actions,
   // sinon le repère client et le bouton GPS se confondent sur l'écran carte.
-  turquoise: '#5FA8F0',
+  turquoise: '#0B6E74',
   surVoile: '#FFFFFF',
-  accentFond: '#0A2233', // le bloc de mise en avant : un bleu-noir plus profond que les cartes
-  surAccent: '#FFFFFF',
-  surAccentDoux: 'rgba(255, 255, 255, 0.72)',
-  // La carte « chauffeur » : le seul aplat de couleur PLEINE de l'accueil.
-  // Un bleu profond — même teinte que les boutons, deux crans plus bas : on
-  // voit tout de suite que c'est un bloc, pas une chose sur quoi appuyer.
-  chauffeurFond: '#0E5A78',
-  surChauffeur: '#FFFFFF',
-  surChauffeurDoux: 'rgba(255, 255, 255, 0.8)',
+  accentFond: '#0F3A24', // le bloc de mise en avant : le vert-nuit de la canopée
+  surAccent: '#EAF6EE',
+  surAccentDoux: 'rgba(234, 246, 238, 0.72)',
+  // La carte « chauffeur » : le seul aplat chaud de l'accueil — un abricot
+  // doux qui accroche l'œil sur le blanc sans voler le vert des actions.
+  chauffeurFond: '#F5C089',
+  surChauffeur: '#3A230C',
+  surChauffeurDoux: 'rgba(58, 35, 12, 0.74)',
 };
 
 const PEAUX: Record<NomPeau, Palette> = {
@@ -435,11 +424,11 @@ const PEAUX: Record<NomPeau, Palette> = {
 };
 
 /**
- * LA PEAU DE L'APPLICATION — « Océan » (31/08/2026, clé interne 'girofle').
+ * LA PEAU DE L'APPLICATION — « Écume » (31/08/2026, clé interne 'girofle').
  *
- * Le bleu du lagon la nuit : la teinte la mieux notée des études de
- * préférence de couleurs, et celle du décor réel de Zanzibar. Le vert de la
- * marque vit dans le logotype, plus sur tout l'écran.
+ * Blanc d'écume, vert zanziGo : un fond quasi blanc qui se lit en plein
+ * soleil, et le vert de la marque en accent — les boutons, les liens, le
+ * filet des cartes — jamais en aplat sur tout l'écran.
  *
  * C'est ici, et nulle part ailleurs, qu'on en change : le layout racine la
  * lit, et la variable de module démarre déjà dessus. Le jour où elle était
@@ -674,43 +663,41 @@ const OMBRES: Record<NomPeau, Ombres> = {
       elevation: 1,
     },
   },
-  // ─── GIROFLE : LE FILET VERT ─────────────────────────────────────────────
+  // ─── GIROFLE (ÉCUME) : LE FILET VERT, EN PLEINE LUMIÈRE ──────────────────
   //
-  // Sur un fond presque noir, une ombre ne sépare plus rien : du noir sur du
-  // noir ne se voit pas. Ce qui détache une carte, c'est son BORD. Le filet
-  // vert joue donc ici le rôle que le trait d'encre joue en Bento et le filet
-  // d'or en Nuit d'épices — sauf qu'il est de la couleur de la marque, ce qui
-  // fait que le vert du logo revient sur chaque bloc de chaque écran sans
-  // qu'on ait eu à colorer quoi que ce soit.
+  // Le filet vert reste la signature de la peau : c'est lui qui ramène la
+  // marque sur chaque bloc de chaque écran sans qu'on ait eu à colorer quoi
+  // que ce soit. Sur fond clair il se fait discret — un liseré, pas un cadre.
   //
-  // L'ombre reste, et elle est franche : elle ne se voit pas SOUS la carte,
-  // elle se voit là où elle mange le halo vert du fond. C'est ce qui empêche
-  // deux cartes empilées de fusionner en un seul bloc.
+  // Les ombres, elles, changent de nature : sur du blanc, une ombre noire à
+  // 0,55 d'opacité fait un trou. On reprend le couple de l'estran — une
+  // longue et douce qui décolle, une courte et dense qui pose — teintées de
+  // l'encre verte de la peau.
   girofle: {
     carte: {
       borderWidth: 1,
-      borderColor: 'rgba(46, 204, 113, 0.22)',
-      shadowColor: '#000000',
-      shadowOpacity: 0.55,
-      shadowRadius: 14,
-      shadowOffset: { width: 0, height: 6 },
+      borderColor: 'rgba(18, 161, 80, 0.26)',
+      shadowColor: '#0C2016',
+      shadowOpacity: 0.12,
+      shadowRadius: 20,
+      shadowOffset: { width: 0, height: 9 },
       elevation: 3,
     },
     douce: {
       borderWidth: 1,
-      borderColor: 'rgba(46, 204, 113, 0.34)',
-      shadowColor: '#000000',
-      shadowOpacity: 0.65,
-      shadowRadius: 22,
-      shadowOffset: { width: 0, height: 12 },
+      borderColor: 'rgba(18, 161, 80, 0.38)',
+      shadowColor: '#0C2016',
+      shadowOpacity: 0.17,
+      shadowRadius: 32,
+      shadowOffset: { width: 0, height: 16 },
       elevation: 6,
     },
     // La petite ombre dense qui POSE la carte, sous celle qui la décolle.
     contact: {
       borderWidth: 0,
       borderColor: 'transparent',
-      shadowColor: '#000000',
-      shadowOpacity: 0.5,
+      shadowColor: '#0C2016',
+      shadowOpacity: 0.1,
       shadowRadius: 3,
       shadowOffset: { width: 0, height: 2 },
       elevation: 1,
@@ -808,12 +795,11 @@ const POLICES_PAR_PEAU: Record<NomPeau, { 400: string; 500: string; 600: string;
     600: 'Archivo-SemiBold',
     700: 'Archivo-Bold',
   },
-  // Girofle prend ARCHIVO pour la même raison que l'estran : à corps égal, sa
-  // très grande hauteur d'x rend plus de millimètres de glyphe. Sur un fond
-  // presque noir ça compte double — le texte clair sur fond sombre gonfle
-  // optiquement, et une grotesque large encaisse mieux ce gonflement qu'une
-  // étroite. En revanche PAS de serif pour les montants : les déliés de
-  // Faustina s'empâtent en blanc sur noir.
+  // Girofle (Écume) prend ARCHIVO pour la même raison que l'estran : à corps
+  // égal, sa très grande hauteur d'x rend plus de millimètres de glyphe — et
+  // nos clients lisent en plein soleil. La peau étant redevenue claire,
+  // Faustina retrouve les montants (voir policeMontant) : les déliés qui
+  // s'empâtaient en blanc sur noir tiennent parfaitement en encre sur blanc.
   girofle: {
     400: 'Archivo',
     500: 'Archivo-Medium',
@@ -835,7 +821,11 @@ export const POLICES = new Proxy({} as Record<400 | 500 | 600 | 700, string>, {
  * Renvoie la famille d'interface sur les peaux qui n'ont pas de serif.
  */
 export function policeMontant(): string {
-  return peauActive === 'estran' ? 'Faustina-Bold' : POLICES_PAR_PEAU[peauActive][700];
+  // Les deux peaux CLAIRES portent le serif : encre sur blanc, les déliés de
+  // Faustina tiennent — c'est en clair sur sombre qu'ils s'empâtaient.
+  return peauActive === 'estran' || peauActive === 'girofle'
+    ? 'Faustina-Bold'
+    : POLICES_PAR_PEAU[peauActive][700];
 }
 
 /** Les fichiers à charger au démarrage (expo-font). */

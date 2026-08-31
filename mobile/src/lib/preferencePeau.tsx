@@ -6,8 +6,8 @@
 // trancher, et il change d'avis dix fois dans la journée.
 //
 // Cinq peaux lui sont proposées :
-//  · « Girofle » — le noir et le vert du logotype. Les couleurs de la marque,
-//    et le design par défaut.
+//  · « Girofle » (Écume) — le blanc d'écume et le vert du logotype. Les
+//    couleurs de la marque, et le design par défaut.
 //  · « Lagon » — bleu profond, panneaux de verre.
 //  · « Estran » — pierre claire, jade et terre cuite. Les ombres y suivent le
 //    vrai soleil de Zanzibar.

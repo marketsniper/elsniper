@@ -17,8 +17,8 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Linking, Pressable, Text, View } from 'react-native';
 
 import { CalendrierDate } from '@/components/CalendrierDate';
+import { CarteTrajet } from '@/components/CarteTrajet';
 import { IconeCategorie } from '@/components/IconeCategorie';
-import { IleDeZanzibar } from '@/components/Ile';
 import { LaCourse } from '@/components/LaCourse';
 import { RidesPartages } from '@/components/RidesPartages';
 import { Selecteur } from '@/components/Selecteur';
@@ -188,6 +188,13 @@ export default function EcranReserver() {
   const itineraireChoisi = depart !== '' && arrivee !== '';
   // Trajet spécial (privé uniquement) : villes exactes, deux sens.
   const estSpecial = mode === 'prive' && estTarifDeTerrain(depart, arrivee);
+  // Les arrivées autorisées depuis le départ courant — la même liste pour le
+  // menu déroulant ET la carte interactive : une seule règle, deux entrées.
+  // (Stone Town, ferry et aéroport sont à quelques minutes : aucune course
+  // entre ces trois points, même règle côté serveur.)
+  const arriveesPossibles = POINTS_STONE_TOWN.includes(depart)
+    ? lieux.filter((lieu) => !POINTS_STONE_TOWN.includes(lieu))
+    : lieux;
   const tarifCourant = itineraireChoisi ? tarifTrajetProfil('private', profil, itineraire) : null;
   // Pas de taxi partagé sur les trajets courts : course privée du même
   // trajet à 35 USD minimum (même règle côté serveur).
@@ -366,11 +373,22 @@ export default function EcranReserver() {
 
   return (
     <Ecran fond="palmiers" vivant>
-      {/* L'ÎLE, EN BANDEAU. C'est ICI que le client arrive une fois
-          connecté — la page d'accueil ne se revoit jamais. Et c'est l'écran
-          où l'on choisit un départ et une arrivée : montrer ce que zanziGo
-          couvre y est à sa place, pas décoratif. */}
-      <IleDeZanzibar />
+      {/* LA CARTE, EN BANDEAU. C'est ICI que le client arrive une fois
+          connecté — et c'est l'écran où l'on choisit un départ et une
+          arrivée : sur le web, une vraie carte interactive (façon Uber) où
+          chaque ville se touche ; sur l'app installée et hors ligne, le
+          bandeau de l'île joue le même rôle. */}
+      <CarteTrajet
+        depart={depart}
+        arrivee={arrivee}
+        lieux={lieux}
+        arriveesPermises={arriveesPossibles}
+        pointExact={positionDepart}
+        chargePosition={chercheposition}
+        onDepart={choisirDepart}
+        onArrivee={setArrivee}
+        onMaPosition={() => choisirDepart(OPTION_MA_POSITION)}
+      />
       {/* LE TAXI — l'écran où l'on réserve une course montre une course. */}
       <LaCourse compacte />
 
@@ -407,13 +425,7 @@ export default function EcranReserver() {
           apparence="ligne"
           label={t('commun_arrivee')}
           valeur={arrivee}
-          // Stone Town, ferry et aéroport sont à quelques minutes : aucune
-          // course entre ces trois points (même règle côté serveur).
-          options={
-            POINTS_STONE_TOWN.includes(depart)
-              ? lieux.filter((lieu) => !POINTS_STONE_TOWN.includes(lieu))
-              : lieux
-          }
+          options={arriveesPossibles}
           detailOption={(option) => detailLieu(option, depart)}
           onChange={setArrivee}
         />
