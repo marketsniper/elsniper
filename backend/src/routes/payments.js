@@ -578,7 +578,12 @@ async function appliquerConfirmation(payment) {
         alerterCoursePayeeParId(payment.trip_id);
       }
       // Et la tour de contrôle voit l'argent arriver, quel que soit le moyen.
-      notifierPaiementConfirme(confirme).catch(() => {});
+      // L'échec se JOURNALISE : un catch muet a caché pendant des semaines un
+      // JOIN sur une table inexistante — plus aucune alerte « place partagée »
+      // ne partait, sans un bruit.
+      notifierPaiementConfirme(confirme).catch((e) =>
+        console.error('notifierPaiementConfirme :', e.message)
+      );
     }
     return confirme;
   });
@@ -619,7 +624,7 @@ async function notifierPaiementConfirme(p) {
     const { rows } = await query(
       `SELECT b.seats, r.origin, r.destination, u.full_name
          FROM ride_bookings b
-         JOIN rides r ON r.id = b.ride_id
+         JOIN posted_rides r ON r.id = b.ride_id
          LEFT JOIN users u ON u.id = b.user_id
         WHERE b.id = $1`,
       [p.ride_booking_id]
@@ -662,7 +667,16 @@ router.post(
   asyncHandler(async (req, res) => {
     const orderTrackingId =
       req.body?.OrderTrackingId ?? req.query?.OrderTrackingId ?? null;
-    if (orderTrackingId) {
+    // DEUX REFUS ABSOLUS, avant toute lecture :
+    //  · en mode STUB (pas de clés Pesapal — la production d'aujourd'hui),
+    //    getTransactionStatus répond « COMPLETED » à tout : il n'y a AUCUN
+    //    statut réel à vérifier, et ce webhook sans jeton confirmerait
+    //    gratuitement n'importe quel paiement dont on connaît la référence —
+    //    référence que le payeur lit dans sa propre réservation ;
+    //  · une référence MANUELLE (WHATSAPP-…) ne se confirme qu'à la main,
+    //    par l'équipe — même garde que manual_confirm_admin_only sur
+    //    /confirm : l'IPN ne parle que des vraies transactions Pesapal.
+    if (orderTrackingId && !isStubMode() && !aValiderALaMain(orderTrackingId)) {
       const { rows } = await query('SELECT * FROM payments WHERE pesapal_reference = $1', [
         orderTrackingId,
       ]);

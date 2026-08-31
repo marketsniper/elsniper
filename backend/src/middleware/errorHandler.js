@@ -29,6 +29,16 @@ export function errorHandler(err, req, res, next) {
     });
   }
 
+  // Identifiant malformé (22P02 : « invalid input syntax for type uuid »).
+  // Un GET /packages/undefined doit répondre 404 comme n'importe quel id
+  // inconnu — pas 500 : une adresse tapée à la main ou un id perdu côté
+  // client n'est pas une panne du serveur, et le 500 déclenchait l'alerte.
+  if (err.code === '22P02') {
+    return res.status(404).json({
+      error: { code: 'not_found', message: 'Ressource introuvable (identifiant invalide)' },
+    });
+  }
+
   // Violations d'unicité PostgreSQL (téléphone ou plaque déjà enregistrés).
   if (err.code === '23505') {
     return res.status(409).json({

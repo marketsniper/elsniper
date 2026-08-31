@@ -124,7 +124,7 @@ export default function EcranAnnonces() {
     }
     setCharge(true);
     try {
-      const annonce = await api.creerRide({
+      await api.creerRide({
         origin: origine,
         destination: destination,
         departureAt: departIso,
@@ -253,7 +253,11 @@ export default function EcranAnnonces() {
         titre={t('courses_case_mes_trajets')}
         icone="arrow-forward-circle-outline"
         variante="secondaire"
-        onPress={() => router.push('/(driver)/courses')}
+        // La case s'ouvre TOUTE SEULE à l'arrivée : sans le paramètre, le
+        // chauffeur atterrissait sur la grille des cases et devait deviner.
+        onPress={() =>
+          router.push({ pathname: '/(driver)/courses', params: { case: 'mestrajets' } })
+        }
       />
     </Ecran>
   );

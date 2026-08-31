@@ -200,12 +200,15 @@ export function BoutonRafraichir({
   onPress: () => void;
   enCours?: boolean;
 }) {
+  // Le libellé du lecteur d'écran suit la langue de l'app — c'était la seule
+  // chaîne d'interface écrite en dur du périmètre client.
+  const { t } = useT();
   return (
     <Pressable
       onPress={onPress}
       disabled={enCours}
       accessibilityRole="button"
-      accessibilityLabel="Rafraîchir"
+      accessibilityLabel={t('commun_rafraichir')}
       style={({ pressed }) => [styles.boutonRafraichir, pressed && { opacity: 0.8 }]}
     >
       {enCours ? (
@@ -325,14 +328,10 @@ export function SelecteurPeau() {
  * vert profond sur les fonds clairs, blanc et vert franc sur les sombres.
  * Le « Go » est vert, et c'est voulu : go, c'est vert.
  */
-export function LogoZanziGo({
-  taille = 40,
-  surFonce = false,
-}: {
-  taille?: number;
-  /** Conservé : un en-tête sombre posé sur une peau claire (rare). */
-  surFonce?: boolean;
-}) {
+export function LogoZanziGo({ taille = 40 }: { taille?: number }) {
+  // (La prop `surFonce` a disparu : aucun appelant ne la passait, et sa
+  // couleur — `couleurs.blanc` — n'était même pas blanche sur les peaux
+  // sombres. Le couple marqueNom/marqueGo de la peau fait foi, partout.)
   return (
     // letterSpacing est en POINTS, pas en em : il doit suivre la taille,
     // sinon le mot de 20 px de l'en-tête serait serré neuf fois trop.
@@ -340,7 +339,7 @@ export function LogoZanziGo({
       style={[styles.logo, { fontSize: taille, letterSpacing: taille * -0.045 }]}
       accessibilityRole="header"
     >
-      <Text style={{ color: surFonce ? couleurs.blanc : couleurs.marqueNom }}>zanzi</Text>
+      <Text style={{ color: couleurs.marqueNom }}>zanzi</Text>
       <Text style={{ color: couleurs.marqueGo }}>Go</Text>
     </Text>
   );

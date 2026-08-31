@@ -148,8 +148,13 @@ function Chaussee({ largeur }: { largeur: number }) {
   const traits: React.ReactElement[] = [];
   const pas = 48;
   for (let x = 0; x < largeur; x += pas) {
+    // Les traits sont la MÊME encre que la bande (peinte à 0,16 dessous),
+    // trois fois plus dense : l'écart d'opacité garantit le contraste sur
+    // TOUTES les peaux. Peints en `sable`, ils disparaissaient sur les peaux
+    // claires — blanc cassé sur gris très clair, la route devenait une bande
+    // unie sous la voiture.
     traits.push(
-      <Rect key={x} x={x} y={HAUTEUR - 11} width={26} height={3} rx={1.5} fill={couleurs.sable} opacity={0.75} />
+      <Rect key={x} x={x} y={HAUTEUR - 11} width={26} height={3} rx={1.5} fill={couleurs.encre} opacity={0.55} />
     );
   }
   return (

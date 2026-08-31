@@ -173,7 +173,9 @@ async function main() {
     { userId: localUser.id, tripType: 'shared_local', pickupLocation: 'Stone Town', dropoffLocation: 'Bububu' },
     bearer(localToken)
   );
-  check('local vérifié : tarif unique 15 000 TZS', localTrip.status === 201 && localTrip.body.currency === 'TZS' && Number(localTrip.body.price) === 15000, localTrip);
+  // Refonte de la grille (les montants nets chauffeur dictent les prix) :
+  // la zone par défaut du partagé local est à 17 000 TZS.
+  check('local vérifié : tarif local en TZS (17 000, zone par défaut)', localTrip.status === 201 && localTrip.body.currency === 'TZS' && Number(localTrip.body.price) === 17000, localTrip);
 
   console.log('— Chauffeur : candidature puis validation (QR véhicule)');
   const driverToken = (await authenticate(PHONES.driver)).token;
@@ -244,17 +246,16 @@ async function main() {
   const doubleConfirm = await call('POST', `/payments/${tripPayment.id}/confirm`, {}, bearer(touristToken));
   check('double confirmation refusée (409)', doubleConfirm.status === 409 && doubleConfirm.body.error.code === 'payment_already_processed', doubleConfirm);
 
-  const startByTourist = await call('PATCH', `/trips/${trip.id}/start`, { qrCode: driverVerified.vehicle_qr_code }, bearer(touristToken));
-  check('départ scanné par un non-chauffeur -> 403', startByTourist.status === 403 && startByTourist.body.error.code === 'forbidden', startByTourist);
+  // Le scan QR des véhicules a été remplacé par les boutons Démarrer /
+  // Terminer : plus de qrCode dans ces requêtes, seul le RÔLE fait foi.
+  const startByTourist = await call('PATCH', `/trips/${trip.id}/start`, {}, bearer(touristToken));
+  check('départ déclaré par un non-chauffeur -> 403', startByTourist.status === 403 && startByTourist.body.error.code === 'forbidden', startByTourist);
 
-  const wrongQr = await call('PATCH', `/trips/${trip.id}/start`, { qrCode: 'VEH-fake-qr' }, bearer(driverToken));
-  check('QR d’un autre véhicule refusé (403 qr_mismatch)', wrongQr.status === 403 && wrongQr.body.error.code === 'qr_mismatch', wrongQr);
+  const started = (await call('PATCH', `/trips/${trip.id}/start`, {}, bearer(driverToken))).body;
+  check('bouton Démarrer -> in_progress', started.status === 'in_progress' && !!started.started_at, started);
 
-  const started = (await call('PATCH', `/trips/${trip.id}/start`, { qrCode: driverVerified.vehicle_qr_code }, bearer(driverToken))).body;
-  check('scan départ -> in_progress', started.status === 'in_progress' && !!started.started_at, started);
-
-  const completed = (await call('PATCH', `/trips/${trip.id}/complete`, { qrCode: driverVerified.vehicle_qr_code }, bearer(driverToken))).body;
-  check('scan arrivée -> completed', completed.status === 'completed' && !!completed.completed_at, completed);
+  const completed = (await call('PATCH', `/trips/${trip.id}/complete`, {}, bearer(driverToken))).body;
+  check('bouton Terminer -> completed', completed.status === 'completed' && !!completed.completed_at, completed);
 
   const rated = (await call('POST', `/trips/${trip.id}/rating`, { rating: 5, comment: 'Parfait !' }, bearer(touristToken))).body;
   check('notation 5/5 enregistrée', rated.rating === 5, rated);
@@ -291,6 +292,36 @@ async function main() {
   check('connexion hôtel par email + mot de passe', hotelLogin.status === 200 && !!hotelLogin.body.token, hotelLogin);
   const hotelToken = hotelLogin.body.token;
   const hotel = hotelLogin.body.hotel;
+
+  // LA VÉRIFICATION D'ABORD (garde assertHotelVerified, partagée trips /
+  // packages / rides) : un partenaire fraîchement inscrit ne peut RIEN
+  // réserver tant que l'équipe ne l'a pas validé. On épingle la règle, puis
+  // on valide le compte comme l'équipe le ferait depuis son tableau de bord.
+  const blockedTrip = await call(
+    'POST',
+    '/trips',
+    {
+      hotelId: hotel.id,
+      clientName: 'M. Dupont',
+      clientPhone: '+33612345678',
+      tripType: 'private',
+      pickupLocation: 'Hotel Baraka, Nungwi',
+      dropoffLocation: 'Aéroport AAKIA',
+    },
+    bearer(hotelToken)
+  );
+  check(
+    'réservation bloquée avant vérification -> 403 hotel_not_verified',
+    blockedTrip.status === 403 && blockedTrip.body.error.code === 'hotel_not_verified',
+    blockedTrip
+  );
+
+  const hotelVerified = await call('PATCH', `/hotels/${hotel.id}/verify`, { status: 'verified' }, ADMIN);
+  check(
+    "l'équipe vérifie le compte hôtel",
+    hotelVerified.status === 200 && hotelVerified.body.verification_status === 'verified',
+    hotelVerified
+  );
 
   const hotelTrip = await call(
     'POST',
@@ -340,7 +371,9 @@ async function main() {
       bearer(hotelToken)
     )
   ).body;
-  check('colis créé avec QR unique, prix TZS figé', pkg.status === 'created' && /^PKG-/.test(pkg.qr_code) && pkg.currency === 'TZS', pkg);
+  // Devise par profil : un expéditeur HÔTEL est facturé en USD (les TZS
+  // restent la devise des expéditeurs locaux).
+  check('colis créé avec QR unique, prix USD figé (expéditeur hôtel)', pkg.status === 'created' && /^PKG-/.test(pkg.qr_code) && pkg.currency === 'USD', pkg);
 
   const pkgPayment = (await call('POST', `/packages/${pkg.id}/payment`, {}, bearer(hotelToken))).body;
   check('lien de paiement colis créé', pkgPayment.status === 'pending' && pkgPayment.package_id === pkg.id, pkgPayment);

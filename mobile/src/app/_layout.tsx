@@ -9,7 +9,7 @@ import React, { useEffect } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import { FournisseurDialogues } from '@/components/BoiteDialogue';
-import { EstranDeZanzibar, LagonDeVerre } from '@/components/FondPlage';
+import { EcumeDeZanzibar, EstranDeZanzibar, LagonDeVerre } from '@/components/FondPlage';
 import { reparerAlertesWeb } from '@/lib/alerteWeb';
 import { reveillerServeur } from '@/lib/api';
 import { AuthProvider } from '@/lib/auth';
@@ -58,6 +58,8 @@ function PilesNavigation() {
   const retourProfil = () => <RetourEntete accueil="/(tabs)/profil" />;
   // Fiches ouvertes depuis le tableau de bord : on revient au tableau.
   const retourEquipe = () => <RetourEntete accueil="/equipe" />;
+  // Fiches de la location de véhicules : retour vers l'onglet Location.
+  const retourLocation = () => <RetourEntete accueil="/(tabs)/location" />;
   return (
     <Stack
       screenOptions={{
@@ -95,6 +97,14 @@ function PilesNavigation() {
       <Stack.Screen name="verifications" options={{ title: t('verif_titre'), headerLeft: retourEquipe }} />
       <Stack.Screen name="hotel/[id]" options={{ title: t('hotel_fiche_titre'), headerLeft: retourEquipe }} />
       <Stack.Screen name="taxi/[id]" options={{ title: t('taxi_fiche_titre'), headerLeft: retourEquipe }} />
+      {/* La location de véhicules — fiches client ET écrans équipe. Sans ces
+          déclarations, l'en-tête affichait le nom brut de la route
+          (« vehicule/[id] ») et le retour de secours manquait. */}
+      <Stack.Screen name="location-vehicule/[id]" options={{ title: t('location_titre'), headerLeft: retourLocation }} />
+      <Stack.Screen name="location/[id]" options={{ title: t('location_reservation_titre'), headerLeft: retourLocation }} />
+      <Stack.Screen name="vehicules" options={{ title: t('vehicules_titre'), headerLeft: retourEquipe }} />
+      <Stack.Screen name="vehicule/nouveau" options={{ title: t('vehicules_ajouter'), headerLeft: retourEquipe }} />
+      <Stack.Screen name="vehicule/[id]" options={{ title: t('vehicules_titre'), headerLeft: retourEquipe }} />
       <Stack.Screen name="annonce/[id]" options={{ title: t('titre_annonce'), headerLeft: retourChauffeur }} />
       <Stack.Screen name="colis-dispo/[id]" options={{ title: t('titre_colis_dispo'), headerLeft: retourChauffeur }} />
     </Stack>
@@ -110,7 +120,9 @@ function PilesNavigation() {
 // et les valeurs claires de React Navigation. Une liste plutôt qu'un test sur
 // « bento » — une quatrième peau claire serait sinon sortie avec l'heure en
 // blanc sur fond blanc.
-const PEAUX_CLAIRES = new Set<NomPeau>(['bento', 'estran']);
+// 'girofle' y est entré le 31/08/2026, quand la direction « Écume » l'a fait
+// passer du bleu-nuit au blanc — exactement le piège que cette liste décrit.
+const PEAUX_CLAIRES = new Set<NomPeau>(['bento', 'estran', 'girofle']);
 
 const THEME_SOMBRE = {
   ...DarkTheme,
@@ -144,6 +156,10 @@ function CadreApplication() {
       <View key={peau} style={{ flex: 1, backgroundColor: couleurs.sable }}>
         {peau === 'verre' && <LagonDeVerre />}
         {peau === 'estran' && <EstranDeZanzibar />}
+        {/* L'écume aussi : sans cette branche, la peau par défaut retombait
+            sur un aplat nu derrière la navigation — le fond « sautait » à
+            chaque fondu entre écrans. */}
+        {peau === 'girofle' && <EcumeDeZanzibar />}
         <ThemeProvider value={PEAUX_CLAIRES.has(peau) ? THEME_CLAIR : THEME_SOMBRE}>
           {/* Les fenêtres de confirmation s'affichent par-dessus tout écran. */}
           <FournisseurDialogues>

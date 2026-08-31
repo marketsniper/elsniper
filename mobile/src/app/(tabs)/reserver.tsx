@@ -153,11 +153,27 @@ export default function EcranReserver() {
   // prix, et on garde les coordonnées exactes pour les envoyer au chauffeur
   // une fois la course créée. Un refus de localisation n'est pas une erreur :
   // on le dit, et le client choisit dans la liste comme avant.
+  // Un nouveau départ peut rendre l'arrivée choisie INVALIDE (même ville, ou
+  // deux points de Stone Town entre eux) : on la vide plutôt que de laisser
+  // partir une réservation que le serveur refusera. Le Selecteur affiche sa
+  // valeur telle quelle, même sortie des options — sans cette toilette,
+  // « Aéroport → Aéroport » restait à l'écran et partait au serveur.
+  const poserDepart = (ville: string) => {
+    setDepart(ville);
+    if (
+      arrivee &&
+      (arrivee === ville ||
+        (POINTS_STONE_TOWN.includes(ville) && POINTS_STONE_TOWN.includes(arrivee)))
+    ) {
+      setArrivee('');
+    }
+  };
+
   const choisirDepart = async (choix: string) => {
     if (choix !== OPTION_MA_POSITION) {
       setPositionDepart(null);
       setMessagePosition('');
-      setDepart(choix);
+      poserDepart(choix);
       return;
     }
     setChercheposition(true);
@@ -174,7 +190,7 @@ export default function EcranReserver() {
       setMessagePosition(t('position_hors_zone'));
       return;
     }
-    setDepart(ville);
+    poserDepart(ville);
     setPositionDepart(position);
     setMessagePosition(t('position_trouvee', { ville }));
   };
@@ -192,9 +208,13 @@ export default function EcranReserver() {
   // menu déroulant ET la carte interactive : une seule règle, deux entrées.
   // (Stone Town, ferry et aéroport sont à quelques minutes : aucune course
   // entre ces trois points, même règle côté serveur.)
-  const arriveesPossibles = POINTS_STONE_TOWN.includes(depart)
-    ? lieux.filter((lieu) => !POINTS_STONE_TOWN.includes(lieu))
-    : lieux;
+  // …et jamais la ville de départ elle-même : « Nungwi → Nungwi » se
+  // réservait, au prix minimum, sans que rien à l'écran ne le signale.
+  const arriveesPossibles = (
+    POINTS_STONE_TOWN.includes(depart)
+      ? lieux.filter((lieu) => !POINTS_STONE_TOWN.includes(lieu))
+      : lieux
+  ).filter((lieu) => lieu !== depart);
   const tarifCourant = itineraireChoisi ? tarifTrajetProfil('private', profil, itineraire) : null;
   // Pas de taxi partagé sur les trajets courts : course privée du même
   // trajet à 35 USD minimum (même règle côté serveur).
@@ -261,7 +281,7 @@ export default function EcranReserver() {
       setErreur(t('reserver_erreur_profil'));
       return;
     }
-    if (!depart || !arrivee) {
+    if (!depart || !arrivee || depart === arrivee) {
       setErreur(t('reserver_erreur_itineraire'));
       return;
     }

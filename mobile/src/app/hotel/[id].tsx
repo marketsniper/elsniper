@@ -146,7 +146,7 @@ export default function EcranHotelEquipe() {
         : t('hotel_fiche_statut_attente');
 
   return (
-    <Ecran fond="vagues">
+    <Ecran fond="vagues" onRefresh={charger}>
       {/* --- Identité de l'établissement --- */}
       <Carte>
         <View style={styles.enTete}>

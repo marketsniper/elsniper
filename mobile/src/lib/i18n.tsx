@@ -854,6 +854,13 @@ const CHAINES = {
     de: 'Angegebener Weg',
     sw: 'Njia iliyotajwa',
   },
+  equipe_recharge_note: {
+    fr: 'Note',
+    en: 'Note',
+    it: 'Nota',
+    de: 'Notiz',
+    sw: 'Maelezo',
+  },
   equipe_recharge_solde: {
     fr: 'Solde actuel',
     en: 'Current balance',
@@ -3035,6 +3042,7 @@ const CHAINES = {
     de: 'Fahrt storniert. Rückerstattung von {montant}: Das Team zahlt sie aus — die sich öffnende WhatsApp-Nachricht benachrichtigt es, einfach auf Senden drücken.',
   },
   commun_retour: { fr: 'Retour', en: 'Back', sw: 'Rudi' , it: 'Indietro', de: 'Zurück' },
+  commun_rafraichir: { fr: 'Rafraîchir', en: 'Refresh', sw: 'Onyesha upya', it: 'Aggiorna', de: 'Aktualisieren' },
   tel_intro_local: {
     fr: 'Votre numéro + un mot de passe de votre choix — pas de code à attendre.',
     en: 'Your number + a password of your choice — no code to wait for.',
@@ -4424,6 +4432,8 @@ const CHAINES = {
 
   // Écran client : catalogue + mes locations (tabs/location.tsx).
   location_titre: { fr: 'Location de véhicules', en: 'Vehicle rentals', sw: 'Kukodisha magari', it: 'Noleggio veicoli', de: 'Fahrzeugvermietung' },
+  // Titre de la fiche d'une réservation de location (en-tête de pile).
+  location_reservation_titre: { fr: 'Ma location', en: 'My rental', sw: 'Kukodisha kwangu', it: 'Il mio noleggio', de: 'Meine Miete' },
   location_sous_titre: {
     fr: "zanziGo est votre intermédiaire de confiance : véhicule vérifié, assurance et road licence contrôlées par notre équipe.",
     en: 'zanziGo is your trusted go-between: vehicle verified, insurance and road licence checked by our team.',

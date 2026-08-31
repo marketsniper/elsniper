@@ -30,7 +30,10 @@ sed -i 's|<html lang="en">|<html lang="fr">|' "$INDEX"
 sed -i 's|<title>zanziGo</title>|<title>zanziGo — Taxi \&amp; colis à Zanzibar</title>|' "$INDEX"
 
 # Colonne centrée façon téléphone sur grand écran (réception d'hôtel).
-sed -i 's|  <link rel="icon" href="/web/favicon.ico" /></head>|    <style id="zanzigo-web">\n      body {\n        background: #071A22;\n      }\n      @media (min-width: 720px) {\n        #root {\n          max-width: 640px;\n          width: 100%;\n          margin: 0 auto;\n          box-shadow: 0 0 48px rgba(0, 0, 0, 0.45);\n          position: relative;\n          overflow: hidden;\n        }\n      }\n    </style>\n  <link rel="icon" href="/web/favicon.ico" /></head>|' "$INDEX"
+# Le fond AVANT que l'app se peigne : celui de la peau par défaut (« Écume »,
+# blanc #F2F8F4) — sinon, flash bleu nuit à chaque ouverture depuis la
+# bascule du 31/08/2026. L'ombre de la colonne suit : douce, teintée d'encre.
+sed -i 's|  <link rel="icon" href="/web/favicon.ico" /></head>|    <style id="zanzigo-web">\n      body {\n        background: #F2F8F4;\n      }\n      @media (min-width: 720px) {\n        #root {\n          max-width: 640px;\n          width: 100%;\n          margin: 0 auto;\n          box-shadow: 0 0 48px rgba(12, 32, 22, 0.18);\n          position: relative;\n          overflow: hidden;\n        }\n      }\n    </style>\n  <link rel="icon" href="/web/favicon.ico" /></head>|' "$INDEX"
 
 # ===== PWA : fichiers (manifest, service worker, icônes) + balises =====
 cp "$RACINE/backend/pwa/"* "$RACINE/backend/public/web/"
@@ -66,7 +69,10 @@ sed -i "s|^const CACHE = '[^']*';|const CACHE = 'zanzigo-web-$VERSION';|" \
   "$RACINE/backend/public/web/service-worker.js"
 
 # Balises PWA dans <head> : manifest, couleur de thème, icône iOS, plein écran iOS.
-sed -i 's|  <link rel="icon" href="/web/favicon.ico" /></head>|  <link rel="icon" href="/web/favicon.ico" />\n    <link rel="manifest" href="/web/manifest.webmanifest" />\n    <meta name="theme-color" content="#073B57" />\n    <link rel="apple-touch-icon" href="/web/'"$APPLE_TOUCH"'" />\n    <meta name="apple-mobile-web-app-capable" content="yes" />\n    <meta name="apple-mobile-web-app-status-bar-style" content="black" />\n    <meta name="apple-mobile-web-app-title" content="zanziGo" />\n  </head>|' "$INDEX"
+# theme-color et barre d'état iOS suivent la peau claire : chrome du
+# navigateur blanc d'écume, heure/batterie en SOMBRE (« default », pas
+# « black » qui posait du texte blanc sur notre fond blanc).
+sed -i 's|  <link rel="icon" href="/web/favicon.ico" /></head>|  <link rel="icon" href="/web/favicon.ico" />\n    <link rel="manifest" href="/web/manifest.webmanifest" />\n    <meta name="theme-color" content="#F2F8F4" />\n    <link rel="apple-touch-icon" href="/web/'"$APPLE_TOUCH"'" />\n    <meta name="apple-mobile-web-app-capable" content="yes" />\n    <meta name="apple-mobile-web-app-status-bar-style" content="default" />\n    <meta name="apple-mobile-web-app-title" content="zanziGo" />\n  </head>|' "$INDEX"
 
 # Enregistrement du service worker + bouton « Installer » en fin de <body>.
 # mise-a-jour.js est appelé depuis la PAGE, qui est vérifiée à chaque

@@ -62,6 +62,10 @@ export default function EcranScanner() {
     scanEnCours.current = false;
     setColis(null);
     setQrColis('');
+    // La photo aussi : sans cette ligne, « Scanner un autre colis » gardait
+    // la preuve du colis PRÉCÉDENT — le bouton « Ramasser » du suivant était
+    // déjà actif, avec la photo d'un autre paquet comme preuve.
+    setPhotoPreuve(null);
     setErreur('');
     setMessage('');
   };

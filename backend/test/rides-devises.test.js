@@ -47,9 +47,12 @@ describe('Devises taxi partagé (parcours local complet)', () => {
     const mine = await request(app).get('/api/rides/mine').set(authHeaders(tokenChauffeur));
     const booking = mine.body[0].bookings[0];
     assert.equal(booking.client_type, 'resident');
-    assert.equal(Number(booking.price_per_seat), 15.2);
+    // La règle de vueChauffeur vaut pour TOUTES les branches : le chauffeur
+    // voit son net, jamais le prix payé ni la commission en argent — seule la
+    // branche résident les renvoyait encore bruts.
+    assert.equal(booking.price_per_seat, undefined, 'le prix client ne sort pas');
+    assert.equal(booking.commission_per_seat, undefined, 'la commission en argent ne sort pas');
     assert.equal(Number(booking.net_per_seat), 11.6, 'le chauffeur porte 0,40 de la remise');
-    assert.equal(Number(booking.commission_per_seat), 3.6, 'zanziGo porte les 0,40 restants');
   });
 
   it('local : TZS sur la liste, la réservation et la fiche chauffeur', async () => {

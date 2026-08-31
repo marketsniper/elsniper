@@ -727,15 +727,25 @@ router.get(
             // porter les trois quarts.
             const prix = round2(usd * (1 - config.residentDiscountRate));
             const net = netPlaceResidentUsd(usd);
-            return avecPaiement(b, {
-              seats: b.seats,
-              client_type: 'resident',
-              client_name: b.user_name ?? null,
-              price_per_seat: prix,
-              currency: 'USD',
-              commission_per_seat: round2(prix - net),
-              net_per_seat: net,
-            });
+            // Même toilette que les trois autres branches : le prix payé et
+            // la commission ne sortent JAMAIS vers le chauffeur — seule
+            // celle-ci les renvoyait bruts, parce qu'elle ne passait pas par
+            // avecGain.
+            return avecPaiement(
+              b,
+              gainsSeuls(
+                {
+                  seats: b.seats,
+                  client_type: 'resident',
+                  client_name: b.user_name ?? null,
+                  price_per_seat: prix,
+                  currency: 'USD',
+                  commission_per_seat: round2(prix - net),
+                  net_per_seat: net,
+                },
+                { prix: 'price_per_seat', commission: 'commission_per_seat', net: 'net_per_seat' }
+              )
+            );
           }
           return avecPaiement(
             b,
@@ -1192,6 +1202,25 @@ router.patch(
 
     if (data.seatsAvailable !== undefined && data.seatsAvailable > ride.seats_total) {
       throw new HttpError(400, 'validation_error', `Ce trajet compte ${ride.seats_total} places au total`);
+    }
+    // Et jamais plus que ce qui n'est PAS déjà vendu : sans ce plafond, un
+    // chauffeur dont les 4 places étaient toutes réservées pouvait renvoyer
+    // seatsAvailable = 4 et revendre un véhicule déjà plein — huit passagers
+    // payants pour quatre sièges.
+    if (data.seatsAvailable !== undefined) {
+      const { rows: vendues } = await query(
+        `SELECT COALESCE(SUM(seats), 0) AS n FROM ride_bookings
+          WHERE ride_id = $1 AND cancelled_at IS NULL`,
+        [req.params.id]
+      );
+      const disponiblesMax = ride.seats_total - Number(vendues[0].n);
+      if (data.seatsAvailable > disponiblesMax) {
+        throw new HttpError(
+          400,
+          'validation_error',
+          `${Number(vendues[0].n)} place(s) déjà réservée(s) : au plus ${Math.max(0, disponiblesMax)} restante(s) à remettre en vente`
+        );
+      }
     }
 
     // ANNULATION D'UNE ANNONCE : les passagers ne disparaissent pas avec

@@ -207,15 +207,20 @@ const styles = stylesReactifs(() => ({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  // Le halo reprend LA couleur de sa pastille (action pour le taxi, sarcelle
+  // pour le client), voilée par l'opacité de la vue — et non un rgba() figé :
+  // un corail codé en dur datait d'une peau où le corail était la couleur
+  // d'action, et jurait derrière une pastille devenue verte ou or.
   halo: {
     position: 'absolute',
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: 'rgba(228, 87, 46, 0.22)', // corail voilé — le taxi
+    backgroundColor: couleurs.primaire,
+    opacity: 0.22,
   },
   haloClient: {
-    backgroundColor: 'rgba(14, 154, 167, 0.22)', // turquoise voilé — le client
+    backgroundColor: couleurs.turquoise,
   },
   pastille: {
     width: 38,

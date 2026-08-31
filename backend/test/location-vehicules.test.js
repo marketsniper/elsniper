@@ -320,7 +320,10 @@ describe('Location de véhicules — réservation et paiement (moteur commun)', 
     assert.equal(res.status, 201, JSON.stringify(res.body));
     assert.equal(res.body.days, 3, 'du 1er au 3e jour = 3 jours pleins, inclusifs');
     assert.equal(Number(res.body.price), 120);
-    assert.equal(Number(res.body.commission), 24);
+    // La commission zanziGo ne sort JAMAIS vers le client — même règle que
+    // daily_commission au catalogue (sanitizeVehicle) : la réponse de
+    // réservation la divulguait (commission ÷ jours = daily_commission).
+    assert.equal(res.body.commission, undefined);
     assert.ok(res.body.payment.payment_link);
     assert.equal(res.body.payment.rental_booking_id, res.body.id);
 
@@ -330,6 +333,7 @@ describe('Location de véhicules — réservation et paiement (moteur commun)', 
     assert.equal(mine.status, 200);
     assert.equal(mine.body.length, 1);
     assert.equal(mine.body[0].make, 'Toyota');
+    assert.equal(mine.body[0].commission, undefined, 'commission cachée aussi dans « mes locations »');
   });
 
   it('mêmes dates de départ et de retour = 1 jour', async () => {
@@ -393,7 +397,9 @@ describe('Location de véhicules — réservation et paiement (moteur commun)', 
     const statsEquipe = await request(app).get('/api/stats').set(adminHeaders());
     assert.equal(statsEquipe.body.revenue.today.locations, 1);
     assert.equal(Number(statsEquipe.body.revenue.today.ca.USD), Number(booking.price));
-    assert.equal(Number(statsEquipe.body.revenue.today.gains.USD), Number(booking.commission));
+    // La commission n'est plus dans la réponse client : on la recalcule
+    // depuis la fiche du véhicule d'essai (8 USD de commission par jour).
+    assert.equal(Number(statsEquipe.body.revenue.today.gains.USD), booking.days * 8);
   });
 });
 

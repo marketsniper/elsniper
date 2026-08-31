@@ -24,6 +24,7 @@ import { Colobe } from '@/components/marques/Colobe';
 import { CarteVersion } from '@/components/Version';
 import {
   api,
+  ErreurApi,
   type CreditHotel,
   type DemandeRecharge,
   type FideliteHotel,
@@ -154,6 +155,7 @@ export default function EcranProfil() {
 
   // Transforme UN bon fidélité en crédit prépayé (l'autre usage : colis offert).
   const [chargeConversion, setChargeConversion] = useState(false);
+  const [erreurConversion, setErreurConversion] = useState('');
   const convertirUnBon = () => {
     if (!hotelId || !fidelite) return;
     const montant = fidelite.voucher_credit_usd ?? 10;
@@ -166,13 +168,18 @@ export default function EcranProfil() {
           // « Oui, convertir » — pas le « Oui, annuler » des annulations.
           text: t('fidelite_convertir_oui'),
           onPress: async () => {
+            setErreurConversion('');
             setChargeConversion(true);
             try {
               await api.convertirBonEnCredit(hotelId);
               setFidelite(await api.fideliteHotel(hotelId));
               setCredit(await api.creditHotel(hotelId));
-            } catch {
-              // silencieux : le solde affiché reste inchangé
+            } catch (e) {
+              // L'échec SE DIT : un catch muet fermait la boîte sans un mot —
+              // l'hôtelier croyait son bon perdu, alors que rien n'a bougé.
+              setErreurConversion(
+                e instanceof ErreurApi ? e.message : t('recharge_erreur_envoi')
+              );
             } finally {
               setChargeConversion(false);
             }
@@ -383,6 +390,7 @@ export default function EcranProfil() {
               charge={chargeConversion}
             />
           )}
+          {!!erreurConversion && <TexteErreur>{erreurConversion}</TexteErreur>}
         </Carte>
       )}
 

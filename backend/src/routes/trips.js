@@ -1361,10 +1361,15 @@ router.post(
         `UPDATE payments SET status = 'failed' WHERE trip_id = $1 AND status = 'pending'`,
         [req.params.id]
       );
-      // Course déjà payée annulée par le CLIENT : remboursement dû selon le
-      // barème, tracé sur le paiement confirmé.
+      // Course déjà payée : remboursement dû, tracé sur le paiement confirmé.
+      // Le CLIENT suit le barème (100 % / 50 % selon le délai) ; l'ÉQUIPE
+      // rembourse à 100 % sans condition — c'est elle qui annule, le client
+      // n'a pas à en faire les frais. Avant cette ligne, une annulation
+      // équipe d'une course payée ne posait AUCUNE trace : l'argent encaissé
+      // disparaissait des « Remboursements à verser ».
       let refund = null;
-      if (dejaPayee && !isAdmin(req) && tauxPaye !== null) {
+      const tauxApplicable = isAdmin(req) ? 1 : tauxPaye;
+      if (dejaPayee && tauxApplicable !== null) {
         const { rows: paiements } = await client.query(
           `UPDATE payments
            -- Le barème (100 % / 50 %) porte sur le PRIX DE LA COURSE, pas
@@ -1375,7 +1380,7 @@ router.post(
            SET refund_amount = ROUND((amount - surcharge) * $2, 2), refund_due_at = now()
            WHERE trip_id = $1 AND status = 'confirmed' AND refund_due_at IS NULL
            RETURNING refund_amount, currency, remise_parrainage_usd`,
-          [req.params.id, tauxPaye]
+          [req.params.id, tauxApplicable]
         );
         // Le crédit de parrainage consommé sur cette course REVIENT au
         // compte : la remise n'est pas de l'argent versé, elle ne se
@@ -1394,7 +1399,7 @@ router.post(
           refund = {
             amount: Number(paiements[0].refund_amount),
             currency: paiements[0].currency,
-            rate: tauxPaye,
+            rate: tauxApplicable,
           };
         }
       }

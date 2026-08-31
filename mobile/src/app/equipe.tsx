@@ -177,19 +177,36 @@ export default function EcranEquipe() {
   // suite, sans attendre le rafraîchissement automatique.
   useEffect(() => ecouterAlertes(() => { chargerRef.current?.(); }), []);
 
+  // try/finally sur les DEUX : Notification.requestPermission peut lever
+  // (Safari ancien, contexte non sécurisé) et serviceWorker.ready ne résout
+  // jamais sans service worker — sans le finally, le bouton restait en
+  // chargement pour toujours, et « couper » acceptait les appuis en rafale.
   const allumerAlertes = async () => {
     setMessageAlertes('');
     setActionEnCours('alerte-on');
-    const souci = await activerAlertes(t('alertes_nom_appareil'));
-    setMessageAlertes(souci ?? t('alertes_ok'));
-    setEtatPush(await etatAlertes());
-    setActionEnCours(null);
+    try {
+      const souci = await activerAlertes(t('alertes_nom_appareil'));
+      setMessageAlertes(souci ?? t('alertes_ok'));
+      setEtatPush(await etatAlertes());
+    } catch {
+      setMessageAlertes(t('alertes_indisponible'));
+    } finally {
+      setActionEnCours(null);
+    }
   };
 
   const couperAlertes = async () => {
-    await desactiverAlertes();
-    setMessageAlertes(t('alertes_coupees'));
-    setEtatPush(await etatAlertes());
+    setMessageAlertes('');
+    setActionEnCours('alerte-off');
+    try {
+      await desactiverAlertes();
+      setMessageAlertes(t('alertes_coupees'));
+      setEtatPush(await etatAlertes());
+    } catch {
+      setMessageAlertes(t('alertes_indisponible'));
+    } finally {
+      setActionEnCours(null);
+    }
   };
 
   const essayerAlerte = async () => {
@@ -329,12 +346,34 @@ export default function EcranEquipe() {
     await supprimerStockage(CLE_STOCKAGE);
     definirCleEquipe(null);
     setCle('');
+    // TOUT l'état du tableau se vide — pas seulement six listes : sinon la
+    // personne suivante qui saisit une clé voit, le temps du rechargement,
+    // le CA, les remboursements et la dernière recherche de profils du
+    // passage précédent — et une pièce d'identité restée ouverte flottait
+    // même par-dessus l'écran de saisie de la clé.
     setCourses([]);
     setPaiements([]);
+    setRemboursements([]);
+    setPaiementsRecus([]);
+    setRecharges([]);
     setCandidats([]);
     setClients([]);
     setHotels([]);
     setChauffeurs([]);
+    setAbonnes(null);
+    setVerifsEnAttente(0);
+    setVehiculesPendants(0);
+    setSection(null);
+    setCaOuvert(false);
+    setRecherche('');
+    setResultats([]);
+    setRechercheFaite(false);
+    setHotelsVerifies([]);
+    setAttentes([]);
+    setPartages([]);
+    setJoursOuverts({});
+    setDetailsCourse({});
+    setDocumentOuvert(null);
   };
 
   // Enveloppe commune des actions : verrouille le bouton, recharge après.
@@ -628,7 +667,10 @@ export default function EcranEquipe() {
         { cle: 'encours', label: t('equipe_courses_en_cours'), icone: 'navigate-outline', n: coursesEnCours.length, action: coursesEnCours.some(courseEnRetard) },
         { cle: 'avenir', label: t('equipe_courses_a_venir'), icone: 'calendar-outline', n: coursesAVenir.length, action: false },
         { cle: 'partages', label: t('equipe_partages'), icone: 'people-circle-outline', n: partagesOuverts.length, action: false },
-        { cle: 'attentes', label: t('equipe_stat_attentes'), icone: 'notifications-outline', n: attentes.filter((a) => !a.matched_at).length, action: true },
+        // Le compteur dit ce que la rubrique AFFICHE (toutes les demandes,
+        // trouvées comprises) ; le voyant, lui, ne s'allume que s'il reste
+        // des demandes ouvertes à recontacter.
+        { cle: 'attentes', label: t('equipe_stat_attentes'), icone: 'notifications-outline', n: attentes.length, action: attentes.some((a) => !a.matched_at) },
       ],
     },
     {
@@ -1704,7 +1746,9 @@ export default function EcranEquipe() {
                   label={t('equipe_recharge_solde')}
                   valeur={formaterMontant(Number(demande.credit_balance ?? 0), 'USD')}
                 />
-                {!!demande.note && <LigneInfo label="Note" valeur={demande.note} />}
+                {!!demande.note && (
+                  <LigneInfo label={t('equipe_recharge_note')} valeur={demande.note} />
+                )}
                 <LigneInfo
                   label={t('commun_telephone')}
                   valeur={demande.hotel_phone ?? '—'}
@@ -2116,7 +2160,20 @@ export default function EcranEquipe() {
                   {bloque ? (
                     <Badge texte={t('equipe_profil_bloque')} ton="danger" />
                   ) : (
-                    <Badge texte={type} ton="primaire" />
+                    // Le type de compte en toutes lettres (mêmes libellés que
+                    // l'inscription), plus le code brut « tourist/resident ».
+                    <Badge
+                      texte={
+                        type === 'tourist'
+                          ? t('client_type_touriste')
+                          : type === 'resident'
+                            ? t('client_type_resident')
+                            : type === 'local'
+                              ? t('client_type_local')
+                              : type
+                      }
+                      ton="primaire"
+                    />
                   )}
                 </View>
                 <Text style={styles.detail}>{String(champ(profil, 'phone') ?? '')}</Text>

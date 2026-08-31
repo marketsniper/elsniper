@@ -238,6 +238,17 @@ router.get(
   })
 );
 
+/**
+ * La ligne de réservation rendue au CLIENT : sans la commission zanziGo.
+ * Même règle que sanitizeVehicle, qui cache daily_commission au catalogue —
+ * la renvoyer ici (commission = daily_commission × jours) revenait à la
+ * donner quand même, une division près.
+ */
+function sansCommission(booking) {
+  const { commission, ...reste } = booking;
+  return reste;
+}
+
 // GET /rental-vehicles/bookings/mine — les réservations du client connecté.
 router.get(
   '/bookings/mine',
@@ -256,7 +267,7 @@ router.get(
         ORDER BY b.created_at DESC`,
       [req.auth.userId]
     );
-    res.json(rows);
+    res.json(rows.map(sansCommission));
   })
 );
 
@@ -632,7 +643,7 @@ router.post(
     }
 
     res.status(201).json({
-      ...booking,
+      ...sansCommission(booking),
       payment: {
         ...paiementRows[0],
         payment_method: paypal?.method ?? (isStubMode() ? 'manual' : 'pesapal'),

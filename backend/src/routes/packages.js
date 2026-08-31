@@ -335,9 +335,23 @@ router.get(
     if (!isAdmin(req) && !req.auth.driverId) {
       throw new HttpError(403, 'forbidden', 'Accès réservé aux chauffeurs');
     }
+    // Même exigence qu'au « Je prends la livraison » : un candidat non validé
+    // n'a rien à lire sur un colis, même l'étiquette sous les yeux.
+    if (!isAdmin(req)) {
+      const { rows: valide } = await query(
+        `SELECT 1 FROM drivers WHERE id = $1 AND verification_status = 'verified'`,
+        [req.auth.driverId]
+      );
+      if (!valide[0]) {
+        throw new HttpError(403, 'driver_not_verified', "Votre compte chauffeur n'a pas encore été validé");
+      }
+    }
     const { rows } = await query('SELECT * FROM packages WHERE qr_code = $1', [req.params.qrCode]);
     if (!rows[0]) throw notFound('Colis');
-    res.json(rows[0]);
+    // La ligne BRUTE sortait ici — seul endroit du fichier : un chauffeur y
+    // lisait le prix payé, le QR et les téléphones d'un colis impayé. Même
+    // toilette que /mine et /claim.
+    res.json(isAdmin(req) ? rows[0] : sansSecretsChauffeur(rows[0]));
   })
 );
 
@@ -631,12 +645,36 @@ router.post(
         `UPDATE payments SET status = 'failed' WHERE package_id = $1 AND status = 'pending'`,
         [req.params.id]
       );
+      // Colis PAYÉ annulé par l'équipe : le remboursement se verse à la main
+      // (WhatsApp), mais il S'INSCRIT ici — sans cette trace, le paiement
+      // confirmé restait intact et la ligne n'apparaissait jamais dans
+      // « Remboursements à verser » : l'argent encaissé disparaissait des
+      // comptes. Même règle que les courses : hors frais carte, à 100 %.
+      if (pkg.status === 'paid') {
+        await client.query(
+          `UPDATE payments
+           SET refund_amount = ROUND(amount - surcharge, 2), refund_due_at = now()
+           WHERE package_id = $1 AND status = 'confirmed' AND refund_due_at IS NULL`,
+          [req.params.id]
+        );
+      }
       const { rows } = await client.query(
         `UPDATE packages SET status = 'cancelled' WHERE id = $1 RETURNING *`,
         [req.params.id]
       );
       return rows[0];
     });
+    if (pkg.status === 'paid') {
+      notifierEquipe(
+        '❌ Annulation colis payé — remboursement à verser',
+        [
+          `Colis : ${pkg.pickup_location} → ${pkg.dropoff_location} (${pkg.size})`,
+          `Montant payé : ${pkg.price} ${pkg.currency}`,
+          `Réf : ${pkg.id}`,
+          'La ligne est dans « Remboursements à verser ».',
+        ].join('\n')
+      );
+    }
     res.json(updated);
   })
 );

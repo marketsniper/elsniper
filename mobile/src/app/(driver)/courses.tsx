@@ -12,8 +12,8 @@
 // course et un colis sont deux façons de gagner sa journée : même liste.
 // Le scanner de QR garde son propre onglet.
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect, useRouter } from 'expo-router';
-import React, { useCallback, useState } from 'react';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Alert, Linking, Pressable, Text, View } from 'react-native';
 
 import {
@@ -69,6 +69,20 @@ export default function EcranCourses() {
   const [historiqueOuvert, setHistoriqueOuvert] = useState(false);
   // QUATRE CASES, une seule à la fois. null = le menu.
   const [caseOuverte, setCaseOuverte] = useState<CaseChauffeur | null>(null);
+  // Un autre écran peut demander une case précise (ex. « Mes trajets
+  // postés » depuis la page de publication) : ?case=mestrajets — sinon le
+  // chauffeur retombait sur la grille et devait deviner où aller.
+  const { case: caseDemandee } = useLocalSearchParams<{ case?: string }>();
+  useEffect(() => {
+    if (
+      caseDemandee === 'mestrajets' ||
+      caseDemandee === 'encours' ||
+      caseDemandee === 'colis' ||
+      caseDemandee === 'aprendre'
+    ) {
+      setCaseOuverte(caseDemandee);
+    }
+  }, [caseDemandee]);
   // Bourse aux courses : les courses privées encore sans chauffeur.
   const [coursesDispo, setCoursesDispo] = useState<Trajet[]>([]);
   const [colisDispo, setColisDispo] = useState<Colis[]>([]);
@@ -896,7 +910,10 @@ export default function EcranCourses() {
         );
       })}
 
-      {nbNettoyables > 0 && (
+      {/* Dans la case « En cours » SEULEMENT : c'est elle qui montre
+          l'historique que le ménage masque — flottant en bas du menu ou de
+          la case Colis, le bouton cachait des courses qu'on ne voyait pas. */}
+      {caseOuverte === 'encours' && nbNettoyables > 0 && (
         <Bouton
           titre={`${t('menage_bouton')} (${nbNettoyables})`}
           icone="trash-outline"

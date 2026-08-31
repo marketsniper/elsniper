@@ -34,25 +34,42 @@ export function CarteAlertes({
   const { t } = useT();
   const [etat, setEtat] = useState<EtatAlertes>('inactif');
   const [message, setMessage] = useState('');
-  const [enCours, setEnCours] = useState<'activer' | 'test' | null>(null);
+  const [enCours, setEnCours] = useState<'activer' | 'couper' | 'test' | null>(null);
 
   useEffect(() => {
     etatAlertes().then(setEtat).catch(() => {});
   }, []);
 
+  // try/finally sur les DEUX : Notification.requestPermission peut lever
+  // (Safari ancien, contexte non sécurisé) et serviceWorker.ready ne résout
+  // jamais sans service worker — sans le finally, le bouton restait en
+  // chargement pour toujours, et « couper » acceptait les appuis en rafale.
   const allumer = async () => {
     setMessage('');
     setEnCours('activer');
-    const souci = await activerAlertes(nomAppareil, cible);
-    setMessage(souci ?? t('alertes_ok'));
-    setEtat(await etatAlertes());
-    setEnCours(null);
+    try {
+      const souci = await activerAlertes(nomAppareil, cible);
+      setMessage(souci ?? t('alertes_ok'));
+      setEtat(await etatAlertes());
+    } catch {
+      setMessage(t('alertes_indisponible'));
+    } finally {
+      setEnCours(null);
+    }
   };
 
   const couper = async () => {
-    await desactiverAlertes(cible);
-    setMessage(t('alertes_coupees'));
-    setEtat(await etatAlertes());
+    setMessage('');
+    setEnCours('couper');
+    try {
+      await desactiverAlertes(cible);
+      setMessage(t('alertes_coupees'));
+      setEtat(await etatAlertes());
+    } catch {
+      setMessage(t('alertes_indisponible'));
+    } finally {
+      setEnCours(null);
+    }
   };
 
   const essayer = async () => {
@@ -93,6 +110,7 @@ export function CarteAlertes({
             icone="notifications-off-outline"
             variante="secondaire"
             onPress={couper}
+            charge={enCours === 'couper'}
           />
         </>
       ) : etat === 'indisponible' ? (

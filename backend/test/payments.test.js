@@ -156,12 +156,15 @@ describe('Paiements — confirmation (mode stub Pesapal)', () => {
     assert.equal(res.body.error.code, 'payment_already_processed');
   });
 
-  it('webhook Pesapal (IPN) : confirme un paiement pending, inconnu → 200 sans effet', async () => {
+  it('webhook Pesapal (IPN) : IGNORÉ en mode stub — pas de confirmation gratuite', async () => {
     const { token, trip, payment } = await createTripPayment();
 
-    // Notification IPN avec la référence du paiement : en stub, le statut
-    // vérifié est COMPLETED → paiement confirmé et course payée, sans aucun
-    // jeton (c'est Pesapal qui appelle).
+    // Sans clés Pesapal (mode stub — la production d'aujourd'hui), il n'y a
+    // AUCUN statut réel à vérifier : ce webhook sans jeton confirmerait
+    // gratuitement n'importe quel paiement dont on connaît la référence — et
+    // le payeur lit la sienne dans sa propre réservation. Accusé de
+    // réception 200, zéro effet. (Une référence manuelle WHATSAPP-… est de
+    // toute façon réservée à la confirmation par l'équipe.)
     const ipn = await request(app)
       .post('/api/payments/pesapal-ipn')
       .send({ OrderTrackingId: payment.pesapal_reference });
@@ -171,9 +174,9 @@ describe('Paiements — confirmation (mode stub Pesapal)', () => {
     const releve = await request(app)
       .get(`/api/payments/${payment.id}`)
       .set(authHeaders(token));
-    assert.equal(releve.body.status, 'confirmed');
+    assert.equal(releve.body.status, 'pending', 'le paiement reste à régler');
     const tripRes = await request(app).get(`/api/trips/${trip.id}`).set(authHeaders(token));
-    assert.equal(tripRes.body.status, 'paid');
+    assert.notEqual(tripRes.body.status, 'paid', 'la course reste impayée');
 
     // Référence inconnue : réponse 200 (accusé de réception), aucun effet.
     const inconnu = await request(app)

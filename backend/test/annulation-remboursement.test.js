@@ -277,7 +277,13 @@ describe('Annulation d\'une course payée (barème 24/48 h)', () => {
       .set(adminHeaders());
     assert.equal(parEquipe.status, 200);
     assert.equal(parEquipe.body.status, 'cancelled');
-    // Annulation par l'équipe : pas de remboursement automatique tracé.
-    assert.equal(parEquipe.body.refund, null);
+    // Annulation par l'ÉQUIPE d'une course payée : remboursement tracé à
+    // 100 % (hors frais carte), sans condition de délai — c'est l'équipe qui
+    // annule, le client n'a pas à en faire les frais. Avant cette trace, le
+    // paiement confirmé restait intact et la ligne n'apparaissait jamais
+    // dans « Remboursements à verser ».
+    assert.equal(parEquipe.body.refund.rate, 1);
+    assert.equal(parEquipe.body.refund.amount, 53);
+    assert.equal(parEquipe.body.refund.currency, 'USD');
   });
 });

@@ -69,7 +69,7 @@ export default function EcranFicheVehiculeLocation() {
           titre={t('commun_retour_accueil')}
           icone="arrow-back-outline"
           variante="secondaire"
-          onPress={() => router.back()}
+          onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)/location'))}
         />
       </Ecran>
     ) : (
@@ -217,7 +217,7 @@ export default function EcranFicheVehiculeLocation() {
         titre={t('commun_retour_accueil')}
         icone="arrow-back-outline"
         variante="secondaire"
-        onPress={() => router.back()}
+        onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)/location'))}
       />
     </Ecran>
   );

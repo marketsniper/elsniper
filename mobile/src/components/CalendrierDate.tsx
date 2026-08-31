@@ -76,10 +76,14 @@ export function CalendrierDate({
           hitSlop={10}
           accessibilityRole="button"
         >
+          {/* Éteinte ≠ invisible : `bordure` est un filet pensé pour des
+              traits, pas pour un glyphe — sur la peau claire il disparaissait
+              du blanc. Le texte secondaire voilé reste lisible partout. */}
           <Ionicons
             name="chevron-back"
             size={22}
-            color={peutReculer ? couleurs.primaireFonce : couleurs.bordure}
+            color={peutReculer ? couleurs.primaireFonce : couleurs.texteSecondaire}
+            style={peutReculer ? undefined : { opacity: 0.45 }}
           />
         </Pressable>
         <Text style={styles.moisTitre}>
@@ -94,7 +98,8 @@ export function CalendrierDate({
           <Ionicons
             name="chevron-forward"
             size={22}
-            color={peutAvancer ? couleurs.primaireFonce : couleurs.bordure}
+            color={peutAvancer ? couleurs.primaireFonce : couleurs.texteSecondaire}
+            style={peutAvancer ? undefined : { opacity: 0.45 }}
           />
         </Pressable>
       </View>
@@ -215,7 +220,10 @@ const styles = stylesReactifs(() => ({
     color: couleurs.surPrimaire,
     fontWeight: '800',
   },
+  // Les jours passés se LISENT, voilés : peints en `bordure`, ils faisaient
+  // des trous dans la grille sur la peau claire (≈ 1,3:1 sur blanc).
   jourDesactive: {
-    color: couleurs.bordure,
+    color: couleurs.texteSecondaire,
+    opacity: 0.45,
   },
 }));

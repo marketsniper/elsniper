@@ -10,11 +10,20 @@ import React, {
   useState,
 } from 'react';
 
-import { definirJeton, ErreurApi, obtenirChauffeur, obtenirHotel, obtenirUtilisateur } from './api';
+import {
+  definirCleEquipe,
+  definirJeton,
+  ErreurApi,
+  obtenirChauffeur,
+  obtenirHotel,
+  obtenirUtilisateur,
+} from './api';
 import { ecrireStockage, lireStockage, supprimerStockage } from './stockage';
 import type { Chauffeur, Hotel, SessionAuth, Utilisateur } from './types';
 
 const CLE_SESSION = 'zanzigo_session';
+// La même clé que l'écran /equipe : c'est ELLE qu'on purge à la déconnexion.
+const CLE_EQUIPE = 'zanzigo.cle_equipe';
 
 /**
  * Confronte la session gardée sur l'appareil à la réalité du serveur.
@@ -116,8 +125,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const deconnexion = useCallback(async () => {
     definirJeton(null);
+    // La CLÉ ÉQUIPE part avec la session : sans cette purge, un membre de
+    // l'équipe qui se déconnectait laissait la clé dans le stockage — et le
+    // prochain utilisateur du même appareil ouvrait /equipe, /verifications
+    // ou /vehicules directement sur les paiements et les pièces d'identité,
+    // sans que la clé lui soit jamais redemandée.
+    definirCleEquipe(null);
     setSession(null);
     await supprimerStockage(CLE_SESSION).catch(() => {});
+    await supprimerStockage(CLE_EQUIPE).catch(() => {});
   }, []);
 
   const majSession = useCallback(async (maj: Partial<SessionAuth>) => {
