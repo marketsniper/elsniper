@@ -10,6 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { CalendrierDate } from '@/components/CalendrierDate';
 import { IconeCategorie } from '@/components/IconeCategorie';
+import { Selecteur } from '@/components/Selecteur';
 import { VisionneusePhotos } from '@/components/VisionneusePhotos';
 import {
   Badge,
@@ -23,7 +24,7 @@ import {
   Titre,
 } from '@/components/ui';
 import { api, ErreurApi } from '@/lib/api';
-import { libelleCategorieVehicule, useT } from '@/lib/i18n';
+import { HEURES_CHOIX, libelleCategorieVehicule, useT } from '@/lib/i18n';
 import { couleurs, espaces, rayons, stylesReactifs } from '@/lib/theme';
 import { formaterMontant, type VehiculeLocation } from '@/lib/types';
 
@@ -44,8 +45,9 @@ export default function EcranFicheVehiculeLocation() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   // Où le client veut récupérer le véhicule (optionnel — sinon le lieu de
-  // retrait de la fiche).
+  // retrait de la fiche), et à quelle heure il veut démarrer.
   const [lieuRemise, setLieuRemise] = useState('');
+  const [heureRemise, setHeureRemise] = useState('');
   const [ouvertDepart, setOuvertDepart] = useState(false);
   const [ouvertRetour, setOuvertRetour] = useState(false);
   const [reservationEnCours, setReservationEnCours] = useState(false);
@@ -106,7 +108,8 @@ export default function EcranFicheVehiculeLocation() {
         startDate,
         endDate,
         undefined,
-        lieuRemise.trim() || undefined
+        lieuRemise.trim() || undefined,
+        heureRemise || undefined
       );
       router.replace(`/location/${booking.id}`);
     } catch (e) {
@@ -235,6 +238,15 @@ export default function EcranFicheVehiculeLocation() {
           value={lieuRemise}
           onChangeText={setLieuRemise}
           placeholder={vehicule.pickup_location}
+        />
+        {/* L'HEURE DE DÉBUT (demande du client) : mêmes créneaux que la
+            programmation d'une course. Optionnelle — sans heure, la remise
+            se convient par WhatsApp comme avant. */}
+        <Selecteur
+          label={t('location_champ_heure_remise')}
+          valeur={heureRemise}
+          options={HEURES_CHOIX}
+          onChange={setHeureRemise}
         />
 
         {jours > 0 && (

@@ -4330,6 +4330,16 @@ const CHAINES = {
   // Menu équipe.
   equipe_famille_location: { fr: 'Location de véhicules', en: 'Vehicle rentals', sw: 'Kukodisha magari', it: 'Noleggio veicoli', de: 'Fahrzeugvermietung' },
   equipe_stat_vehicules: { fr: 'Véhicules', en: 'Vehicles', sw: 'Magari', it: 'Veicoli', de: 'Fahrzeuge' },
+  // La rubrique « Locations » du tableau : en cours (véhicule dehors) puis
+  // à venir (remise à préparer), avec dates, heure et lieu de remise.
+  equipe_stat_locations: { fr: 'Locations', en: 'Rentals', sw: 'Kukodisha' },
+  equipe_locations_en_cours: { fr: 'En cours', en: 'Ongoing', sw: 'Zinazoendelea' },
+  equipe_locations_a_venir: { fr: 'À venir', en: 'Upcoming', sw: 'Zijazo' },
+  equipe_locations_vide: {
+    fr: 'Aucune location en cours ni à venir.',
+    en: 'No ongoing or upcoming rentals.',
+    sw: 'Hakuna kukodisha kunakoendelea wala kujako.',
+  },
 
   // Catégories figées (migration 043) : le client choisit la sienne au
   // catalogue, l'équipe la choisit à la création — jamais de texte libre.
@@ -4462,6 +4472,13 @@ const CHAINES = {
     sw: 'Ungependa kupokea gari wapi? (hiari)',
     it: 'Dove vuoi ritirare il veicolo? (facoltativo)',
     de: 'Wo möchten Sie das Fahrzeug übernehmen? (optional)',
+  },
+  location_champ_heure_remise: {
+    fr: 'À quelle heure souhaitez-vous démarrer ? (optionnel)',
+    en: 'What time would you like to start? (optional)',
+    sw: 'Ungependa kuanza saa ngapi? (hiari)',
+    it: 'A che ora vuoi iniziare? (facoltativo)',
+    de: 'Um wie viel Uhr möchten Sie starten? (optional)',
   },
   location_sous_titre: {
     fr: "zanziGo est votre intermédiaire de confiance : véhicule vérifié, assurance et road licence contrôlées par notre équipe.",

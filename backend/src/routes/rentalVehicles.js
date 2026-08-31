@@ -541,6 +541,8 @@ const bookSchema = z
     // Où le CLIENT veut récupérer le véhicule (son hôtel, une adresse…).
     // Optionnel : à défaut, la remise se fait au lieu de retrait de la fiche.
     pickupLocation: z.string().trim().min(2).max(160).optional(),
+    // Et À QUELLE HEURE il veut démarrer (« HH:MM », optionnel).
+    pickupTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).optional(),
   })
   .refine((d) => d.endDate >= d.startDate, {
     message: 'La date de retour doit être après la date de départ',
@@ -592,8 +594,8 @@ router.post(
         );
       }
       const { rows } = await client.query(
-        `INSERT INTO rental_bookings (vehicle_id, user_id, start_date, end_date, days, price, commission, currency, pickup_location)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
+        `INSERT INTO rental_bookings (vehicle_id, user_id, start_date, end_date, days, price, commission, currency, pickup_location, pickup_time)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
         [
           vehicule.id,
           req.auth.userId,
@@ -604,6 +606,7 @@ router.post(
           commission,
           vehicule.currency,
           data.pickupLocation ?? null,
+          data.pickupTime ?? null,
         ]
       );
       return rows[0];
@@ -616,7 +619,9 @@ router.post(
       `Véhicule: ${vehicule.make} ${vehicule.model} (${vehicule.plate})`,
       `Du ${booking.start_date} au ${booking.end_date} (${booking.days} j)`,
       // Le lieu voulu par le client d'abord ; sinon celui de la fiche.
-      `Remise: ${booking.pickup_location ?? vehicule.pickup_location}`,
+      // L'heure de début suit, si le client en a choisi une.
+      `Remise: ${booking.pickup_location ?? vehicule.pickup_location}` +
+        (booking.pickup_time ? ` à ${booking.pickup_time}` : ''),
     ];
 
     const paypal =

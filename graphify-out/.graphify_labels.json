@@ -140,5 +140,6 @@
   "138": "Le logotype zanziGo, et l'icône qui en dérive",
   "139": "Unguja en volume — le rendu 3D de l'île",
   "140": "TypeTrajet",
-  "141": "044_lieu_remise_location.sql"
+  "141": "044_lieu_remise_location.sql",
+  "142": "045_heure_remise_location.sql"
 }

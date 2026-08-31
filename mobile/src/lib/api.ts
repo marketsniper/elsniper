@@ -1718,7 +1718,9 @@ export async function reserverVehicule(
   endDate: string,
   moyen?: MoyenPaiement,
   /** Où le client veut récupérer le véhicule (son hôtel…) — optionnel. */
-  pickupLocation?: string
+  pickupLocation?: string,
+  /** À quelle heure il veut démarrer (« HH:MM ») — optionnel. */
+  pickupTime?: string
 ): Promise<ReservationVehiculeAvecPaiement> {
   return requete<ReservationVehiculeAvecPaiement>(`/rental-vehicles/${id}/book`, {
     methode: 'POST',
@@ -1727,6 +1729,7 @@ export async function reserverVehicule(
       endDate,
       ...(moyen ? { method: moyen } : {}),
       ...(pickupLocation ? { pickupLocation } : {}),
+      ...(pickupTime ? { pickupTime } : {}),
     },
   });
 }

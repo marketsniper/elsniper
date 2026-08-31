@@ -65,6 +65,7 @@ import {
   type Chauffeur,
   type Hotel,
   type PaiementEquipe,
+  type ReservationVehicule,
   type StatutTrajet,
   type Trajet,
   type TypeTrajet,
@@ -88,7 +89,8 @@ type SectionEquipe =
   | 'taxis'
   | 'clients'
   | 'locaux'
-  | 'attentes';
+  | 'attentes'
+  | 'locations';
 
 // Ce que le partenaire a annoncé comme moyen de paiement — c'est ce que
 // l'équipe va aller vérifier avant de créditer.
@@ -135,6 +137,9 @@ export default function EcranEquipe() {
   const [verifsEnAttente, setVerifsEnAttente] = useState(0);
   // Véhicules de location pas encore vérifiés (même logique que verifsEnAttente).
   const [vehiculesPendants, setVehiculesPendants] = useState(0);
+  // Les réservations de location (équipe) : la rubrique « Locations » du
+  // tableau les partage en « en cours » et « à venir ».
+  const [locationsResa, setLocationsResa] = useState<ReservationVehicule[]>([]);
   // Rubrique ouverte (null = menu en grille de cases).
   const [section, setSection] = useState<SectionEquipe | null>(null);
   // Case chiffre d'affaires : repliée (jour seul) ou dépliée (7 j / 30 j).
@@ -255,6 +260,11 @@ export default function EcranEquipe() {
         .listerVehicules(true, 'pending')
         .then((vehicules) => setVehiculesPendants(vehicules.length))
         .catch(() => setVehiculesPendants(0));
+      // Les réservations de location : en cours et à venir, même douceur.
+      api
+        .listerLocations()
+        .then(setLocationsResa)
+        .catch(() => setLocationsResa([]));
       setCourses(lesCourses);
       setPaiements(lesPaiements);
       setCandidats(lesCandidats);
@@ -371,6 +381,7 @@ export default function EcranEquipe() {
     setHotelsVerifies([]);
     setAttentes([]);
     setPartages([]);
+    setLocationsResa([]);
     setJoursOuverts({});
     setDetailsCourse({});
     setDocumentOuvert(null);
@@ -655,6 +666,22 @@ export default function EcranEquipe() {
     /** Rubrique qui ouvre un ÉCRAN à part au lieu d'une section du tableau. */
     ecran?: string;
   };
+  // LES LOCATIONS, partagées à la date de Zanzibar : en cours (le véhicule
+  // est dehors), à venir (préparer la remise). Les annulées sont écartées ;
+  // le passé n'encombre pas le tableau.
+  const jourZanzibar = new Date().toLocaleDateString('fr-CA', { timeZone: 'Africa/Dar_es_Salaam' });
+  const locationsVivantes = locationsResa.filter((l) => !l.cancelled_at);
+  const locationsEnCours = locationsVivantes
+    .filter(
+      (l) =>
+        String(l.start_date).slice(0, 10) <= jourZanzibar &&
+        String(l.end_date).slice(0, 10) >= jourZanzibar
+    )
+    .sort((a, b) => String(a.end_date).localeCompare(String(b.end_date)));
+  const locationsAVenir = locationsVivantes
+    .filter((l) => String(l.start_date).slice(0, 10) > jourZanzibar)
+    .sort((a, b) => String(a.start_date).localeCompare(String(b.start_date)));
+
   const familles: { cle: string; emoji: string; titre: string; rubriques: Rubrique[] }[] = [
     {
       cle: 'courses',
@@ -722,6 +749,15 @@ export default function EcranEquipe() {
           n: vehiculesPendants,
           action: vehiculesPendants > 0,
           ecran: '/vehicules',
+        },
+        // Le voyant s'allume quand un véhicule est DEHORS : une location en
+        // cours se surveille, une location à venir se prépare.
+        {
+          cle: 'locations',
+          label: t('equipe_stat_locations'),
+          icone: 'key-outline',
+          n: locationsEnCours.length + locationsAVenir.length,
+          action: locationsEnCours.length > 0,
         },
       ],
     },
@@ -2154,6 +2190,65 @@ export default function EcranEquipe() {
           ))}
         </>
       )}
+
+      {/* Locations de véhicules : en cours (le véhicule est dehors, dates et
+          heure de remise sous les yeux) puis à venir (préparer la remise). */}
+      {section === 'locations' && (() => {
+        const carteLocation = (resa: ReservationVehicule) => (
+          <Carte key={resa.id}>
+            <View style={styles.ligneDetails}>
+              <Text style={styles.itineraire}>
+                🚗 {resa.make} {resa.model}
+                {resa.plate ? ` (${resa.plate})` : ''}
+              </Text>
+              {resa.paid_at ? (
+                <Badge texte={t('resa_payee')} ton="succes" />
+              ) : (
+                <Badge texte={t('resa_impayee')} ton="attente" />
+              )}
+            </View>
+            <Text style={styles.detail}>
+              📅{' '}
+              {t('equipe_location_dates', {
+                debut: String(resa.start_date).slice(0, 10),
+                fin: String(resa.end_date).slice(0, 10),
+              })}
+              {resa.pickup_time ? ` · 🕐 ${resa.pickup_time}` : ''}
+            </Text>
+            {!!resa.pickup_location && (
+              <Text style={styles.detail}>📍 {resa.pickup_location}</Text>
+            )}
+            {!!resa.client_name && (
+              <Text style={styles.detail}>
+                {resa.client_name}
+                {resa.client_phone ? ` · ${resa.client_phone}` : ''}
+              </Text>
+            )}
+          </Carte>
+        );
+        return (
+          <>
+            <Text style={styles.titreSection}>🔑 {t('equipe_stat_locations')}</Text>
+            {locationsEnCours.length === 0 && locationsAVenir.length === 0 && (
+              <EncartInfo icone="checkmark-circle-outline" ton="succes">
+                {t('equipe_locations_vide')}
+              </EncartInfo>
+            )}
+            {locationsEnCours.length > 0 && (
+              <Text style={styles.titreSection}>
+                ▶️ {t('equipe_locations_en_cours')} ({locationsEnCours.length})
+              </Text>
+            )}
+            {locationsEnCours.map(carteLocation)}
+            {locationsAVenir.length > 0 && (
+              <Text style={styles.titreSection}>
+                📅 {t('equipe_locations_a_venir')} ({locationsAVenir.length})
+              </Text>
+            )}
+            {locationsAVenir.map(carteLocation)}
+          </>
+        );
+      })()}
 
       {/* 7-8. Clients / Locaux : recherche par nom ou téléphone, radiation. */}
       {(section === 'clients' || section === 'locaux') && (

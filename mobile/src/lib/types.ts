@@ -209,6 +209,8 @@ export interface ReservationVehicule {
   created_at: string;
   /** Lieu de remise choisi PAR LE CLIENT à la réservation (optionnel). */
   pickup_location?: string | null;
+  /** Heure de début choisie par le client (« HH:MM », optionnelle). */
+  pickup_time?: string | null;
   /** GET /rental-vehicles/bookings/mine et /bookings (équipe) enrichissent avec le véhicule. */
   make?: string;
   model?: string;
