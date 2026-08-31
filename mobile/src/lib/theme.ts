@@ -14,9 +14,10 @@
 //    Le fond ne bouge pas, les cartes flottent au-dessus — c'est la
 //    profondeur qui donne la hiérarchie, pas les traits.
 //
-//  · « girofle » — LES COULEURS DE LA MARQUE. Le noir du clou de girofle et
-//    le vert du logotype, et rien d'autre. C'est la peau de l'application
-//    (25/08/2026).
+//  · « girofle » — OCÉAN (31/08/2026). Le bleu du lagon la nuit : noir tiré
+//    vers l'océan, cyan lagon pour les actions, le vert replié sur le logo.
+//    C'est la peau de l'application. (La clé garde son ancien nom pour ne
+//    pas casser les préférences enregistrées.)
 //
 // Les deux peaux exposent EXACTEMENT les mêmes noms de couleurs. Aucun écran
 // n'a besoin de savoir laquelle est active : `couleurs.encre` donne l'encre
@@ -325,53 +326,64 @@ const ESTRAN: Palette = {
   surChauffeurDoux: 'rgba(58, 28, 12, 0.74)',
 };
 
-// ──────────────────────────── 06 · GIROFLE ────────────────────────────────
+// ──────────────────────────── 06 · OCÉAN ──────────────────────────────────
 //
-// LE NOIR ET LE VERT DU LOGOTYPE, ET RIEN D'AUTRE.
+// LE BLEU DU LAGON, LA NUIT. (31/08/2026 — « la couleur principale est trop
+// verte », demande du client : quelque chose de plus agréable, fondé sur la
+// science des préférences.)
 //
-// L'icône de zanziGo tient en trois couleurs : un fond presque noir, le vert
-// `#2ECC71` du « Go », et du blanc. Cette peau-là ne fait qu'étendre ces
-// trois couleurs à l'écran entier — c'est la seule des cinq dont on puisse
-// dire qu'elle EST la marque, et pas une ambiance à côté.
+// POURQUOI LE BLEU-CYAN, ET PAS UN AUTRE. Les études de préférence de
+// couleurs (Palmer & Schloss, PNAS 2010, répliquées à travers les cultures)
+// donnent le même résultat partout : les bleus et les cyans saturés sont les
+// teintes les plus aimées, chez les hommes comme chez les femmes, d'un pays
+// à l'autre. L'explication dite « écologique » : on aime les couleurs des
+// choses qui nous font du bien — le ciel dégagé, l'eau propre. Pour une
+// application dont le décor RÉEL est le lagon de Zanzibar, c'est doublement
+// juste : la couleur préférée du monde est aussi celle du produit. Et le
+// bleu porte la confiance — ce qu'on demande à un service où l'on monte dans
+// la voiture d'un inconnu et où l'on paie d'avance.
 //
-// Le noir n'est pas un gris désaturé : il est tiré vers le vert (#07120D).
-// C'est ce qui fait que le vert du logo a l'air d'appartenir au fond au lieu
-// d'être collé dessus — un accent posé sur un noir neutre se voit toujours
-// comme une pièce rapportée. Et ce n'est pas non plus du noir PUR : sur un
-// écran OLED, le noir absolu traîne derrière le doigt quand la liste défile,
-// et il supprime toute possibilité d'ombre.
+// LE VERT N'A PAS DISPARU : il se replie sur le logotype (« Go » reste vert,
+// go = feu vert) et sur les statuts de succès — son rôle sémantique
+// universel. En cessant d'être PARTOUT, il redevient un signal : une
+// pastille verte veut à nouveau dire quelque chose.
 //
-// LE PARTAGE DES RÔLES, qui n'est pas celui des autres peaux :
-//  · VERT — ce sur quoi on appuie. Les boutons, les liens, « en course ».
-//  · BLANC PLEIN — « payée, tu peux y aller ». C'est le seul aplat blanc de
-//    l'écran : rien d'autre ne crie aussi fort sur du presque noir. Ailleurs
-//    le feu vert est vert ; ici le vert est déjà pris par les boutons, et
-//    deux pastilles vertes côte à côte ne se distinguent plus au coup d'œil —
-//    or c'est exactement ce que le chauffeur lit sans s'arrêter.
-//  · AMBRE — l'argent et les étoiles.
+// Le noir n'est pas un gris désaturé : il est tiré vers l'océan (#071018),
+// pour que le cyan des boutons ait l'air d'appartenir au fond au lieu d'être
+// collé dessus. Pas de noir PUR non plus : sur un écran OLED, le noir absolu
+// traîne derrière le doigt quand la liste défile, et il supprime toute
+// possibilité d'ombre.
+//
+// LE PARTAGE DES RÔLES :
+//  · CYAN LAGON — ce sur quoi on appuie. Les boutons, les liens, « en course ».
+//  · BLANC PLEIN — « payée, tu peux y aller ». Le seul aplat blanc de
+//    l'écran : rien d'autre ne crie aussi fort sur du presque noir.
+//  · VERT — le logo, et les statuts « terminée » / « vérifié ».
+//  · AMBRE — l'argent et les étoiles (le complément chaud du bleu : c'est le
+//    contraste chaud/froid qui fait la hiérarchie, pas la taille des textes).
 //  · ROUGE — le danger.
-//  · BLEU PÉTROLE — le client sur une carte. C'est le bleu du fond de
-//    l'icône, éclairci pour tenir sur le noir.
+//  · BLEU CIEL — le client sur une carte, décalé vers le bleu franc pour ne
+//    pas se confondre avec le cyan des actions.
 //
-// PLUS DE BLANC (25/08/2026, demande du client) : l'encre passe au blanc
-// PUR — le blanc verdi (#E9F3EC) du premier jet tirait tout l'écran vers le
-// vert — et le texte secondaire s'éclaircit de trois crans. Le vert reste la
-// couleur des actions ; le blanc, celle de ce qu'on lit.
-//
-// Contrastes mesurés sur le fond (#07120D) et sur les cartes (#101E17) :
-// encre 19,1 / 17,2 · secondaire 11,7 / 10,6 · vert 9,1 / 8,2 · ambre 9,6 ·
-// menthe 12,7 / 11,5 · danger 6,2. Rien sous 4,5:1.
+// Contrastes mesurés sur le fond (#071018) et sur les cartes (#0F1D28) :
+// encre 19,2 / 17,1 · secondaire 11,9 / 10,6 · cyan 8,8 / 7,8 · liens
+// 12,7 / 11,4 · vert du logo 9,1 · menthe 12,6 · ambre 10,7 · danger 6,9.
+// Rien sous 4,5:1. (Script : contrastes.js, mêmes formules que WCAG.)
 const GIROFLE: Palette = {
+  // La clé interne reste « girofle » : c'est la valeur enregistrée sur les
+  // téléphones des clients qui ont déjà choisi leur peau — la renommer les
+  // aurait tous fait retomber sur une autre. Seuls le contenu et le libellé
+  // (i18n : peau_girofle → « Océan ») ont changé.
   marqueNom: '#FFFFFF', // le logotype, à la lettre : blanc…
-  marqueGo: '#2ECC71', // …et le vert du « Go » (9,07:1 sur le fond)
-  primaire: '#2ECC71', // LE VERT DE LA MARQUE — la couleur d'action
-  primaireFonce: '#7CE8AC', // menthe claire : liens, flèches, chiffres qui portent
-  primaireClair: 'rgba(46, 204, 113, 0.14)', // pastilles d'icônes, encarts d'information
-  sable: '#07120D', // le fond de tous les écrans — un noir tiré vers le vert
-  blanc: '#101E17', // « blanc » = la surface la plus claire de la peau : les cartes
+  marqueGo: '#2ECC71', // …et le vert du « Go » (9,07:1 sur le fond) — le vert vit ICI
+  primaire: '#2EC0D4', // LE CYAN LAGON — la couleur d'action
+  primaireFonce: '#8EDFF0', // aqua claire : liens, flèches, chiffres qui portent
+  primaireClair: 'rgba(46, 192, 212, 0.14)', // pastilles d'icônes, encarts d'information
+  sable: '#071018', // le fond de tous les écrans — un noir tiré vers l'océan
+  blanc: '#0F1D28', // « blanc » = la surface la plus claire de la peau : les cartes
   encre: '#FFFFFF', // texte principal — blanc PUR
-  texteSecondaire: '#C3CDC7',
-  bordure: 'rgba(46, 204, 113, 0.24)', // LE FILET VERT — la signature de la peau
+  texteSecondaire: '#C2CDD6',
+  bordure: 'rgba(46, 192, 212, 0.24)', // LE FILET CYAN — la signature de la peau
   danger: '#FF6B6B',
   dangerFonce: '#FFC2C2',
   dangerFond: 'rgba(255, 107, 107, 0.15)',
@@ -384,30 +396,32 @@ const GIROFLE: Palette = {
   orange: '#FF9E6E',
   orangeFond: 'rgba(255, 158, 110, 0.16)',
   etoile: '#F2B84B',
-  voile: 'rgba(3, 9, 6, 0.84)',
+  voile: 'rgba(2, 8, 12, 0.84)',
   succesClair: '#7BE3A3',
   dangerClair: '#FCA5A5',
-  voilePhotoClair: '#07120D',
-  voilePhotoSombre: 'rgba(3, 9, 6, 0.6)',
-  fondOnglets: 'rgba(3, 9, 6, 0.62)',
-  carteTranslucide: '#101E17', // OPAQUE : un panneau translucide n'a pas de contraste mesurable
-  surface: '#16281F', // champs de saisie, menus
-  surPrimaire: '#06180F', // l'encre posée SUR le vert (9,07:1)
+  voilePhotoClair: '#071018',
+  voilePhotoSombre: 'rgba(2, 8, 12, 0.6)',
+  fondOnglets: 'rgba(2, 8, 12, 0.62)',
+  carteTranslucide: '#0F1D28', // OPAQUE : un panneau translucide n'a pas de contraste mesurable
+  surface: '#152838', // champs de saisie, menus
+  surPrimaire: '#04212B', // l'encre posée SUR le cyan (7,64:1)
   or: '#F2B84B',
-  nuit: '#030906',
-  // « Payée » : voir plus haut — ici le feu vert est BLANC. Le nom de la clé
-  // dit le rôle (le signal qui autorise à partir), pas la teinte.
-  vertFeu: '#F4FBF6',
-  surVertFeu: '#06180F',
-  turquoise: '#4CB8E8', // le bleu du fond de l'icône, éclairci — LE CLIENT sur une carte
+  nuit: '#020810',
+  // « Payée » : le feu vert reste BLANC — rien ne crie aussi fort sur du
+  // presque noir. Le nom de la clé dit le rôle, pas la teinte.
+  vertFeu: '#F2FAFC',
+  surVertFeu: '#04212B',
+  // LE CLIENT sur une carte : décalé du cyan des actions vers le bleu franc,
+  // sinon le repère client et le bouton GPS se confondent sur l'écran carte.
+  turquoise: '#5FA8F0',
   surVoile: '#FFFFFF',
-  accentFond: '#0C2A1B', // le bloc de mise en avant : un vert-noir plus profond que les cartes
+  accentFond: '#0A2233', // le bloc de mise en avant : un bleu-noir plus profond que les cartes
   surAccent: '#FFFFFF',
   surAccentDoux: 'rgba(255, 255, 255, 0.72)',
   // La carte « chauffeur » : le seul aplat de couleur PLEINE de l'accueil.
-  // Un vert profond — même teinte que les boutons, deux crans plus bas : on
+  // Un bleu profond — même teinte que les boutons, deux crans plus bas : on
   // voit tout de suite que c'est un bloc, pas une chose sur quoi appuyer.
-  chauffeurFond: '#116B41',
+  chauffeurFond: '#0E5A78',
   surChauffeur: '#FFFFFF',
   surChauffeurDoux: 'rgba(255, 255, 255, 0.8)',
 };
@@ -421,11 +435,11 @@ const PEAUX: Record<NomPeau, Palette> = {
 };
 
 /**
- * LA PEAU DE L'APPLICATION — « Girofle » (25/08/2026).
+ * LA PEAU DE L'APPLICATION — « Océan » (31/08/2026, clé interne 'girofle').
  *
- * Le noir et le vert du logotype. Une application se reconnaît à ses
- * couleurs avant de se lire : celles de l'écran doivent être celles de
- * l'icône sur laquelle le client vient d'appuyer.
+ * Le bleu du lagon la nuit : la teinte la mieux notée des études de
+ * préférence de couleurs, et celle du décor réel de Zanzibar. Le vert de la
+ * marque vit dans le logotype, plus sur tout l'écran.
  *
  * C'est ici, et nulle part ailleurs, qu'on en change : le layout racine la
  * lit, et la variable de module démarre déjà dessus. Le jour où elle était

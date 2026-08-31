@@ -190,28 +190,26 @@ export function EstranDeZanzibar({ fond }: { fond?: string } = {}) {
   );
 }
 
-// ─────────────────────────── LA NUIT DE GIROFLE ────────────────────────────
+// ─────────────────────────── LA NUIT D'OCÉAN ───────────────────────────────
 //
-// LE FOND DE LA PEAU DE MARQUE.
+// LE FOND DE LA PEAU DE L'APPLICATION (clé 'girofle', direction « Océan »).
 //
 // Un aplat presque noir suffirait à être lisible, mais il n'a pas de haut ni
 // de bas : l'écran devient un trou, et les cartes flottent dans le vide.
-// Deux halos très faibles lui donnent une direction — le vert vif du
-// logotype qui entre par en haut, un vert de sous-bois beaucoup plus profond
-// qui s'accumule en bas.
+// Deux halos très faibles lui donnent une direction — le cyan du lagon qui
+// entre par en haut, un bleu de grand fond beaucoup plus profond qui
+// s'accumule en bas.
 //
-// DEUX VERTS, PAS UN VERT ET UN BLEU. Le premier jet mettait en bas le bleu
-// pétrole du fond de l'icône : à l'écran, le coin inférieur virait
-// franchement au marine et l'application n'était plus « verte et noire »,
-// elle était verte, noire ET bleue. Une couleur de plus qui ne sert à rien
-// est une couleur en trop.
+// DEUX BLEUS, PAS UN BLEU ET UN VERT — même règle qu'avant la bascule du
+// 31/08/2026, teinte inversée : une couleur de plus qui ne sert à rien est
+// une couleur en trop.
 //
 // Les opacités sont BASSES à dessein. Un halo qu'on remarque est un halo
 // raté : celui-ci ne doit se voir que quand on retire la carte qui était
 // posée dessus.
 const HALOS_GIROFLE = [
-  { teinte: '#2ECC71', cx: 0.2, cy: 0.0, r: 0.85, opacite: 0.15 }, // le vert du « Go »
-  { teinte: '#0E5C3C', cx: 0.88, cy: 1.02, r: 0.8, opacite: 0.34 }, // le vert de sous-bois
+  { teinte: '#2EC0D4', cx: 0.2, cy: 0.0, r: 0.85, opacite: 0.15 }, // le cyan du lagon
+  { teinte: '#0C3D5C', cx: 0.88, cy: 1.02, r: 0.8, opacite: 0.34 }, // le bleu de grand fond
 ];
 
 export function NuitDeGirofle({ fond }: { fond?: string } = {}) {

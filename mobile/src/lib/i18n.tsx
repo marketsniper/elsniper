@@ -3234,18 +3234,18 @@ const CHAINES = {
   // « Girofle » : le noir du clou et le vert du logotype. Zanzibar EST l'île
   // aux girofles — le nom dit à la fois la couleur et d'où l'on vient.
   peau_girofle: {
-    fr: 'Girofle',
-    en: 'Clove',
-    sw: 'Karafuu',
-    it: 'Garofano',
-    de: 'Nelke',
+    fr: 'Océan',
+    en: 'Ocean',
+    sw: 'Bahari kuu',
+    it: 'Oceano',
+    de: 'Ozean',
   },
   peau_girofle_quand: {
-    fr: 'Le vert et le noir du logo',
-    en: 'The logo\'s green and black',
-    sw: 'Kijani na nyeusi za nembo',
-    it: 'Il verde e il nero del logo',
-    de: 'Das Grün und Schwarz des Logos',
+    fr: 'Le bleu du lagon, la nuit',
+    en: 'The lagoon\'s blue, at night',
+    sw: 'Bluu ya bahari, usiku',
+    it: 'Il blu della laguna, di notte',
+    de: 'Das Blau der Lagune, bei Nacht',
   },
   peau_lagon: { fr: 'Lagon', en: 'Lagoon', sw: 'Bahari', it: 'Laguna', de: 'Lagune' },
   peau_lagon_quand: {
