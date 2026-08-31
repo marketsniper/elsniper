@@ -46,9 +46,11 @@ async function coursePrete({ audience = 'tourist' } = {}) {
 }
 
 describe('Moyens de paiement : la règle', () => {
-  it('une facture en dollars propose les deux moyens, une facture en shillings un seul', () => {
+  it('les deux moyens partout — seul le DÉFAUT change avec la devise', () => {
+    // L'ordre fait le défaut : carte d'abord en dollars, portefeuille mobile
+    // d'abord en shillings — la carte y est ouverte (31/08/2026), pas imposée.
     assert.deepEqual(moyensPour('USD'), ['carte', 'mobile']);
-    assert.deepEqual(moyensPour('TZS'), ['mobile'], 'le local paie au portefeuille, point');
+    assert.deepEqual(moyensPour('TZS'), ['mobile', 'carte']);
   });
 
   it('carte : le prix plus les frais de la banque, en dollars', () => {
@@ -75,8 +77,14 @@ describe('Moyens de paiement : la règle', () => {
     assert.equal(enShillings(47), 122200);
   });
 
-  it('une facture en shillings ne se paie JAMAIS par carte', () => {
-    assert.throws(() => reglement(16000, 'TZS', 'carte'), /Moyen de paiement indisponible/);
+  it('une facture en shillings par CARTE : convertie en dollars, frais compris', () => {
+    // 16 000 TZS ÷ 2 600 = 6,15 USD, + 4 % de frais carte (0,25) = 6,40.
+    const carte = reglement(16000, 'TZS', 'carte');
+    assert.equal(carte.devise, 'USD', 'la carte encaisse toujours en dollars');
+    assert.equal(carte.montant, 6.4);
+    assert.equal(carte.surcharge, 0.25);
+    assert.match(carte.mention, /1 USD = /, 'le taux de conversion est annoncé');
+    // Le portefeuille mobile reste le défaut : le prix, sans conversion ni frais.
     const r = reglement(16000, 'TZS', 'mobile');
     assert.equal(r.montant, 16000, 'le prix, sans conversion ni frais');
     assert.equal(r.surcharge, 0);
@@ -136,17 +144,12 @@ describe('Moyens de paiement : sur une vraie course', () => {
     assert.equal(Number(paiement.body.amount), 46.8);
   });
 
-  it('un LOCAL n\'a que le portefeuille mobile — la carte est refusée', async () => {
+  it('un LOCAL part sur le portefeuille mobile — et la CARTE lui est ouverte, en dollars', async () => {
     const { course, token } = await coursePrete({ audience: 'local' });
     assert.equal(course.currency, 'TZS');
 
-    const refus = await request(app)
-      .post(`/api/trips/${course.id}/payment`)
-      .set(authHeaders(token))
-      .send({ method: 'carte' });
-    assert.equal(refus.status, 422, JSON.stringify(refus.body));
-    assert.equal(refus.body.error.code, 'moyen_indisponible');
-
+    // Le défaut d'un montant en shillings reste le portefeuille mobile,
+    // sans frais — rien ne change pour qui paie comme avant.
     const paiement = await request(app)
       .post(`/api/trips/${course.id}/payment`)
       .set(authHeaders(token))
@@ -156,7 +159,22 @@ describe('Moyens de paiement : sur une vraie course', () => {
     assert.equal(paiement.body.currency, 'TZS');
     assert.equal(Number(paiement.body.amount), Number(course.price));
     assert.equal(Number(paiement.body.surcharge), 0);
-    assert.deepEqual(paiement.body.moyens_disponibles, ['mobile']);
+    assert.deepEqual(paiement.body.moyens_disponibles, ['mobile', 'carte']);
+
+    // La CARTE (31/08/2026 : « il faut que les clients puissent payer par
+    // carte ») : la facture en shillings est convertie en dollars au taux
+    // de la grille, puis les frais carte s'appliquent sur le converti.
+    const usd = Math.round((Number(course.price) / 2600) * 100) / 100;
+    const surcharge = Math.round(usd * 0.04 * 100) / 100;
+    const parCarte = await request(app)
+      .post(`/api/payments/${paiement.body.id}/moyen`)
+      .set(authHeaders(token))
+      .send({ moyen: 'carte' });
+    assert.equal(parCarte.status, 200, JSON.stringify(parCarte.body));
+    assert.equal(parCarte.body.method, 'carte');
+    assert.equal(parCarte.body.currency, 'USD');
+    assert.equal(Number(parCarte.body.amount), Math.round((usd + surcharge) * 100) / 100);
+    assert.equal(Number(parCarte.body.surcharge), surcharge);
   });
 });
 
@@ -257,7 +275,7 @@ describe('Places de taxi partagé : même choix', () => {
     assert.equal(mesPlaces.body[0].reglement_moyen, 'mobile');
   });
 
-  it('le local ne se voit proposer que le portefeuille mobile', async () => {
+  it('le local part sur le portefeuille mobile, la carte en option', async () => {
     const { token: tokenChauffeur } = await createVerifiedDriver();
     const { token: tokenLocal } = await createLocal();
     const depart = new Date(Date.now() + 6 * 3600 * 1000).toISOString();
@@ -277,7 +295,7 @@ describe('Places de taxi partagé : même choix', () => {
     const mesPlaces = await request(app)
       .get('/api/rides/reservations')
       .set(authHeaders(tokenLocal));
-    assert.deepEqual(mesPlaces.body[0].moyens_disponibles, ['mobile']);
+    assert.deepEqual(mesPlaces.body[0].moyens_disponibles, ['mobile', 'carte']);
   });
 });
 

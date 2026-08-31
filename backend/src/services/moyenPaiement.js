@@ -4,10 +4,14 @@
  * Deux moyens, un seul principe : le client choisit, et il voit le montant
  * exact AVANT de payer.
  *
- *  - CARTE BANCAIRE (dollars) — réservée aux clients dont le prix est en USD
- *    (touristes, résidents, hôtels). Les frais de la banque sont ajoutés au
- *    prix et annoncés : c'est l'usage dans le tourisme, et sans ça ils
- *    mangeaient plus du tiers de la marge de zanziGo.
+ *  - CARTE BANCAIRE (encaissée en dollars) — ouverte à TOUS depuis le
+ *    31/08/2026 (« il faut que les clients puissent payer par carte »,
+ *    demande du client). Une facture en shillings est convertie en dollars
+ *    au taux de la grille avant d'arriver au circuit carte. Les frais de la
+ *    banque sont ajoutés au montant réglé et annoncés : c'est l'usage dans
+ *    le tourisme, et sans ça ils mangeaient plus du tiers de la marge de
+ *    zanziGo. Pour un montant en shillings, la carte reste un CHOIX — le
+ *    portefeuille mobile demeure le moyen par défaut.
  *
  *  - PORTEFEUILLE MOBILE (shillings) — Tigo Pesa, M-Pesa, Airtel Money. AUCUN
  *    frais ajouté. C'est le moyen normal du pays : les locaux n'ont que
@@ -35,9 +39,16 @@ export const MOYEN_CREDIT = 'credit'; // crédit prépayé des hôtels (circuit 
 
 const round2 = (n) => Math.round(n * 100) / 100;
 
-/** Les moyens proposés pour une facture libellée dans cette devise. */
+/**
+ * Les moyens proposés pour une facture libellée dans cette devise. L'ORDRE
+ * fait le défaut : carte d'abord en dollars (comportement historique),
+ * portefeuille mobile d'abord en shillings — la carte y est OUVERTE, jamais
+ * imposée.
+ */
 export function moyensPour(devise) {
-  return String(devise).toUpperCase() === 'USD' ? [MOYEN_CARTE, MOYEN_MOBILE] : [MOYEN_MOBILE];
+  return String(devise).toUpperCase() === 'USD'
+    ? [MOYEN_CARTE, MOYEN_MOBILE]
+    : [MOYEN_MOBILE, MOYEN_CARTE];
 }
 
 /** Le moyen retenu quand le client n'a rien choisi (comportement historique). */
@@ -97,14 +108,23 @@ export function reglement(prix, deviseCourse, moyen) {
     };
   }
 
-  const { montant, surcharge, taux } = montantAvecSurcharge(prix, devise);
+  // CARTE — toujours encaissée EN DOLLARS : le circuit carte (PayPal,
+  // Pesapal) ne débite pas les shillings. Une facture en TZS est convertie
+  // au même taux de grille que le sens inverse, puis les frais carte
+  // s'appliquent sur le montant converti.
+  const prixCarte = devise === 'USD' ? round2(Number(prix)) : round2(Number(prix) / config.usdToTzsRate);
+  const { montant, surcharge, taux } = montantAvecSurcharge(prixCarte, 'USD');
   return {
     moyen: MOYEN_CARTE,
-    devise,
+    devise: 'USD',
     montant,
     surcharge,
     taux,
-    mention: mentionSurcharge(prix, devise),
+    mention:
+      devise === 'USD'
+        ? mentionSurcharge(prix, devise)
+        : `Carte bancaire : ${montant} USD (1 USD = ${config.usdToTzsRate} TZS)` +
+          (surcharge > 0 ? ` — dont ${surcharge} USD de frais bancaires` : ''),
     moyens,
   };
 }

@@ -1,16 +1,16 @@
 # Graph Report - elsniper  (2026-08-31)
 
 ## Corpus Check
-- 249 files · ~332,842 words
+- 250 files · ~333,474 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1596 nodes · 4798 edges · 141 communities (71 shown, 37 thin omitted)
+- 1597 nodes · 4799 edges · 142 communities (71 shown, 37 thin omitted)
 - Extraction: 97% EXTRACTED · 3% INFERRED · 0% AMBIGUOUS · INFERRED: 140 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `8a8605a5`
+- Built from commit: `89ccc60b`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -151,7 +151,7 @@
 ## Import Cycles
 - None detected.
 
-## Communities (141 total, 37 thin omitted)
+## Communities (142 total, 37 thin omitted)
 
 ### Community 0 - "authHeaders"
 Cohesion: 0.05
@@ -439,14 +439,14 @@ Nodes (3): CreationTrajet, CreationTrajetHotel, TypeTrajet
 
 ## Knowledge Gaps
 - **449 isolated node(s):** `otp_codes`, `uploaded_files`, `driver_signups`, `push_subscriptions`, `name` (+444 more)
-  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 559 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 560 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
 - **37 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `expo-router` connect `expo-router` to `Bouton`, `reserver.tsx`, `trip/[id].tsx`, `courses.tsx`, `expo`, `i18n.tsx`, `auth.tsx`, `useT`, `RidesPartages.tsx`, `champ`, `equipe.tsx`, `ui.tsx`, `app/_layout.tsx`?**
-  _High betweenness centrality (0.016) - this node is a cross-community bridge._
+  _High betweenness centrality (0.017) - this node is a cross-community bridge._
 - **Why does `plugins` connect `expo` to `expo-router`?**
   _High betweenness centrality (0.014) - this node is a cross-community bridge._
 - **What connects `otp_codes`, `uploaded_files`, `driver_signups` to the rest of the system?**
@@ -456,6 +456,6 @@ _Questions this graph is uniquely positioned to answer:_
 - **Should `pricingService.js` be split into smaller, more focused modules?**
   _Cohesion score 0.05555555555555555 - nodes in this community are weakly interconnected._
 - **Should `trip/[id].tsx` be split into smaller, more focused modules?**
-  _Cohesion score 0.12896405919661733 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.13002114164904863 - nodes in this community are weakly interconnected._
 - **Should `courses.tsx` be split into smaller, more focused modules?**
   _Cohesion score 0.14516129032258066 - nodes in this community are weakly interconnected._

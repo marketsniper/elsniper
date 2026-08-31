@@ -32,8 +32,10 @@ import { config } from '../config.js';
 
 const round2 = (n) => Math.round(n * 100) / 100;
 
-/** La carte n'est proposée qu'en devise étrangère ; les TZS passent par le
- *  portefeuille mobile. La devise dit donc à elle seule qui est concerné. */
+/** La carte ENCAISSE toujours en dollars : une facture en shillings est
+ *  convertie en USD par `reglement` AVANT d'arriver ici (31/08/2026 — la
+ *  carte est ouverte à tous, le portefeuille mobile reste le défaut des
+ *  montants en TZS). La devise reçue ici dit donc qui est surchargé. */
 export function surchargeApplicable(devise) {
   return String(devise).toUpperCase() === 'USD' && config.surchargeCarte > 0;
 }

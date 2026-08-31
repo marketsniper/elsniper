@@ -842,12 +842,14 @@ export type MoyenPaiement = 'carte' | 'mobile';
 export const SURCHARGE_CARTE = 0.04;
 
 /**
- * Les moyens proposés selon la devise de la facture : en dollars, carte ou
- * portefeuille mobile ; en shillings, portefeuille mobile uniquement — le
- * moyen de paiement normal du pays, et le seul des clients locaux.
+ * Les moyens proposés selon la devise de la facture. L'ORDRE fait le
+ * défaut : en dollars, la carte d'abord (comportement historique) ; en
+ * shillings, le portefeuille mobile d'abord — la carte y est OUVERTE
+ * (31/08/2026 : « il faut que les clients puissent payer par carte »),
+ * jamais imposée.
  */
 export function moyensPaiement(devise: string): MoyenPaiement[] {
-  return String(devise).toUpperCase() === 'USD' ? ['carte', 'mobile'] : ['mobile'];
+  return String(devise).toUpperCase() === 'USD' ? ['carte', 'mobile'] : ['mobile', 'carte'];
 }
 
 /** Ce que le client réglera : montant, devise, et frais éventuels. */
@@ -863,11 +865,12 @@ export function reglementPaiement(
     const montant = dev === 'USD' ? Math.ceil((prix * TAUX_USD_TZS) / 100) * 100 : prix;
     return { montant, devise: 'TZS', surcharge: 0 };
   }
-  // La carte n'existe qu'en dollars (miroir de surchargeApplicable côté
-  // serveur) : sur une facture en shillings, aucun frais quoi qu'on passe.
-  if (dev !== 'USD') return { montant: prix, devise: dev, surcharge: 0 };
-  const surcharge = Math.round(prix * SURCHARGE_CARTE * 100) / 100;
-  return { montant: Math.round((prix + surcharge) * 100) / 100, devise: dev, surcharge };
+  // La carte encaisse TOUJOURS en dollars (miroir de reglement côté
+  // serveur) : une facture en shillings est convertie au taux de la grille,
+  // puis les frais carte s'appliquent sur le montant converti.
+  const prixUsd = dev === 'USD' ? prix : Math.round((prix / TAUX_USD_TZS) * 100) / 100;
+  const surcharge = Math.round(prixUsd * SURCHARGE_CARTE * 100) / 100;
+  return { montant: Math.round((prixUsd + surcharge) * 100) / 100, devise: 'USD', surcharge };
 }
 
 /** Tarif local par défaut (zone inconnue) — affiché aussi sur l'accueil. */

@@ -352,7 +352,7 @@
       "file_type": "code",
       "norm_label": "taillecolis",
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1440"
+      "source_location": "L1443"
     },
     {
       "id": "backend_src_errors_httperror",
@@ -768,7 +768,7 @@
       "file_type": "code",
       "norm_label": "tarifszone",
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L953"
+      "source_location": "L956"
     },
     {
       "id": "mobile_src_lib_types_zonetarifaire",
@@ -781,7 +781,7 @@
       "file_type": "code",
       "norm_label": "zonetarifaire",
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L951"
+      "source_location": "L954"
     },
     {
       "id": "mobile_src_app_equipe_sectionequipe",
@@ -3268,7 +3268,7 @@
       "file_type": "code",
       "norm_label": "enshillings()",
       "source_file": "backend/src/services/moyenPaiement.js",
-      "source_location": "L54"
+      "source_location": "L65"
     },
     {
       "id": "backend_src_services_moyenpaiement_moyenpardefaut",
@@ -3280,7 +3280,7 @@
       "file_type": "code",
       "norm_label": "moyenpardefaut()",
       "source_file": "backend/src/services/moyenPaiement.js",
-      "source_location": "L44"
+      "source_location": "L55"
     },
     {
       "id": "backend_src_services_moyenpaiement_moyenspour",
@@ -3292,7 +3292,7 @@
       "file_type": "code",
       "norm_label": "moyenspour()",
       "source_file": "backend/src/services/moyenPaiement.js",
-      "source_location": "L39"
+      "source_location": "L48"
     },
     {
       "id": "backend_src_services_moyenpaiement_reglement",
@@ -3304,7 +3304,7 @@
       "file_type": "code",
       "norm_label": "reglement()",
       "source_file": "backend/src/services/moyenPaiement.js",
-      "source_location": "L70"
+      "source_location": "L81"
     },
     {
       "id": "backend_src_services_moyenpaiement_round2",
@@ -3316,7 +3316,7 @@
       "file_type": "code",
       "norm_label": "round2()",
       "source_file": "backend/src/services/moyenPaiement.js",
-      "source_location": "L36"
+      "source_location": "L40"
     },
     {
       "id": "backend_src_services_surchargecarte_mentionsurcharge",
@@ -3328,7 +3328,7 @@
       "file_type": "code",
       "norm_label": "mentionsurcharge()",
       "source_file": "backend/src/services/surchargeCarte.js",
-      "source_location": "L58"
+      "source_location": "L60"
     },
     {
       "id": "backend_src_services_surchargecarte_montantavecsurcharge",
@@ -3340,7 +3340,7 @@
       "file_type": "code",
       "norm_label": "montantavecsurcharge()",
       "source_file": "backend/src/services/surchargeCarte.js",
-      "source_location": "L48"
+      "source_location": "L50"
     },
     {
       "id": "backend_src_services_surchargecarte_round2",
@@ -3364,7 +3364,7 @@
       "file_type": "code",
       "norm_label": "surchargeapplicable()",
       "source_file": "backend/src/services/surchargeCarte.js",
-      "source_location": "L37"
+      "source_location": "L39"
     },
     {
       "id": "mobile_src_lib_soleil_decalagesolaire",
@@ -4324,7 +4324,7 @@
       "file_type": "code",
       "norm_label": "libellemoyen()",
       "source_file": "backend/src/services/moyenPaiement.js",
-      "source_location": "L113"
+      "source_location": "L133"
     },
     {
       "id": "backend_src_services_pricingservice_hubtohubroute",
@@ -5308,7 +5308,7 @@
       "file_type": "code",
       "norm_label": "baseusditineraire()",
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1327"
+      "source_location": "L1330"
     },
     {
       "id": "mobile_src_lib_types_danslegroupe",
@@ -5320,7 +5320,7 @@
       "file_type": "code",
       "norm_label": "danslegroupe()",
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1282"
+      "source_location": "L1285"
     },
     {
       "id": "mobile_src_lib_types_estaeroportville",
@@ -5344,7 +5344,7 @@
       "file_type": "code",
       "norm_label": "forfaitzanzigotrajetusd()",
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1344"
+      "source_location": "L1347"
     },
     {
       "id": "mobile_src_lib_types_netchainecoteest",
@@ -5356,7 +5356,7 @@
       "file_type": "code",
       "norm_label": "netchainecoteest()",
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1274"
+      "source_location": "L1277"
     },
     {
       "id": "mobile_src_lib_types_netchauffeurpriveusd",
@@ -5368,7 +5368,7 @@
       "file_type": "code",
       "norm_label": "netchauffeurpriveusd()",
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1290"
+      "source_location": "L1293"
     },
     {
       "id": "mobile_src_lib_types_supplementusd",
@@ -5392,7 +5392,7 @@
       "file_type": "code",
       "norm_label": "tarifpriveitineraire()",
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1339"
+      "source_location": "L1342"
     },
     {
       "id": "mobile_src_lib_types_tauxcommissionprive",
@@ -5680,7 +5680,7 @@
       "file_type": "code",
       "norm_label": "partagepossibleitineraire()",
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L895"
+      "source_location": "L898"
     },
     {
       "id": "mobile_src_lib_types_tariflocalminitzs",
@@ -5692,7 +5692,7 @@
       "file_type": "code",
       "norm_label": "tariflocalminitzs()",
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L921"
+      "source_location": "L924"
     },
     {
       "id": "mobile_src_lib_types_tarifplacepartagee",
@@ -5704,7 +5704,7 @@
       "file_type": "code",
       "norm_label": "tarifplacepartagee()",
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L965"
+      "source_location": "L968"
     },
     {
       "id": "mobile_src_lib_types_tarifspecialitineraire",
@@ -5740,7 +5740,7 @@
       "file_type": "code",
       "norm_label": "tarifszoneitineraire()",
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1031"
+      "source_location": "L1034"
     },
     {
       "id": "mobile_src_lib_types_tariftrajetprofil",
@@ -5752,7 +5752,7 @@
       "file_type": "code",
       "norm_label": "tariftrajetprofil()",
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1366"
+      "source_location": "L1369"
     },
     {
       "id": "mobile_src_lib_types_villecanonique",
@@ -5776,7 +5776,7 @@
       "file_type": "code",
       "norm_label": "zoneitineraire()",
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1021"
+      "source_location": "L1024"
     },
     {
       "id": "backend_src_routes_packages_issender",
@@ -6844,7 +6844,7 @@
       "file_type": "code",
       "norm_label": "dureerouteminutes()",
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1123"
+      "source_location": "L1126"
     },
     {
       "id": "mobile_src_lib_types_esttarifdeterrain",
@@ -6868,7 +6868,7 @@
       "file_type": "code",
       "norm_label": "kmentrevilles()",
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1098"
+      "source_location": "L1101"
     },
     {
       "id": "mobile_src_lib_types_localverifie",
@@ -6892,7 +6892,7 @@
       "file_type": "code",
       "norm_label": "normaliserlieu()",
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1010"
+      "source_location": "L1013"
     },
     {
       "id": "mobile_src_lib_types_profiltarifaireutilisateur",
@@ -6904,7 +6904,7 @@
       "file_type": "code",
       "norm_label": "profiltarifaireutilisateur()",
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1352"
+      "source_location": "L1355"
     },
     {
       "id": "mobile_src_lib_types_residentverifie",
@@ -6928,7 +6928,7 @@
       "file_type": "code",
       "norm_label": "traversejozani()",
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1148"
+      "source_location": "L1151"
     },
     {
       "id": "mobile_src_lib_types_villelaplusproche",
@@ -6940,7 +6940,7 @@
       "file_type": "code",
       "norm_label": "villelaplusproche()",
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1233"
+      "source_location": "L1236"
     },
     {
       "id": "mobile_src_components_cartealertes_cartealertes",
@@ -7672,7 +7672,7 @@
       "file_type": "code",
       "norm_label": "dureeapprocheminutes()",
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1210"
+      "source_location": "L1213"
     },
     {
       "id": "mobile_src_lib_types_formatermontant",
@@ -7708,7 +7708,7 @@
       "file_type": "code",
       "norm_label": "moyenspaiement()",
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L849"
+      "source_location": "L851"
     },
     {
       "id": "mobile_src_lib_types_reglementpaiement",
@@ -7720,7 +7720,7 @@
       "file_type": "code",
       "norm_label": "reglementpaiement()",
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L854"
+      "source_location": "L856"
     },
     {
       "id": "mobile_src_lib_types_tauxremboursement",
@@ -8044,7 +8044,7 @@
       "file_type": "code",
       "norm_label": "tarifcolistaille()",
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1451"
+      "source_location": "L1454"
     },
     {
       "id": "mobile_src_app_taxi_id_ecrantaxiequipe",
@@ -9304,7 +9304,7 @@
       "file_type": "code",
       "norm_label": "coordonneesville()",
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1178"
+      "source_location": "L1181"
     },
     {
       "id": "mobile_src_lib_types_kmentrepoints",
@@ -9316,7 +9316,7 @@
       "file_type": "code",
       "norm_label": "kmentrepoints()",
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1183"
+      "source_location": "L1186"
     },
     {
       "id": "mobile_src_lib_types_nombrevillesdesservies",
@@ -9328,7 +9328,7 @@
       "file_type": "code",
       "norm_label": "nombrevillesdesservies()",
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1169"
+      "source_location": "L1172"
     },
     {
       "id": "mobile_src_lib_position_positionactuelle",
@@ -12531,7 +12531,7 @@
       "file_type": "code",
       "norm_label": "moyen_carte",
       "source_file": "backend/src/services/moyenPaiement.js",
-      "source_location": "L32"
+      "source_location": "L36"
     },
     {
       "id": "backend_src_services_moyenpaiement_moyen_credit",
@@ -12542,7 +12542,7 @@
       "file_type": "code",
       "norm_label": "moyen_credit",
       "source_file": "backend/src/services/moyenPaiement.js",
-      "source_location": "L34"
+      "source_location": "L38"
     },
     {
       "id": "backend_src_services_moyenpaiement_moyen_mobile",
@@ -12553,7 +12553,7 @@
       "file_type": "code",
       "norm_label": "moyen_mobile",
       "source_file": "backend/src/services/moyenPaiement.js",
-      "source_location": "L33"
+      "source_location": "L37"
     },
     {
       "id": "backend_src_services_surchargecarte",
@@ -15963,7 +15963,7 @@
       "file_type": "code",
       "norm_label": "chaine_cote_est",
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1261"
+      "source_location": "L1264"
     },
     {
       "id": "mobile_src_lib_types_commission_prive",
@@ -15985,7 +15985,7 @@
       "file_type": "code",
       "norm_label": "coordonnees_villes",
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1044"
+      "source_location": "L1047"
     },
     {
       "id": "mobile_src_lib_types_etapes_colis",
@@ -16029,7 +16029,7 @@
       "file_type": "code",
       "norm_label": "hubs_tarifaires",
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1087"
+      "source_location": "L1090"
     },
     {
       "id": "mobile_src_lib_types_libelles_statut_colis",
@@ -16095,7 +16095,7 @@
       "file_type": "code",
       "norm_label": "nets_chaine_usd",
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1272"
+      "source_location": "L1275"
     },
     {
       "id": "mobile_src_lib_types_ouest_jozani",
@@ -16106,7 +16106,7 @@
       "file_type": "code",
       "norm_label": "ouest_jozani",
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1142"
+      "source_location": "L1145"
     },
     {
       "id": "mobile_src_lib_types_paliers_km_net_usd",
@@ -16117,7 +16117,7 @@
       "file_type": "code",
       "norm_label": "paliers_km_net_usd",
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1077"
+      "source_location": "L1080"
     },
     {
       "id": "mobile_src_lib_types_remise_hotel",
@@ -16150,7 +16150,7 @@
       "file_type": "code",
       "norm_label": "sud_est_jozani",
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1143"
+      "source_location": "L1146"
     },
     {
       "id": "mobile_src_lib_types_surcharge_carte",
@@ -16172,7 +16172,7 @@
       "file_type": "code",
       "norm_label": "tailles_colis",
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1442"
+      "source_location": "L1445"
     },
     {
       "id": "mobile_src_lib_types_tarif_local_tzs",
@@ -16183,7 +16183,7 @@
       "file_type": "code",
       "norm_label": "tarif_local_tzs",
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L874"
+      "source_location": "L877"
     },
     {
       "id": "mobile_src_lib_types_tarifs_colis_taille",
@@ -16194,7 +16194,7 @@
       "file_type": "code",
       "norm_label": "tarifs_colis_taille",
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1444"
+      "source_location": "L1447"
     },
     {
       "id": "mobile_src_lib_types_tarifs_trajet_usd",
@@ -16216,7 +16216,7 @@
       "file_type": "code",
       "norm_label": "tarifs_zone",
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L973"
+      "source_location": "L976"
     },
     {
       "id": "mobile_src_lib_types_tarifs_zone_defaut",
@@ -16227,7 +16227,7 @@
       "file_type": "code",
       "norm_label": "tarifs_zone_defaut",
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L983"
+      "source_location": "L986"
     },
     {
       "id": "mobile_src_lib_types_trajets_speciaux_local_tzs",
@@ -16260,7 +16260,7 @@
       "file_type": "code",
       "norm_label": "villes_zone",
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L989"
+      "source_location": "L992"
     },
     {
       "id": "mobile_src_app_course_id",
@@ -19919,7 +19919,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "backend/src/services/moyenPaiement.js",
-      "source_location": "L45",
+      "source_location": "L56",
       "weight": 1.0
     },
     {
@@ -19931,7 +19931,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "backend/src/services/moyenPaiement.js",
-      "source_location": "L100",
+      "source_location": "L116",
       "weight": 1.0
     },
     {
@@ -19943,7 +19943,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "backend/src/services/moyenPaiement.js",
-      "source_location": "L107",
+      "source_location": "L125",
       "weight": 1.0
     },
     {
@@ -19955,7 +19955,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "backend/src/services/moyenPaiement.js",
-      "source_location": "L72",
+      "source_location": "L83",
       "weight": 1.0
     },
     {
@@ -19967,7 +19967,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "backend/src/services/moyenPaiement.js",
-      "source_location": "L73",
+      "source_location": "L84",
       "weight": 1.0
     },
     {
@@ -19979,7 +19979,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "backend/src/services/moyenPaiement.js",
-      "source_location": "L75",
+      "source_location": "L86",
       "weight": 1.0
     },
     {
@@ -19991,7 +19991,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "backend/src/services/moyenPaiement.js",
-      "source_location": "L85",
+      "source_location": "L96",
       "weight": 1.0
     },
     {
@@ -20003,7 +20003,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "backend/src/services/moyenPaiement.js",
-      "source_location": "L85",
+      "source_location": "L96",
       "weight": 1.0
     },
     {
@@ -20999,7 +20999,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "backend/src/services/surchargeCarte.js",
-      "source_location": "L59",
+      "source_location": "L61",
       "weight": 1.0
     },
     {
@@ -21011,7 +21011,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "backend/src/services/surchargeCarte.js",
-      "source_location": "L50",
+      "source_location": "L52",
       "weight": 1.0
     },
     {
@@ -21023,7 +21023,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "backend/src/services/surchargeCarte.js",
-      "source_location": "L51",
+      "source_location": "L53",
       "weight": 1.0
     },
     {
@@ -30047,7 +30047,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1328",
+      "source_location": "L1331",
       "weight": 1.0
     },
     {
@@ -30059,7 +30059,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1330",
+      "source_location": "L1333",
       "weight": 1.0
     },
     {
@@ -30071,7 +30071,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1332",
+      "source_location": "L1335",
       "weight": 1.0
     },
     {
@@ -30107,7 +30107,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1179",
+      "source_location": "L1182",
       "weight": 1.0
     },
     {
@@ -30167,7 +30167,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1345",
+      "source_location": "L1348",
       "weight": 1.0
     },
     {
@@ -30179,7 +30179,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1345",
+      "source_location": "L1348",
       "weight": 1.0
     },
     {
@@ -30227,7 +30227,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1099",
+      "source_location": "L1102",
       "weight": 1.0
     },
     {
@@ -30263,7 +30263,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1291",
+      "source_location": "L1294",
       "weight": 1.0
     },
     {
@@ -30275,7 +30275,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1312",
+      "source_location": "L1315",
       "weight": 1.0
     },
     {
@@ -30287,7 +30287,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1314",
+      "source_location": "L1317",
       "weight": 1.0
     },
     {
@@ -30299,7 +30299,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1316",
+      "source_location": "L1319",
       "weight": 1.0
     },
     {
@@ -30311,7 +30311,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1172",
+      "source_location": "L1175",
       "weight": 1.0
     },
     {
@@ -30323,7 +30323,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L896",
+      "source_location": "L899",
       "weight": 1.0
     },
     {
@@ -30335,7 +30335,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L901",
+      "source_location": "L904",
       "weight": 1.0
     },
     {
@@ -30371,7 +30371,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1355",
+      "source_location": "L1358",
       "weight": 1.0
     },
     {
@@ -30383,7 +30383,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1357",
+      "source_location": "L1360",
       "weight": 1.0
     },
     {
@@ -30431,7 +30431,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L932",
+      "source_location": "L935",
       "weight": 1.0
     },
     {
@@ -30443,7 +30443,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L933",
+      "source_location": "L936",
       "weight": 1.0
     },
     {
@@ -30455,7 +30455,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1340",
+      "source_location": "L1343",
       "weight": 1.0
     },
     {
@@ -30467,7 +30467,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1340",
+      "source_location": "L1343",
       "weight": 1.0
     },
     {
@@ -30527,7 +30527,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1032",
+      "source_location": "L1035",
       "weight": 1.0
     },
     {
@@ -30539,7 +30539,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1372",
+      "source_location": "L1375",
       "weight": 1.0
     },
     {
@@ -30551,7 +30551,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1379",
+      "source_location": "L1382",
       "weight": 1.0
     },
     {
@@ -30563,7 +30563,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1387",
+      "source_location": "L1390",
       "weight": 1.0
     },
     {
@@ -30575,7 +30575,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1392",
+      "source_location": "L1395",
       "weight": 1.0
     },
     {
@@ -30611,7 +30611,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1150",
+      "source_location": "L1153",
       "weight": 1.0
     },
     {
@@ -30635,7 +30635,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1237",
+      "source_location": "L1240",
       "weight": 1.0
     },
     {
@@ -30647,7 +30647,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1022",
+      "source_location": "L1025",
       "weight": 1.0
     },
     {
@@ -33685,7 +33685,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "backend/src/services/moyenPaiement.js",
-      "source_location": "L28",
+      "source_location": "L32",
       "weight": 1.0
     },
     {
@@ -33697,7 +33697,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "backend/src/services/moyenPaiement.js",
-      "source_location": "L29",
+      "source_location": "L33",
       "weight": 1.0
     },
     {
@@ -33709,7 +33709,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "backend/src/services/moyenPaiement.js",
-      "source_location": "L30",
+      "source_location": "L34",
       "weight": 1.0
     },
     {
@@ -33721,7 +33721,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "backend/src/services/moyenPaiement.js",
-      "source_location": "L30",
+      "source_location": "L34",
       "weight": 1.0
     },
     {
@@ -53857,7 +53857,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "backend/src/services/moyenPaiement.js",
-      "source_location": "L28",
+      "source_location": "L32",
       "weight": 1.0
     },
     {
@@ -53869,7 +53869,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "backend/src/services/moyenPaiement.js",
-      "source_location": "L29",
+      "source_location": "L33",
       "weight": 1.0
     },
     {
@@ -53881,7 +53881,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "backend/src/services/moyenPaiement.js",
-      "source_location": "L30",
+      "source_location": "L34",
       "weight": 1.0
     },
     {
@@ -62543,7 +62543,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "backend/src/services/moyenPaiement.js",
-      "source_location": "L113",
+      "source_location": "L133",
       "weight": 1.0
     },
     {
@@ -62554,7 +62554,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "backend/src/services/moyenPaiement.js",
-      "source_location": "L32",
+      "source_location": "L36",
       "weight": 1.0
     },
     {
@@ -62565,7 +62565,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "backend/src/services/moyenPaiement.js",
-      "source_location": "L33",
+      "source_location": "L37",
       "weight": 1.0
     },
     {
@@ -62576,7 +62576,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "backend/src/services/moyenPaiement.js",
-      "source_location": "L34",
+      "source_location": "L38",
       "weight": 1.0
     },
     {
@@ -62587,7 +62587,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "backend/src/services/moyenPaiement.js",
-      "source_location": "L36",
+      "source_location": "L40",
       "weight": 1.0
     },
     {
@@ -62598,7 +62598,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "backend/src/services/moyenPaiement.js",
-      "source_location": "L39",
+      "source_location": "L48",
       "weight": 1.0
     },
     {
@@ -62609,7 +62609,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "backend/src/services/moyenPaiement.js",
-      "source_location": "L44",
+      "source_location": "L55",
       "weight": 1.0
     },
     {
@@ -62620,7 +62620,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "backend/src/services/moyenPaiement.js",
-      "source_location": "L54",
+      "source_location": "L65",
       "weight": 1.0
     },
     {
@@ -62631,7 +62631,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "backend/src/services/moyenPaiement.js",
-      "source_location": "L70",
+      "source_location": "L81",
       "weight": 1.0
     },
     {
@@ -63621,7 +63621,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "backend/src/services/surchargeCarte.js",
-      "source_location": "L37",
+      "source_location": "L39",
       "weight": 1.0
     },
     {
@@ -63632,7 +63632,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "backend/src/services/surchargeCarte.js",
-      "source_location": "L48",
+      "source_location": "L50",
       "weight": 1.0
     },
     {
@@ -63643,7 +63643,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "backend/src/services/surchargeCarte.js",
-      "source_location": "L58",
+      "source_location": "L60",
       "weight": 1.0
     },
     {
@@ -71101,7 +71101,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1010",
+      "source_location": "L1013",
       "weight": 1.0
     },
     {
@@ -71112,7 +71112,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1021",
+      "source_location": "L1024",
       "weight": 1.0
     },
     {
@@ -71123,7 +71123,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1031",
+      "source_location": "L1034",
       "weight": 1.0
     },
     {
@@ -71134,7 +71134,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1044",
+      "source_location": "L1047",
       "weight": 1.0
     },
     {
@@ -71145,7 +71145,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1077",
+      "source_location": "L1080",
       "weight": 1.0
     },
     {
@@ -71156,7 +71156,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1087",
+      "source_location": "L1090",
       "weight": 1.0
     },
     {
@@ -71167,7 +71167,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1098",
+      "source_location": "L1101",
       "weight": 1.0
     },
     {
@@ -71178,7 +71178,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1123",
+      "source_location": "L1126",
       "weight": 1.0
     },
     {
@@ -71189,7 +71189,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1142",
+      "source_location": "L1145",
       "weight": 1.0
     },
     {
@@ -71200,7 +71200,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1143",
+      "source_location": "L1146",
       "weight": 1.0
     },
     {
@@ -71211,7 +71211,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1148",
+      "source_location": "L1151",
       "weight": 1.0
     },
     {
@@ -71222,7 +71222,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1169",
+      "source_location": "L1172",
       "weight": 1.0
     },
     {
@@ -71233,7 +71233,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1178",
+      "source_location": "L1181",
       "weight": 1.0
     },
     {
@@ -71244,7 +71244,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1183",
+      "source_location": "L1186",
       "weight": 1.0
     },
     {
@@ -71255,7 +71255,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1210",
+      "source_location": "L1213",
       "weight": 1.0
     },
     {
@@ -71277,7 +71277,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1233",
+      "source_location": "L1236",
       "weight": 1.0
     },
     {
@@ -71288,7 +71288,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1261",
+      "source_location": "L1264",
       "weight": 1.0
     },
     {
@@ -71299,7 +71299,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1272",
+      "source_location": "L1275",
       "weight": 1.0
     },
     {
@@ -71310,7 +71310,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1274",
+      "source_location": "L1277",
       "weight": 1.0
     },
     {
@@ -71321,7 +71321,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1282",
+      "source_location": "L1285",
       "weight": 1.0
     },
     {
@@ -71332,7 +71332,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1290",
+      "source_location": "L1293",
       "weight": 1.0
     },
     {
@@ -71343,7 +71343,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1327",
+      "source_location": "L1330",
       "weight": 1.0
     },
     {
@@ -71354,7 +71354,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1339",
+      "source_location": "L1342",
       "weight": 1.0
     },
     {
@@ -71365,7 +71365,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1344",
+      "source_location": "L1347",
       "weight": 1.0
     },
     {
@@ -71376,7 +71376,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1352",
+      "source_location": "L1355",
       "weight": 1.0
     },
     {
@@ -71387,7 +71387,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1366",
+      "source_location": "L1369",
       "weight": 1.0
     },
     {
@@ -71409,7 +71409,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1440",
+      "source_location": "L1443",
       "weight": 1.0
     },
     {
@@ -71420,7 +71420,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1442",
+      "source_location": "L1445",
       "weight": 1.0
     },
     {
@@ -71431,7 +71431,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1444",
+      "source_location": "L1447",
       "weight": 1.0
     },
     {
@@ -71442,7 +71442,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L1451",
+      "source_location": "L1454",
       "weight": 1.0
     },
     {
@@ -72223,7 +72223,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L849",
+      "source_location": "L851",
       "weight": 1.0
     },
     {
@@ -72234,7 +72234,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L854",
+      "source_location": "L856",
       "weight": 1.0
     },
     {
@@ -72245,7 +72245,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L874",
+      "source_location": "L877",
       "weight": 1.0
     },
     {
@@ -72256,7 +72256,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L895",
+      "source_location": "L898",
       "weight": 1.0
     },
     {
@@ -72278,7 +72278,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L921",
+      "source_location": "L924",
       "weight": 1.0
     },
     {
@@ -72289,7 +72289,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L951",
+      "source_location": "L954",
       "weight": 1.0
     },
     {
@@ -72300,7 +72300,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L953",
+      "source_location": "L956",
       "weight": 1.0
     },
     {
@@ -72311,7 +72311,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L965",
+      "source_location": "L968",
       "weight": 1.0
     },
     {
@@ -72322,7 +72322,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L973",
+      "source_location": "L976",
       "weight": 1.0
     },
     {
@@ -72333,7 +72333,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L983",
+      "source_location": "L986",
       "weight": 1.0
     },
     {
@@ -72344,7 +72344,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/lib/types.ts",
-      "source_location": "L989",
+      "source_location": "L992",
       "weight": 1.0
     },
     {
@@ -74919,5 +74919,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "89ccc60b68ffcf6e7c71090ee3fce5ad6694af40"
+  "built_at_commit": "f1c38ce732ebc63814abc96fd21fc053bc50e33b"
 }
