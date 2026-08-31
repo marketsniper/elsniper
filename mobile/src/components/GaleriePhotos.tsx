@@ -24,6 +24,7 @@ export function GaleriePhotos({
   onAjouter,
   onSupprimer,
   max = 12,
+  equipe = false,
 }: {
   photos: { id: string; url: string }[];
   /** Photo déjà envoyée sur le serveur (adresse définitive) : au parent de l'enregistrer (POST .../photos). */
@@ -31,6 +32,8 @@ export function GaleriePhotos({
   /** Au parent de la retirer côté serveur (DELETE .../photos/:id). */
   onSupprimer: (id: string) => Promise<void>;
   max?: number;
+  /** Écran ÉQUIPE : l'envoi part avec la clé équipe (voir ChoixDocument). */
+  equipe?: boolean;
 }) {
   const { t } = useT();
   const [envoiEnCours, setEnvoiEnCours] = useState(false);
@@ -43,7 +46,7 @@ export function GaleriePhotos({
     setErreur('');
     setEnvoiEnCours(true);
     try {
-      const { url } = await api.televerser(uri);
+      const { url } = await api.televerser(uri, equipe);
       await onAjouter(url);
     } catch (e) {
       setErreur(e instanceof ErreurApi ? e.message : t('galerie_erreur_envoi'));

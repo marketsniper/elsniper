@@ -337,6 +337,7 @@ export function ChoixDocument({
   texteChanger,
   camera = false,
   imagesSeules = false,
+  equipe = false,
 }: {
   uri: string | null;
   onFichier: (uri: string) => void;
@@ -349,6 +350,9 @@ export function ChoixDocument({
   camera?: boolean;
   /** Portrait : une image, mais choisie librement (galerie comprise). */
   imagesSeules?: boolean;
+  /** Écran ÉQUIPE : l'envoi part avec la clé équipe — le téléphone de
+   *  l'équipe n'a pas forcément de session client ouverte. */
+  equipe?: boolean;
 }) {
   const { t } = useT();
   const [typeMime, setTypeMime] = useState<string | null>(null);
@@ -382,7 +386,7 @@ export function ChoixDocument({
     // un envoi, ce serait perdre la pièce. Ce drapeau la fait patienter.
     marquerEnvoi(true);
     try {
-      const { url } = await api.televerser(adresse);
+      const { url } = await api.televerser(adresse, equipe);
       onFichier(url);
     } catch (e) {
       signaler(e instanceof ErreurApi ? e.message : t('doc_erreur_envoi'));

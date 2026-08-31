@@ -1544,8 +1544,13 @@ export async function bannirClient(id: string, banned: boolean): Promise<Utilisa
 // Upload (backend/src/routes/uploads.js)
 // ---------------------------------------------------------------------------
 
-/** POST /uploads (multipart, champ `file`) → {url, size, mimeType}. */
-export async function televerser(uri: string): Promise<{ url: string }> {
+/** POST /uploads (multipart, champ `file`) → {url, size, mimeType}.
+ *
+ *  `equipe` : depuis un ÉCRAN ÉQUIPE (fiche véhicule, photo chauffeur), la
+ *  requête part avec la clé équipe — le téléphone de l'équipe n'a pas
+ *  forcément de session client ouverte, et sans jeton NI clé le serveur
+ *  refusait la pièce (« je ne peux pas joindre de fichier », 31/08/2026). */
+export async function televerser(uri: string, equipe = false): Promise<{ url: string }> {
   // GARDE-FOU. Une adresse http(s) n'est PAS un fichier à envoyer : c'est un
   // fichier DÉJÀ envoyé. Passée ici, elle tombait dans la branche « application
   // native » et posait un objet { uri, name, type } dans le FormData — un
@@ -1579,6 +1584,7 @@ export async function televerser(uri: string): Promise<{ url: string }> {
   const reponse = await requete<Record<string, unknown>>('/uploads', {
     methode: 'POST',
     formData,
+    admin: equipe,
   });
   const url = reponse?.url;
   if (typeof url !== 'string') {

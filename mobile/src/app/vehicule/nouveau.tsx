@@ -168,6 +168,7 @@ export default function EcranNouveauVehicule() {
           texteAjouter={t('vehicule_doc_assurance_ajouter')}
           texteAjoute={t('vehicule_doc_assurance_ajoute')}
           texteChanger={t('vehicule_doc_changer')}
+          equipe
         />
         <Champ
           label={t('vehicule_champ_assurance_expiration')}
@@ -183,6 +184,7 @@ export default function EcranNouveauVehicule() {
           texteAjouter={t('vehicule_doc_road_licence_ajouter')}
           texteAjoute={t('vehicule_doc_road_licence_ajoute')}
           texteChanger={t('vehicule_doc_changer')}
+          equipe
         />
         <Champ
           label={t('vehicule_champ_road_licence_expiration')}
@@ -195,6 +197,7 @@ export default function EcranNouveauVehicule() {
       <Carte>
         <Text style={styles.label}>{t('vehicule_photos_titre')}</Text>
         <GaleriePhotos
+          equipe
           photos={photos}
           onAjouter={async (url) => setPhotos((liste) => [...liste, { id: url, url }])}
           onSupprimer={async (id) => setPhotos((liste) => liste.filter((p) => p.id !== id))}

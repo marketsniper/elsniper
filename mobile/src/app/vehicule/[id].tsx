@@ -272,7 +272,7 @@ export default function EcranFicheVehicule() {
 
       <Carte>
         <Text style={styles.label}>{t('vehicule_photos_titre')}</Text>
-        <GaleriePhotos photos={vehicule.photos} onAjouter={ajouterPhoto} onSupprimer={supprimerPhoto} />
+        <GaleriePhotos equipe photos={vehicule.photos} onAjouter={ajouterPhoto} onSupprimer={supprimerPhoto} />
       </Carte>
 
       <Carte>
@@ -313,6 +313,7 @@ export default function EcranFicheVehicule() {
           texteAjouter={t('vehicule_doc_assurance_ajouter')}
           texteAjoute={t('vehicule_doc_assurance_ajoute')}
           texteChanger={t('vehicule_doc_changer')}
+          equipe
         />
         <Champ
           label={t('vehicule_champ_assurance_expiration')}
@@ -328,6 +329,7 @@ export default function EcranFicheVehicule() {
           texteAjouter={t('vehicule_doc_road_licence_ajouter')}
           texteAjoute={t('vehicule_doc_road_licence_ajoute')}
           texteChanger={t('vehicule_doc_changer')}
+          equipe
         />
         <Champ
           label={t('vehicule_champ_road_licence_expiration')}

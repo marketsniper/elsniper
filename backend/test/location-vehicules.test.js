@@ -492,6 +492,30 @@ describe('Location de véhicules — annulation (barème 24/48 h, comme les plac
   });
 });
 
+describe('Location de véhicules — pièces jointes de l’équipe', () => {
+  it('la seule clé équipe suffit pour téléverser (pas besoin de session client)', async () => {
+    // Le téléphone de l'équipe n'a pas forcément de session client ouverte :
+    // la fiche véhicule envoie ses pièces avec X-Admin-Key seule. Ce test
+    // verrouille le contrat côté serveur (requireAuth laisse passer isAdmin) —
+    // c'est le bug « je ne peux pas joindre de fichier » du 31/08/2026.
+    const res = await request(app)
+      .post('/api/uploads')
+      .set(adminHeaders())
+      .attach('file', Buffer.from([0xff, 0xd8, 0xff, 0xdb, 0x00, 0x01]), {
+        filename: 'assurance.jpg',
+        contentType: 'image/jpeg',
+      });
+    assert.equal(res.status, 201, JSON.stringify(res.body));
+    assert.ok(String(res.body.url).startsWith('http'), 'une URL publique est renvoyée');
+
+    // Sans clé NI jeton : porte fermée.
+    const anonyme = await request(app)
+      .post('/api/uploads')
+      .attach('file', Buffer.from([0xff, 0xd8]), { filename: 'x.jpg', contentType: 'image/jpeg' });
+    assert.equal(anonyme.status, 401);
+  });
+});
+
 describe('Location de véhicules — file de vérification (queue commune)', () => {
   it('apparaît dans /verifications avec ses deux documents ; disparaît une fois vérifié', async () => {
     const vehicule = await creerVehicule();
