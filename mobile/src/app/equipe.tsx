@@ -137,6 +137,9 @@ export default function EcranEquipe() {
   const [verifsEnAttente, setVerifsEnAttente] = useState(0);
   // Véhicules de location pas encore vérifiés (même logique que verifsEnAttente).
   const [vehiculesPendants, setVehiculesPendants] = useState(0);
+  // Le TOTAL de la flotte : c'est lui que la case affiche — un compteur à
+  // « 0 » avec trois véhicules publiés se lisait comme une flotte vide.
+  const [vehiculesTotal, setVehiculesTotal] = useState(0);
   // Les réservations de location (équipe) : la rubrique « Locations » du
   // tableau les partage en « en cours » et « à venir ».
   const [locationsResa, setLocationsResa] = useState<ReservationVehicule[]>([]);
@@ -256,10 +259,20 @@ export default function EcranEquipe() {
         .catch(() => setVerifsEnAttente(0));
       // Compteur de la case « Véhicules » : véhicules encore 'pending', même
       // logique silencieuse — la case affiche 0 plutôt que de tout bloquer.
+      // UNE seule lecture pour la flotte : le total (ce que la case affiche)
+      // et les fiches encore à vérifier (ce qui allume le voyant).
       api
-        .listerVehicules(true, 'pending')
-        .then((vehicules) => setVehiculesPendants(vehicules.length))
-        .catch(() => setVehiculesPendants(0));
+        .listerVehicules(true)
+        .then((vehicules) => {
+          setVehiculesTotal(vehicules.length);
+          setVehiculesPendants(
+            vehicules.filter((v) => v.verification_status === 'pending').length
+          );
+        })
+        .catch(() => {
+          setVehiculesTotal(0);
+          setVehiculesPendants(0);
+        });
       // Les réservations de location : en cours et à venir, même douceur.
       api
         .listerLocations()
@@ -373,6 +386,7 @@ export default function EcranEquipe() {
     setAbonnes(null);
     setVerifsEnAttente(0);
     setVehiculesPendants(0);
+    setVehiculesTotal(0);
     setSection(null);
     setCaOuvert(false);
     setRecherche('');
@@ -743,10 +757,12 @@ export default function EcranEquipe() {
       titre: t('equipe_famille_location'),
       rubriques: [
         {
+          // Le compteur dit la FLOTTE entière ; le voyant, lui, ne s'allume
+          // que s'il reste des fiches à vérifier.
           cle: 'vehicules',
           label: t('equipe_stat_vehicules'),
           icone: 'car-sport-outline',
-          n: vehiculesPendants,
+          n: vehiculesTotal,
           action: vehiculesPendants > 0,
           ecran: '/vehicules',
         },
