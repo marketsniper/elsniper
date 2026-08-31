@@ -1,0 +1,7 @@
+# Hors du graphe de connaissances (syntaxe .gitignore, lu par graphify) :
+# du compilé et de l'outillage, pas du savoir sur le projet. Sans ce fichier,
+# `graphify update .` réaspirait le bundle web minifié (2,4 Mo de JS illisible
+# = des centaines de nœuds poubelle) et la doc interne de graphify lui-même.
+backend/public/web/
+.claude/
+CLAUDE.md

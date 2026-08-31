@@ -4372,6 +4372,30 @@ const CHAINES = {
     de: 'Dieses Fahrzeug wird dauerhaft aus dem Katalog entfernt. Fortfahren?',
   },
 
+  // Mise en avant de la location sur l'écran Réserver (demande du client :
+  // « une phrase sympa — déplacez-vous librement avec zanziGo »).
+  accueil_location_titre: {
+    fr: 'Déplacez-vous librement avec zanziGo',
+    en: 'Move freely with zanziGo',
+    sw: 'Tembea kwa uhuru na zanziGo',
+    it: 'Muoviti liberamente con zanziGo',
+    de: 'Bewegen Sie sich frei mit zanziGo',
+  },
+  accueil_location_texte: {
+    fr: 'Taxi à la course, colis livrés… et maintenant la location à la journée : voiture, 4x4, luxe, scooter, moto, enduro.',
+    en: 'Taxi rides, parcels delivered… and now daily rentals: car, 4x4, luxury, scooter, motorbike, enduro.',
+    sw: 'Safari za teksi, mizigo… na sasa kukodisha kwa siku: gari, 4x4, kifahari, skuta, pikipiki, enduro.',
+    it: 'Corse in taxi, pacchi consegnati… e ora il noleggio a giornata: auto, 4x4, lusso, scooter, moto, enduro.',
+    de: 'Taxifahrten, Pakete geliefert… und jetzt Tagesmiete: Auto, 4x4, Luxus, Roller, Motorrad, Enduro.',
+  },
+  accueil_location_bouton: {
+    fr: 'Découvrir la location',
+    en: 'Discover rentals',
+    sw: 'Gundua kukodisha',
+    it: 'Scopri il noleggio',
+    de: 'Vermietung entdecken',
+  },
+
   // Écran client : catalogue + mes locations (tabs/location.tsx).
   location_titre: { fr: 'Location de véhicules', en: 'Vehicle rentals', sw: 'Kukodisha magari', it: 'Noleggio veicoli', de: 'Fahrzeugvermietung' },
   location_sous_titre: {

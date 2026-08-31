@@ -9,6 +9,7 @@ import { Image, Pressable, ScrollView, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { CalendrierDate } from '@/components/CalendrierDate';
+import { IconeCategorie } from '@/components/IconeCategorie';
 import {
   Badge,
   Bouton,
@@ -119,7 +120,10 @@ export default function EcranFicheVehiculeLocation() {
           </Titre>
           {vehicule.documents_verified && <Badge texte={t('location_verifie')} ton="succes" />}
         </View>
-        <Text style={styles.categorie}>{libelleCategorieVehicule(vehicule.category, t)}</Text>
+        <View style={styles.ligneCategorie}>
+          <IconeCategorie categorie={vehicule.category} taille={18} couleur={couleurs.texteSecondaire} />
+          <Text style={styles.categorie}>{libelleCategorieVehicule(vehicule.category, t)}</Text>
+        </View>
         {!!vehicule.seats && (
           <LigneInfo label={t('vehicule_champ_places')} valeur={String(vehicule.seats)} />
         )}
@@ -229,6 +233,7 @@ const styles = stylesReactifs(() => ({
     backgroundColor: couleurs.surface,
   },
   enTete: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: espaces.m },
+  ligneCategorie: { flexDirection: 'row', alignItems: 'center', gap: espaces.xs },
   categorie: { color: couleurs.texteSecondaire, fontSize: 13.5, textTransform: 'uppercase', letterSpacing: 0.4 },
   description: { color: couleurs.encre, fontSize: 14.5, lineHeight: 21 },
   blocPrix: {

@@ -17,6 +17,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Linking, Pressable, Text, View } from 'react-native';
 
 import { CalendrierDate } from '@/components/CalendrierDate';
+import { IconeCategorie } from '@/components/IconeCategorie';
 import { IleDeZanzibar } from '@/components/Ile';
 import { LaCourse } from '@/components/LaCourse';
 import { RidesPartages } from '@/components/RidesPartages';
@@ -707,11 +708,48 @@ export default function EcranReserver() {
               l'écran illisible. */}
         </>
       )}
+
+      {/* LA LOCATION, MISE EN AVANT SUR L'ACCUEIL (demande du client) : une
+          carte qui se touche, en pied d'écran pour ne jamais retarder la
+          réservation — le geste principal reste la course. */}
+      <Pressable
+        onPress={() => router.push('/(tabs)/location')}
+        accessibilityRole="button"
+        style={({ pressed }) => [styles.promoLocation, pressed && { opacity: 0.85 }]}
+      >
+        <View style={styles.promoIcones}>
+          <IconeCategorie categorie="tourisme" taille={22} couleur={couleurs.primaire} />
+          <IconeCategorie categorie="4x4" taille={22} couleur={couleurs.primaire} />
+          <IconeCategorie categorie="scooter" taille={22} couleur={couleurs.primaire} />
+          <IconeCategorie categorie="moto" taille={22} couleur={couleurs.primaire} />
+        </View>
+        <Text style={styles.promoTitre}>{t('accueil_location_titre')}</Text>
+        <Text style={styles.promoTexte}>{t('accueil_location_texte')}</Text>
+        <View style={styles.promoAppel}>
+          <Text style={styles.promoAppelTexte}>{t('accueil_location_bouton')}</Text>
+          <Ionicons name="arrow-forward" size={16} color={couleurs.primaireFonce} />
+        </View>
+      </Pressable>
     </Ecran>
   );
 }
 
 const styles = stylesReactifs(() => ({
+  // La carte « location » du pied d'écran : le liseré cyan la rattache aux
+  // actions, les quatre silhouettes de véhicules disent l'offre d'un regard.
+  promoLocation: {
+    backgroundColor: couleurs.carteTranslucide,
+    borderRadius: rayons.carte,
+    padding: espaces.l,
+    gap: espaces.xs,
+    // ombres.carte porte déjà le liseré de la peau : on le laisse gagner.
+    ...ombres.carte,
+  },
+  promoIcones: { flexDirection: 'row', gap: espaces.m },
+  promoTitre: { fontSize: 16, fontWeight: '800', color: couleurs.encre },
+  promoTexte: { fontSize: 13.5, color: couleurs.texteSecondaire, lineHeight: 19 },
+  promoAppel: { flexDirection: 'row', alignItems: 'center', gap: espaces.xs, marginTop: 2 },
+  promoAppelTexte: { fontSize: 14, fontWeight: '700', color: couleurs.primaireFonce },
   // Retour de la géolocalisation, sous le champ Départ : gris pendant la
   // recherche ou en cas de refus, vert quand la ville est trouvée.
   messagePosition: {

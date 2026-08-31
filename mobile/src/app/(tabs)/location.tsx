@@ -1,10 +1,12 @@
 // ONGLET LOCATION — le catalogue des véhicules vérifiés, disponibles, non
 // archivés (jamais un véhicule encore en attente de contrôle), et une
 // bascule vers « Mes locations » pour suivre ses réservations en cours.
-import { Ionicons } from '@expo/vector-icons';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import { Image, Pressable, ScrollView, Text, View } from 'react-native';
+
+import { IconeCategorie } from '@/components/IconeCategorie';
 
 import {
   Badge,
@@ -94,15 +96,22 @@ export default function EcranLocationOnglet() {
 
       <TexteErreur>{erreur}</TexteErreur>
 
+      {/* LES CATÉGORIES EN TUILES ILLUSTRÉES — un scooter pour « Scooter »,
+          un 4x4 pour « 4x4 »… : on choisit avec les yeux, pas en lisant. */}
       {onglet === 'catalogue' && (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsDefil}>
           <View style={styles.chips}>
             <Pressable
               onPress={() => setCategorie(null)}
               accessibilityRole="button"
-              style={[styles.chip, categorie === null && styles.chipActif]}
+              style={[styles.tuileCategorie, categorie === null && styles.tuileCategorieActive]}
             >
-              <Text style={[styles.chipTexte, categorie === null && styles.chipTexteActif]}>
+              <MaterialCommunityIcons
+                name="car-multiple"
+                size={26}
+                color={categorie === null ? couleurs.primaireFonce : couleurs.texteSecondaire}
+              />
+              <Text style={[styles.tuileTexte, categorie === null && styles.tuileTexteActif]}>
                 {t('location_categorie_toutes')}
               </Text>
             </Pressable>
@@ -111,9 +120,14 @@ export default function EcranLocationOnglet() {
                 key={c}
                 onPress={() => setCategorie(c)}
                 accessibilityRole="button"
-                style={[styles.chip, categorie === c && styles.chipActif]}
+                style={[styles.tuileCategorie, categorie === c && styles.tuileCategorieActive]}
               >
-                <Text style={[styles.chipTexte, categorie === c && styles.chipTexteActif]}>
+                <IconeCategorie
+                  categorie={c}
+                  taille={26}
+                  couleur={categorie === c ? couleurs.primaireFonce : couleurs.texteSecondaire}
+                />
+                <Text style={[styles.tuileTexte, categorie === c && styles.tuileTexteActif]}>
                   {libelleCategorieVehicule(c, t)}
                 </Text>
               </Pressable>
@@ -142,8 +156,9 @@ export default function EcranLocationOnglet() {
                   {v.photos[0] ? (
                     <Image source={{ uri: v.photos[0].url }} style={styles.vignette} resizeMode="cover" />
                   ) : (
+                    // Pas encore de photo : l'icône de SA catégorie tient la place.
                     <View style={[styles.vignette, styles.vignetteVide]}>
-                      <Ionicons name="car-sport-outline" size={26} color={couleurs.primaire} />
+                      <IconeCategorie categorie={v.category} taille={30} couleur={couleurs.primaire} />
                     </View>
                   )}
                   <View style={styles.infosCarte}>
@@ -222,21 +237,28 @@ const styles = stylesReactifs(() => ({
   pillTexte: { fontSize: 14, fontWeight: '700', color: couleurs.texteSecondaire },
   pillTexteActif: { color: couleurs.surPrimaire },
   chipsDefil: { marginBottom: espaces.s },
-  chips: { flexDirection: 'row', gap: espaces.xs },
-  chip: {
-    paddingHorizontal: espaces.m,
-    paddingVertical: espaces.xs,
-    borderRadius: rayons.pastille,
+  chips: { flexDirection: 'row', gap: espaces.s },
+  tuileCategorie: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    minWidth: 84,
+    paddingHorizontal: espaces.s,
+    paddingVertical: espaces.s,
+    borderRadius: rayons.carte,
     backgroundColor: couleurs.surface,
     borderWidth: 1,
     borderColor: couleurs.bordure,
   },
-  chipActif: {
+  tuileCategorieActive: {
     backgroundColor: couleurs.primaireClair,
+    borderWidth: 2,
     borderColor: couleurs.primaire,
+    paddingHorizontal: espaces.s - 1,
+    paddingVertical: espaces.s - 1,
   },
-  chipTexte: { fontSize: 13, fontWeight: '600', color: couleurs.texteSecondaire },
-  chipTexteActif: { color: couleurs.primaireFonce },
+  tuileTexte: { fontSize: 12, fontWeight: '600', color: couleurs.texteSecondaire, textAlign: 'center' },
+  tuileTexteActif: { color: couleurs.primaireFonce },
   ligneCarte: { flexDirection: 'row', gap: espaces.m, alignItems: 'center' },
   vignette: { width: 88, height: 72, borderRadius: rayons.bouton, backgroundColor: couleurs.surface },
   vignetteVide: { alignItems: 'center', justifyContent: 'center' },
