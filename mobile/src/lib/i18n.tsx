@@ -4362,6 +4362,11 @@ const CHAINES = {
   // Écran équipe : liste des véhicules (vehicules.tsx).
   vehicules_titre: { fr: 'Véhicules en location', en: 'Rental vehicles', sw: 'Magari ya kukodisha', it: 'Veicoli a noleggio', de: 'Mietfahrzeuge' },
   vehicules_ajouter: { fr: 'Ajouter un véhicule', en: 'Add a vehicle', sw: 'Ongeza gari', it: 'Aggiungi un veicolo', de: 'Fahrzeug hinzufügen' },
+  vehicules_recherche: {
+    fr: 'Rechercher (modèle, plaque, loueur…)',
+    en: 'Search (model, plate, owner…)',
+    sw: 'Tafuta (modeli, namba ya gari, mkodishaji…)',
+  },
   vehicules_vide_titre: { fr: 'Aucun véhicule', en: 'No vehicles', sw: 'Hakuna magari', it: 'Nessun veicolo', de: 'Keine Fahrzeuge' },
   vehicules_vide_message: {
     fr: 'Ajoutez le premier véhicule du catalogue de location.',

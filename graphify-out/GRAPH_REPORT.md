@@ -1,24 +1,24 @@
 # Graph Report - elsniper  (2026-08-31)
 
 ## Corpus Check
-- 251 files · ~334,561 words
+- 251 files · ~334,820 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1598 nodes · 4804 edges · 143 communities (71 shown, 37 thin omitted)
+- 1599 nodes · 4811 edges · 142 communities (69 shown, 37 thin omitted)
 - Extraction: 97% EXTRACTED · 3% INFERRED · 0% AMBIGUOUS · INFERRED: 140 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `c4630d13`
+- Built from commit: `12cccb01`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
 - authHeaders
 - pricingService.js
-- trip/[id].tsx
-- courses.tsx
+- espaces
+- ui.tsx
 - app.js
 - types.ts
 - api.ts
@@ -26,46 +26,45 @@
 - i18n.tsx
 - CarteTrajet.web.tsx
 - backend/package.json
-- drivers.js
+- paypalService.js
 - 001_init.sql
 - LaCourse.tsx
 - useT
-- moyenPaiement.js
+- payments.js
 - theme.ts
 - EcranEquipe
-- champ
+- BoiteDialogue.tsx
 - rides.js
-- entretienService.js
-- hotels.js
-- ui.tsx
+- notifierEquipe
+- drivers.js
+- trip/[id].tsx
 - query
 - rentalVehicles.js
-- tarifPriveItineraire
-- HttpError
+- normaliserLieu
+- packages.js
 - dependencies
-- EcranAnnonces
+- app/_layout.tsx
 - trips.js
 - EcranFicheVehicule
-- app/_layout.tsx
-- Bouton
+- FondPlage.tsx
+- preferencePeau.tsx
 - reserver.tsx
 - CarteAlertes.tsx
 - include
-- expo-router
 - imports-natifs.test.js
 - peaux-contraste.test.js
-- colisLocal.ts
+- lireStockage
 - auth.tsx
-- formaterMontant
+- EcranTrajet
 - mobile/package.json
 - CalendrierDate.tsx
 - smoke-test.js
 - zanziGo — Architecture technique (v0.1, MVP)
-- RidesPartages.tsx
+- RidesPartages
 - EcranTelephone
-- EcranScanner
+- soleil.ts
 - scripts
-- EcranTaxiEquipe
+- definirCleEquipe
 - equipe.tsx
 - mise-a-jour.js
 - service-worker.js
@@ -114,8 +113,7 @@
 - position.ts
 - frein-durgence.sh
 - Étapes de déploiement
-- policeMontant
-- EcranHotelEquipe
+- Devise
 - README.md
 - Mise en ligne de zanziGo — pas à pas
 - zanziGo — application mobile
@@ -137,69 +135,69 @@
 10. `app` - 48 edges
 
 ## Surprising Connections (you probably didn't know these)
+- `makeLimiter()` --calls--> `isAdmin()`  [EXTRACTED]
+  backend/src/app.js → backend/src/middleware/auth.js
 - `getPhotos()` --calls--> `query()`  [EXTRACTED]
   backend/src/routes/rentalVehicles.js → backend/src/db.js
-- `readFile()` --calls--> `query()`  [EXTRACTED]
-  backend/src/services/storageService.js → backend/src/db.js
-- `poserPosition()` --calls--> `query()`  [EXTRACTED]
-  backend/test/diffusion-bourse.test.js → backend/src/db.js
 - `refuserSiOtpFerme()` --calls--> `HttpError`  [EXTRACTED]
   backend/src/routes/auth.js → backend/src/errors.js
+- `courseConfirmee()` --calls--> `adminHeaders()`  [EXTRACTED]
+  backend/test/alerte-paiement-a-encaisser.test.js → backend/test/setup.js
 - `RetourEntete()` --calls--> `useT()`  [EXTRACTED]
   mobile/src/app/_layout.tsx → mobile/src/lib/i18n.tsx
 
 ## Import Cycles
 - None detected.
 
-## Communities (143 total, 37 thin omitted)
+## Communities (142 total, 37 thin omitted)
 
 ### Community 0 - "authHeaders"
-Cohesion: 0.05
-Nodes (78): migrationsDir, pool, courseConfirmee(), coursePayee(), posterAnnonce(), reserverEtPayer(), annonceReservee(), coursePrete() (+70 more)
+Cohesion: 0.06
+Nodes (76): migrationsDir, pool, coursePayee(), posterAnnonce(), reserverEtPayer(), annonceReservee(), coursePrete(), payer() (+68 more)
 
 ### Community 1 - "pricingService.js"
 Cohesion: 0.06
-Nodes (63): round2(), sansPrixDePlace(), valeurReservationPlace(), AEROPORT, ANCIENS_LIBELLES_AEROPORT, RIDE_DESTINATIONS, RIDE_ORIGINS, RIDE_ORIGINS_ACCEPTES (+55 more)
+Nodes (64): round2(), sansPrixDePlace(), valeurReservationPlace(), AEROPORT, ANCIENS_LIBELLES_AEROPORT, RIDE_DESTINATIONS, RIDE_ORIGINS, RIDE_ORIGINS_ACCEPTES (+56 more)
 
-### Community 2 - "trip/[id].tsx"
-Cohesion: 0.13
-Nodes (31): styles, FiltreCategorie, Onglet, styles, styles, styles, TON_STATUT, EcranNouveauVehicule() (+23 more)
+### Community 2 - "espaces"
+Cohesion: 0.09
+Nodes (36): EcranFicheVehiculeLocation(), styles, FiltreCategorie, Onglet, styles, styles, TON_STATUT, styles (+28 more)
 
-### Community 3 - "courses.tsx"
-Cohesion: 0.15
-Nodes (27): CaseChauffeur, EcranCourses(), styles, EcranColis(), STATUTS_FINIS, styles, EcranTrajets(), STATUTS_FINIS (+19 more)
+### Community 3 - "ui.tsx"
+Cohesion: 0.12
+Nodes (41): EcranColisDispo(), styles, EcranDetailCourse(), styles, CaseChauffeur, EcranCourses(), styles, EcranColis() (+33 more)
 
 ### Community 4 - "app.js"
-Cohesion: 0.08
-Nodes (29): createApp(), otpLimiter, publicPostLimiter, uploadLimiter, config, asyncHandler(), errorHandler(), router (+21 more)
+Cohesion: 0.10
+Nodes (19): createApp(), makeLimiter(), otpLimiter, publicPostLimiter, uploadLimiter, asyncHandler(), errorHandler(), notificationsRouter (+11 more)
 
 ### Community 5 - "types.ts"
 Cohesion: 0.05
-Nodes (41): ALIAS_AEROPORT, AnnulationVehicule, CHAINE_COTE_EST, COMMISSION_PRIVE, COORDONNEES_VILLES, ETAPES_COLIS, GROUPES_NET_USD, HUBS_RIDES (+33 more)
+Nodes (50): ALIAS_AEROPORT, AnnulationVehicule, CHAINE_COTE_EST, COMMISSION_PRIVE, COORDONNEES_VILLES, ETAPES_COLIS, GROUPES_NET_USD, HUBS_RIDES (+42 more)
 
 ### Community 6 - "api.ts"
-Cohesion: 0.04
-Nodes (79): EcranHotelInscription(), EcranOtp(), AbonnementPush, abonnerAlertes(), abonnerAlertesChauffeur(), AnnoncePartageEquipe, AnnulationPlace, annulerAttentePartage() (+71 more)
+Cohesion: 0.05
+Nodes (65): EcranScanner(), estQrColis(), LayoutRacine(), AbonnementPush, abonnerAlertes(), abonnerAlertesChauffeur(), AnnulationPlace, annulerAttentePartage() (+57 more)
 
 ### Community 7 - "expo"
 Cohesion: 0.05
 Nodes (39): backgroundColor, backgroundImage, foregroundImage, monochromeImage, adaptiveIcon, package, predictiveBackGestureEnabled, projectId (+31 more)
 
 ### Community 8 - "i18n.tsx"
-Cohesion: 0.13
-Nodes (20): styles, styles, PRESENTATION_TAILLES, styles, Selecteur(), styles, EncartInfo(), Photo (+12 more)
+Cohesion: 0.09
+Nodes (28): EcranAnnonces(), styles, styles, EcranNouveauColis(), PRESENTATION_TAILLES, styles, LOCALES, styles (+20 more)
 
 ### Community 9 - "CarteTrajet.web.tsx"
-Cohesion: 0.29
-Nodes (9): CarteTrajet(), ProprietesCarteTrajet, CarteTrajet(), chargerLeaflet(), Leaflet, IleDeZanzibar(), coordonneesVille(), kmEntrePoints() (+1 more)
+Cohesion: 0.21
+Nodes (14): styles, styles, CarteTrajet(), ProprietesCarteTrajet, CarteTrajet(), chargerLeaflet(), Leaflet, styles (+6 more)
 
 ### Community 10 - "backend/package.json"
 Cohesion: 0.05
 Nodes (36): @aws-sdk/client-s3, dependencies, @aws-sdk/client-s3, dotenv, express, express-rate-limit, jsonwebtoken, multer (+28 more)
 
-### Community 11 - "drivers.js"
-Cohesion: 0.24
-Nodes (14): createDriverSchema, documentsSchema, motDePasseSchema, photoSchema, searchSchema, verifySchema, alerterCompteValide(), alerterCourseAnnulee() (+6 more)
+### Community 11 - "paypalService.js"
+Cohesion: 0.36
+Nodes (10): base(), BASES, capturePaypalOrder(), circuitPaiementUsd(), createPaypalOrder(), getAccessToken(), hasPaypalMe(), isPaypalConfigured() (+2 more)
 
 ### Community 12 - "001_init.sql"
 Cohesion: 0.10
@@ -210,96 +208,92 @@ Cohesion: 0.11
 Nodes (24): bruit(), Canopee(), ColobeVoyageur(), Espece, Souffle(), Bande(), BasCote(), bruit() (+16 more)
 
 ### Community 14 - "useT"
-Cohesion: 0.13
-Nodes (21): EcranAccueil(), ProfilAccueil, styles, LayoutAuth(), styles, styles, Colobe(), ConsigneJozani() (+13 more)
+Cohesion: 0.08
+Nodes (56): EcranAccueil(), ProfilAccueil, styles, EcranClient(), styles, EcranHotelConnexion(), EcranHotelInscription(), styles (+48 more)
 
-### Community 15 - "moyenPaiement.js"
-Cohesion: 0.27
-Nodes (12): enShillings(), MOYEN_CARTE, MOYEN_CREDIT, MOYEN_MOBILE, moyenParDefaut(), moyensPour(), reglement(), round2() (+4 more)
+### Community 15 - "payments.js"
+Cohesion: 0.14
+Nodes (22): config, withTransaction(), appliquerConfirmation(), moyenSchema, notifierPaiementConfirme(), enShillings(), libelleMoyen(), MOYEN_CARTE (+14 more)
 
 ### Community 16 - "theme.ts"
 Cohesion: 0.07
-Nodes (29): decalageSolaire(), positionSolaire, SECTEUR_ZENITH, secteurSolaire(), appliquerSecteur(), BENTO, ContextePeau, ContexteSoleil (+21 more)
+Nodes (26): Etoiles(), styles, BENTO, ContextePeau, ContexteSoleil, couleursStatutColis, couleursStatutTrajet, ESTRAN (+18 more)
 
 ### Community 17 - "EcranEquipe"
 Cohesion: 0.09
-Nodes (31): EcranEquipe(), libelleChauffeur(), EcranLocationOnglet(), ecouterAlertes(), assignerChauffeur(), bannirClient(), commeListe(), confirmerPaiementEquipe() (+23 more)
+Nodes (30): EcranEquipe(), assignerChauffeur(), bannirClient(), commeListe(), confirmerPaiementEquipe(), crediterDemandeRecharge(), fileRechargesCredit(), listerAnnoncesPartageEquipe() (+22 more)
 
-### Community 18 - "champ"
-Cohesion: 0.18
-Nodes (22): EcranAnnonce(), EcranClient(), EcranHotelConnexion(), EcranPro(), EcranColisDispo(), styles, EcranDetailCourse(), EcranCompteChauffeur() (+14 more)
+### Community 18 - "BoiteDialogue.tsx"
+Cohesion: 0.31
+Nodes (7): FournisseurDialogues(), styles, reparerAlertesWeb(), DemandeDialogue, Ecouteur, ouvrirDialogue(), sabonnerAuxDialogues()
 
 ### Community 19 - "rides.js"
-Cohesion: 0.16
-Nodes (24): makeLimiter(), withTransaction(), isAdmin(), requireAdmin(), appliquerConfirmation(), moyenSchema, notifierPaiementConfirme(), annulerReservationsImpayees() (+16 more)
+Cohesion: 0.24
+Nodes (13): isAdmin(), requireAdmin(), baseFacturePlace(), createRideSchema, PRICING_TZS, pricingPourClient(), rideUsd(), rideWhatsappLink() (+5 more)
 
-### Community 20 - "entretienService.js"
-Cohesion: 0.31
-Nodes (7): cloturerRidesPartis(), app, messageAlerte(), signalerCoursesFigees(), demarrerEntretienAutomatique(), passageEntretien(), passageEntretienInterne()
+### Community 20 - "notifierEquipe"
+Cohesion: 0.24
+Nodes (11): verifierExpirationsDocuments(), annulerReservationsImpayees(), cloturerRidesPartis(), signalerAttentesCorrespondantes(), validerParrainageApresCourse(), messageAlerte(), signalerCoursesFigees(), notifierEquipe() (+3 more)
 
-### Community 21 - "hotels.js"
+### Community 21 - "drivers.js"
 Cohesion: 0.09
-Nodes (34): authRouter, phoneSchema, refuserSiOtpFerme(), usernameSchema, sanitizeDriver(), alerteDemandeRecharge(), assertHotelVerified(), COURSES_PAR_BON (+26 more)
+Nodes (31): authRouter, phoneSchema, refuserSiOtpFerme(), usernameSchema, createDriverSchema, documentsSchema, motDePasseSchema, photoSchema (+23 more)
 
-### Community 22 - "ui.tsx"
-Cohesion: 0.11
-Nodes (31): styles, styles, styles, CLES_PROFIL, Mode, styles, styles, styles (+23 more)
+### Community 22 - "trip/[id].tsx"
+Cohesion: 0.14
+Nodes (33): EcranAnnonce(), styles, styles, EcranLocation(), styles, EcranDetailColis(), styles, EcranPlace() (+25 more)
 
 ### Community 23 - "query"
-Cohesion: 0.18
-Nodes (21): query(), notFound(), verifierExpirationsDocuments(), abonnementSchema, chauffeurDuJeton(), getPackage(), getPayment(), isPayer() (+13 more)
+Cohesion: 0.13
+Nodes (26): query(), notFound(), abonnementSchema, chauffeurDuJeton(), getPackage(), getPayment(), isPayer(), getVehicle() (+18 more)
 
 ### Community 24 - "rentalVehicles.js"
-Cohesion: 0.14
-Nodes (10): bookSchema, champsVehicule, COLONNES_SQL, createVehicleSchema, getPhotos(), RENTAL_CATEGORIES, updateVehicleSchema, REMBOURSEMENT_MOITIE_HEURES (+2 more)
+Cohesion: 0.11
+Nodes (16): bookSchema, champsVehicule, COLONNES_SQL, createVehicleSchema, getPhotos(), RENTAL_CATEGORIES, router, updateVehicleSchema (+8 more)
 
-### Community 25 - "tarifPriveItineraire"
-Cohesion: 0.28
-Nodes (9): baseUsdItineraire(), dansLeGroupe(), estAeroportVille(), forfaitZanzigoTrajetUsd(), netChaineCoteEst(), netChauffeurPriveUsd(), supplementUsd(), tarifPriveItineraire() (+1 more)
+### Community 25 - "normaliserLieu"
+Cohesion: 0.21
+Nodes (14): baseUsdItineraire(), dansLeGroupe(), estAeroportVille(), estTarifDeTerrain(), forfaitZanzigoTrajetUsd(), kmEntreVilles(), netChaineCoteEst(), netChauffeurPriveUsd() (+6 more)
 
-### Community 26 - "HttpError"
-Cohesion: 0.14
-Nodes (23): HttpError, invalidStatus(), requireAuth(), ALLOWED_MIME_TYPES, upload, uploadsRouter, uploadUnFichier(), base() (+15 more)
+### Community 26 - "packages.js"
+Cohesion: 0.11
+Nodes (27): HttpError, invalidStatus(), requireAuth(), alerteDemandeRecharge(), assertHotelVerified(), COURSES_PAR_BON, createHotelSchema, creditSchema (+19 more)
 
 ### Community 27 - "dependencies"
 Cohesion: 0.13
 Nodes (15): expo, expo-blur, expo-linking, expo-router, expo-splash-screen, expo-system-ui, dependencies, expo (+7 more)
 
-### Community 28 - "EcranAnnonces"
-Cohesion: 0.15
-Nodes (14): EcranAnnonces(), lieuxRides(), netPlacePartageeTzs(), netPlacePartageeUsd(), normaliserVille(), partagePossibleItineraire(), tarifLocalMiniTzs(), tarifPlacePartagee() (+6 more)
+### Community 28 - "app/_layout.tsx"
+Cohesion: 0.25
+Nodes (8): CadreApplication(), PEAUX_CLAIRES, PilesNavigation(), RetourEntete(), THEME_CLAIR, THEME_SOMBRE, FICHIERS_POLICES, usePeau()
 
 ### Community 29 - "trips.js"
-Cohesion: 0.09
-Nodes (32): createPackageSchema, router, sansSecretsChauffeur(), scanSchema, assignDriverSchema, avecAnnonceGroupe(), courseSansIdentiteClient(), createTripSchema (+24 more)
+Cohesion: 0.11
+Nodes (32): sansSecretsChauffeur(), assignDriverSchema, avecAnnonceGroupe(), courseSansIdentiteClient(), createTripSchema, positionSchema, purgeSchema, ratingSchema (+24 more)
 
 ### Community 30 - "EcranFicheVehicule"
-Cohesion: 0.14
-Nodes (14): EcranFicheVehiculeLocation(), EcranFicheVehicule(), FORMAT_DATE_OK(), EcranVerifications(), ajouterPhotoVehicule(), archiverVehicule(), majVehicule(), obtenirVehicule() (+6 more)
+Cohesion: 0.17
+Nodes (12): EcranFicheVehicule(), FORMAT_DATE_OK(), EcranVerifications(), ajouterPhotoVehicule(), archiverVehicule(), majVehicule(), obtenirVehicule(), supprimerPhotoVehicule() (+4 more)
 
-### Community 31 - "app/_layout.tsx"
-Cohesion: 0.06
-Nodes (40): CadreApplication(), LayoutRacine(), PEAUX_CLAIRES, PilesNavigation(), RetourEntete(), THEME_CLAIR, THEME_SOMBRE, FournisseurDialogues() (+32 more)
+### Community 31 - "FondPlage.tsx"
+Cohesion: 0.18
+Nodes (13): AMPLITUDES, bruit(), cheminBande(), EcumeDeZanzibar(), EstranDeZanzibar(), GRAINES, HALOS, HALOS_GIROFLE (+5 more)
 
-### Community 32 - "Bouton"
-Cohesion: 0.26
-Nodes (10): styles, styles, ChoixDocument(), decoder(), marquerEnvoi(), preparerFichierWeb(), SecoursNatif(), styles (+2 more)
+### Community 32 - "preferencePeau.tsx"
+Cohesion: 0.28
+Nodes (8): Contexte, ContextePreference, FournisseurPreferencePeau(), peauValide(), PEAUX_AU_CHOIX, appliquerPeau(), FournisseurPeau(), NomPeau
 
 ### Community 33 - "reserver.tsx"
-Cohesion: 0.13
-Nodes (21): EcranReserver(), ModeCourse, IconeCategorie, ICONES, NomMci, formaterDateChoisie(), isoDepuisDateHeure(), JOURS_RESERVATION_AVANCE (+13 more)
+Cohesion: 0.14
+Nodes (18): EcranReserver(), ModeCourse, CreationUtilisateur, creerAttentePartage(), creerTrajet(), creerTrajetHotel(), formaterDateChoisie(), isoDepuisDateHeure() (+10 more)
 
 ### Community 34 - "CarteAlertes.tsx"
-Cohesion: 0.33
-Nodes (11): CarteAlertes(), activerAlertes(), alertesPossibles(), CibleAlertes, cleEnOctets(), desactiverAlertes(), etatAlertes, surIphoneSansInstallation() (+3 more)
+Cohesion: 0.30
+Nodes (12): CarteAlertes(), activerAlertes(), alertesPossibles(), CibleAlertes, cleEnOctets(), desactiverAlertes(), ecouterAlertes(), etatAlertes (+4 more)
 
 ### Community 35 - "include"
 Cohesion: 0.15
 Nodes (12): compilerOptions, paths, strict, extends, include, @/assets/*, ./assets/*, expo-env.d.ts (+4 more)
-
-### Community 36 - "expo-router"
-Cohesion: 0.19
-Nodes (10): styles, icone(), LayoutChauffeur(), icone(), LayoutOnglets(), MarqueEntete(), useRetourSiDeconnecte(), StatutRide (+2 more)
 
 ### Community 37 - "imports-natifs.test.js"
 Cohesion: 0.17
@@ -309,25 +303,25 @@ Nodes (7): CONTRAT, fichiers, ICI, MOBILE, requireMobile, SRC, ts
 Cohesion: 0.20
 Nodes (10): canalLineaire(), contraste(), COURANT, GRAS, luminance(), NOMS_DE_PEAU, PALETTES, preference (+2 more)
 
-### Community 39 - "colisLocal.ts"
-Cohesion: 0.36
-Nodes (10): ajouter(), ajouterColisLocal(), ajouterCourseLocale(), cle(), effacerColisMasques(), lister(), listerColisLocaux(), listerColisMasques() (+2 more)
+### Community 39 - "lireStockage"
+Cohesion: 0.26
+Nodes (14): ajouter(), ajouterColisLocal(), ajouterCourseLocale(), cle(), effacerColisMasques(), lister(), listerColisLocaux(), listerColisMasques() (+6 more)
 
 ### Community 40 - "auth.tsx"
-Cohesion: 0.24
-Nodes (12): definirJeton(), obtenirChauffeur(), obtenirHotel(), obtenirUtilisateur(), AuthContext, AuthProvider(), ContexteAuth, verifierSession() (+4 more)
+Cohesion: 0.13
+Nodes (20): EcranHotelEquipe(), EcranProfil(), initiales(), convertirBonEnCredit(), crediterHotel(), definirJeton(), demanderRechargeCredit(), demandesRechargeHotel() (+12 more)
 
-### Community 41 - "formaterMontant"
-Cohesion: 0.24
-Nodes (14): EcranLocation(), EcranDetailColis(), EcranPlace(), EcranTrajet(), choisirMoyenPaiement(), mesReservationsPlaces(), obtenirTrajet(), libelleTypeTrajet() (+6 more)
+### Community 41 - "EcranTrajet"
+Cohesion: 0.18
+Nodes (11): EcranTrajet(), annulerTrajet(), confirmerPaiement(), noterTrajet(), obtenirTrajet(), partagerPointRendezVous(), payerTrajet(), payerTrajetAvecCredit() (+3 more)
 
 ### Community 42 - "mobile/package.json"
 Cohesion: 0.20
 Nodes (9): devDependencies, @types/react, typescript, main, name, private, version, @types/react (+1 more)
 
 ### Community 43 - "CalendrierDate.tsx"
-Cohesion: 0.43
-Nodes (6): aMinuit(), CalendrierDate(), LOCALES, memeMois(), styles, ymd()
+Cohesion: 0.36
+Nodes (7): aMinuit(), CalendrierDate(), LOCALES, memeMois(), styles, ymd(), Langue
 
 ### Community 44 - "smoke-test.js"
 Cohesion: 0.36
@@ -337,29 +331,29 @@ Nodes (8): ADMIN, authenticate(), bearer(), call(), check(), main(), PHONES, run
 Cohesion: 0.18
 Nodes (11): 1. Vue d'ensemble de l'architecture, 2. Stack technique retenue, 3. Modèle de données, 4. Référence API, 5. Flux métier implémentés, 7. Sécurité et conformité — à ajouter avant la production, 8. Ce qui a été construit et vérifié, 9. Prochaines étapes suggérées (+3 more)
 
-### Community 46 - "RidesPartages.tsx"
-Cohesion: 0.18
-Nodes (12): heureDepart(), libelleJour(), LOCALES, RidesPartages(), styles, CreationUtilisateur, listerRides(), FonctionT (+4 more)
+### Community 46 - "RidesPartages"
+Cohesion: 0.33
+Nodes (6): heureDepart(), libelleJour(), RidesPartages(), lieuxRides(), listerRides(), reserverPlacesRide()
 
 ### Community 47 - "EcranTelephone"
 Cohesion: 0.33
 Nodes (6): EcranTelephone(), normaliserTelephone(), connexionChauffeur(), connexionClient(), creerCompteClient(), inscriptionChauffeur()
 
-### Community 48 - "EcranScanner"
-Cohesion: 0.33
-Nodes (6): EcranScanner(), estQrColis(), colisParQr(), livrerColis(), prochaineActionColis(), recupererColis()
+### Community 48 - "soleil.ts"
+Cohesion: 0.25
+Nodes (7): decalageSolaire(), positionSolaire, SECTEUR_ZENITH, secteurSolaire(), appliquerSecteur(), FournisseurSoleil(), reliefOriente()
 
 ### Community 49 - "scripts"
 Cohesion: 0.29
 Nodes (7): scripts, android, ios, lint, reset-project, start, web
 
-### Community 50 - "EcranTaxiEquipe"
-Cohesion: 0.33
-Nodes (6): EcranTaxiEquipe(), definirMotDePasseChauffeur(), listerCoursesChauffeur(), majDocumentsChauffeur(), radierDefinitivement(), retirerPhotoChauffeur()
+### Community 50 - "definirCleEquipe"
+Cohesion: 0.15
+Nodes (13): EcranTaxiEquipe(), EcranNouveauVehicule(), FORMAT_DATE_OK(), EcranVehicules(), normaliser(), creerVehicule(), definirCleEquipe(), definirMotDePasseChauffeur() (+5 more)
 
 ### Community 51 - "equipe.tsx"
-Cohesion: 0.10
-Nodes (31): styles, MOYEN_RECHARGE, SectionEquipe, styles, styles, styles, CartePosition(), lienOpenStreetMap() (+23 more)
+Cohesion: 0.13
+Nodes (23): libelleChauffeur(), MOYEN_RECHARGE, SectionEquipe, styles, styles, styles, CartePosition(), lienOpenStreetMap() (+15 more)
 
 ### Community 52 - "mise-a-jour.js"
 Cohesion: 0.60
@@ -394,20 +388,16 @@ Cohesion: 0.22
 Nodes (9): Authentification, Chauffeurs, Colis, Hôtels, Paiements, Référence API, Trajets, Upload (+1 more)
 
 ### Community 96 - "position.ts"
-Cohesion: 0.47
-Nodes (5): Position, positionActuelle(), positionNative(), positionWeb(), ResultatPosition
+Cohesion: 0.38
+Nodes (6): lienNavigation(), Position, positionActuelle(), positionNative(), positionWeb(), ResultatPosition
 
 ### Community 131 - "Étapes de déploiement"
 Cohesion: 0.22
 Nodes (8): 1. Provisionner PostgreSQL 16 managé, 2. Définir les variables d'environnement, 3. Migrations à chaque déploiement, 4. Stockage des fichiers : Cloudflare R2 recommandé, Déploiement zanziGo (backend), Options d'hébergement, Sécurité — rappels, Étapes de déploiement
 
-### Community 132 - "policeMontant"
-Cohesion: 0.40
-Nodes (5): styles, styles, styles, styles, policeMontant()
-
-### Community 133 - "EcranHotelEquipe"
+### Community 132 - "Devise"
 Cohesion: 0.67
-Nodes (3): EcranHotelEquipe(), listerColisHotel(), listerTrajetsHotel()
+Nodes (3): AnnoncePartageEquipe, DonneesVehicule, Devise
 
 ### Community 134 - "README.md"
 Cohesion: 0.33
@@ -445,17 +435,17 @@ Nodes (3): CreationTrajet, CreationTrajetHotel, TypeTrajet
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `expo-router` connect `expo-router` to `Bouton`, `reserver.tsx`, `trip/[id].tsx`, `courses.tsx`, `expo`, `i18n.tsx`, `auth.tsx`, `useT`, `RidesPartages.tsx`, `champ`, `equipe.tsx`, `ui.tsx`, `app/_layout.tsx`?**
-  _High betweenness centrality (0.017) - this node is a cross-community bridge._
-- **Why does `plugins` connect `expo` to `expo-router`?**
+- **Why does `expo-router` connect `useT` to `reserver.tsx`, `espaces`, `ui.tsx`, `choix.tsx`, `expo`, `i18n.tsx`, `auth.tsx`, `equipe.tsx`, `trip/[id].tsx`, `app/_layout.tsx`?**
+  _High betweenness centrality (0.016) - this node is a cross-community bridge._
+- **Why does `plugins` connect `expo` to `useT`?**
   _High betweenness centrality (0.014) - this node is a cross-community bridge._
 - **What connects `otp_codes`, `uploaded_files`, `driver_signups` to the rest of the system?**
   _449 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `authHeaders` be split into smaller, more focused modules?**
-  _Cohesion score 0.0535802225943071 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.0565262076053443 - nodes in this community are weakly interconnected._
 - **Should `pricingService.js` be split into smaller, more focused modules?**
-  _Cohesion score 0.05555555555555555 - nodes in this community are weakly interconnected._
-- **Should `trip/[id].tsx` be split into smaller, more focused modules?**
-  _Cohesion score 0.13240418118466898 - nodes in this community are weakly interconnected._
-- **Should `courses.tsx` be split into smaller, more focused modules?**
-  _Cohesion score 0.14516129032258066 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.055534987041836355 - nodes in this community are weakly interconnected._
+- **Should `espaces` be split into smaller, more focused modules?**
+  _Cohesion score 0.09250693802035152 - nodes in this community are weakly interconnected._
+- **Should `ui.tsx` be split into smaller, more focused modules?**
+  _Cohesion score 0.1196808510638298 - nodes in this community are weakly interconnected._

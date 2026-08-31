@@ -1,16 +1,16 @@
 # Graph Report - elsniper  (2026-08-31)
 
 ## Corpus Check
-- 250 files · ~333,873 words
+- 251 files · ~334,561 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1597 nodes · 4799 edges · 142 communities (71 shown, 37 thin omitted)
+- 1598 nodes · 4804 edges · 143 communities (71 shown, 37 thin omitted)
 - Extraction: 97% EXTRACTED · 3% INFERRED · 0% AMBIGUOUS · INFERRED: 140 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `f1c38ce7`
+- Built from commit: `c4630d13`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -151,7 +151,7 @@
 ## Import Cycles
 - None detected.
 
-## Communities (142 total, 37 thin omitted)
+## Communities (143 total, 37 thin omitted)
 
 ### Community 0 - "authHeaders"
 Cohesion: 0.05
@@ -163,7 +163,7 @@ Nodes (63): round2(), sansPrixDePlace(), valeurReservationPlace(), AEROPORT, ANC
 
 ### Community 2 - "trip/[id].tsx"
 Cohesion: 0.13
-Nodes (32): styles, styles, FiltreCategorie, Onglet, styles, styles, styles, TON_STATUT (+24 more)
+Nodes (31): styles, FiltreCategorie, Onglet, styles, styles, styles, TON_STATUT, EcranNouveauVehicule() (+23 more)
 
 ### Community 3 - "courses.tsx"
 Cohesion: 0.15
@@ -187,7 +187,7 @@ Nodes (39): backgroundColor, backgroundImage, foregroundImage, monochromeImage, 
 
 ### Community 8 - "i18n.tsx"
 Cohesion: 0.13
-Nodes (19): styles, styles, PRESENTATION_TAILLES, styles, Selecteur(), styles, EncartInfo(), CategorieVehicule (+11 more)
+Nodes (20): styles, styles, PRESENTATION_TAILLES, styles, Selecteur(), styles, EncartInfo(), Photo (+12 more)
 
 ### Community 9 - "CarteTrajet.web.tsx"
 Cohesion: 0.29
@@ -210,8 +210,8 @@ Cohesion: 0.11
 Nodes (24): bruit(), Canopee(), ColobeVoyageur(), Espece, Souffle(), Bande(), BasCote(), bruit() (+16 more)
 
 ### Community 14 - "useT"
-Cohesion: 0.11
-Nodes (24): EcranAccueil(), ProfilAccueil, styles, LayoutAuth(), styles, styles, Colobe(), ConsigneJozani() (+16 more)
+Cohesion: 0.13
+Nodes (21): EcranAccueil(), ProfilAccueil, styles, LayoutAuth(), styles, styles, Colobe(), ConsigneJozani() (+13 more)
 
 ### Community 15 - "moyenPaiement.js"
 Cohesion: 0.27
@@ -298,8 +298,8 @@ Cohesion: 0.15
 Nodes (12): compilerOptions, paths, strict, extends, include, @/assets/*, ./assets/*, expo-env.d.ts (+4 more)
 
 ### Community 36 - "expo-router"
-Cohesion: 0.29
-Nodes (7): icone(), LayoutChauffeur(), icone(), LayoutOnglets(), MarqueEntete(), useRetourSiDeconnecte(), expo-router
+Cohesion: 0.19
+Nodes (10): styles, icone(), LayoutChauffeur(), icone(), LayoutOnglets(), MarqueEntete(), useRetourSiDeconnecte(), StatutRide (+2 more)
 
 ### Community 37 - "imports-natifs.test.js"
 Cohesion: 0.17
@@ -439,7 +439,7 @@ Nodes (3): CreationTrajet, CreationTrajetHotel, TypeTrajet
 
 ## Knowledge Gaps
 - **449 isolated node(s):** `otp_codes`, `uploaded_files`, `driver_signups`, `push_subscriptions`, `name` (+444 more)
-  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 560 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 561 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
 - **37 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
@@ -456,6 +456,6 @@ _Questions this graph is uniquely positioned to answer:_
 - **Should `pricingService.js` be split into smaller, more focused modules?**
   _Cohesion score 0.05555555555555555 - nodes in this community are weakly interconnected._
 - **Should `trip/[id].tsx` be split into smaller, more focused modules?**
-  _Cohesion score 0.13002114164904863 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.13240418118466898 - nodes in this community are weakly interconnected._
 - **Should `courses.tsx` be split into smaller, more focused modules?**
   _Cohesion score 0.14516129032258066 - nodes in this community are weakly interconnected._
