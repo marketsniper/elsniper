@@ -1058,12 +1058,15 @@ const CHAINES = {
     it: 'I colobi rossi attraversano questa strada. Le auto sono la loro prima causa di morte: prima dei dossi, una scimmia veniva uccisa ogni due o tre settimane. Da allora le collisioni si sono dimezzate. Rispetta i dossi.',
     de: 'Rote Stummelaffen überqueren diese Straße. Autos sind ihre häufigste Todesursache: vor den Bodenschwellen wurde alle zwei bis drei Wochen ein Affe getötet. Seither haben sich die Kollisionen halbiert. Beachten Sie die Bodenschwellen.',
   },
-  ile_titre: {
-    fr: 'Toute l’île',
-    en: 'The whole island',
-    sw: 'Kisiwa chote',
-    it: 'Tutta l’isola',
-    de: 'Die ganze Insel',
+  // LE SLOGAN de l'accueil (demande du client : « déplacez-vous easy sur
+  // ZANZIBAR ») — il coiffe le bandeau de l'île, premier regard de l'écran
+  // Réserver. « easy » voyage tel quel dans les langues qui l'adoptent.
+  accueil_slogan: {
+    fr: 'Déplacez-vous easy sur Zanzibar',
+    en: 'Move around Zanzibar, easy',
+    sw: 'Zunguka Zanzibar kwa urahisi',
+    it: 'Muoviti easy per Zanzibar',
+    de: 'Easy unterwegs auf Sansibar',
   },
   ile_legende: {
     fr: '{villes} villes desservies, du nord de Nungwi à la pointe de Kizimkazi.',

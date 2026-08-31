@@ -72,7 +72,9 @@ export function IleDeZanzibar() {
         />
       </Animated.View>
       <View style={styles.textes}>
-        <Text style={styles.titre}>{t('ile_titre')}</Text>
+        {/* LE SLOGAN, à la place d'un simple titre : c'est la première ligne
+            que lit un client connecté — elle doit donner envie de partir. */}
+        <Text style={styles.titre}>{t('accueil_slogan')}</Text>
         <Text style={styles.legende}>
           {t('ile_legende', { villes: String(nombreVillesDesservies()) })}
         </Text>
@@ -110,9 +112,12 @@ const styles = stylesReactifs(() => ({
     flex: 1,
     gap: 3,
   },
+  // Le slogan tient sur deux lignes à côté de l'île : un cran sous les 22 px
+  // de l'ancien titre court, sinon il mangeait la légende sur petit écran.
   titre: {
     fontFamily: policeMontant(),
-    fontSize: 22,
+    fontSize: 20,
+    lineHeight: 25,
     color: couleurs.encre,
   },
   legende: {
