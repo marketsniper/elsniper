@@ -3043,6 +3043,13 @@ const CHAINES = {
   },
   commun_retour: { fr: 'Retour', en: 'Back', sw: 'Rudi' , it: 'Indietro', de: 'Zurück' },
   commun_rafraichir: { fr: 'Rafraîchir', en: 'Refresh', sw: 'Onyesha upya', it: 'Aggiorna', de: 'Aktualisieren' },
+  photos_ouvrir: {
+    fr: 'Voir la photo en grand',
+    en: 'View photo full screen',
+    sw: 'Ona picha kwa ukubwa',
+    it: 'Vedi la foto a schermo intero',
+    de: 'Foto in Großansicht öffnen',
+  },
   tel_intro_local: {
     fr: 'Votre numéro + un mot de passe de votre choix — pas de code à attendre.',
     en: 'Your number + a password of your choice — no code to wait for.',

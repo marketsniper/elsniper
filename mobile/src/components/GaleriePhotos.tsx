@@ -13,6 +13,7 @@ import React, { useState } from 'react';
 import { ActivityIndicator, Image, Pressable, Text, View } from 'react-native';
 
 import { ZoneFichier } from '@/components/ChoixDocument';
+import { VisionneusePhotos } from '@/components/VisionneusePhotos';
 import { api, ErreurApi } from '@/lib/api';
 import { useT } from '@/lib/i18n';
 import { couleurs, espaces, rayons, stylesReactifs } from '@/lib/theme';
@@ -39,6 +40,9 @@ export function GaleriePhotos({
   const [envoiEnCours, setEnvoiEnCours] = useState(false);
   const [suppressionEnCours, setSuppressionEnCours] = useState<string | null>(null);
   const [erreur, setErreur] = useState('');
+  // Vignette touchée = photo EN GRAND : l'équipe vérifie la qualité de ses
+  // clichés avant que le catalogue les montre aux clients.
+  const [photoOuverte, setPhotoOuverte] = useState<number | null>(null);
 
   const complet = photos.length >= max;
 
@@ -70,9 +74,16 @@ export function GaleriePhotos({
   return (
     <View style={styles.bloc}>
       <View style={styles.grille}>
-        {photos.map((photo) => (
+        {photos.map((photo, position) => (
           <View key={photo.id} style={styles.tuile}>
-            <Image source={{ uri: photo.url }} style={styles.image} resizeMode="cover" />
+            <Pressable
+              onPress={() => setPhotoOuverte(position)}
+              accessibilityRole="button"
+              accessibilityLabel={t('photos_ouvrir')}
+              style={styles.image}
+            >
+              <Image source={{ uri: photo.url }} style={styles.image} resizeMode="cover" />
+            </Pressable>
             {suppressionEnCours === photo.id ? (
               <View style={styles.voile}>
                 <ActivityIndicator size="small" color="#fff" />
@@ -109,6 +120,11 @@ export function GaleriePhotos({
           <Text style={styles.texteErreur}>{erreur}</Text>
         </View>
       )}
+      <VisionneusePhotos
+        photos={photos}
+        index={photoOuverte}
+        onFermer={() => setPhotoOuverte(null)}
+      />
     </View>
   );
 }

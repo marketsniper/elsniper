@@ -10,6 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { CalendrierDate } from '@/components/CalendrierDate';
 import { IconeCategorie } from '@/components/IconeCategorie';
+import { VisionneusePhotos } from '@/components/VisionneusePhotos';
 import {
   Badge,
   Bouton,
@@ -36,6 +37,8 @@ export default function EcranFicheVehiculeLocation() {
   const [vehicule, setVehicule] = useState<VehiculeLocation | null>(null);
   const [erreur, setErreur] = useState('');
   const [introuvable, setIntrouvable] = useState(false);
+  // Photo ouverte en grand (position dans la galerie), ou null.
+  const [photoOuverte, setPhotoOuverte] = useState<number | null>(null);
 
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -107,11 +110,31 @@ export default function EcranFicheVehiculeLocation() {
     <Ecran fond="palmiers" onRefresh={charger}>
       {vehicule.photos.length > 0 && (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.galerie}>
-          {vehicule.photos.map((photo) => (
-            <Image key={photo.id} source={{ uri: photo.url }} style={styles.photo} resizeMode="cover" />
+          {/* Chaque photo S'OUVRE EN GRAND (demande du client) : la vignette
+              du ruban ne montre qu'un cadrage — le plein écran montre le
+              véhicule. La petite loupe dit que ça se touche. */}
+          {vehicule.photos.map((photo, position) => (
+            <Pressable
+              key={photo.id}
+              onPress={() => setPhotoOuverte(position)}
+              accessibilityRole="button"
+              accessibilityLabel={t('photos_ouvrir')}
+              style={({ pressed }) => [styles.cadrePhoto, pressed && { opacity: 0.85 }]}
+            >
+              <Image source={{ uri: photo.url }} style={styles.photo} resizeMode="cover" />
+              <View style={styles.loupe}>
+                <Ionicons name="expand-outline" size={14} color="#FFFFFF" />
+              </View>
+            </Pressable>
           ))}
         </ScrollView>
       )}
+      <VisionneusePhotos
+        photos={vehicule.photos}
+        index={photoOuverte}
+        titre={`${vehicule.make} ${vehicule.model}`}
+        onFermer={() => setPhotoOuverte(null)}
+      />
 
       <Carte>
         <View style={styles.enTete}>
@@ -225,12 +248,24 @@ export default function EcranFicheVehiculeLocation() {
 
 const styles = stylesReactifs(() => ({
   galerie: { marginBottom: espaces.s },
+  cadrePhoto: { marginRight: espaces.s },
   photo: {
     width: 260,
     height: 180,
     borderRadius: rayons.carte,
-    marginRight: espaces.s,
     backgroundColor: couleurs.surface,
+  },
+  // La loupe en coin : l'indice que la vignette s'ouvre en grand.
+  loupe: {
+    position: 'absolute',
+    right: espaces.s,
+    bottom: espaces.s,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: 'rgba(4, 8, 6, 0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   enTete: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: espaces.m },
   ligneCategorie: { flexDirection: 'row', alignItems: 'center', gap: espaces.xs },
