@@ -6,6 +6,7 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import { Alert, Linking, Text, View } from 'react-native';
 
+import { CaseApplePay } from '@/components/CaseApplePay';
 import {
   Badge,
   Bouton,
@@ -203,6 +204,7 @@ export default function EcranLocation() {
                 charge={moyenEnCours === 'mobile'}
                 desactive={moyenEnCours !== null && moyenEnCours !== 'mobile'}
               />
+              <CaseApplePay />
             </>
           ) : (
             <Bouton

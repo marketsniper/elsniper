@@ -1072,7 +1072,73 @@ const COORDONNEES_VILLES: Record<string, [number, number]> = {
   kizimkazi: [-6.4544, 39.4728],
   fumba: [-6.3148, 39.2848],
 };
-const DETOUR_ROUTIER = 1.35;
+const DETOUR_ROUTIER = 1.35; // repli SEULEMENT : lieu absent du graphe routier
+
+// ─── LE GRAPHE ROUTIER D'UNGUJA — miroir EXACT du serveur ──────────────────
+// (backend/src/services/pricingService.js, TRONCONS_ROUTIERS : les deux
+// listes bougent ENSEMBLE, sinon le client voit un prix et le serveur en
+// fige un autre.) Fin du vol d'oiseau : chaque arête est un tronçon réel de
+// route, la distance est le plus court chemin — la baie de Chwaka se
+// contourne enfin (Michamvi ↔ Chwaka : ~44 km par la route, pas 10).
+const TRONCONS_ROUTIERS: [string, string, number][] = [
+  ['stone town', 'stone town ferry', 1],
+  ['stone town', 'aéroport', 8],
+  ['stone town', 'fumba', 17],
+  ['aéroport', 'fumba', 12],
+  ['stone town', 'nungwi', 56], // la B1, par Mahonda et Kivunge
+  ['nungwi', 'kendwa', 4],
+  ['nungwi', 'matemwe', 24], // par Chaani — la jonction du nord-est
+  ['matemwe', 'pwani mchangani', 10],
+  ['pwani mchangani', 'kiwengwa', 8],
+  ['kiwengwa', 'pongwe', 9],
+  ['pongwe', 'uroa', 6],
+  ['uroa', 'chwaka', 9],
+  ['stone town', 'chwaka', 32], // la B2
+  ['stone town', 'kiwengwa', 40], // par Mahonda et Upenja
+  ['stone town', 'paje', 47], // par Tunguu et la forêt de Jozani
+  ['aéroport', 'paje', 42], // rejoint la route de Jozani par Tunguu
+  ['paje', 'bwejuu', 4],
+  ['bwejuu', 'dongwe', 6],
+  ['dongwe', 'michamvi', 4], // le bout de la presqu'île
+  ['paje', 'jambiani', 8],
+  ['jambiani', 'makunduchi', 14],
+  ['makunduchi', 'mtende', 7],
+  ['mtende', 'kizimkazi', 10],
+  ['paje', 'kizimkazi', 33], // par Kitogani
+  ['stone town', 'kizimkazi', 55], // par Tunguu et Kitogani
+  ['aéroport', 'kizimkazi', 50],
+  ['paje', 'chwaka', 30], // la piste intérieure par Ukongoroni — PAS la baie
+  ['fumba', 'kizimkazi', 48],
+];
+
+/** Toutes les graphies de l'aéroport pointent sur le même nœud du graphe. */
+function noeudRoutier(nom: string): string {
+  const n = normaliserLieu(nom);
+  return /a[ée]roport|airport/.test(n) ? 'aéroport' : n;
+}
+
+/** Plus courts chemins entre tous les nœuds, calculés une fois. */
+const KM_ROUTE: Map<string, Map<string, number>> = (() => {
+  const noeuds = [...new Set(TRONCONS_ROUTIERS.flatMap(([a, b]) => [a, b]))];
+  const dist = new Map(noeuds.map((n): [string, Map<string, number>] => [n, new Map([[n, 0]])]));
+  for (const [a, b, km] of TRONCONS_ROUTIERS) {
+    dist.get(a)!.set(b, Math.min(km, dist.get(a)!.get(b) ?? Infinity));
+    dist.get(b)!.set(a, Math.min(km, dist.get(b)!.get(a) ?? Infinity));
+  }
+  for (const k of noeuds) {
+    for (const i of noeuds) {
+      const dik = dist.get(i)!.get(k);
+      if (dik === undefined) continue;
+      for (const j of noeuds) {
+        const dkj = dist.get(k)!.get(j);
+        if (dkj === undefined) continue;
+        const dij = dist.get(i)!.get(j);
+        if (dij === undefined || dik + dkj < dij) dist.get(i)!.set(j, dik + dkj);
+      }
+    }
+  }
+  return dist;
+})();
 
 /**
  * PALIERS DE DISTANCE entre deux villages (hors hubs) — miroir exact de la
@@ -1099,8 +1165,11 @@ const HUBS_TARIFAIRES = new Set([
   'airport',
 ]);
 
-/** Kilomètres de route estimés entre deux villes connues, sinon null. */
+/** Kilomètres de ROUTE entre deux villes connues, sinon null : le plus
+ *  court chemin du graphe routier d'abord, le vol d'oiseau × 1,35 en repli. */
 export function kmEntreVilles(depart: string, arrivee: string): number | null {
+  const route = KM_ROUTE.get(noeudRoutier(depart))?.get(noeudRoutier(arrivee));
+  if (route !== undefined) return route;
   const a = COORDONNEES_VILLES[normaliserLieu(depart)];
   const b = COORDONNEES_VILLES[normaliserLieu(arrivee)];
   if (!a || !b) return null;

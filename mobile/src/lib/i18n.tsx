@@ -3049,6 +3049,22 @@ const CHAINES = {
   },
   commun_retour: { fr: 'Retour', en: 'Back', sw: 'Rudi' , it: 'Indietro', de: 'Zurück' },
   commun_rafraichir: { fr: 'Rafraîchir', en: 'Refresh', sw: 'Onyesha upya', it: 'Aggiorna', de: 'Aktualisieren' },
+  // La case Apple Pay (appareils Apple seulement) : annoncée, pas encore
+  // active — voir components/CaseApplePay.tsx.
+  paiement_applepay_badge: {
+    fr: 'bientôt',
+    en: 'soon',
+    sw: 'hivi karibuni',
+    it: 'presto',
+    de: 'bald',
+  },
+  paiement_applepay_bientot: {
+    fr: 'Bientôt disponible — en attendant, payez par carte bancaire.',
+    en: 'Coming soon — in the meantime, pay by card.',
+    sw: 'Inakuja hivi karibuni — kwa sasa, lipa kwa kadi.',
+    it: 'In arrivo — nel frattempo paga con carta.',
+    de: 'Bald verfügbar — zahlen Sie bis dahin mit Karte.',
+  },
   photos_ouvrir: {
     fr: 'Voir la photo en grand',
     en: 'View photo full screen',

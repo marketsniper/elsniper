@@ -11,7 +11,7 @@
 // étendu, sans laisser passer une erreur de saisie.
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { kmEntreVilles } from '../src/services/pricingService.js';
+import { kmVolOiseauEntreVilles } from '../src/services/pricingService.js';
 
 const REFERENCE = {
   Nungwi: [-5.7272, 39.2992],
@@ -31,9 +31,9 @@ const REFERENCE = {
   Fumba: [-6.3148, 39.2848],
 };
 
-// Distance à vol d'oiseau — kmEntreVilles applique un facteur de détour de
-// 1,35 qu'on retire ici pour comparer des points, pas des routes.
-const DETOUR = 1.35;
+// On sonde le VOL D'OISEAU brut du service (kmVolOiseauEntreVilles) : depuis
+// le graphe routier du 31/08/2026, kmEntreVilles rend des km de ROUTE — il
+// ne dit plus rien de la position des points, seule la table le dit.
 const TOLERANCE_KM = 2;
 
 describe('Coordonnées des villages', () => {
@@ -59,7 +59,7 @@ describe('Coordonnées des villages', () => {
     for (let i = 0; i < villes.length; i++) {
       for (let j = i + 1; j < villes.length; j++) {
         const attendu = distanceReference(villes[i], villes[j]);
-        const mesure = kmEntreVilles(villes[i], villes[j]) / DETOUR;
+        const mesure = kmVolOiseauEntreVilles(villes[i], villes[j]);
         assert.ok(
           Math.abs(mesure - attendu) <= TOLERANCE_KM,
           `${villes[i]} → ${villes[j]} : la table donne ${mesure.toFixed(1)} km, la réalité ${attendu.toFixed(1)} km`
@@ -94,7 +94,7 @@ describe('Coordonnées des villages', () => {
     // maillon fait quelques kilomètres, jamais trente.
     const chaine = ['Michamvi', 'Bwejuu', 'Paje', 'Jambiani', 'Makunduchi'];
     for (let i = 0; i < chaine.length - 1; i++) {
-      const km = kmEntreVilles(chaine[i], chaine[i + 1]) / DETOUR;
+      const km = kmVolOiseauEntreVilles(chaine[i], chaine[i + 1]);
       assert.ok(
         km > 1 && km < 25,
         `${chaine[i]} → ${chaine[i + 1]} : ${km.toFixed(1)} km à vol d'oiseau, invraisemblable`

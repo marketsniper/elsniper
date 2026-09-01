@@ -87,36 +87,47 @@ describe('Grille privée : le net du chauffeur décide, le forfait s’ajoute', 
   });
 
   it('la grille est COHÉRENTE : jamais plus cher pour aller moins loin', () => {
-    // La règle que le client vérifie sur une carte : deux plages, la plus
-    // proche ne coûte jamais plus. Deux absents assumés : Michamvi et Dongwe,
-    // dont le kilométrage à vol d'oiseau ment — la route passe par Paje.
-    const plages = [
-      'Fumba', 'Chwaka', 'Uroa', 'Pongwe', 'Kiwengwa', 'Pwani Mchangani',
-      'Matemwe', 'Paje', 'Bwejuu', 'Jambiani', 'Kizimkazi', 'Makunduchi',
-      'Mtende', 'Kendwa', 'Nungwi',
+    // La règle que le client vérifie sur une carte : deux plages de la MÊME
+    // route, la plus proche ne coûte jamais plus. La comparaison se fait PAR
+    // CORRIDOR depuis le graphe routier du 31/08/2026 : la grille est une
+    // politique par côte (le sud-est à 45 USD, le nord-est à 28-30) —
+    // comparer Paje (47 km, 45 USD) à Pwani Mchangani (48 km, 30 USD) ne
+    // dénonce aucune injustice, ils ne partagent pas un kilomètre de route.
+    const corridors = [
+      ['Chwaka', 'Uroa', 'Pongwe', 'Kiwengwa', 'Pwani Mchangani', 'Matemwe'],
+      ['Paje', 'Bwejuu', 'Jambiani', 'Kizimkazi', 'Makunduchi', 'Mtende'],
+      ['Kendwa', 'Nungwi'],
+      ['Fumba'],
     ];
-    const mesures = plages.map((v) => ({
-      ville: v,
-      km: kmEntreVilles('Stone Town', v),
-      prix: privateUsdForRoute('Stone Town', v),
-    }));
-    for (const a of mesures) {
-      for (const b of mesures) {
-        if (a.km >= b.km) continue;
+    for (const corridor of corridors) {
+      const mesures = corridor.map((v) => ({
+        ville: v,
+        km: kmEntreVilles('Stone Town', v),
+        prix: privateUsdForRoute('Stone Town', v),
+      }));
+      for (const a of mesures) {
+        for (const b of mesures) {
+          if (a.km >= b.km) continue;
+          // ±1 USD : l'arrondi des zones voisines (Kiwengwa 29, Uroa 28 à un
+          // kilomètre d'écart) n'est pas une dérive.
+          assert.ok(
+            a.prix <= b.prix + 1,
+            `${a.ville} (${a.km.toFixed(0)} km, ${a.prix} USD) coûte plus cher ` +
+              `que ${b.ville} (${b.km.toFixed(0)} km, ${b.prix} USD), pourtant plus loin`
+          );
+        }
+        // Et le prix au kilomètre DE ROUTE reste dans une bande : entre 0,55
+        // et 1,20 USD/km. (Recalibrée avec les km routiers, plus courts que
+        // l'ancien vol d'oiseau × 1,35 : Fumba, 17 km de route pour le prix
+        // plancher de zone, monte à 1,18 ; Pongwe, 47 km pour 28 USD,
+        // descend à 0,596.) C'est ce qui empêche la grille de re-dériver
+        // vers les 1,44 USD/km que payait la côte est.
+        const parKm = a.prix / a.km;
         assert.ok(
-          a.prix <= b.prix,
-          `${a.ville} (${a.km.toFixed(0)} km, ${a.prix} USD) coûte plus cher ` +
-            `que ${b.ville} (${b.km.toFixed(0)} km, ${b.prix} USD), pourtant plus loin`
+          parKm >= 0.55 && parKm <= 1.2,
+          `${a.ville} : ${parKm.toFixed(2)} USD/km, hors de la bande 0,55-1,20`
         );
       }
-      // Et le prix au kilomètre reste dans une bande serrée : entre 0,60 et
-      // 0,90 USD/km. C'est ce qui empêche la grille de re-dériver vers les
-      // 1,44 USD/km que payait la côte est.
-      const parKm = a.prix / a.km;
-      assert.ok(
-        parKm >= 0.6 && parKm <= 0.9,
-        `${a.ville} : ${parKm.toFixed(2)} USD/km, hors de la bande 0,60-0,90`
-      );
     }
   });
 
@@ -216,9 +227,10 @@ describe('Grille privée : le net du chauffeur décide, le forfait s’ajoute', 
 
   it('ce que la liste ne couvre pas retombe sur les kilomètres', () => {
     // Villages voisins de la côte nord-est : aucun groupe ne les nomme.
-    verifier('Uroa', 'Pongwe', 10, 13); // ≈ 7 km
-    verifier('Matemwe', 'Kiwengwa', 15, 19); // ≈ 22 km
-    verifier('Kiwengwa', 'Chwaka', 20, 25); // ≈ 27 km
+    // Kilomètres DE ROUTE depuis le graphe du 31/08/2026.
+    verifier('Uroa', 'Pongwe', 10, 13); // 6 km de route
+    verifier('Matemwe', 'Kiwengwa', 15, 19); // 18 km de route
+    verifier('Kiwengwa', 'Chwaka', 15, 19); // 24 km de route — un village d'écart au barème
   });
 
   it('la côte est se compte en VILLAGES traversés, pas en kilomètres', () => {

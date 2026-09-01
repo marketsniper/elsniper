@@ -8,6 +8,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Image, Linking, Pressable, Text, View } from 'react-native';
 
 import { CartePosition } from '@/components/CartePosition';
+import { CaseApplePay } from '@/components/CaseApplePay';
 import { Etoiles } from '@/components/Etoiles';
 import { TimelineStatut } from '@/components/TimelineStatut';
 import {
@@ -627,6 +628,8 @@ export default function EcranTrajet() {
                 </Text>
               )}
             </Pressable>
+            <View style={styles.filetMoyen} />
+            <CaseApplePay />
           </Carte>
         ) : (
           <Bouton

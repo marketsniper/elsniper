@@ -7,6 +7,7 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import { Alert, Linking, Text, View } from 'react-native';
 
+import { CaseApplePay } from '@/components/CaseApplePay';
 import { TimelineStatut } from '@/components/TimelineStatut';
 import {
   Badge,
@@ -265,6 +266,7 @@ export default function EcranPlace() {
                 desactive={moyenEnCours !== null && moyenEnCours !== 'mobile'}
               />
               <Text style={styles.detailMoyen}>{t('paiement_mobile_detail')}</Text>
+              <CaseApplePay />
             </>
           ) : (
             <Bouton
