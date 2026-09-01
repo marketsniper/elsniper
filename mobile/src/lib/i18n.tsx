@@ -1604,6 +1604,21 @@ const CHAINES = {
     it: 'Percorso impostato — tocca un\'altra località per ricominciare',
     de: 'Strecke gesetzt — tippen Sie auf einen anderen Ort für neu',
   },
+  // Bouton de bascule du fond de carte : satellite (par défaut) ⇄ plan.
+  carte_fond_plan: {
+    fr: 'Passer en vue plan',
+    en: 'Switch to map view',
+    sw: 'Badili kwenda ramani ya kawaida',
+    it: 'Passa alla vista mappa',
+    de: 'Zur Kartenansicht wechseln',
+  },
+  carte_fond_satellite: {
+    fr: 'Passer en vue satellite',
+    en: 'Switch to satellite view',
+    sw: 'Badili kwenda mwonekano wa setilaiti',
+    it: 'Passa alla vista satellite',
+    de: 'Zur Satellitenansicht wechseln',
+  },
   equipe_annonce_groupe: {
     fr: 'Annoncer au groupe des chauffeurs',
     en: 'Post to the drivers group',

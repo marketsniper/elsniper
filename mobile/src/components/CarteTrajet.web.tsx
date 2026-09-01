@@ -1,9 +1,14 @@
 // LA CARTE DU TRAJET — version WEB (la PWA, celle que les clients ouvrent).
 //
 // « Comme sur Uber » (demande du client, 31/08/2026) : une vraie carte sur
-// laquelle on OPÈRE, pas une illustration. Le fond est OpenStreetMap — libre,
-// sans clé ni compte, lisible à Zanzibar — servi par Leaflet, chargé depuis
-// son CDN au premier montage : pas de dépendance npm, pas de reconstruction
+// laquelle on OPÈRE, pas une illustration. Et depuis le 01/09/2026, un FOND
+// DE SCÈNE : la carte occupe environ 60 % de l'écran, pleine largeur, et le
+// contenu vient glisser par-dessus comme une feuille — le slogan et l'aide
+// flottent sur la carte. Le fond par défaut est la VUE SATELLITE (imagerie
+// Esri World Imagery — libre d'accès, sans clé) : l'île, ses lagons et ses
+// toits, pas un plan gris ; un bouton bascule vers le plan OpenStreetMap
+// pour qui préfère lire des noms de routes. Leaflet reste chargé depuis son
+// CDN au premier montage : pas de dépendance npm, pas de reconstruction
 // native, et l'app installée n'embarque pas un octet de plus.
 //
 // CE QU'ON PEUT Y FAIRE. Chaque ville desservie est une pastille touchable :
@@ -18,7 +23,7 @@
 // bandeau de l'île — l'écran reste entier, la carte est un plus, pas un dû.
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
-import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, Text, useWindowDimensions, View } from 'react-native';
 
 import { IleDeZanzibar } from '@/components/Ile';
 import type { ProprietesCarteTrajet } from '@/components/CarteTrajet';
@@ -34,12 +39,25 @@ export type { ProprietesCarteTrajet };
 type Leaflet = any;
 
 const ADRESSE_LEAFLET = 'https://unpkg.com/leaflet@1.9.4/dist';
-const TUILES = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-const ATTRIBUTION =
+// Deux fonds au choix. Le satellite (par défaut) vient du service de tuiles
+// public d'Esri — accès libre avec attribution, pas de clé ; le plan reste
+// OpenStreetMap. Les deux calques sont créés une fois, la bascule les échange.
+const TUILES_PLAN = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+const ATTRIBUTION_PLAN =
   '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
+const TUILES_SATELLITE =
+  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+const ATTRIBUTION_SATELLITE = '&copy; <a href="https://www.esri.com/">Esri</a> — Maxar, Earthstar Geographics';
 /** Au-delà, un toucher sur la carte ne s'aimante plus : on est en mer. */
 const AIMANT_MAX_KM = 30;
-const HAUTEUR_CARTE = 230;
+/** Ce que la feuille de contenu recouvre en bas de la carte (le « deuxième
+ *  plan » : les cartes suivantes glissent SUR la carte). Le défilement de
+ *  l'écran garde son gap (espaces.m) — le chevauchement visible est donc
+ *  DEBORD_BAS − espaces.m. */
+const DEBORD_BAS = espaces.xl + espaces.m;
+/** Les boutons posés sur la carte remontent au-dessus du chevauchement ET
+ *  de la ligne d'attribution (relevée elle aussi, ~18 px de haut). */
+const BOUTONS_BAS = DEBORD_BAS + espaces.xl;
 
 let chargement: Promise<Leaflet> | null = null;
 
@@ -56,6 +74,13 @@ function chargerLeaflet(): Promise<Leaflet> {
     feuille.rel = 'stylesheet';
     feuille.href = `${ADRESSE_LEAFLET}/leaflet.css`;
     document.head.appendChild(feuille);
+    // La feuille de contenu recouvre le bas de la carte : l'attribution
+    // (obligatoire — OSM comme Esri) remonte au-dessus du chevauchement.
+    // Règle SCOPÉE à cette carte : les autres cartes Leaflet de l'app
+    // gardent leur attribution au bord.
+    const reglages = document.createElement('style');
+    reglages.textContent = `.carte-fond-reserver .leaflet-bottom .leaflet-control { margin-bottom: ${DEBORD_BAS + 4}px; }`;
+    document.head.appendChild(reglages);
     const script = document.createElement('script');
     script.src = `${ADRESSE_LEAFLET}/leaflet.js`;
     script.onload = () => (global.L ? resoudre(global.L) : rejeter(new Error('leaflet absent')));
@@ -85,10 +110,17 @@ export function CarteTrajet({
     carte: any;
     villes: any;
     selection: any;
+    fonds: { plan: any; satellite: any };
     cadree: boolean;
   } | null>(null);
   const [prete, setPrete] = React.useState(false);
   const [indisponible, setIndisponible] = React.useState(false);
+  // Le fond du moment : satellite d'abord (demande du client, 01/09/2026).
+  const [fondSatellite, setFondSatellite] = React.useState(true);
+  // « Sur la moitié ou les trois quarts de l'écran » : ~62 % de la fenêtre,
+  // bornés pour rester utilisables du petit téléphone au grand écran.
+  const { height: hauteurFenetre } = useWindowDimensions();
+  const hauteurCarte = Math.min(Math.max(Math.round(hauteurFenetre * 0.62), 320), 700);
 
   // LE CHOIX, décidé au moment du toucher — via une référence, parce que les
   // gestionnaires Leaflet sont posés une fois et liraient sinon des états morts.
@@ -121,9 +153,19 @@ export function CarteTrajet({
           // La molette reste à la page : une carte qui capture le défilement
           // au survol rend tout l'écran pénible. Les boutons +/− suffisent.
           scrollWheelZoom: false,
-          zoomControl: true,
+          // Le zoom passe à droite : le slogan flotte en haut à gauche.
+          zoomControl: false,
         });
-        L.tileLayer(TUILES, { maxZoom: 17, attribution: ATTRIBUTION }).addTo(carte);
+        L.control.zoom({ position: 'topright' }).addTo(carte);
+        carte.getContainer().classList.add('carte-fond-reserver');
+        const fonds = {
+          plan: L.tileLayer(TUILES_PLAN, { maxZoom: 17, attribution: ATTRIBUTION_PLAN }),
+          satellite: L.tileLayer(TUILES_SATELLITE, {
+            maxZoom: 17,
+            attribution: ATTRIBUTION_SATELLITE,
+          }),
+        };
+        fonds.satellite.addTo(carte);
         carte.on('click', (evenement: any) => {
           const { lat, lng } = evenement.latlng;
           let proche: string | null = null;
@@ -144,6 +186,7 @@ export function CarteTrajet({
           carte,
           villes: L.layerGroup().addTo(carte),
           selection: L.layerGroup().addTo(carte),
+          fonds,
           cadree: false,
         };
         setPrete(true);
@@ -157,6 +200,23 @@ export function CarteTrajet({
       carteRef.current = null;
     };
   }, []);
+
+  // ── LE FOND : SATELLITE ⇄ PLAN ───────────────────────────────────────────
+  React.useEffect(() => {
+    const poignee = carteRef.current;
+    if (!prete || !poignee) return;
+    const { carte, fonds } = poignee;
+    const entrant = fondSatellite ? fonds.satellite : fonds.plan;
+    const sortant = fondSatellite ? fonds.plan : fonds.satellite;
+    if (carte.hasLayer(sortant)) carte.removeLayer(sortant);
+    if (!carte.hasLayer(entrant)) entrant.addTo(carte);
+  }, [prete, fondSatellite]);
+
+  // La hauteur suit la fenêtre (rotation, clavier, redimensionnement) :
+  // Leaflet doit remesurer son cadre, sinon tuiles et touchers se décalent.
+  React.useEffect(() => {
+    carteRef.current?.carte.invalidateSize();
+  }, [prete, hauteurCarte]);
 
   // ── LES VILLES, UNE PASTILLE CHACUNE ─────────────────────────────────────
   React.useEffect(() => {
@@ -264,13 +324,7 @@ export function CarteTrajet({
 
   return (
     <View style={styles.carte}>
-      {/* LE SLOGAN COIFFE LA CARTE : sur le web elle remplace le bandeau de
-          l'île, et le slogan ne doit disparaître sur aucune plateforme. */}
-      <View style={styles.entete}>
-        <Text style={styles.titre}>{t('accueil_slogan')}</Text>
-        <Text style={styles.aide}>{aide}</Text>
-      </View>
-      <View style={styles.cadre}>
+      <View style={[styles.cadre, { height: hauteurCarte }]}>
         {React.createElement('div', {
           ref: (noeud: HTMLDivElement | null) => {
             divRef.current = noeud;
@@ -282,6 +336,26 @@ export function CarteTrajet({
             <ActivityIndicator size="small" color={couleurs.primaire} />
           </View>
         )}
+        {/* LE SLOGAN FLOTTE SUR LA CARTE : la carte est le décor, l'interface
+            se pose dessus. Le chip reste touchable (il BLOQUE le toucher) :
+            un tap dessus ne doit pas choisir la ville cachée dessous. */}
+        <View style={styles.enteteFlottante}>
+          <Text style={styles.titre}>{t('accueil_slogan')}</Text>
+          <Text style={styles.aide}>{aide}</Text>
+        </View>
+        {/* La bascule satellite ⇄ plan, en bas à gauche. */}
+        <Pressable
+          onPress={() => setFondSatellite((v) => !v)}
+          accessibilityRole="button"
+          accessibilityLabel={fondSatellite ? t('carte_fond_plan') : t('carte_fond_satellite')}
+          style={({ pressed }) => [styles.boutonFond, pressed && { opacity: 0.7 }]}
+        >
+          <Ionicons
+            name={fondSatellite ? 'map-outline' : 'earth-outline'}
+            size={20}
+            color={couleurs.primaireFonce}
+          />
+        </Pressable>
         {!!onMaPosition && (
           <Pressable
             onPress={onMaPosition}
@@ -302,25 +376,34 @@ export function CarteTrajet({
 }
 
 const styles = stylesReactifs(() => ({
-  // La carte est un BLOC de l'écran, au même relief que les autres cartes.
-  // overflow hidden : les tuiles doivent épouser les angles arrondis.
+  // La carte n'est plus un bloc parmi les autres : c'est le FOND DE SCÈNE.
+  // Les marges négatives annulent le padding de l'écran (pleine largeur,
+  // collée en haut) et laissent la feuille de contenu recouvrir son bas.
   carte: {
+    marginTop: -espaces.l,
+    marginHorizontal: -espaces.l,
+    marginBottom: -DEBORD_BAS,
+    overflow: 'hidden',
+  },
+  // Le chip du slogan, posé sur la carte. Le retrait à droite laisse la
+  // place aux boutons de zoom de Leaflet (en haut à droite).
+  enteteFlottante: {
+    position: 'absolute',
+    top: espaces.m,
+    left: espaces.m,
+    right: 60,
+    zIndex: 1100,
     backgroundColor: couleurs.carteTranslucide,
     borderRadius: rayons.carte,
-    overflow: 'hidden',
-    marginBottom: espaces.s,
-    ...ombres.carte,
-  },
-  entete: {
     paddingHorizontal: espaces.l,
-    paddingTop: espaces.m,
-    paddingBottom: espaces.s,
+    paddingVertical: espaces.s + 2,
     gap: 3,
+    ...ombres.carte,
   },
   titre: {
     fontFamily: policeMontant(),
-    fontSize: 20,
-    lineHeight: 25,
+    fontSize: 19,
+    lineHeight: 24,
     color: couleurs.encre,
   },
   aide: {
@@ -329,7 +412,7 @@ const styles = stylesReactifs(() => ({
     color: couleurs.texteSecondaire,
   },
   cadre: {
-    height: HAUTEUR_CARTE,
+    // La hauteur (~62 % de la fenêtre) est posée à l'affichage.
     backgroundColor: couleurs.primaireClair,
   },
   voileChargement: {
@@ -342,17 +425,33 @@ const styles = stylesReactifs(() => ({
     justifyContent: 'center',
   },
   // Le bouton « ma position », posé SUR la carte comme sur toutes les
-  // applications de cartes — en bas à droite, à portée de pouce.
+  // applications de cartes — en bas à droite, au-dessus de la feuille de
+  // contenu qui recouvre le bas de la carte.
   boutonPosition: {
     position: 'absolute',
     right: espaces.m,
-    bottom: espaces.m,
+    bottom: BOUTONS_BAS,
     width: 42,
     height: 42,
     borderRadius: 21,
     backgroundColor: couleurs.surface,
     alignItems: 'center',
     justifyContent: 'center',
+    zIndex: 1100,
+    ...ombres.carte,
+  },
+  // La bascule satellite ⇄ plan — même rond, en bas à gauche.
+  boutonFond: {
+    position: 'absolute',
+    left: espaces.m,
+    bottom: BOUTONS_BAS,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: couleurs.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1100,
     ...ombres.carte,
   },
 }));
