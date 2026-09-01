@@ -7,7 +7,7 @@
 //    dernière version en cache quand le réseau est coupé, et en tout dernier
 //    recours sur un écran d'attente maison : JAMAIS « Ce site est
 //    inaccessible » du navigateur, qui laisse l'utilisateur devant un mur.
-const CACHE = 'zanzigo-web-2026-09-01.0625-c1621f8';
+const CACHE = 'zanzigo-web-2026-09-01.0644-80e6424';
 const COQUILLE = '/web/';
 
 // Y avait-il déjà une version installée ? Si oui, les fenêtres ouvertes

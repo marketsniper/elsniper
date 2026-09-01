@@ -24,7 +24,7 @@ import { IleDeZanzibar } from '@/components/Ile';
 import type { ProprietesCarteTrajet } from '@/components/CarteTrajet';
 import { useT } from '@/lib/i18n';
 import { couleurs, espaces, ombres, policeMontant, rayons, stylesReactifs } from '@/lib/theme';
-import { coordonneesVille, kmEntrePoints } from '@/lib/types';
+import { coordonneesVille, itineraireRoutier, kmEntrePoints } from '@/lib/types';
 
 export type { ProprietesCarteTrajet };
 
@@ -219,14 +219,22 @@ export function CarteTrajet({
         .addTo(selection);
     }
     if (coordDepart && coordArrivee) {
-      // Un trait TIRETÉ : c'est un raccourci à vol d'oiseau, pas la route —
-      // un trait plein promettrait un itinéraire qu'on ne connaît pas.
-      L.polyline([coordDepart, coordArrivee], {
+      // Le trait suit les VILLES-ÉTAPES du chemin routier (le même graphe qui
+      // fixe le prix au kilomètre) : Stone Town → Michamvi passe par Paje et
+      // Bwejuu, pas par-dessus la baie de Chwaka. Il reste TIRETÉ : c'est une
+      // approximation par étapes, pas l'itinéraire GPS mètre par mètre — un
+      // trait plein promettrait plus qu'on ne sait.
+      const etapes = itineraireRoutier(depart, arrivee);
+      const points: [number, number][] =
+        etapes && etapes.length >= 2
+          ? etapes.map((p) => [p.lat, p.lng] as [number, number])
+          : [coordDepart, coordArrivee];
+      L.polyline(points, {
         color: couleurs.primaire,
         weight: 3,
         dashArray: '7 7',
       }).addTo(selection);
-      carte.fitBounds(L.latLngBounds([coordDepart, coordArrivee]), {
+      carte.fitBounds(L.latLngBounds(points), {
         padding: [46, 46],
         maxZoom: 12,
       });

@@ -1117,13 +1117,22 @@ function noeudRoutier(nom: string): string {
   return /a[ée]roport|airport/.test(n) ? 'aéroport' : n;
 }
 
-/** Plus courts chemins entre tous les nœuds, calculés une fois. */
-const KM_ROUTE: Map<string, Map<string, number>> = (() => {
+/** Plus courts chemins entre tous les nœuds — distances ET étapes (la
+ *  première ville à traverser vers la destination), calculés une fois. Les
+ *  étapes servent à TRACER le trajet sur la carte le long de la route : un
+ *  trait tiré tout droit se lisait comme du vol d'oiseau, alors même que le
+ *  kilométrage était routier. */
+const { KM_ROUTE, ETAPE_SUIVANTE } = (() => {
   const noeuds = [...new Set(TRONCONS_ROUTIERS.flatMap(([a, b]) => [a, b]))];
   const dist = new Map(noeuds.map((n): [string, Map<string, number>] => [n, new Map([[n, 0]])]));
+  const suivant = new Map(noeuds.map((n): [string, Map<string, string>] => [n, new Map([[n, n]])]));
   for (const [a, b, km] of TRONCONS_ROUTIERS) {
-    dist.get(a)!.set(b, Math.min(km, dist.get(a)!.get(b) ?? Infinity));
-    dist.get(b)!.set(a, Math.min(km, dist.get(b)!.get(a) ?? Infinity));
+    if (km < (dist.get(a)!.get(b) ?? Infinity)) {
+      dist.get(a)!.set(b, km);
+      dist.get(b)!.set(a, km);
+      suivant.get(a)!.set(b, b);
+      suivant.get(b)!.set(a, a);
+    }
   }
   for (const k of noeuds) {
     for (const i of noeuds) {
@@ -1133,12 +1142,41 @@ const KM_ROUTE: Map<string, Map<string, number>> = (() => {
         const dkj = dist.get(k)!.get(j);
         if (dkj === undefined) continue;
         const dij = dist.get(i)!.get(j);
-        if (dij === undefined || dik + dkj < dij) dist.get(i)!.set(j, dik + dkj);
+        if (dij === undefined || dik + dkj < dij) {
+          dist.get(i)!.set(j, dik + dkj);
+          suivant.get(i)!.set(j, suivant.get(i)!.get(k)!);
+        }
       }
     }
   }
-  return dist;
+  return { KM_ROUTE: dist, ETAPE_SUIVANTE: suivant };
 })();
+
+/**
+ * Le CHEMIN ROUTIER entre deux villes, ville-étape par ville-étape (bouts
+ * compris), en coordonnées — pour dessiner sur la carte un trajet qui suit
+ * la route et pas les airs. Null si l'une des deux est hors graphe.
+ */
+export function itineraireRoutier(
+  depart: string,
+  arrivee: string
+): { lat: number; lng: number }[] | null {
+  let courant = noeudRoutier(depart);
+  const but = noeudRoutier(arrivee);
+  if (courant === but || !ETAPE_SUIVANTE.get(courant)?.get(but)) return null;
+  const noms = [courant];
+  while (courant !== but) {
+    const prochain = ETAPE_SUIVANTE.get(courant)?.get(but);
+    if (!prochain || prochain === courant) return null;
+    courant = prochain;
+    noms.push(courant);
+  }
+  const points = noms
+    .map((nom) => COORDONNEES_VILLES[nom])
+    .filter((coord): coord is [number, number] => !!coord)
+    .map(([lat, lng]) => ({ lat, lng }));
+  return points.length >= 2 ? points : null;
+}
 
 /**
  * PALIERS DE DISTANCE entre deux villages (hors hubs) — miroir exact de la
