@@ -1,10 +1,13 @@
 // LA CARTE DU TRAJET — version WEB (la PWA, celle que les clients ouvrent).
 //
 // « Comme sur Uber » (demande du client, 31/08/2026) : une vraie carte sur
-// laquelle on OPÈRE, pas une illustration. Et depuis le 01/09/2026, un FOND
-// DE SCÈNE : la carte occupe environ 60 % de l'écran, pleine largeur, et le
-// contenu vient glisser par-dessus comme une feuille — le slogan et l'aide
-// flottent sur la carte. Le fond par défaut est la VUE SATELLITE (imagerie
+// laquelle on OPÈRE, pas une illustration. Depuis le 03/09/2026, elle s'ouvre
+// À LA DEMANDE : fermée, l'écran ne montre qu'un chip discret (slogan +
+// « Voir la carte ») — « la carte prenait trop de place ». Ouverte, c'est un
+// FOND DE SCÈNE d'au moins la moitié de l'écran, pleine largeur, calibré pour
+// que Départ et Arrivée restent visibles dessous ; le contenu glisse
+// par-dessus comme une feuille, le slogan et l'aide flottent sur la carte,
+// une croix la referme. Le fond par défaut est la VUE SATELLITE (imagerie
 // Esri World Imagery — libre d'accès, sans clé) : l'île, ses lagons et ses
 // toits, pas un plan gris ; un bouton bascule vers le plan OpenStreetMap
 // pour qui préfère lire des noms de routes. Leaflet reste chargé depuis son
@@ -79,7 +82,10 @@ function chargerLeaflet(): Promise<Leaflet> {
     // Règle SCOPÉE à cette carte : les autres cartes Leaflet de l'app
     // gardent leur attribution au bord.
     const reglages = document.createElement('style');
-    reglages.textContent = `.carte-fond-reserver .leaflet-bottom .leaflet-control { margin-bottom: ${DEBORD_BAS + 4}px; }`;
+    reglages.textContent =
+      `.carte-fond-reserver .leaflet-bottom .leaflet-control { margin-bottom: ${DEBORD_BAS + 4}px; }` +
+      // Le zoom descend sous la croix « fermer » (toutes deux en haut à droite).
+      '.carte-fond-reserver .leaflet-top.leaflet-right { top: 52px; }';
     document.head.appendChild(reglages);
     const script = document.createElement('script');
     script.src = `${ADRESSE_LEAFLET}/leaflet.js`;
@@ -117,10 +123,14 @@ export function CarteTrajet({
   const [indisponible, setIndisponible] = React.useState(false);
   // Le fond du moment : satellite d'abord (demande du client, 01/09/2026).
   const [fondSatellite, setFondSatellite] = React.useState(true);
-  // « Sur la moitié ou les trois quarts de l'écran » : ~62 % de la fenêtre,
-  // bornés pour rester utilisables du petit téléphone au grand écran.
+  // La carte s'ouvre À LA DEMANDE (fermée par défaut, demande du 03/09/2026) :
+  // « la carte prend trop de place » — chacun l'appelle quand il en a besoin.
+  const [ouverte, setOuverte] = React.useState(false);
+  // Ouverte : « au moins la moitié de l'écran », mais pas plus — il faut
+  // encore voir Départ et Arrivée dessous. Bornée du petit téléphone au
+  // grand écran.
   const { height: hauteurFenetre } = useWindowDimensions();
-  const hauteurCarte = Math.min(Math.max(Math.round(hauteurFenetre * 0.62), 320), 700);
+  const hauteurCarte = Math.min(Math.max(Math.round(hauteurFenetre * 0.52), 320), 620);
 
   // LE CHOIX, décidé au moment du toucher — via une référence, parce que les
   // gestionnaires Leaflet sont posés une fois et liraient sinon des états morts.
@@ -143,8 +153,11 @@ export function CarteTrajet({
   const lieuxRef = React.useRef(lieux);
   lieuxRef.current = lieux;
 
-  // ── LA CARTE, MONTÉE UNE FOIS ────────────────────────────────────────────
+  // ── LA CARTE, MONTÉE À L'OUVERTURE ───────────────────────────────────────
+  // Fermée, Leaflet n'existe pas (rien à télécharger, rien en mémoire).
+  // Chaque ouverture repart d'une carte neuve ; la fermeture détruit tout.
   React.useEffect(() => {
+    if (!ouverte) return;
     let vivant = true;
     chargerLeaflet()
       .then((L) => {
@@ -198,8 +211,9 @@ export function CarteTrajet({
       vivant = false;
       carteRef.current?.carte.remove();
       carteRef.current = null;
+      setPrete(false);
     };
-  }, []);
+  }, [ouverte]);
 
   // ── LE FOND : SATELLITE ⇄ PLAN ───────────────────────────────────────────
   React.useEffect(() => {
@@ -315,6 +329,25 @@ export function CarteTrajet({
   // l'île. L'écran reste entier, les menus déroulants font le travail.
   if (indisponible) return <IleDeZanzibar />;
 
+  // FERMÉE (l'état de départ) : un chip discret — le slogan reste, et un
+  // bouton appelle la carte pour qui la veut. Le reste de l'écran respire.
+  if (!ouverte) {
+    return (
+      <View style={styles.carteFermee}>
+        <Text style={styles.titre}>{t('accueil_slogan')}</Text>
+        <Pressable
+          onPress={() => setOuverte(true)}
+          accessibilityRole="button"
+          style={({ pressed }) => [styles.boutonOuvrir, pressed && { opacity: 0.7 }]}
+        >
+          <Ionicons name="map-outline" size={20} color={couleurs.primaireFonce} />
+          <Text style={styles.texteOuvrir}>{t('carte_ouvrir')}</Text>
+          <Ionicons name="chevron-down" size={18} color={couleurs.primaireFonce} />
+        </Pressable>
+      </View>
+    );
+  }
+
   // L'aide suit le geste : elle dit toujours LE prochain toucher utile.
   const aide = !depart
     ? t('carte_aide_depart')
@@ -343,6 +376,16 @@ export function CarteTrajet({
           <Text style={styles.titre}>{t('accueil_slogan')}</Text>
           <Text style={styles.aide}>{aide}</Text>
         </View>
+        {/* La croix qui referme la carte, en haut à droite (le zoom Leaflet
+            est décalé dessous par la règle CSS scopée). */}
+        <Pressable
+          onPress={() => setOuverte(false)}
+          accessibilityRole="button"
+          accessibilityLabel={t('carte_fermer')}
+          style={({ pressed }) => [styles.boutonFermer, pressed && { opacity: 0.7 }]}
+        >
+          <Ionicons name="close" size={22} color={couleurs.primaireFonce} />
+        </Pressable>
         {/* La bascule satellite ⇄ plan, en bas à gauche. */}
         <Pressable
           onPress={() => setFondSatellite((v) => !v)}
@@ -376,7 +419,30 @@ export function CarteTrajet({
 }
 
 const styles = stylesReactifs(() => ({
-  // La carte n'est plus un bloc parmi les autres : c'est le FOND DE SCÈNE.
+  // FERMÉE : une carte ordinaire de l'écran — slogan + bouton d'ouverture.
+  carteFermee: {
+    backgroundColor: couleurs.carteTranslucide,
+    borderRadius: rayons.carte,
+    padding: espaces.l,
+    gap: espaces.m,
+    ...ombres.carte,
+  },
+  boutonOuvrir: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: espaces.s,
+    alignSelf: 'flex-start',
+    backgroundColor: couleurs.primaireClair,
+    borderRadius: rayons.bouton,
+    paddingHorizontal: espaces.m,
+    paddingVertical: espaces.s + 2,
+  },
+  texteOuvrir: {
+    fontSize: 14.5,
+    fontWeight: '700',
+    color: couleurs.primaireFonce,
+  },
+  // OUVERTE : la carte n'est plus un bloc parmi les autres — le FOND DE SCÈNE.
   // Les marges négatives annulent le padding de l'écran (pleine largeur,
   // collée en haut) et laissent la feuille de contenu recouvrir son bas.
   carte: {
@@ -431,6 +497,20 @@ const styles = stylesReactifs(() => ({
     position: 'absolute',
     right: espaces.m,
     bottom: BOUTONS_BAS,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: couleurs.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1100,
+    ...ombres.carte,
+  },
+  // La croix « fermer », en haut à droite — même rond que les autres.
+  boutonFermer: {
+    position: 'absolute',
+    top: espaces.m,
+    right: espaces.m,
     width: 42,
     height: 42,
     borderRadius: 21,

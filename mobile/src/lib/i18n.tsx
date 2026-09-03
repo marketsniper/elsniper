@@ -1604,6 +1604,21 @@ const CHAINES = {
     it: 'Percorso impostato — tocca un\'altra località per ricominciare',
     de: 'Strecke gesetzt — tippen Sie auf einen anderen Ort für neu',
   },
+  // La carte s'ouvre À LA DEMANDE : bouton d'ouverture et de fermeture.
+  carte_ouvrir: {
+    fr: 'Voir la carte de l\'île',
+    en: 'Show the island map',
+    sw: 'Ona ramani ya kisiwa',
+    it: 'Mostra la mappa dell\'isola',
+    de: 'Karte der Insel anzeigen',
+  },
+  carte_fermer: {
+    fr: 'Fermer la carte',
+    en: 'Close the map',
+    sw: 'Funga ramani',
+    it: 'Chiudi la mappa',
+    de: 'Karte schließen',
+  },
   // Bouton de bascule du fond de carte : satellite (par défaut) ⇄ plan.
   carte_fond_plan: {
     fr: 'Passer en vue plan',
