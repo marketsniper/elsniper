@@ -599,7 +599,7 @@
       "file_type": "code",
       "norm_label": "fonctiont",
       "source_file": "mobile/src/lib/i18n.tsx",
-      "source_location": "L4592"
+      "source_location": "L4600"
     },
     {
       "id": "mobile_src_lib_theme_ombres",
@@ -768,7 +768,7 @@
       "file_type": "code",
       "norm_label": "clechaine",
       "source_file": "mobile/src/lib/i18n.tsx",
-      "source_location": "L4589"
+      "source_location": "L4597"
     },
     {
       "id": "mobile_src_lib_preferencepeau_contextepreference",
@@ -1184,7 +1184,7 @@
       "file_type": "code",
       "norm_label": "categorievehicule",
       "source_file": "mobile/src/lib/i18n.tsx",
-      "source_location": "L4697"
+      "source_location": "L4705"
     },
     {
       "id": "mobile_src_lib_i18n_contextelangue",
@@ -1197,7 +1197,7 @@
       "file_type": "code",
       "norm_label": "contextelangue",
       "source_file": "mobile/src/lib/i18n.tsx",
-      "source_location": "L4611"
+      "source_location": "L4619"
     },
     {
       "id": "mobile_src_lib_i18n_traductions",
@@ -3244,7 +3244,7 @@
       "file_type": "code",
       "norm_label": "logozanzigo()",
       "source_file": "mobile/src/components/ui.tsx",
-      "source_location": "L331"
+      "source_location": "L361"
     },
     {
       "id": "mobile_src_components_ui_selecteurlangue",
@@ -3328,7 +3328,7 @@
       "file_type": "code",
       "norm_label": "uset()",
       "source_file": "mobile/src/lib/i18n.tsx",
-      "source_location": "L4655"
+      "source_location": "L4663"
     },
     {
       "id": "backend_src_services_moyenpaiement_enshillings",
@@ -4348,7 +4348,7 @@
       "file_type": "code",
       "norm_label": "bouton()",
       "source_file": "mobile/src/components/ui.tsx",
-      "source_location": "L502"
+      "source_location": "L532"
     },
     {
       "id": "mobile_src_components_ui_carte",
@@ -4360,7 +4360,7 @@
       "file_type": "code",
       "norm_label": "carte()",
       "source_file": "mobile/src/components/ui.tsx",
-      "source_location": "L384"
+      "source_location": "L414"
     },
     {
       "id": "mobile_src_components_ui_champ",
@@ -4372,7 +4372,7 @@
       "file_type": "code",
       "norm_label": "champ()",
       "source_file": "mobile/src/components/ui.tsx",
-      "source_location": "L555"
+      "source_location": "L585"
     },
     {
       "id": "mobile_src_components_ui_ecran",
@@ -4396,7 +4396,7 @@
       "file_type": "code",
       "norm_label": "soustitre()",
       "source_file": "mobile/src/components/ui.tsx",
-      "source_location": "L491"
+      "source_location": "L521"
     },
     {
       "id": "mobile_src_components_ui_texteerreur",
@@ -4408,7 +4408,7 @@
       "file_type": "code",
       "norm_label": "texteerreur()",
       "source_file": "mobile/src/components/ui.tsx",
-      "source_location": "L645"
+      "source_location": "L675"
     },
     {
       "id": "mobile_src_components_ui_titre",
@@ -4420,7 +4420,7 @@
       "file_type": "code",
       "norm_label": "titre()",
       "source_file": "mobile/src/components/ui.tsx",
-      "source_location": "L487"
+      "source_location": "L517"
     },
     {
       "id": "mobile_src_components_visionneusephotos_visionneusephotos",
@@ -4972,7 +4972,7 @@
       "file_type": "code",
       "norm_label": "badge()",
       "source_file": "mobile/src/components/ui.tsx",
-      "source_location": "L572"
+      "source_location": "L602"
     },
     {
       "id": "mobile_src_components_ui_badgestatuttrajet",
@@ -4984,7 +4984,7 @@
       "file_type": "code",
       "norm_label": "badgestatuttrajet()",
       "source_file": "mobile/src/components/ui.tsx",
-      "source_location": "L605"
+      "source_location": "L635"
     },
     {
       "id": "mobile_src_components_ui_chargementcentre",
@@ -4996,7 +4996,7 @@
       "file_type": "code",
       "norm_label": "chargementcentre()",
       "source_file": "mobile/src/components/ui.tsx",
-      "source_location": "L761"
+      "source_location": "L791"
     },
     {
       "id": "mobile_src_components_ui_encartinfo",
@@ -5008,7 +5008,7 @@
       "file_type": "code",
       "norm_label": "encartinfo()",
       "source_file": "mobile/src/components/ui.tsx",
-      "source_location": "L705"
+      "source_location": "L735"
     },
     {
       "id": "mobile_src_components_ui_ligneinfo",
@@ -5020,7 +5020,7 @@
       "file_type": "code",
       "norm_label": "ligneinfo()",
       "source_file": "mobile/src/components/ui.tsx",
-      "source_location": "L635"
+      "source_location": "L665"
     },
     {
       "id": "mobile_src_lib_i18n_libellestatutride",
@@ -5032,7 +5032,7 @@
       "file_type": "code",
       "norm_label": "libellestatutride()",
       "source_file": "mobile/src/lib/i18n.tsx",
-      "source_location": "L4677"
+      "source_location": "L4685"
     },
     {
       "id": "mobile_src_lib_i18n_libellestatuttrajet",
@@ -5044,7 +5044,7 @@
       "file_type": "code",
       "norm_label": "libellestatuttrajet()",
       "source_file": "mobile/src/lib/i18n.tsx",
-      "source_location": "L4667"
+      "source_location": "L4675"
     },
     {
       "id": "mobile_src_lib_i18n_libelletypetrajet",
@@ -5056,7 +5056,7 @@
       "file_type": "code",
       "norm_label": "libelletypetrajet()",
       "source_file": "mobile/src/lib/i18n.tsx",
-      "source_location": "L4682"
+      "source_location": "L4690"
     },
     {
       "id": "mobile_src_lib_position_liennavigation",
@@ -6172,7 +6172,7 @@
       "file_type": "code",
       "norm_label": "badgestatutcolis()",
       "source_file": "mobile/src/components/ui.tsx",
-      "source_location": "L620"
+      "source_location": "L650"
     },
     {
       "id": "mobile_src_components_ui_boutonrafraichir",
@@ -6196,7 +6196,7 @@
       "file_type": "code",
       "norm_label": "etatvide()",
       "source_file": "mobile/src/components/ui.tsx",
-      "source_location": "L737"
+      "source_location": "L767"
     },
     {
       "id": "mobile_src_components_ui_gainchauffeur",
@@ -6208,7 +6208,7 @@
       "file_type": "code",
       "norm_label": "gainchauffeur()",
       "source_file": "mobile/src/components/ui.tsx",
-      "source_location": "L676"
+      "source_location": "L706"
     },
     {
       "id": "mobile_src_lib_api_listercolisaramasser",
@@ -6268,7 +6268,7 @@
       "file_type": "code",
       "norm_label": "departcourse()",
       "source_file": "mobile/src/lib/i18n.tsx",
-      "source_location": "L4722"
+      "source_location": "L4730"
     },
     {
       "id": "mobile_src_lib_i18n_formaterdaterelativei18n",
@@ -6280,7 +6280,7 @@
       "file_type": "code",
       "norm_label": "formaterdaterelativei18n()",
       "source_file": "mobile/src/lib/i18n.tsx",
-      "source_location": "L4762"
+      "source_location": "L4770"
     },
     {
       "id": "mobile_src_lib_i18n_libellestatutcolis",
@@ -6292,7 +6292,7 @@
       "file_type": "code",
       "norm_label": "libellestatutcolis()",
       "source_file": "mobile/src/lib/i18n.tsx",
-      "source_location": "L4672"
+      "source_location": "L4680"
     },
     {
       "id": "mobile_src_lib_i18n_libelletaillecolis",
@@ -6304,7 +6304,7 @@
       "file_type": "code",
       "norm_label": "libelletaillecolis()",
       "source_file": "mobile/src/lib/i18n.tsx",
-      "source_location": "L4688"
+      "source_location": "L4696"
     },
     {
       "id": "mobile_src_lib_menagelocal_cle",
@@ -6952,7 +6952,7 @@
       "file_type": "code",
       "norm_label": "selecteurpeau()",
       "source_file": "mobile/src/components/ui.tsx",
-      "source_location": "L274"
+      "source_location": "L278"
     },
     {
       "id": "mobile_src_lib_api_definircleequipe",
@@ -7000,7 +7000,7 @@
       "file_type": "code",
       "norm_label": "libellecategorievehicule()",
       "source_file": "mobile/src/lib/i18n.tsx",
-      "source_location": "L4700"
+      "source_location": "L4708"
     },
     {
       "id": "mobile_src_lib_preferencepeau_fournisseurpreferencepeau",
@@ -8344,7 +8344,7 @@
       "file_type": "code",
       "norm_label": "marqueentete()",
       "source_file": "mobile/src/components/ui.tsx",
-      "source_location": "L359"
+      "source_location": "L389"
     },
     {
       "id": "mobile_src_components_ui_userangdecarte",
@@ -8356,7 +8356,7 @@
       "file_type": "code",
       "norm_label": "userangdecarte()",
       "source_file": "mobile/src/components/ui.tsx",
-      "source_location": "L376"
+      "source_location": "L406"
     },
     {
       "id": "mobile_src_lib_auth_useretoursideconnecte",
@@ -9196,7 +9196,7 @@
       "file_type": "code",
       "norm_label": "depliant()",
       "source_file": "mobile/src/components/ui.tsx",
-      "source_location": "L453"
+      "source_location": "L483"
     },
     {
       "id": "mobile_src_lib_api_creercolis",
@@ -9220,7 +9220,7 @@
       "file_type": "code",
       "norm_label": "formaterdatechoisie()",
       "source_file": "mobile/src/lib/i18n.tsx",
-      "source_location": "L4827"
+      "source_location": "L4835"
     },
     {
       "id": "mobile_src_lib_i18n_isodepuischoix",
@@ -9232,7 +9232,7 @@
       "file_type": "code",
       "norm_label": "isodepuischoix()",
       "source_file": "mobile/src/lib/i18n.tsx",
-      "source_location": "L4870"
+      "source_location": "L4878"
     },
     {
       "id": "mobile_src_lib_i18n_isodepuisdateheure",
@@ -9244,7 +9244,7 @@
       "file_type": "code",
       "norm_label": "isodepuisdateheure()",
       "source_file": "mobile/src/lib/i18n.tsx",
-      "source_location": "L4814"
+      "source_location": "L4822"
     },
     {
       "id": "mobile_src_lib_i18n_langueprovider",
@@ -9256,7 +9256,7 @@
       "file_type": "code",
       "norm_label": "langueprovider()",
       "source_file": "mobile/src/lib/i18n.tsx",
-      "source_location": "L4619"
+      "source_location": "L4627"
     },
     {
       "id": "mobile_src_lib_i18n_libellesdates",
@@ -9268,7 +9268,7 @@
       "file_type": "code",
       "norm_label": "libellesdates()",
       "source_file": "mobile/src/lib/i18n.tsx",
-      "source_location": "L4850"
+      "source_location": "L4858"
     },
     {
       "id": "mobile_src_lib_i18n_traduire",
@@ -9280,7 +9280,7 @@
       "file_type": "code",
       "norm_label": "traduire()",
       "source_file": "mobile/src/lib/i18n.tsx",
-      "source_location": "L4594"
+      "source_location": "L4602"
     },
     {
       "id": "mobile_src_lib_types_deviseutilisateur",
@@ -13429,7 +13429,7 @@
       "file_type": "code",
       "norm_label": "categories_vehicule",
       "source_file": "mobile/src/lib/i18n.tsx",
-      "source_location": "L4696"
+      "source_location": "L4704"
     },
     {
       "id": "mobile_src_lib_theme_couleurs",
@@ -16201,7 +16201,7 @@
       "file_type": "code",
       "norm_label": "rangdescartes",
       "source_file": "mobile/src/components/ui.tsx",
-      "source_location": "L374"
+      "source_location": "L404"
     },
     {
       "id": "mobile_src_components_ui_styles",
@@ -16212,7 +16212,7 @@
       "file_type": "code",
       "norm_label": "styles",
       "source_file": "mobile/src/components/ui.tsx",
-      "source_location": "L770"
+      "source_location": "L800"
     },
     {
       "id": "mobile_src_lib_theme_couleursstatutcolis",
@@ -18164,7 +18164,7 @@
       "file_type": "code",
       "norm_label": "heures_choix",
       "source_file": "mobile/src/lib/i18n.tsx",
-      "source_location": "L4793"
+      "source_location": "L4801"
     },
     {
       "id": "mobile_src_lib_i18n_jours_reservation_avance",
@@ -18175,7 +18175,7 @@
       "file_type": "code",
       "norm_label": "jours_reservation_avance",
       "source_file": "mobile/src/lib/i18n.tsx",
-      "source_location": "L4807"
+      "source_location": "L4815"
     },
     {
       "id": "mobile_src_lib_i18n_languecontext",
@@ -18186,7 +18186,7 @@
       "file_type": "code",
       "norm_label": "languecontext",
       "source_file": "mobile/src/lib/i18n.tsx",
-      "source_location": "L4617"
+      "source_location": "L4625"
     },
     {
       "id": "mobile_src_lib_i18n_langues",
@@ -18208,7 +18208,7 @@
       "file_type": "code",
       "norm_label": "locales_intl",
       "source_file": "mobile/src/lib/i18n.tsx",
-      "source_location": "L4784"
+      "source_location": "L4792"
     },
     {
       "id": "mobile_src_lib_types_origines_rides",
@@ -28048,7 +28048,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "mobile/src/components/ui.tsx",
-      "source_location": "L621",
+      "source_location": "L651",
       "weight": 1.0
     },
     {
@@ -28060,7 +28060,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "mobile/src/components/ui.tsx",
-      "source_location": "L628",
+      "source_location": "L658",
       "weight": 1.0
     },
     {
@@ -28072,7 +28072,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "mobile/src/components/ui.tsx",
-      "source_location": "L606",
+      "source_location": "L636",
       "weight": 1.0
     },
     {
@@ -28084,7 +28084,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "mobile/src/components/ui.tsx",
-      "source_location": "L613",
+      "source_location": "L643",
       "weight": 1.0
     },
     {
@@ -28108,7 +28108,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "mobile/src/components/ui.tsx",
-      "source_location": "L391",
+      "source_location": "L421",
       "weight": 1.0
     },
     {
@@ -28120,7 +28120,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "mobile/src/components/ui.tsx",
-      "source_location": "L407",
+      "source_location": "L437",
       "weight": 1.0
     },
     {
@@ -28144,7 +28144,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "mobile/src/components/ui.tsx",
-      "source_location": "L685",
+      "source_location": "L715",
       "weight": 1.0
     },
     {
@@ -28156,7 +28156,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "mobile/src/components/ui.tsx",
-      "source_location": "L686",
+      "source_location": "L716",
       "weight": 1.0
     },
     {
@@ -28168,7 +28168,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "mobile/src/components/ui.tsx",
-      "source_location": "L687",
+      "source_location": "L717",
       "weight": 1.0
     },
     {
@@ -28180,7 +28180,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "mobile/src/components/ui.tsx",
-      "source_location": "L688",
+      "source_location": "L718",
       "weight": 1.0
     },
     {
@@ -28192,7 +28192,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "mobile/src/components/ui.tsx",
-      "source_location": "L693",
+      "source_location": "L723",
       "weight": 1.0
     },
     {
@@ -28204,7 +28204,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "mobile/src/components/ui.tsx",
-      "source_location": "L693",
+      "source_location": "L723",
       "weight": 1.0
     },
     {
@@ -28228,7 +28228,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "mobile/src/components/ui.tsx",
-      "source_location": "L275",
+      "source_location": "L279",
       "weight": 1.0
     },
     {
@@ -28240,7 +28240,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "mobile/src/components/ui.tsx",
-      "source_location": "L276",
+      "source_location": "L280",
       "weight": 1.0
     },
     {
@@ -30064,7 +30064,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "mobile/src/lib/i18n.tsx",
-      "source_location": "L4776",
+      "source_location": "L4784",
       "weight": 1.0
     },
     {
@@ -30076,7 +30076,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "mobile/src/lib/i18n.tsx",
-      "source_location": "L4629",
+      "source_location": "L4637",
       "weight": 1.0
     },
     {
@@ -30088,7 +30088,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "mobile/src/lib/i18n.tsx",
-      "source_location": "L4641",
+      "source_location": "L4649",
       "weight": 1.0
     },
     {
@@ -30100,7 +30100,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "mobile/src/lib/i18n.tsx",
-      "source_location": "L4645",
+      "source_location": "L4653",
       "weight": 1.0
     },
     {
@@ -69559,7 +69559,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/components/ui.tsx",
-      "source_location": "L274",
+      "source_location": "L278",
       "weight": 1.0
     },
     {
@@ -69570,7 +69570,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/components/ui.tsx",
-      "source_location": "L331",
+      "source_location": "L361",
       "weight": 1.0
     },
     {
@@ -69581,7 +69581,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/components/ui.tsx",
-      "source_location": "L359",
+      "source_location": "L389",
       "weight": 1.0
     },
     {
@@ -69592,7 +69592,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/components/ui.tsx",
-      "source_location": "L374",
+      "source_location": "L404",
       "weight": 1.0
     },
     {
@@ -69603,7 +69603,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/components/ui.tsx",
-      "source_location": "L376",
+      "source_location": "L406",
       "weight": 1.0
     },
     {
@@ -69614,7 +69614,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/components/ui.tsx",
-      "source_location": "L384",
+      "source_location": "L414",
       "weight": 1.0
     },
     {
@@ -69625,7 +69625,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/components/ui.tsx",
-      "source_location": "L453",
+      "source_location": "L483",
       "weight": 1.0
     },
     {
@@ -69636,29 +69636,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/components/ui.tsx",
-      "source_location": "L487",
-      "weight": 1.0
-    },
-    {
-      "source": "mobile_src_components_ui",
-      "target": "mobile_src_components_ui_soustitre",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "mobile/src/components/ui.tsx",
-      "source_location": "L491",
-      "weight": 1.0
-    },
-    {
-      "source": "mobile_src_components_ui",
-      "target": "mobile_src_components_ui_bouton",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "mobile/src/components/ui.tsx",
-      "source_location": "L502",
+      "source_location": "L517",
       "weight": 1.0
     },
     {
@@ -69674,13 +69652,35 @@
     },
     {
       "source": "mobile_src_components_ui",
+      "target": "mobile_src_components_ui_soustitre",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "mobile/src/components/ui.tsx",
+      "source_location": "L521",
+      "weight": 1.0
+    },
+    {
+      "source": "mobile_src_components_ui",
+      "target": "mobile_src_components_ui_bouton",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "mobile/src/components/ui.tsx",
+      "source_location": "L532",
+      "weight": 1.0
+    },
+    {
+      "source": "mobile_src_components_ui",
       "target": "mobile_src_components_ui_champ",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/components/ui.tsx",
-      "source_location": "L555",
+      "source_location": "L585",
       "weight": 1.0
     },
     {
@@ -69691,7 +69691,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/components/ui.tsx",
-      "source_location": "L572",
+      "source_location": "L602",
       "weight": 1.0
     },
     {
@@ -69702,7 +69702,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/components/ui.tsx",
-      "source_location": "L605",
+      "source_location": "L635",
       "weight": 1.0
     },
     {
@@ -69713,7 +69713,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/components/ui.tsx",
-      "source_location": "L620",
+      "source_location": "L650",
       "weight": 1.0
     },
     {
@@ -69724,7 +69724,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/components/ui.tsx",
-      "source_location": "L635",
+      "source_location": "L665",
       "weight": 1.0
     },
     {
@@ -69735,7 +69735,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/components/ui.tsx",
-      "source_location": "L645",
+      "source_location": "L675",
       "weight": 1.0
     },
     {
@@ -69746,18 +69746,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/components/ui.tsx",
-      "source_location": "L676",
-      "weight": 1.0
-    },
-    {
-      "source": "mobile_src_components_ui",
-      "target": "mobile_src_components_ui_encartinfo",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "mobile/src/components/ui.tsx",
-      "source_location": "L705",
+      "source_location": "L706",
       "weight": 1.0
     },
     {
@@ -69773,13 +69762,24 @@
     },
     {
       "source": "mobile_src_components_ui",
+      "target": "mobile_src_components_ui_encartinfo",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "mobile/src/components/ui.tsx",
+      "source_location": "L735",
+      "weight": 1.0
+    },
+    {
+      "source": "mobile_src_components_ui",
       "target": "mobile_src_components_ui_etatvide",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/components/ui.tsx",
-      "source_location": "L737",
+      "source_location": "L767",
       "weight": 1.0
     },
     {
@@ -69790,7 +69790,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/components/ui.tsx",
-      "source_location": "L761",
+      "source_location": "L791",
       "weight": 1.0
     },
     {
@@ -69801,7 +69801,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/components/ui.tsx",
-      "source_location": "L770",
+      "source_location": "L800",
       "weight": 1.0
     },
     {
@@ -70725,7 +70725,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/lib/i18n.tsx",
-      "source_location": "L4589",
+      "source_location": "L4597",
       "weight": 1.0
     },
     {
@@ -70736,7 +70736,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/lib/i18n.tsx",
-      "source_location": "L4592",
+      "source_location": "L4600",
       "weight": 1.0
     },
     {
@@ -70747,7 +70747,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/lib/i18n.tsx",
-      "source_location": "L4594",
+      "source_location": "L4602",
       "weight": 1.0
     },
     {
@@ -70758,7 +70758,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/lib/i18n.tsx",
-      "source_location": "L4611",
+      "source_location": "L4619",
       "weight": 1.0
     },
     {
@@ -70769,7 +70769,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/lib/i18n.tsx",
-      "source_location": "L4617",
+      "source_location": "L4625",
       "weight": 1.0
     },
     {
@@ -70780,7 +70780,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/lib/i18n.tsx",
-      "source_location": "L4619",
+      "source_location": "L4627",
       "weight": 1.0
     },
     {
@@ -70791,7 +70791,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/lib/i18n.tsx",
-      "source_location": "L4655",
+      "source_location": "L4663",
       "weight": 1.0
     },
     {
@@ -70802,7 +70802,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/lib/i18n.tsx",
-      "source_location": "L4667",
+      "source_location": "L4675",
       "weight": 1.0
     },
     {
@@ -70813,7 +70813,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/lib/i18n.tsx",
-      "source_location": "L4672",
+      "source_location": "L4680",
       "weight": 1.0
     },
     {
@@ -70824,7 +70824,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/lib/i18n.tsx",
-      "source_location": "L4677",
+      "source_location": "L4685",
       "weight": 1.0
     },
     {
@@ -70835,7 +70835,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/lib/i18n.tsx",
-      "source_location": "L4682",
+      "source_location": "L4690",
       "weight": 1.0
     },
     {
@@ -70846,7 +70846,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/lib/i18n.tsx",
-      "source_location": "L4688",
+      "source_location": "L4696",
       "weight": 1.0
     },
     {
@@ -70857,7 +70857,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/lib/i18n.tsx",
-      "source_location": "L4696",
+      "source_location": "L4704",
       "weight": 1.0
     },
     {
@@ -70868,7 +70868,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/lib/i18n.tsx",
-      "source_location": "L4697",
+      "source_location": "L4705",
       "weight": 1.0
     },
     {
@@ -70879,7 +70879,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/lib/i18n.tsx",
-      "source_location": "L4700",
+      "source_location": "L4708",
       "weight": 1.0
     },
     {
@@ -70890,7 +70890,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/lib/i18n.tsx",
-      "source_location": "L4722",
+      "source_location": "L4730",
       "weight": 1.0
     },
     {
@@ -70901,7 +70901,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/lib/i18n.tsx",
-      "source_location": "L4762",
+      "source_location": "L4770",
       "weight": 1.0
     },
     {
@@ -70912,7 +70912,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/lib/i18n.tsx",
-      "source_location": "L4784",
+      "source_location": "L4792",
       "weight": 1.0
     },
     {
@@ -70923,7 +70923,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/lib/i18n.tsx",
-      "source_location": "L4793",
+      "source_location": "L4801",
       "weight": 1.0
     },
     {
@@ -70934,7 +70934,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/lib/i18n.tsx",
-      "source_location": "L4807",
+      "source_location": "L4815",
       "weight": 1.0
     },
     {
@@ -70945,7 +70945,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/lib/i18n.tsx",
-      "source_location": "L4814",
+      "source_location": "L4822",
       "weight": 1.0
     },
     {
@@ -70956,7 +70956,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/lib/i18n.tsx",
-      "source_location": "L4827",
+      "source_location": "L4835",
       "weight": 1.0
     },
     {
@@ -70967,7 +70967,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/lib/i18n.tsx",
-      "source_location": "L4850",
+      "source_location": "L4858",
       "weight": 1.0
     },
     {
@@ -70978,7 +70978,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "mobile/src/lib/i18n.tsx",
-      "source_location": "L4870",
+      "source_location": "L4878",
       "weight": 1.0
     },
     {
@@ -75632,5 +75632,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "5c51b38c61ae07bdf5ac16ee4d993d021a51e75b"
+  "built_at_commit": "50041a02b19049e945b65a9b6107875fe28c9a1d"
 }

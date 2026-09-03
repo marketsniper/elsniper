@@ -270,10 +270,37 @@ const LIBELLES_PEAU: Record<NomPeau, { nom: CleChaine; quand: CleChaine }> = {
  * L'aperçu n'est pas une pastille de couleur : c'est un écran miniature —
  * fond, panneau, deux lignes de texte, bouton — dessiné dans les VRAIES
  * couleurs de la peau. On choisit ce qu'on voit.
+ *
+ * REPLIÉ PAR DÉFAUT (« ça prend trop de place sur la page », 03/09/2026) :
+ * une seule ligne montre le thème du moment et invite à voir les autres.
+ * Choisir un thème — ou re-toucher l'actuel — replie la liste.
  */
 export function SelecteurPeau() {
   const { peau, choisir } = usePreferencePeau();
   const { t } = useT();
+  const [deplie, setDeplie] = React.useState(false);
+  if (!deplie) {
+    const mots = LIBELLES_PEAU[peau];
+    return (
+      <Pressable
+        onPress={() => setDeplie(true)}
+        accessibilityRole="button"
+        accessibilityState={{ expanded: false }}
+        accessibilityLabel={t('peau_voir_toutes')}
+        style={({ pressed }) => [
+          styles.casePeau,
+          styles.casePeauActive,
+          pressed && { opacity: 0.75 },
+        ]}
+      >
+        <Text style={styles.nomPeau}>{t(mots.nom)}</Text>
+        <Text style={styles.quandPeau} numberOfLines={1}>
+          {t('peau_voir_toutes')}
+        </Text>
+        <Ionicons name="chevron-down" size={18} color={couleurs.primaire} />
+      </Pressable>
+    );
+  }
   return (
     <View style={styles.rangeePeaux}>
       {PEAUX_AU_CHOIX.map((nom) => {
@@ -282,7 +309,10 @@ export function SelecteurPeau() {
         return (
           <Pressable
             key={nom}
-            onPress={() => choisir(nom)}
+            onPress={() => {
+              choisir(nom);
+              setDeplie(false);
+            }}
             accessibilityRole="radio"
             accessibilityState={{ selected: actif }}
             accessibilityLabel={t(mots.nom)}

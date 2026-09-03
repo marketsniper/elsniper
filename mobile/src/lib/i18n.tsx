@@ -1604,6 +1604,14 @@ const CHAINES = {
     it: 'Percorso impostato — tocca un\'altra località per ricominciare',
     de: 'Strecke gesetzt — tippen Sie auf einen anderen Ort für neu',
   },
+  // Le choix des thèmes est REPLIÉ : l'invite à voir toute la liste.
+  peau_voir_toutes: {
+    fr: 'Voir tous les thèmes',
+    en: 'See all themes',
+    sw: 'Ona mandhari zote',
+    it: 'Vedi tutti i temi',
+    de: 'Alle Designs ansehen',
+  },
   // La carte s'ouvre À LA DEMANDE : bouton d'ouverture et de fermeture.
   carte_ouvrir: {
     fr: 'Voir la carte de l\'île',
