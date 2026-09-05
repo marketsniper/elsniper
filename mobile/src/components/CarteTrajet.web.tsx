@@ -53,6 +53,18 @@ const TUILES_SATELLITE =
 const ATTRIBUTION_SATELLITE = '&copy; <a href="https://www.esri.com/">Esri</a> — Maxar, Earthstar Geographics';
 /** Au-delà, un toucher sur la carte ne s'aimante plus : on est en mer. */
 const AIMANT_MAX_KM = 30;
+/** L'ÎLE, ET RIEN QUE L'ÎLE (demande du client, 05/09/2026) : la carte ne
+ *  se laisse pas faire glisser vers le continent ni dézoomer jusqu'à se
+ *  perdre. Le cadre couvre Unguja de Nungwi (nord) à Kizimkazi (sud) avec
+ *  une marge de lagon — la côte tanzanienne, elle, reste hors champ. */
+const LIMITES_UNGUJA: [[number, number], [number, number]] = [
+  [-6.58, 39.0],
+  [-5.6, 39.72],
+];
+/** À 10, l'île entière ne tient plus en hauteur sur un téléphone ; à 9, la
+ *  côte tanzanienne entre dans le champ. 9,5 (zoom fractionné) montre toute
+ *  l'île, et rien qu'elle. */
+const ZOOM_MINIMUM = 9.5;
 /** Ce que la feuille de contenu recouvre en bas de la carte (le « deuxième
  *  plan » : les cartes suivantes glissent SUR la carte). Le défilement de
  *  l'écran garde son gap (espaces.m) — le chevauchement visible est donc
@@ -168,6 +180,13 @@ export function CarteTrajet({
           scrollWheelZoom: false,
           // Le zoom passe à droite : le slogan flotte en haut à gauche.
           zoomControl: false,
+          // Bornée à l'île : glisser vers le continent bute sur un mur
+          // (viscosité pleine), et le dézoom s'arrête quand l'île remplit
+          // encore l'écran — personne ne se perd au large.
+          maxBounds: LIMITES_UNGUJA,
+          maxBoundsViscosity: 1,
+          minZoom: ZOOM_MINIMUM,
+          zoomSnap: 0.5,
         });
         L.control.zoom({ position: 'topright' }).addTo(carte);
         carte.getContainer().classList.add('carte-fond-reserver');
