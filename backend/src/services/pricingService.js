@@ -212,9 +212,15 @@ const NET_TRANSFERT_USD = 45;
 //
 // Les NETS sont posés pour retomber EXACTEMENT sur le prix client visé, la
 // commission ordinaire prélevée (12 % à partir de 40 USD, 15 % en dessous) :
-// net 17 → 20 ; 23 → 28 ; 24 → 29 ; 25 → 30 ; 26 → 31 ; 28 → 33 ; 39 → 45 ;
+// net 17 → 20 ; 23 → 28 ; 24 → 29 ; 25 → 30 ; 26 → 31 ; 28 → 33 ; 38 → 44 ;
 // 42 → 48. « ville » couvre Stone Town ET son terminal ferry : cinq minutes
 // à pied séparent les deux, aucune course ne se vend entre elles.
+//
+// BAISSE DU 05/09/2026 (réunion chauffeurs) : les transferts qui se
+// vendaient 45 USD passent à 44 — le net promis descend de 39 à 38, pour un
+// versé de 38,72 USD ≈ 100 700 TSh (viser « 100 000 TSh » exactement est
+// impossible avec des prix clients en dollars entiers). Toute la baisse va
+// au client ; les transferts à 48 USD (net 42) ne bougent pas.
 const NET_TRANSFERT_PAR_VILLE_USD = {
   fumba: { ville: 17 },
   chwaka: { ville: 23 },
@@ -222,15 +228,15 @@ const NET_TRANSFERT_PAR_VILLE_USD = {
   pongwe: { ville: 23 },
   kiwengwa: { ville: 24, aeroport: 26 },
   'pwani mchangani': { ville: 25, aeroport: 28 },
-  matemwe: { ville: 39 },
-  paje: { ville: 39 },
-  bwejuu: { ville: 39 },
-  jambiani: { ville: 39 },
-  kizimkazi: { ville: 39 },
-  makunduchi: { ville: 39 },
-  mtende: { ville: 39 },
-  kendwa: { ville: 39, aeroport: 42 },
-  nungwi: { ville: 39, aeroport: 42 },
+  matemwe: { ville: 38 },
+  paje: { ville: 38 },
+  bwejuu: { ville: 38 },
+  jambiani: { ville: 38 },
+  kizimkazi: { ville: 38 },
+  makunduchi: { ville: 38 },
+  mtende: { ville: 38 },
+  kendwa: { ville: 38, aeroport: 42 },
+  nungwi: { ville: 38, aeroport: 42 },
   michamvi: { ville: 42 },
   dongwe: { ville: 42 },
 };
