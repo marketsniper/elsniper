@@ -682,11 +682,12 @@ const NET_TRANSFERT_USD = 45;
  *
  * GRILLE PAR BANDES KILOMÉTRIQUES (25/08/2026) — le prix suit la route,
  * partout entre 0,67 et 0,86 USD/km. Nets → prix client :
- * 17 → 20 ; 23 → 28 ; 24 → 29 ; 25 → 30 ; 26 → 31 ; 38 → 44 ; 42 → 48.
+ * 17 → 20 ; 23 → 28 ; 24 → 29 ; 25 → 30 ; 26 → 31 ; 36,96 → 42 ; 42 → 48.
  *
  * BAISSE DU 05/09/2026 (réunion chauffeurs, miroir du serveur) : les
- * transferts à 45 USD passent à 44 — net promis 39 → 38, versé 38,72 USD
- * ≈ 100 700 TSh. Toute la baisse va au client ; les 48 USD ne bougent pas.
+ * transferts à 45 USD visent un net d'environ 95 000 TSh → prix client
+ * 42 USD, net versé 36,96 USD ≈ 96 100 TSh. Toute la baisse va au client ;
+ * les 48 USD ne bougent pas.
  */
 const NET_TRANSFERT_PAR_VILLE_USD: Record<string, { ville: number; aeroport?: number }> = {
   fumba: { ville: 17 },
@@ -695,15 +696,15 @@ const NET_TRANSFERT_PAR_VILLE_USD: Record<string, { ville: number; aeroport?: nu
   pongwe: { ville: 23 },
   kiwengwa: { ville: 24, aeroport: 26 },
   'pwani mchangani': { ville: 25, aeroport: 28 },
-  matemwe: { ville: 38 },
-  paje: { ville: 38 },
-  bwejuu: { ville: 38 },
-  jambiani: { ville: 38 },
-  kizimkazi: { ville: 38 },
-  makunduchi: { ville: 38 },
-  mtende: { ville: 38 },
-  kendwa: { ville: 38, aeroport: 42 },
-  nungwi: { ville: 38, aeroport: 42 },
+  matemwe: { ville: 36.96 },
+  paje: { ville: 36.96 },
+  bwejuu: { ville: 36.96 },
+  jambiani: { ville: 36.96 },
+  kizimkazi: { ville: 36.96 },
+  makunduchi: { ville: 36.96 },
+  mtende: { ville: 36.96 },
+  kendwa: { ville: 36.96, aeroport: 42 },
+  nungwi: { ville: 36.96, aeroport: 42 },
   michamvi: { ville: 42 },
   dongwe: { ville: 42 },
 };

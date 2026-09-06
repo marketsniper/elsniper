@@ -212,15 +212,17 @@ const NET_TRANSFERT_USD = 45;
 //
 // Les NETS sont posés pour retomber EXACTEMENT sur le prix client visé, la
 // commission ordinaire prélevée (12 % à partir de 40 USD, 15 % en dessous) :
-// net 17 → 20 ; 23 → 28 ; 24 → 29 ; 25 → 30 ; 26 → 31 ; 28 → 33 ; 38 → 44 ;
-// 42 → 48. « ville » couvre Stone Town ET son terminal ferry : cinq minutes
-// à pied séparent les deux, aucune course ne se vend entre elles.
+// net 17 → 20 ; 23 → 28 ; 24 → 29 ; 25 → 30 ; 26 → 31 ; 28 → 33 ;
+// 36,96 → 42 ; 42 → 48. « ville » couvre Stone Town ET son terminal ferry :
+// cinq minutes à pied séparent les deux, aucune course ne se vend entre elles.
 //
 // BAISSE DU 05/09/2026 (réunion chauffeurs) : les transferts qui se
-// vendaient 45 USD passent à 44 — le net promis descend de 39 à 38, pour un
-// versé de 38,72 USD ≈ 100 700 TSh (viser « 100 000 TSh » exactement est
-// impossible avec des prix clients en dollars entiers). Toute la baisse va
-// au client ; les transferts à 48 USD (net 42) ne bougent pas.
+// vendaient 45 USD visent désormais un net d'environ 95 000 TSh. Avec des
+// prix clients en dollars entiers, le plus proche est 42 USD : net versé
+// 36,96 USD ≈ 96 100 TSh (l'option 41 USD donnait 93 800, sous la cible).
+// Toute la baisse va au client ; les transferts à 48 USD (net 42) ne
+// bougent pas. Le net promis est posé à 36,96 — la valeur exacte du versé,
+// pour que le plus petit dollar entier qui le couvre soit 42.
 const NET_TRANSFERT_PAR_VILLE_USD = {
   fumba: { ville: 17 },
   chwaka: { ville: 23 },
@@ -228,15 +230,15 @@ const NET_TRANSFERT_PAR_VILLE_USD = {
   pongwe: { ville: 23 },
   kiwengwa: { ville: 24, aeroport: 26 },
   'pwani mchangani': { ville: 25, aeroport: 28 },
-  matemwe: { ville: 38 },
-  paje: { ville: 38 },
-  bwejuu: { ville: 38 },
-  jambiani: { ville: 38 },
-  kizimkazi: { ville: 38 },
-  makunduchi: { ville: 38 },
-  mtende: { ville: 38 },
-  kendwa: { ville: 38, aeroport: 42 },
-  nungwi: { ville: 38, aeroport: 42 },
+  matemwe: { ville: 36.96 },
+  paje: { ville: 36.96 },
+  bwejuu: { ville: 36.96 },
+  jambiani: { ville: 36.96 },
+  kizimkazi: { ville: 36.96 },
+  makunduchi: { ville: 36.96 },
+  mtende: { ville: 36.96 },
+  kendwa: { ville: 36.96, aeroport: 42 },
+  nungwi: { ville: 36.96, aeroport: 42 },
   michamvi: { ville: 42 },
   dongwe: { ville: 42 },
 };
