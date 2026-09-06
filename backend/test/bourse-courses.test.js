@@ -53,7 +53,8 @@ describe('Bourse aux courses', () => {
     // Ce que le chauffeur DOIT voir pour décider.
     assert.equal(vue.pickup_location, 'Stone Town');
     assert.equal(vue.dropoff_location, 'Nungwi');
-    assert.equal(Number(vue.net_chauffeur), 39.6, 'son gain net, commission déduite');
+    // Transfert à 42 USD (baisse du 05/09/2026) : 42 − 5,03 = 36,97 nets.
+    assert.equal(Number(vue.net_chauffeur), 36.97, 'son gain net, commission déduite');
     assert.equal(Number(vue.part_zanzigo_pct), 12, 'la part zanziGo, en pourcentage');
     assert.equal(vue.flight_number, 'TK123');
     // …et ce qu'il ne voit PLUS : on choisit une course sur ce qu'elle

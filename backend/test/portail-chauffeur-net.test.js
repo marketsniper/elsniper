@@ -63,7 +63,7 @@ function champsInterdits(valeur, chemin = '$') {
   return trouves;
 }
 
-/** Une course Stone Town → Nungwi (45 $, 12 %) prise par un chauffeur. */
+/** Une course Stone Town → Nungwi (42 $, 12 %) prise par un chauffeur. */
 async function coursePrise({ payee = false } = {}) {
   const { token, user } = await createTourist();
   const { token: jetonChauffeur, driver } = await createVerifiedDriver();
@@ -93,8 +93,10 @@ async function coursePrise({ payee = false } = {}) {
 }
 
 describe('Le pourcentage zanziGo, calculé sur la course elle-même', () => {
-  it('un transfert à 45 $ : 12 %', () => {
-    assert.equal(partZanziGoPct(45, 5.4), 12);
+  it('un transfert à 42 $ : 12 %', () => {
+    // 42 USD depuis la baisse du 05/09/2026 — commission 5,03, soit 12 %
+    // une fois arrondi au point entier.
+    assert.equal(partZanziGoPct(42, 5.03), 12);
   });
 
   it('l’aéroport ↔ Stone Town : le calcul brut donne bien 31 %…', () => {
@@ -144,7 +146,7 @@ describe('Le pourcentage zanziGo, calculé sur la course elle-même', () => {
   it('rien à calculer → rien à afficher, pas un zéro trompeur', () => {
     assert.equal(partZanziGoPct(0, 0), null);
     assert.equal(partZanziGoPct(null, 5), null);
-    assert.equal(partZanziGoPct(45, undefined), null);
+    assert.equal(partZanziGoPct(42, undefined), null);
   });
 });
 
@@ -168,7 +170,8 @@ describe('Portail chauffeur : aucun prix client ne sort du serveur', () => {
     assert.equal(bourse.status, 200);
     assert.equal(bourse.body.length, 1);
     assert.deepEqual(champsInterdits(bourse.body), []);
-    assert.equal(Number(bourse.body[0].net_chauffeur), 39.6);
+    // 42 − 5,03 de commission : le chauffeur voit 36,97 USD nets.
+    assert.equal(Number(bourse.body[0].net_chauffeur), 36.97);
     assert.equal(Number(bourse.body[0].part_zanzigo_pct), 12);
   });
 
@@ -224,7 +227,7 @@ describe('Portail chauffeur : aucun prix client ne sort du serveur', () => {
         [],
         `course ${payee ? 'payée' : 'non payée'} : un prix client a filtré`
       );
-      assert.equal(Number(vue.body.net_chauffeur), 39.6);
+      assert.equal(Number(vue.body.net_chauffeur), 36.97);
       assert.equal(Number(vue.body.part_zanzigo_pct), 12);
     }
   });
@@ -237,7 +240,7 @@ describe('Portail chauffeur : aucun prix client ne sort du serveur', () => {
     assert.equal(liste.status, 200);
     assert.equal(liste.body.length, 1);
     assert.deepEqual(champsInterdits(liste.body), []);
-    assert.equal(Number(liste.body[0].net_chauffeur), 39.6);
+    assert.equal(Number(liste.body[0].net_chauffeur), 36.97);
   });
 
   it('la bourse aux colis et « mes colis », du dépôt à la livraison', async () => {
@@ -312,12 +315,13 @@ describe('Portail chauffeur : aucun prix client ne sort du serveur', () => {
     assert.equal(miennes.status, 200);
     assert.deepEqual(champsInterdits(miennes.body), []);
     const vue = miennes.body[0];
-    // Place touriste à 15 USD (privé 45 → place 15) : 25 % pour zanziGo.
-    assert.equal(Number(vue.net_par_place_usd), 11.25);
+    // Place touriste à 14 USD (privé 42 → place 14, depuis la baisse du
+    // 05/09/2026) : 25 % pour zanziGo, net 10,50 la place.
+    assert.equal(Number(vue.net_par_place_usd), 10.5);
     assert.equal(Number(vue.part_zanzigo_pct), 25);
     // Et le net en shillings suit la règle des comptes ronds.
     assert.equal(Number(vue.net_par_place_tzs) % 1000, 0, 'le net local est un compte rond');
-    assert.equal(Number(vue.bookings[0].net_per_seat), 11.25);
+    assert.equal(Number(vue.bookings[0].net_per_seat), 10.5);
   });
 });
 
@@ -357,15 +361,15 @@ describe('…mais l’équipe et le client, eux, voient les montants', () => {
     const { id } = await coursePrise({ payee: true });
     const vue = await request(app).get(`/api/trips/${id}`).set(adminHeaders());
     assert.equal(vue.status, 200);
-    assert.equal(Number(vue.body.price), 45, "l'équipe doit voir ce que le client paie");
-    assert.equal(Number(vue.body.commission), 5.4, 'et ce que zanziGo encaisse');
+    assert.equal(Number(vue.body.price), 42, "l'équipe doit voir ce que le client paie");
+    assert.equal(Number(vue.body.commission), 5.03, 'et ce que zanziGo encaisse');
   });
 
   it('le client voit le prix de SA course', async () => {
     const { id, jetonClient } = await coursePrise({ payee: true });
     const vue = await request(app).get(`/api/trips/${id}`).set(authHeaders(jetonClient));
     assert.equal(vue.status, 200);
-    assert.equal(Number(vue.body.price), 45);
+    assert.equal(Number(vue.body.price), 42);
   });
 
   it('le passager voit le prix de la place qu’il réserve', async () => {
@@ -378,6 +382,6 @@ describe('…mais l’équipe et le client, eux, voient les montants', () => {
     const { token: jetonTouriste } = await createTourist();
     const liste = await request(app).get('/api/rides').set(authHeaders(jetonTouriste));
     assert.equal(liste.status, 200);
-    assert.equal(Number(liste.body[0].price_per_seat_usd), 15, 'sinon il ne peut pas décider');
+    assert.equal(Number(liste.body[0].price_per_seat_usd), 14, 'sinon il ne peut pas décider');
   });
 });

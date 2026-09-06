@@ -71,15 +71,19 @@ describe('Grille privée : le net du chauffeur décide, le forfait s’ajoute', 
     verifier('Stone Town', 'Pongwe', 23, 28);
     verifier('Stone Town', 'Kiwengwa', 24, 29);
     verifier('Stone Town', 'Pwani Mchangani', 25, 30);
-    verifier('Stone Town', 'Matemwe', 39, 45);
-    verifier('Stone Town', 'Paje', 39, 45);
-    verifier('Stone Town', 'Bwejuu', 39, 45);
-    verifier('Stone Town', 'Jambiani', 39, 45);
-    verifier('Stone Town', 'Kizimkazi', 39, 45);
-    verifier('Stone Town', 'Makunduchi', 39, 45);
-    verifier('Stone Town', 'Mtende', 39, 45);
-    verifier('Stone Town', 'Kendwa', 39, 45);
-    verifier('Stone Town', 'Nungwi', 39, 45);
+    // BAISSE DU 05/09/2026 (réunion chauffeurs) : les transferts qui se
+    // vendaient 45 USD passent à 42 — le net promis est posé à 36,96, la
+    // valeur exacte du versé (42 − 12 %), pour que 42 soit le premier dollar
+    // entier qui le couvre.
+    verifier('Stone Town', 'Matemwe', 36.96, 42);
+    verifier('Stone Town', 'Paje', 36.96, 42);
+    verifier('Stone Town', 'Bwejuu', 36.96, 42);
+    verifier('Stone Town', 'Jambiani', 36.96, 42);
+    verifier('Stone Town', 'Kizimkazi', 36.96, 42);
+    verifier('Stone Town', 'Makunduchi', 36.96, 42);
+    verifier('Stone Town', 'Mtende', 36.96, 42);
+    verifier('Stone Town', 'Kendwa', 36.96, 42);
+    verifier('Stone Town', 'Nungwi', 36.96, 42);
     // Michamvi et Dongwe sont au bout de la presqu'île, par Paje puis retour
     // à vide : leur route réelle dépasse Nungwi, leur prix aussi.
     verifier('Stone Town', 'Michamvi', 42, 48);
@@ -133,14 +137,17 @@ describe('Grille privée : le net du chauffeur décide, le forfait s’ajoute', 
 
   it('le couloir du sud-est a rejoint le prix de Nungwi', () => {
     // Décision du 25/08/2026 : Paje, Bwejuu et Jambiani au même prix que
-    // Nungwi — 45 USD, commission ordinaire de 12 %. Leur règle à part
-    // (105 000 TZS nets, 17 %) n'existe plus ; la promesse des comptes ronds
-    // en shillings, elle, demeure.
+    // Nungwi — commission ordinaire de 12 %. Leur règle à part (105 000 TZS
+    // nets, 17 %) n'existe plus ; la promesse des comptes ronds en
+    // shillings, elle, demeure. Le prix commun est passé de 45 à 42 USD le
+    // 05/09/2026 (réunion chauffeurs) — le couloir suit toujours Nungwi.
     for (const hub of HUBS) {
       for (const plage of ['Paje', 'Bwejuu', 'Jambiani']) {
-        assert.equal(privateUsdForRoute(hub, plage), 45, `prix ${hub} → ${plage}`);
+        assert.equal(privateUsdForRoute(hub, plage), 42, `prix ${hub} → ${plage}`);
         const course = priceTrip('private', 'tourist', { pickup: hub, dropoff: plage });
-        assert.equal(course.commission, 5.4, `${hub} → ${plage} : 12 % de 45`);
+        // 12 % de 42 = 5,04, arrondis au centime INFÉRIEUR quand la promesse
+        // de 36,96 l'exige : la commission tombe à 5,03.
+        assert.equal(course.commission, 5.03, `${hub} → ${plage} : 12 % de 42`);
         const locale = priceTrip('private', 'local', { pickup: hub, dropoff: plage });
         assert.equal(
           (locale.price - locale.commission) % 1000,
@@ -258,9 +265,12 @@ describe('Grille privée : le net du chauffeur décide, le forfait s’ajoute', 
       pickup: 'Stone Town',
       dropoff: 'Nungwi',
     });
-    assert.equal(transfert.price, 45);
-    assert.equal(transfert.commission, 5.4);
-    assert.equal(transfert.price - transfert.commission, 39.6, 'le net promis au chauffeur');
+    // 42 USD depuis la baisse du 05/09/2026 (réunion chauffeurs) : le net
+    // promis est 36,96 et la commission s'arrête à 5,03 — le centime
+    // d'arrondi tombe sur zanziGo, le chauffeur touche 36,97.
+    assert.equal(transfert.price, 42);
+    assert.equal(transfert.commission, 5.03);
+    assert.equal(transfert.price - transfert.commission, 36.97, 'au moins le net promis (36,96)');
 
     // Une destination à 15 % : la côte est, sous les 40 USD.
     const courte = priceTrip('private', 'tourist', { pickup: 'Stone Town', dropoff: 'Chwaka' });
@@ -390,9 +400,10 @@ describe('Grille privée : le net du chauffeur décide, le forfait s’ajoute', 
       const net = course.price - course.commission;
       assert.equal(net % 1000, 0, `${a} → ${b} : ${net} n'est pas un compte rond`);
     }
-    // L'exemple fondateur de la règle, à la lettre.
+    // L'exemple fondateur de la règle, à la lettre. Depuis la baisse du
+    // 05/09/2026 : 42 USD = 109 200 TZS, net 96 096 arrondi à 96 000.
     const nungwi = priceTrip('private', 'local', { pickup: 'Stone Town', dropoff: 'Nungwi' });
-    assert.equal(nungwi.price - nungwi.commission, 102000);
+    assert.equal(nungwi.price - nungwi.commission, 96000);
     // La place locale et le colis en shillings suivent.
     const place = priceTrip('shared_local', 'local', { pickup: 'Stone Town', dropoff: 'Nungwi' });
     assert.equal(place.price - place.commission, 13000);
@@ -400,7 +411,7 @@ describe('Grille privée : le net du chauffeur décide, le forfait s’ajoute', 
     assert.equal((colis.price - colis.commission) % 1000, 0);
   });
 
-  it('bout en bout : une course privée Stone Town → Nungwi est créée à 45 USD', async () => {
+  it('bout en bout : une course privée Stone Town → Nungwi est créée à 42 USD', async () => {
     const { token, user } = await createTourist();
     const creation = await request(app)
       .post('/api/trips')
@@ -412,9 +423,10 @@ describe('Grille privée : le net du chauffeur décide, le forfait s’ajoute', 
         dropoffLocation: 'Nungwi',
       });
     assert.equal(creation.status, 201, JSON.stringify(creation.body));
-    assert.equal(Number(creation.body.price), 45);
+    // 42 USD depuis le 05/09/2026 (réunion chauffeurs) — commission 5,03.
+    assert.equal(Number(creation.body.price), 42);
     assert.equal(creation.body.currency, 'USD');
-    assert.equal(Number(creation.body.commission), 5.4);
+    assert.equal(Number(creation.body.commission), 5.03);
   });
 });
 

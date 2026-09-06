@@ -80,18 +80,19 @@ describe('Surcharge carte : sur une vraie course', () => {
   it('le touriste règle prix + frais, et le voit avant de payer', async () => {
     const { course, token } = await coursePrete();
     const prix = Number(course.price);
-    assert.equal(prix, 45, 'Stone Town → Nungwi, prix de transfert');
+    // 42 USD depuis la baisse du 05/09/2026 (réunion chauffeurs).
+    assert.equal(prix, 42, 'Stone Town → Nungwi, prix de transfert');
 
     const paiement = await request(app)
       .post(`/api/trips/${course.id}/payment`)
       .set(authHeaders(token));
     assert.equal(paiement.status, 201, JSON.stringify(paiement.body));
-    assert.equal(Number(paiement.body.prix_course), 45, 'le prix de la course est rappelé');
-    assert.equal(Number(paiement.body.surcharge), 1.8);
-    assert.equal(Number(paiement.body.amount), 46.8, 'ce qui est débité');
+    assert.equal(Number(paiement.body.prix_course), 42, 'le prix de la course est rappelé');
+    assert.equal(Number(paiement.body.surcharge), 1.68); // 42 × 4 %
+    assert.equal(Number(paiement.body.amount), 43.68, 'ce qui est débité');
     assert.match(paiement.body.mention_surcharge, /Frais bancaires carte/);
     // Le message envoyé à l'équipe porte le même montant : pas deux vérités.
-    assert.ok(decodeURIComponent(paiement.body.payment_link).includes('46.8'));
+    assert.ok(decodeURIComponent(paiement.body.payment_link).includes('43.68'));
   });
 
   it('la COMMISSION et le gain du chauffeur ignorent la surcharge', async () => {
@@ -99,10 +100,10 @@ describe('Surcharge carte : sur une vraie course', () => {
     await request(app).post(`/api/trips/${course.id}/payment`).set(authHeaders(token));
 
     const vue = await request(app).get(`/api/trips/${course.id}`).set(adminHeaders());
-    assert.equal(Number(vue.body.price), 45, 'le prix de la course n’a pas bougé');
-    assert.equal(Number(vue.body.commission), 5.4, '12 % de 45, pas de 46,80');
-    // Le chauffeur touche 39,60 : la banque ne se sert pas dans sa poche.
-    assert.equal(Number(vue.body.price) - Number(vue.body.commission), 39.6);
+    assert.equal(Number(vue.body.price), 42, 'le prix de la course n’a pas bougé');
+    assert.equal(Number(vue.body.commission), 5.03, '12 % de 42, pas de 43,68');
+    // Le chauffeur touche 36,97 : la banque ne se sert pas dans sa poche.
+    assert.equal(Number(vue.body.price) - Number(vue.body.commission), 36.97);
   });
 
   it('un LOCAL qui paie en shillings n’a aucune surcharge', async () => {

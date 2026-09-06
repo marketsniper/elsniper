@@ -6,8 +6,9 @@
 // Stone Town.
 //
 //   Stone Town / ferry → Fumba     20 USD      (aéroport aussi)
-//   Matemwe : 45 USD depuis tous les hubs (aligné le 25/08/2026)
-//   Stone Town / ferry → Nungwi    45 USD      aéroport → Nungwi   48 USD
+//   Matemwe : 42 USD depuis tous les hubs (aligné le 25/08/2026 à 45,
+//             puis baisse du 05/09/2026)
+//   Stone Town / ferry → Nungwi    42 USD      aéroport → Nungwi   48 USD
 //
 // Ces montants sont des décisions commerciales, pas des calculs : ce test les
 // tient, et vérifie que le reste de la grille n'a pas bougé avec.
@@ -59,20 +60,24 @@ describe('Prix de transfert — les exceptions au prix unique', () => {
     [AEROPORT, 'Kiwengwa', 31, 26],
     ['Stone Town', 'Pwani Mchangani', 30, 25],
     [AEROPORT, 'Pwani Mchangani', 33, 28],
-    ['Stone Town', 'Matemwe', 45, 39],
-    ['Stone Town Ferry', 'Matemwe', 45, 39],
-    [AEROPORT, 'Matemwe', 45, 39],
-    ['Stone Town', 'Paje', 45, 39],
-    [AEROPORT, 'Paje', 45, 39],
-    ['Stone Town', 'Bwejuu', 45, 39],
-    ['Stone Town', 'Jambiani', 45, 39],
-    ['Stone Town', 'Kizimkazi', 45, 39],
-    ['Stone Town', 'Makunduchi', 45, 39],
-    ['Stone Town', 'Mtende', 45, 39],
-    ['Stone Town', 'Kendwa', 45, 39],
+    // BAISSE DU 05/09/2026 (réunion chauffeurs) : tous les transferts qui se
+    // vendaient 45 USD (net 39) passent à 42, net promis 36,96 — la valeur
+    // exacte du versé à 12 %, pour que 42 soit le premier dollar entier qui
+    // la couvre. Les transferts à 48 USD (net 42) ne bougent pas.
+    ['Stone Town', 'Matemwe', 42, 36.96],
+    ['Stone Town Ferry', 'Matemwe', 42, 36.96],
+    [AEROPORT, 'Matemwe', 42, 36.96],
+    ['Stone Town', 'Paje', 42, 36.96],
+    [AEROPORT, 'Paje', 42, 36.96],
+    ['Stone Town', 'Bwejuu', 42, 36.96],
+    ['Stone Town', 'Jambiani', 42, 36.96],
+    ['Stone Town', 'Kizimkazi', 42, 36.96],
+    ['Stone Town', 'Makunduchi', 42, 36.96],
+    ['Stone Town', 'Mtende', 42, 36.96],
+    ['Stone Town', 'Kendwa', 42, 36.96],
     [AEROPORT, 'Kendwa', 48, 42],
-    ['Stone Town', 'Nungwi', 45, 39],
-    ['Stone Town Ferry', 'Nungwi', 45, 39],
+    ['Stone Town', 'Nungwi', 42, 36.96],
+    ['Stone Town Ferry', 'Nungwi', 42, 36.96],
     [AEROPORT, 'Nungwi', 48, 42],
     ['Stone Town', 'Michamvi', 48, 42],
     ['Stone Town', 'Dongwe', 48, 42],

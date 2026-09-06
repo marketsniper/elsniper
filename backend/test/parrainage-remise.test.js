@@ -126,18 +126,19 @@ describe('Parrainage : le crédit se pose et se déduit tout seul', () => {
       .set(authHeaders(token));
     assert.equal(Number(fiche.body.remise_parrainage_disponible_usd), 5);
 
-    // …et le paiement la déduit : 45 − 5 = 40 USD → carte 41,60 (4 % sur la
-    // base remisée), remise figée sur la ligne.
+    // …et le paiement la déduit : 42 − 5 = 37 USD → carte 38,48 (4 % sur la
+    // base remisée), remise figée sur la ligne. (Le transfert vaut 42 USD
+    // depuis la baisse du 05/09/2026, réunion chauffeurs.)
     const paiement = await request(app)
       .post(`/api/trips/${troisieme.body.id}/payment`)
       .set(authHeaders(token))
       .send({ method: 'carte' });
     assert.equal(paiement.status, 201, JSON.stringify(paiement.body));
     assert.equal(Number(paiement.body.remise_parrainage), 5);
-    assert.equal(Number(paiement.body.amount), 41.6);
-    assert.equal(Number(paiement.body.surcharge), 1.6);
+    assert.equal(Number(paiement.body.amount), 38.48);
+    assert.equal(Number(paiement.body.surcharge), 1.48);
     assert.match(paiement.body.mention_parrainage, /Remise parrainage/);
-    assert.equal(Number(paiement.body.prix_course), 45, 'le PRIX ne bouge pas');
+    assert.equal(Number(paiement.body.prix_course), 42, 'le PRIX ne bouge pas');
 
     // Le crédit n'est PAS consommé tant que rien n'est payé…
     assert.equal(await creditDe(filleul.id), 5);
@@ -145,14 +146,14 @@ describe('Parrainage : le crédit se pose et se déduit tout seul', () => {
     await request(app).post(`/api/payments/${paiement.body.id}/confirm`).set(authHeaders(token));
     assert.equal(await creditDe(filleul.id), 0, 'crédit consommé une seule fois');
 
-    // La COMMISSION du chauffeur est calculée sur 45, pas sur 40 : la
+    // La COMMISSION du chauffeur est calculée sur 42, pas sur 37 : la
     // remise est le geste commercial de zanziGo, pas celui du chauffeur.
     const vue = await request(app).get(`/api/trips/${troisieme.body.id}`).set(adminHeaders());
-    assert.equal(Number(vue.body.price), 45);
-    assert.equal(Number(vue.body.commission), 5.4);
+    assert.equal(Number(vue.body.price), 42);
+    assert.equal(Number(vue.body.commission), 5.03);
 
     // Le PARRAIN, lui aussi, voit sa remise sur sa prochaine course —
-    // en portefeuille mobile : (45 − 5) × 2 600 = 104 000 TZS.
+    // en portefeuille mobile : (42 − 5) × 2 600 = 96 200 TZS.
     const { driver: chauffeurP } = await createVerifiedDriver();
     const courseParrain = await request(app)
       .post('/api/trips')
@@ -171,7 +172,7 @@ describe('Parrainage : le crédit se pose et se déduit tout seul', () => {
       .post(`/api/trips/${courseParrain.body.id}/payment`)
       .set(authHeaders(tokenParrain))
       .send({ method: 'mobile' });
-    assert.equal(Number(paiementParrain.body.amount), 104000);
+    assert.equal(Number(paiementParrain.body.amount), 96200);
     assert.equal(Number(paiementParrain.body.remise_parrainage), 5);
   });
 
@@ -199,15 +200,15 @@ describe('Parrainage : le crédit se pose et se déduit tout seul', () => {
       .post(`/api/trips/${course.body.id}/payment`)
       .set(authHeaders(token))
       .send({ method: 'carte' });
-    assert.equal(Number(paiement.body.amount), 41.6);
+    assert.equal(Number(paiement.body.amount), 38.48); // (42 − 5) × 1,04
 
     const bascule = await request(app)
       .post(`/api/payments/${paiement.body.id}/moyen`)
       .set(authHeaders(token))
       .send({ moyen: 'mobile' });
     assert.equal(bascule.status, 200, JSON.stringify(bascule.body));
-    // (45 − 5) × 2 600 : la base reste remisée après la bascule.
-    assert.equal(Number(bascule.body.amount), 104000);
+    // (42 − 5) × 2 600 : la base reste remisée après la bascule.
+    assert.equal(Number(bascule.body.amount), 96200);
   });
 
   it('course annulée après paiement : l\'argent est remboursé ET le crédit revient', async () => {
@@ -244,8 +245,8 @@ describe('Parrainage : le crédit se pose et se déduit tout seul', () => {
       .set(authHeaders(token));
     assert.equal(annulation.status, 200, JSON.stringify(annulation.body));
     // Remboursé en argent : ce qu'il a réellement payé, hors frais carte —
-    // 41,60 − 1,60 = 40,00 (la remise n'était pas de l'argent versé).
-    assert.equal(Number(annulation.body.refund.amount), 40);
+    // 38,48 − 1,48 = 37,00 (la remise n'était pas de l'argent versé).
+    assert.equal(Number(annulation.body.refund.amount), 37);
     // Et le crédit revient, prêt pour la prochaine course.
     assert.equal(await creditDe(filleul.id), 5, 'le crédit est rendu');
   });

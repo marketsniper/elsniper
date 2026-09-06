@@ -70,8 +70,9 @@ async function annonceReservee({ seats = 2, method = 'carte' } = {}) {
 describe('Remboursements : la surcharge carte ne se rembourse JAMAIS', () => {
   it('place payée par carte, annulée à +48 h : remboursement = PRIX, pas montant débité', async () => {
     const { resa, tokenTouriste } = await annonceReservee({ seats: 2, method: 'carte' });
-    // 2 places à 15 USD = 30 ; débité par carte : 31,20 (surcharge 1,20).
-    assert.equal(Number(resa.payment.amount), 31.2);
+    // 2 places à 14 USD = 28 (la place suit le privé à 42 depuis la baisse
+    // du 05/09/2026) ; débité par carte : 29,12 (surcharge 1,12).
+    assert.equal(Number(resa.payment.amount), 29.12);
     await request(app)
       .post(`/api/payments/${resa.payment.id}/confirm`)
       .set(authHeaders(tokenTouriste));
@@ -84,8 +85,8 @@ describe('Remboursements : la surcharge carte ne se rembourse JAMAIS', () => {
       .set(authHeaders(tokenTouriste));
     assert.equal(annulation.status, 200, JSON.stringify(annulation.body));
     assert.equal(annulation.body.refund.rate, 1);
-    // 30,00 — les 1,20 de frais bancaires sont chez la banque, pas chez nous.
-    assert.equal(Number(annulation.body.refund.amount), 30);
+    // 28,00 — les 1,12 de frais bancaires sont chez la banque, pas chez nous.
+    assert.equal(Number(annulation.body.refund.amount), 28);
   });
 });
 
@@ -135,8 +136,9 @@ describe('paid_at : la trace qui survit à tout', () => {
     assert.equal(annulation.status, 200, JSON.stringify(annulation.body));
     assert.ok(annulation.body.refund, 'le remboursement doit être tracé');
     assert.equal(annulation.body.refund.rate, 1);
-    // Prix 45 — la surcharge carte (1,80) reste hors du remboursement.
-    assert.equal(Number(annulation.body.refund.amount), 45);
+    // Prix 42 (baisse du 05/09/2026) — la surcharge carte (1,68) reste hors
+    // du remboursement.
+    assert.equal(Number(annulation.body.refund.amount), 42);
 
     const dus = await request(app).get('/api/payments/remboursements').set(adminHeaders());
     assert.equal(dus.body.length, 1, 'la ligne est dans « Remboursements à verser »');
@@ -180,10 +182,10 @@ describe('Annonce annulée par le chauffeur : les passagers ne disparaissent pas
       .set(authHeaders(tokenTouriste));
     assert.equal(mesPlaces.body[0].cancelled, true);
 
-    // …et le remboursement DÛ est tracé : 30 USD (prix), pas 31,20 (débité).
+    // …et le remboursement DÛ est tracé : 28 USD (prix), pas 29,12 (débité).
     const dus = await request(app).get('/api/payments/remboursements').set(adminHeaders());
     assert.equal(dus.body.length, 1);
-    assert.equal(Number(dus.body[0].refund_amount), 30);
+    assert.equal(Number(dus.body[0].refund_amount), 28);
   });
 });
 

@@ -54,8 +54,9 @@ describe('Pack améliorations', () => {
       });
     assert.equal(ar.status, 201, JSON.stringify(ar.body));
     assert.equal(ar.body.round_trip, true);
-    assert.equal(Number(ar.body.price), 81); // 45 × 1,8
-    assert.equal(Number(ar.body.commission), 9.72); // 12 % de 81,00 (45 × 1,8)
+    // 42 USD depuis la baisse du 05/09/2026 : l'aller-retour suit.
+    assert.equal(Number(ar.body.price), 75.6); // 42 × 1,8
+    assert.equal(Number(ar.body.commission), 9.05); // 5,03 × 1,8, au centime
 
     // Sur un partagé, le drapeau est ignoré (pas d'aller-retour partagé).
     const partage = await request(app)
@@ -70,7 +71,7 @@ describe('Pack améliorations', () => {
       });
     assert.equal(partage.status, 201);
     assert.equal(partage.body.round_trip, false);
-    assert.equal(Number(partage.body.price), 15); // privé 45 → place 15
+    assert.equal(Number(partage.body.price), 14); // privé 42 → place 14
   });
 
   it('Stone Town et son ferry : même place, aucune course entre les deux', async () => {

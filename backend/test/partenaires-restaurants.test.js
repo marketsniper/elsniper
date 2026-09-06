@@ -115,8 +115,9 @@ describe('Restaurants partenaires', () => {
       });
     assert.equal(course.status, 201, JSON.stringify(course.body));
     assert.equal(course.body.hotel_id, partenaire.id);
-    // La remise partenaire de 5 % vaut aussi pour un restaurant : 45 → 42,75.
-    assert.equal(Number(course.body.price), 42.75);
+    // La remise partenaire de 5 % vaut aussi pour un restaurant : 42 → 39,90
+    // (le transfert vaut 42 USD depuis la baisse du 05/09/2026).
+    assert.equal(Number(course.body.price), 39.9);
     const message = decodeURIComponent(course.body.whatsapp_link ?? '');
     assert.match(message, /Lukmaan Restaurant \(restaurant\) pour Amina Hassan/);
   });
