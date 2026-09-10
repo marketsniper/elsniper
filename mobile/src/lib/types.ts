@@ -967,13 +967,17 @@ export interface TarifsZone {
 
 /**
  * Prix d'une place en taxi partagé : le TIERS du prix de la course PRIVÉE du
- * même trajet, arrondi au dollar inférieur (miroir exact du serveur). Règle
+ * même trajet, arrondi au dollar inférieur, PLAFONNÉ à 12 USD (miroir exact
+ * du serveur — plafond de lancement du 10/09/2026 : aucune place touriste
+ * au-dessus de 12 $, le gain chauffeur suit à 75 % du prix). Règle
  * volontairement simple à vérifier de tête : « à trois, c'est le prix du
- * taxi ». Dès la quatrième place, la voiture rapporte plus au chauffeur qu'une
- * course privée — et elle en tient six.
+ * taxi » — sauf là où le plafond mord. Dès la quatrième place, la voiture
+ * rapporte plus au chauffeur qu'une course privée — et elle en tient six.
  */
+const PLAFOND_PLACE_USD = 12;
+
 export function tarifPlacePartagee(priveUsd: number): number {
-  return Math.floor(priveUsd / 3);
+  return Math.min(Math.floor(priveUsd / 3), PLAFOND_PLACE_USD);
 }
 
 // Tarif local UNIFIÉ : 17 000 TZS la place partout (sauf trajets spéciaux,

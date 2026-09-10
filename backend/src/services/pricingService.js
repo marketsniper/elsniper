@@ -42,8 +42,16 @@ const ZONE_TIERS = {
 //
 // En dessous de PARTAGE_PRIVE_MIN_USD la question ne se pose pas : le taxi
 // partagé n'existe pas sur les trajets courts.
+//
+// PLAFOND DE LANCEMENT (10/09/2026, décision du client) : aucune place
+// touriste au-dessus de 12 USD. Les places à 14-16 (côte est/sud, Nungwi,
+// Michamvi, aéroport) descendent à 12 ; celles déjà à 9-11 ne bougent pas.
+// Le gain chauffeur suit le prix (toujours 75 % de la place) — assumé : la
+// société n'a pas encore de clients, la grille se règle avant l'ouverture.
+const PLAFOND_PLACE_USD = 12;
+
 function sharedSeatUsd(priveUsd) {
-  return Math.floor(priveUsd / 3);
+  return Math.min(Math.floor(priveUsd / 3), PLAFOND_PLACE_USD);
 }
 
 // Commissions zanziGo par service (grille « Chauffeur reçoit ») :
