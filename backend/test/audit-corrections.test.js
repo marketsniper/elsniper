@@ -70,9 +70,9 @@ async function annonceReservee({ seats = 2, method = 'carte' } = {}) {
 describe('Remboursements : la surcharge carte ne se rembourse JAMAIS', () => {
   it('place payée par carte, annulée à +48 h : remboursement = PRIX, pas montant débité', async () => {
     const { resa, tokenTouriste } = await annonceReservee({ seats: 2, method: 'carte' });
-    // 2 places à 14 USD = 28 (la place suit le privé à 42 depuis la baisse
-    // du 05/09/2026) ; débité par carte : 29,12 (surcharge 1,12).
-    assert.equal(Number(resa.payment.amount), 29.12);
+    // 2 places à 12 USD = 24 (la place suit le privé à 42, plafonnée à
+    // 12 USD depuis le 10/09/2026) ; débité par carte : 24,96 (surcharge 0,96).
+    assert.equal(Number(resa.payment.amount), 24.96);
     await request(app)
       .post(`/api/payments/${resa.payment.id}/confirm`)
       .set(authHeaders(tokenTouriste));
@@ -85,8 +85,8 @@ describe('Remboursements : la surcharge carte ne se rembourse JAMAIS', () => {
       .set(authHeaders(tokenTouriste));
     assert.equal(annulation.status, 200, JSON.stringify(annulation.body));
     assert.equal(annulation.body.refund.rate, 1);
-    // 28,00 — les 1,12 de frais bancaires sont chez la banque, pas chez nous.
-    assert.equal(Number(annulation.body.refund.amount), 28);
+    // 24,00 — les 0,96 de frais bancaires sont chez la banque, pas chez nous.
+    assert.equal(Number(annulation.body.refund.amount), 24);
   });
 });
 
@@ -182,10 +182,10 @@ describe('Annonce annulée par le chauffeur : les passagers ne disparaissent pas
       .set(authHeaders(tokenTouriste));
     assert.equal(mesPlaces.body[0].cancelled, true);
 
-    // …et le remboursement DÛ est tracé : 28 USD (prix), pas 29,12 (débité).
+    // …et le remboursement DÛ est tracé : 24 USD (prix), pas 24,96 (débité).
     const dus = await request(app).get('/api/payments/remboursements').set(adminHeaders());
     assert.equal(dus.body.length, 1);
-    assert.equal(Number(dus.body[0].refund_amount), 28);
+    assert.equal(Number(dus.body[0].refund_amount), 24);
   });
 });
 

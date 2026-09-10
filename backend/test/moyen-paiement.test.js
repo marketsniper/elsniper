@@ -261,11 +261,11 @@ describe('Places de taxi partagé : même choix', () => {
       .set(authHeaders(tokenTouriste))
       .send({ seats: 2, method: 'mobile' });
     assert.equal(resa.status, 201, JSON.stringify(resa.body));
-    // 2 places à 14 USD = 28 USD → 72 800 TZS, sans frais. (La place vaut le
-    // tiers du privé : 42 ÷ 3 depuis la baisse du 05/09/2026.)
+    // 2 places à 12 USD = 24 USD → 62 400 TZS, sans frais. (La place vaut le
+    // tiers du privé, plafonné à 12 USD depuis le 10/09/2026.)
     assert.equal(resa.body.payment.method, 'mobile');
     assert.equal(resa.body.payment.currency, 'TZS');
-    assert.equal(Number(resa.body.payment.amount), 72800);
+    assert.equal(Number(resa.body.payment.amount), 62400);
     assert.equal(Number(resa.body.payment.surcharge), 0);
 
     // La fiche « ma place » montre les deux chiffres : le prix et ce qu'il y
@@ -273,9 +273,9 @@ describe('Places de taxi partagé : même choix', () => {
     const mesPlaces = await request(app)
       .get('/api/rides/reservations')
       .set(authHeaders(tokenTouriste));
-    assert.equal(Number(mesPlaces.body[0].amount), 28, 'le prix des 2 places');
+    assert.equal(Number(mesPlaces.body[0].amount), 24, 'le prix des 2 places');
     assert.equal(mesPlaces.body[0].currency, 'USD');
-    assert.equal(Number(mesPlaces.body[0].reglement_montant), 72800);
+    assert.equal(Number(mesPlaces.body[0].reglement_montant), 62400);
     assert.equal(mesPlaces.body[0].reglement_devise, 'TZS');
     assert.equal(mesPlaces.body[0].reglement_moyen, 'mobile');
   });

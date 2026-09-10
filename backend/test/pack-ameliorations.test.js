@@ -71,7 +71,7 @@ describe('Pack améliorations', () => {
       });
     assert.equal(partage.status, 201);
     assert.equal(partage.body.round_trip, false);
-    assert.equal(Number(partage.body.price), 14); // privé 42 → place 14
+    assert.equal(Number(partage.body.price), 12); // privé 42 → place plafonnée à 12 (10/09/2026)
   });
 
   it('Stone Town et son ferry : même place, aucune course entre les deux', async () => {

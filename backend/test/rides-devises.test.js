@@ -20,9 +20,9 @@ useTestDb();
 
 describe('Devises taxi partagé (parcours local complet)', () => {
   it('résident : la remise de 5 % se partage moitié-moitié avec le chauffeur', async () => {
-    // Aéroport → Nungwi : la place vaut 16 USD, commission 25 % (4,00 à
-    // zanziGo, 12,00 au chauffeur). Le résident paie 15,20 ; la remise de
-    // 0,80 se coupe en deux, 0,40 chacun.
+    // Aéroport → Nungwi : la place vaut 12 USD (plafond du 10/09/2026),
+    // commission 20 % (2,40 à zanziGo, 9,60 au chauffeur). Le résident paie
+    // 11,40 ; la remise de 0,60 se coupe en deux, 0,30 chacun.
     const { token: tokenChauffeur } = await createVerifiedDriver();
     const { token: tokenResident } = await createResident();
 
@@ -36,7 +36,7 @@ describe('Devises taxi partagé (parcours local complet)', () => {
     const liste = await request(app).get('/api/rides').set(authHeaders(tokenResident));
     const ride = liste.body[0];
     assert.equal(ride.currency, 'USD');
-    assert.equal(Number(ride.price_per_seat_usd), 15.2, 'le résident garde ses −5 %');
+    assert.equal(Number(ride.price_per_seat_usd), 11.4, 'le résident garde ses −5 %');
 
     const resa = await request(app)
       .post(`/api/rides/${ride.id}/book`)
@@ -52,7 +52,7 @@ describe('Devises taxi partagé (parcours local complet)', () => {
     // branche résident les renvoyait encore bruts.
     assert.equal(booking.price_per_seat, undefined, 'le prix client ne sort pas');
     assert.equal(booking.commission_per_seat, undefined, 'la commission en argent ne sort pas');
-    assert.equal(Number(booking.net_per_seat), 11.6, 'le chauffeur porte 0,40 de la remise');
+    assert.equal(Number(booking.net_per_seat), 9.3, 'le chauffeur porte 0,30 de la remise');
   });
 
   it('local : TZS sur la liste, la réservation et la fiche chauffeur', async () => {
@@ -91,16 +91,15 @@ describe('Devises taxi partagé (parcours local complet)', () => {
     assert.equal(annonce.price_per_seat, undefined, 'le prix de la place ne part pas');
     assert.equal(annonce.price_per_seat_usd, undefined);
     assert.equal(Number(annonce.net_par_place_tzs), 13000, '20 % de commission, arrondi au millier');
-    assert.equal(Number(annonce.net_par_place_usd), 12, '25 % de commission sur 16 USD');
-    assert.equal(Number(annonce.part_zanzigo_pct), 25);
+    assert.equal(Number(annonce.net_par_place_usd), 9.6, '20 % de commission sur la place plafonnée à 12 USD');
+    assert.equal(Number(annonce.part_zanzigo_pct), 20);
     const booking = annonce.bookings[0];
     assert.equal(booking.client_type, 'local');
     assert.equal(booking.currency, 'TZS');
     assert.equal(booking.price_per_seat, undefined);
     assert.equal(booking.commission_per_seat, undefined);
-    // Commission partagé local 17 % : le chauffeur touche 83 % de 16 000,
-    // soit PLUS que les 12 750 d'avant (15 % de 15 000) — la hausse de la
-    // place a été décidée pour ça.
+    // Commission partagé local 20 % : le chauffeur touche 80 % de 17 000,
+    // soit 13 600 TZS, arrondis au millier inférieur — le compte rond.
     assert.equal(Number(booking.net_per_seat), 13000);
   });
 
@@ -123,7 +122,7 @@ describe('Devises taxi partagé (parcours local complet)', () => {
       .set(authHeaders(tokenTouriste))
       .set(adminHeaders());
     assert.equal(liste.body[0].currency, 'USD');
-    assert.equal(Number(liste.body[0].price_per_seat_usd), 16);
+    assert.equal(Number(liste.body[0].price_per_seat_usd), 12);
     assert.equal(liste.body[0].price_per_seat, undefined);
 
     const resa = await request(app)
@@ -133,11 +132,12 @@ describe('Devises taxi partagé (parcours local complet)', () => {
       .send({ seats: 1 });
     assert.equal(resa.status, 201);
     assert.equal(resa.body.payment.currency, 'USD');
-    // La place vaut 16 USD ; réglée par carte (le choix par défaut d'un
-    // client facturé en dollars), elle se débite 16,64 — les 4 % de frais
-    // bancaires, à la charge du payeur comme sur les courses et les colis.
-    assert.equal(Number(resa.body.payment.amount), 16.64);
-    assert.equal(Number(resa.body.payment.surcharge), 0.64);
+    // La place vaut 12 USD (plafond du 10/09/2026) ; réglée par carte (le
+    // choix par défaut d'un client facturé en dollars), elle se débite
+    // 12,48 — les 4 % de frais bancaires, à la charge du payeur comme sur
+    // les courses et les colis.
+    assert.equal(Number(resa.body.payment.amount), 12.48);
+    assert.equal(Number(resa.body.payment.surcharge), 0.48);
     assert.equal(resa.body.payment.method, 'carte');
 
     // « Mes places » du touriste : USD aussi, même avec la clé embarquée.
@@ -146,9 +146,9 @@ describe('Devises taxi partagé (parcours local complet)', () => {
       .set(authHeaders(tokenTouriste))
       .set(adminHeaders());
     assert.equal(mesPlaces.body[0].currency, 'USD');
-    assert.equal(Number(mesPlaces.body[0].amount), 16, 'le PRIX de la place');
+    assert.equal(Number(mesPlaces.body[0].amount), 12, 'le PRIX de la place');
     // …et, à côté, ce qu'il y a réellement à régler avec le moyen choisi.
-    assert.equal(Number(mesPlaces.body[0].reglement_montant), 16.64);
+    assert.equal(Number(mesPlaces.body[0].reglement_montant), 12.48);
     assert.equal(mesPlaces.body[0].reglement_devise, 'USD');
     assert.equal(mesPlaces.body[0].reglement_moyen, 'carte');
     assert.deepEqual(mesPlaces.body[0].moyens_disponibles, ['carte', 'mobile']);

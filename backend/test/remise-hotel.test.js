@@ -44,7 +44,7 @@ describe('Remise partenaire hôtel', () => {
     assert.equal(priceTrip('private', 'resident', route).price, 39.9);
     assert.equal(
       priceTrip('shared_tourist', 'resident', route).price,
-      Math.round(14 * 0.95 * 100) / 100 // la place vaut 14 USD (42 ÷ 3)
+      Math.round(12 * 0.95 * 100) / 100 // la place vaut 12 USD (42 ÷ 3, plafonnée à 12 depuis le 10/09/2026)
     );
   });
 

@@ -336,7 +336,9 @@ describe('Grille privée : le net du chauffeur décide, le forfait s’ajoute', 
     }
   });
 
-  it('la place en taxi partagé vaut le tiers du privé', () => {
+  it('la place en taxi partagé vaut le tiers du privé, plafonné à 12 USD', () => {
+    // ⅓ du privé (arrondi au dollar inférieur), plafonné à 12 USD
+    // (lancement du 10/09/2026) : aucune place touriste au-dessus de 12.
     for (const [depart, arrivee] of [
       ['Stone Town', 'Nungwi'],
       ['Stone Town', 'Paje'],
@@ -345,7 +347,7 @@ describe('Grille privée : le net du chauffeur décide, le forfait s’ajoute', 
       ['Nungwi', 'Kiwengwa'],
     ]) {
       const prive = privateUsdForRoute(depart, arrivee);
-      assert.equal(sharedSeatUsdForRoute(depart, arrivee), Math.floor(prive / 3));
+      assert.equal(sharedSeatUsdForRoute(depart, arrivee), Math.min(Math.floor(prive / 3), 12));
       assert.ok(
         sharedSeatUsdForRoute(depart, arrivee) * 3 <= prive,
         'trois places ne doivent jamais coûter plus cher que la voiture entière'
@@ -357,19 +359,22 @@ describe('Grille privée : le net du chauffeur décide, le forfait s’ajoute', 
   });
 
   it('la voiture pleine rapporte plus que la course privée', () => {
-    // C'est l'argument de recrutement : quatre places suffisent à dépasser le
-    // privé, et la voiture en tient six. S'il tombe, la fiche chauffeur ment.
-    for (const [depart, arrivee] of [
-      ['Stone Town', 'Nungwi'],
-      ['Stone Town', 'Paje'],
-      ['Nungwi', 'Makunduchi'],
+    // C'est l'argument de recrutement. Depuis le plafond de la place à 12 USD
+    // et la commission à 20 % (10/09/2026), le gain par place est de 9,60 :
+    // quatre places (38,40) suffisent encore sur les transferts, et sur la
+    // grande traversée (net 55) c'est la voiture PLEINE — six places,
+    // 57,60 — qui bat le privé. S'il tombe, la fiche chauffeur ment.
+    for (const [depart, arrivee, places] of [
+      ['Stone Town', 'Nungwi', 4],
+      ['Stone Town', 'Paje', 4],
+      ['Nungwi', 'Makunduchi', 6],
     ]) {
       const place = priceTrip('shared_tourist', 'tourist', { pickup: depart, dropoff: arrivee });
       const gainPlace = place.price - place.commission;
       const netPrive = netChauffeurPriveUsd(depart, arrivee);
       assert.ok(
-        gainPlace * 4 > netPrive,
-        `${depart} → ${arrivee} : 4 places (${(gainPlace * 4).toFixed(2)}) doivent battre le privé (${netPrive})`
+        gainPlace * places > netPrive,
+        `${depart} → ${arrivee} : ${places} places (${(gainPlace * places).toFixed(2)}) doivent battre le privé (${netPrive})`
       );
     }
   });

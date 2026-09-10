@@ -127,13 +127,14 @@ describe('Courses taxi (trips)', () => {
     const { token: touristToken, user: tourist } = await createTourist();
     const { token: residentToken, user: resident } = await createResident();
 
-    // Aéroport → Nungwi : privé 48 USD, donc la place vaut 16.
+    // Aéroport → Nungwi : privé 48 USD ; la place (⅓ du privé) est
+    // plafonnée à 12 USD depuis le 10/09/2026.
     const shared = await createTrip(touristToken, tourist.id, { tripType: 'shared_tourist' });
-    assert.equal(Number(shared.price), 16);
+    assert.equal(Number(shared.price), 12);
     assert.equal(shared.currency, 'USD');
 
     const posted = await createTrip(touristToken, tourist.id, { tripType: 'posted_return' });
-    assert.equal(Number(posted.price), 16);
+    assert.equal(Number(posted.price), 12);
 
     // Grande traversée Nungwi ↔ Paje : plafonnée à 57 USD depuis le 21/08/2026
     // (le prix qui laisse 50 USD au chauffeur). Résident vérifié : −10 %.

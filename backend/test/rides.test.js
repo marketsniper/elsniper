@@ -45,7 +45,7 @@ describe('Trajets partagés (rides)', () => {
     assert.equal(Number(res.body.price_per_seat), 17000); // grille Nord, fixée par zanziGo
     // Le chauffeur voit LES DEUX prix : TZS (locaux) et USD (touristes) —
     // chaque client paie dans sa devise, le chauffeur doit le savoir.
-    assert.equal(Number(res.body.price_per_seat_usd), 16);
+    assert.equal(Number(res.body.price_per_seat_usd), 12);
     assert.ok(res.body.whatsapp_link.includes('wa.me'));
   });
 
@@ -131,25 +131,25 @@ describe('Trajets partagés (rides)', () => {
     assert.equal(anonymous.status, 401);
   });
 
-  it('cloison tarifaire : touriste 16 USD, résident vérifié 15,20 USD, local TZS', async () => {
+  it('cloison tarifaire : touriste 12 USD, résident vérifié 11,40 USD, local TZS', async () => {
     const { token } = await createVerifiedDriver();
     const ride = (await postRide(token)).body;
 
     const { token: touristToken } = await createTourist();
     const forTourist = await request(app).get('/api/rides').set(authHeaders(touristToken));
     const t = forTourist.body.find((r) => r.id === ride.id);
-    assert.equal(t.price_per_seat_usd, 16);
+    assert.equal(t.price_per_seat_usd, 12);
     assert.equal(t.currency, 'USD');
     assert.equal(t.price_per_seat, undefined, 'le prix local ne doit pas fuiter vers un touriste');
-    assert.ok(t.whatsapp_link.includes(encodeURIComponent('16 USD')));
+    assert.ok(t.whatsapp_link.includes(encodeURIComponent('12 USD')));
 
     const { createResident, createLocal } = await import('./setup.js');
 
-    // Résident vérifié : remise de 5 % sur 16 USD → 15,20, jamais le prix local.
+    // Résident vérifié : remise de 5 % sur 12 USD → 11,40, jamais le prix local.
     const { token: residentToken } = await createResident();
     const forResident = await request(app).get('/api/rides').set(authHeaders(residentToken));
     const r = forResident.body.find((x) => x.id === ride.id);
-    assert.equal(r.price_per_seat_usd, 15.2);
+    assert.equal(r.price_per_seat_usd, 11.4);
     assert.equal(r.currency, 'USD');
     assert.equal(r.price_per_seat, undefined);
 
@@ -257,11 +257,11 @@ describe('Trajets partagés — réservation de places dans l\'app', () => {
     assert.equal(mine.body[0].bookings[0].seats, 2);
     assert.equal(mine.body[0].bookings[0].client_type, 'tourist');
     assert.equal(mine.body[0].bookings[0].currency, 'USD');
-    // Le chauffeur voit ce qu'il TOUCHE (75 % de la place à 16 USD) et le
-    // pourcentage — ni le prix payé par le passager, ni la commission en
-    // argent (services/vueChauffeur.js).
-    assert.equal(mine.body[0].bookings[0].net_per_seat, 12);
-    assert.equal(mine.body[0].bookings[0].part_zanzigo_pct, 25);
+    // Le chauffeur voit ce qu'il TOUCHE (80 % de la place à 12 USD, depuis
+    // le 10/09/2026) et le pourcentage — ni le prix payé par le passager,
+    // ni la commission en argent (services/vueChauffeur.js).
+    assert.equal(mine.body[0].bookings[0].net_per_seat, 9.6);
+    assert.equal(mine.body[0].bookings[0].part_zanzigo_pct, 20);
     assert.equal(mine.body[0].bookings[0].price_per_seat, undefined);
     assert.equal(mine.body[0].bookings[0].commission_per_seat, undefined);
   });

@@ -315,13 +315,13 @@ describe('Portail chauffeur : aucun prix client ne sort du serveur', () => {
     assert.equal(miennes.status, 200);
     assert.deepEqual(champsInterdits(miennes.body), []);
     const vue = miennes.body[0];
-    // Place touriste à 14 USD (privé 42 → place 14, depuis la baisse du
-    // 05/09/2026) : 25 % pour zanziGo, net 10,50 la place.
-    assert.equal(Number(vue.net_par_place_usd), 10.5);
-    assert.equal(Number(vue.part_zanzigo_pct), 25);
+    // Place touriste à 12 USD (privé 42 → place plafonnée à 12, et
+    // commission à 20 % depuis le 10/09/2026) : net 9,60 la place.
+    assert.equal(Number(vue.net_par_place_usd), 9.6);
+    assert.equal(Number(vue.part_zanzigo_pct), 20);
     // Et le net en shillings suit la règle des comptes ronds.
     assert.equal(Number(vue.net_par_place_tzs) % 1000, 0, 'le net local est un compte rond');
-    assert.equal(Number(vue.bookings[0].net_per_seat), 10.5);
+    assert.equal(Number(vue.bookings[0].net_per_seat), 9.6);
   });
 });
 
@@ -382,6 +382,6 @@ describe('…mais l’équipe et le client, eux, voient les montants', () => {
     const { token: jetonTouriste } = await createTourist();
     const liste = await request(app).get('/api/rides').set(authHeaders(jetonTouriste));
     assert.equal(liste.status, 200);
-    assert.equal(Number(liste.body[0].price_per_seat_usd), 14, 'sinon il ne peut pas décider');
+    assert.equal(Number(liste.body[0].price_per_seat_usd), 12, 'sinon il ne peut pas décider');
   });
 });
