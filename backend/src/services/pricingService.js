@@ -78,10 +78,10 @@ function sharedSeatUsd(priveUsd) {
 // LA COURSE PRIVÉE N'EST PLUS ICI : son taux dépend du prix du trajet
 // (12 % dès 40 USD, 15 % en dessous) — voir COMMISSION_PRIVE plus bas.
 const COMMISSION_RATES = {
-  // TAXI PARTAGÉ : zanziGo prend au moins 20 % (21/08/2026), et 25 % côté
-  // touriste. Ces taux-là n'ont pas bougé quand la course privée est repassée
-  // au pourcentage : ce sont deux décisions séparées.
-  shared: 0.25, // taxi partagé touriste (USD)
+  // TAXI PARTAGÉ : 20 % partout depuis le 10/09/2026 (décision du client,
+  // avant l'ouverture) — le touriste était à 25 %, il rejoint le local. Le
+  // prix des places ne bouge pas : c'est le gain chauffeur qui monte à 80 %.
+  shared: 0.2, // taxi partagé touriste (USD)
   local: 0.2, // taxi partagé local (TZS)
   package: 0.2, // colis : inchangé
 };

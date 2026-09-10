@@ -523,8 +523,11 @@ export function gainNetChauffeur(
  *
  * Sert à l'écran de publication d'annonce, qui doit annoncer le gain AVANT
  * que l'annonce existe : il n'y a donc rien à demander au serveur.
+ *
+ * 20 % PARTOUT depuis le 10/09/2026 (décision du client) : le partagé
+ * touriste était à 25 %, il rejoint le local — le chauffeur garde 80 %.
  */
-const TAUX_PLACE_USD = 0.25;
+const TAUX_PLACE_USD = 0.2;
 const TAUX_PLACE_LOCALE = 0.2;
 
 /** Le gain d'une place en dollars, au centime. */
