@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, json } from 'express';
 import { query } from '../db.js';
 import { HttpError } from '../errors.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
@@ -72,6 +72,116 @@ router.get(
     const jour = dump.exported_at.slice(0, 10);
     res.setHeader('Content-Disposition', `attachment; filename="zanzigo-sauvegarde-${jour}.json"`);
     res.json(dump);
+  })
+);
+
+// POST /stats/restauration — le miroir de /sauvegarde : réinjecte un export
+// JSON dans une base NEUVE (schéma déjà posé par les migrations). Né du
+// cycle des bases gratuites Render : tous les 30 jours, la base expire et
+// repart de zéro — sauvegarde avant, restauration après, rien ne se perd.
+//
+// Garde-fous : clé équipe obligatoire ; noms de tables ET de colonnes
+// vérifiés contre le schéma réel (le JSON vient du client, rien n'entre tel
+// quel dans le SQL) ; une table déjà remplie est IGNORÉE, jamais écrasée —
+// rejouer une restauration ne duplique rien. L'ordre des clés étrangères
+// est inconnu : on tourne en boucle en réessayant les tables qui échouent
+// tant qu'un tour fait avancer quelque chose.
+function versValeurSql(v) {
+  if (v && typeof v === 'object') {
+    // Un Buffer sérialisé en JSON ({type:'Buffer',data:[…]}) redevient un
+    // Buffer (photos, pièces jointes) ; le reste repart en JSON (jsonb).
+    if (v.type === 'Buffer' && Array.isArray(v.data)) return Buffer.from(v.data);
+    return JSON.stringify(v);
+  }
+  return v;
+}
+
+router.post(
+  '/restauration',
+  requireAdmin,
+  json({ limit: '80mb' }),
+  asyncHandler(async (req, res) => {
+    const fournies = req.body?.tables;
+    if (!fournies || typeof fournies !== 'object') {
+      return res.status(400).json({ error: 'sauvegarde_invalide' });
+    }
+    const { rows: tablesReelles } = await query(
+      `SELECT tablename FROM pg_tables WHERE schemaname = 'public'`
+    );
+    const connues = new Set(tablesReelles.map((t) => t.tablename));
+    const { rows: colonnesReelles } = await query(
+      `SELECT table_name, column_name FROM information_schema.columns
+       WHERE table_schema = 'public'`
+    );
+    const colonnesPar = new Map();
+    for (const c of colonnesReelles) {
+      if (!colonnesPar.has(c.table_name)) colonnesPar.set(c.table_name, new Set());
+      colonnesPar.get(c.table_name).add(c.column_name);
+    }
+
+    const inserees = {};
+    const ignorees = [];
+    let restantes = [];
+    for (const [nom, lignes] of Object.entries(fournies)) {
+      if (!connues.has(nom) || TABLES_EXCLUES.has(nom)) continue;
+      if (!Array.isArray(lignes) || lignes.length === 0) continue;
+      const { rows } = await query(`SELECT COUNT(*)::int AS n FROM "${nom}"`);
+      if (rows[0].n > 0) {
+        ignorees.push(nom);
+        continue;
+      }
+      restantes.push([nom, lignes]);
+    }
+
+    const erreurs = {};
+    for (let tour = 0; restantes.length > 0 && tour < 10; tour += 1) {
+      const echouees = [];
+      for (const [nom, lignes] of restantes) {
+        const autorisees = colonnesPar.get(nom) ?? new Set();
+        try {
+          await query('BEGIN');
+          for (const ligne of lignes) {
+            const cles = Object.keys(ligne).filter((c) => autorisees.has(c));
+            await query(
+              `INSERT INTO "${nom}" (${cles.map((c) => `"${c}"`).join(', ')})
+               VALUES (${cles.map((_, i) => `$${i + 1}`).join(', ')})`,
+              cles.map((c) => versValeurSql(ligne[c]))
+            );
+          }
+          await query('COMMIT');
+          inserees[nom] = lignes.length;
+          delete erreurs[nom];
+        } catch (e) {
+          await query('ROLLBACK');
+          erreurs[nom] = e.message;
+          echouees.push([nom, lignes]);
+        }
+      }
+      if (echouees.length === restantes.length) break; // plus rien n'avance
+      restantes = echouees;
+    }
+
+    // Les séquences repartent après le plus grand identifiant restauré.
+    const { rows: seqs } = await query(
+      `SELECT c.table_name, c.column_name,
+              pg_get_serial_sequence(quote_ident(c.table_name), c.column_name) AS seq
+       FROM information_schema.columns c
+       WHERE c.table_schema = 'public' AND c.column_default LIKE 'nextval%'`
+    );
+    for (const s of seqs) {
+      if (!s.seq) continue;
+      await query(
+        `SELECT setval($1, COALESCE((SELECT MAX("${s.column_name}") FROM "${s.table_name}"), 1))`,
+        [s.seq]
+      );
+    }
+
+    res.json({
+      inserees,
+      ignorees,
+      echecs: erreurs,
+      total: Object.values(inserees).reduce((a, b) => a + b, 0),
+    });
   })
 );
 
