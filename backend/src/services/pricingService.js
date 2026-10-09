@@ -92,7 +92,7 @@ const COMMISSION_RATES = {
 // et les places de taxi partagé étaient restées à l'ancien barème. Une seule
 // source pour la commission, sinon elle diverge en silence.
 export const TAUX_PLACE_LOCALE = COMMISSION_RATES.local; // 20 % (place en TZS)
-export const TAUX_PLACE_USD = COMMISSION_RATES.shared; // 25 % (touriste, résident, hôtel)
+export const TAUX_PLACE_USD = COMMISSION_RATES.shared; // 20 % (touriste, résident, hôtel — 10/09/2026)
 
 // Rattachement des villes aux zones. Les villes de la côte centre-est et
 // Fumba sont assimilées aux zones voisines (ajustable sur demande).
@@ -794,7 +794,7 @@ export function priceTrip(tripType, audience, route = {}) {
     taux = tauxCommissionPrive(usd - supplementUsd(route.pickup, route.dropoff), route.pickup, route.dropoff);
   } else if (tripType === 'shared_tourist' || tripType === 'posted_return') {
     usd = sharedSeatUsdForRoute(route.pickup, route.dropoff);
-    taux = COMMISSION_RATES.shared; // 22 % — le chauffeur reçoit 78 %
+    taux = COMMISSION_RATES.shared; // 20 % — le chauffeur reçoit 80 %
   } else {
     return null; // shared_local n'existe pas en USD
   }
