@@ -66,6 +66,11 @@ export function createApp() {
     res.setHeader('Referrer-Policy', 'no-referrer');
     next();
   });
+  // La RESTAURATION d'une sauvegarde transporte toute la base (photos
+  // comprises) : son lecteur JSON doit être monté AVANT le lecteur global,
+  // sinon la limite de 1 Mo rejette le fichier avant d'atteindre la route.
+  // Réservé à ce seul chemin — le reste de l'API garde sa petite limite.
+  app.use('/api/stats/restauration', express.json({ limit: '80mb' }));
   app.use(express.json({ limit: '1mb' }));
 
   // Fichiers uploadés en mode dev (fallback disque local)

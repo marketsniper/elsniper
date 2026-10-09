@@ -1,5 +1,5 @@
 import { Router, json } from 'express';
-import { query } from '../db.js';
+import { pool, query } from '../db.js';
 import { HttpError } from '../errors.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { requireAdmin } from '../middleware/auth.js';
@@ -133,32 +133,40 @@ router.post(
       restantes.push([nom, lignes]);
     }
 
+    // Les transactions par table exigent UNE connexion dédiée : le helper
+    // `query` tire une connexion du pool à chaque appel, un BEGIN y serait
+    // orphelin et chaque INSERT partirait en auto-commit.
+    const client = await pool.connect();
     const erreurs = {};
-    for (let tour = 0; restantes.length > 0 && tour < 10; tour += 1) {
-      const echouees = [];
-      for (const [nom, lignes] of restantes) {
-        const autorisees = colonnesPar.get(nom) ?? new Set();
-        try {
-          await query('BEGIN');
-          for (const ligne of lignes) {
-            const cles = Object.keys(ligne).filter((c) => autorisees.has(c));
-            await query(
-              `INSERT INTO "${nom}" (${cles.map((c) => `"${c}"`).join(', ')})
-               VALUES (${cles.map((_, i) => `$${i + 1}`).join(', ')})`,
-              cles.map((c) => versValeurSql(ligne[c]))
-            );
+    try {
+      for (let tour = 0; restantes.length > 0 && tour < 10; tour += 1) {
+        const echouees = [];
+        for (const [nom, lignes] of restantes) {
+          const autorisees = colonnesPar.get(nom) ?? new Set();
+          try {
+            await client.query('BEGIN');
+            for (const ligne of lignes) {
+              const cles = Object.keys(ligne).filter((c) => autorisees.has(c));
+              await client.query(
+                `INSERT INTO "${nom}" (${cles.map((c) => `"${c}"`).join(', ')})
+                 VALUES (${cles.map((_, i) => `$${i + 1}`).join(', ')})`,
+                cles.map((c) => versValeurSql(ligne[c]))
+              );
+            }
+            await client.query('COMMIT');
+            inserees[nom] = lignes.length;
+            delete erreurs[nom];
+          } catch (e) {
+            await client.query('ROLLBACK');
+            erreurs[nom] = e.message;
+            echouees.push([nom, lignes]);
           }
-          await query('COMMIT');
-          inserees[nom] = lignes.length;
-          delete erreurs[nom];
-        } catch (e) {
-          await query('ROLLBACK');
-          erreurs[nom] = e.message;
-          echouees.push([nom, lignes]);
         }
+        if (echouees.length === restantes.length) break; // plus rien n'avance
+        restantes = echouees;
       }
-      if (echouees.length === restantes.length) break; // plus rien n'avance
-      restantes = echouees;
+    } finally {
+      client.release();
     }
 
     // Les séquences repartent après le plus grand identifiant restauré.
