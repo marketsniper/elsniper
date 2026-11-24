@@ -29,8 +29,10 @@ import {
   formaterMontant,
   moyensPaiement,
   reglementPaiement,
+  rideDemarrable,
   type MoyenPaiement,
   type ReservationPlace,
+  type StatutRide,
 } from '@/lib/types';
 
 const WHATSAPP_EQUIPE = 'https://wa.me/255666241749';
@@ -88,13 +90,34 @@ export default function EcranPlace() {
 
   const montant = formaterMontant(place.amount, place.currency);
   const partie = new Date(place.departure_at).getTime() < Date.now();
-  const terminee = place.ride_status === 'closed' || (partie && place.paid);
+  // OÙ EN EST LE TAXI. Le chauffeur déclare maintenant son départ et son
+  // arrivée : quand il l'a fait, c'est LUI qu'on croit. Avant, la fiche ne
+  // connaissait que l'horloge — le passager lisait « Trajet terminé » dix
+  // minutes après l'heure du départ, assis dans un taxi encore sur la route.
+  // Tant que le taxi roule, rien ne peut donc dire « terminée ».
+  //
+  // Et tant que le chauffeur PEUT ENCORE déclarer son départ, l'horloge se
+  // tait : un taxi qui attend ses passagers cinq minutes après l'heure
+  // annoncée n'est ni « en route » ni « terminé » — la fiche l'affichait
+  // pourtant, puis reculait à « en route » quand le chauffeur démarrait pour
+  // de bon. L'horloge n'est plus que le dernier repli, pour un trajet dont
+  // personne n'a rien déclaré et qui ne peut plus l'être (douze heures après
+  // l'heure annoncée — même règle que le bouton du chauffeur, rideDemarrable).
+  const enRoute = place.ride_status === 'in_progress';
+  const departEncoreDeclarable =
+    rideDemarrable(place.ride_status as StatutRide, place.departure_at) !== 'non';
+  const terminee =
+    place.ride_status === 'completed' ||
+    (!enRoute &&
+      partie &&
+      !departEncoreDeclarable &&
+      (place.ride_status === 'closed' || place.paid));
   // Étape courante de la fiche : réservée → payée → en route → terminée.
   const etapeCourante = place.cancelled
     ? 'reservee'
     : terminee
       ? 'terminee'
-      : partie
+      : enRoute || (partie && !departEncoreDeclarable)
         ? 'depart'
         : place.paid
           ? 'payee'
@@ -284,7 +307,13 @@ export default function EcranPlace() {
         </EncartInfo>
       )}
 
-      {place.cancellable && !place.cancelled && (
+      {/* On n'annule pas une place dans un taxi déjà parti, ni après
+          l'arrivée. Le chauffeur peut déclarer son départ jusqu'à une heure
+          AVANT l'heure annoncée : dans cet intervalle, le drapeau
+          `cancellable` du serveur — calculé sur l'heure annoncée — peut
+          encore dire oui pour une place non payée. La fiche, elle, sait que
+          le taxi roule. */}
+      {place.cancellable && !place.cancelled && !enRoute && !terminee && (
         <Bouton
           titre={t('place_annuler')}
           icone="close-circle-outline"

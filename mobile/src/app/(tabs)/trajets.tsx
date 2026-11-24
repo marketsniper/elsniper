@@ -102,9 +102,17 @@ export default function EcranTrajets() {
     ]);
   };
 
-  // Places à venir, non annulées — les autres n'ont plus rien à faire ici.
+  // Places à venir, non annulées — et celles dont le taxi ROULE en ce moment :
+  // cette liste est le seul chemin vers la fiche de suivi, elle doit rester
+  // atteignable tant que la voiture est sur la route (le chauffeur démarre
+  // souvent quelques minutes après l'heure annoncée). Un trajet terminé n'a
+  // plus rien à faire ici.
   const placesVisibles = places.filter(
-    (place) => !place.cancelled && new Date(place.departure_at).getTime() > Date.now()
+    (place) =>
+      !place.cancelled &&
+      (place.ride_status === 'in_progress' ||
+        (place.ride_status !== 'completed' &&
+          new Date(place.departure_at).getTime() > Date.now()))
   );
 
   // Annulation d'une place : le dialogue précise le remboursement (100 % à
@@ -217,7 +225,11 @@ export default function EcranTrajets() {
                     {!place.paid && !place.cancelled && (
                       <Text style={styles.lienFiche}>{t('place_voir_fiche')}</Text>
                     )}
-                    {place.cancellable ? (
+                    {/* Même garde que sur la fiche : on n'annule pas sa place
+                        dans un taxi déjà parti. */}
+                    {place.cancellable &&
+                    place.ride_status !== 'in_progress' &&
+                    place.ride_status !== 'completed' ? (
                       <Bouton
                         titre={t('place_annuler')}
                         icone="close-circle-outline"

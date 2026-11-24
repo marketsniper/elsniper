@@ -167,6 +167,8 @@ const CHAINES = {
   // --- Statuts d'annonce (rides) -------------------------------------------
   statut_ride_open: { fr: 'Ouvert', en: 'Open', sw: 'Wazi' , it: 'Aperta', de: 'Offen' },
   statut_ride_closed: { fr: 'Clôturé', en: 'Closed', sw: 'Imefungwa' , it: 'Chiusa', de: 'Geschlossen' },
+  statut_ride_in_progress: { fr: 'En route', en: 'On the road', sw: 'Safarini' , it: 'In viaggio', de: 'Unterwegs' },
+  statut_ride_completed: { fr: 'Terminé', en: 'Completed', sw: 'Imekamilika' , it: 'Completata', de: 'Abgeschlossen' },
   statut_ride_cancelled: { fr: 'Annulé', en: 'Cancelled', sw: 'Imeghairiwa' , it: 'Annullata', de: 'Storniert' },
 
   // --- Types de course -----------------------------------------------------
@@ -2650,6 +2652,58 @@ const CHAINES = {
     en: 'Client (name shown once paid)',
     sw: 'Mteja (jina litaonekana baada ya malipo)',
   },
+  // Depuis que le chauffeur déclare le départ et l'arrivée de sa voiture
+  // partagée, la rubrique se lit en trois temps : en route, à venir,
+  // terminées. Les deux titres longs servent hors de la rubrique (« Courses
+  // en cours », « Courses à venir »), où « En route » seul ne dirait pas de
+  // quoi l'on parle.
+  equipe_partages_en_route: { fr: 'En route', en: 'On the road', sw: 'Njiani' },
+  equipe_partages_a_venir: { fr: 'À venir', en: 'Upcoming', sw: 'Zijazo' },
+  equipe_partages_en_route_titre: {
+    fr: 'Taxis partagés en route',
+    en: 'Shared taxis on the road',
+    sw: 'Teksi za pamoja zilizo njiani',
+  },
+  equipe_partages_a_venir_titre: {
+    fr: 'Taxis partagés à venir',
+    en: 'Upcoming shared taxis',
+    sw: 'Teksi za pamoja zijazo',
+  },
+  equipe_partages_en_route_vide: {
+    fr: 'Aucun taxi partagé sur la route en ce moment.',
+    en: 'No shared taxi on the road right now.',
+    sw: 'Hakuna teksi ya pamoja njiani kwa sasa.',
+  },
+  // Affiché seulement quand une voiture roule déjà : d'où « autre ».
+  equipe_partages_a_venir_vide: {
+    fr: 'Aucun autre départ annoncé pour les prochains jours.',
+    en: 'No other departure posted for the coming days.',
+    sw: 'Hakuna safari nyingine iliyotangazwa kwa siku zijazo.',
+  },
+  // L'heure RÉELLE du départ (la touche « Démarrer ») face à l'heure annoncée.
+  equipe_partages_depart_reel: {
+    fr: 'Parti à {heure} · annoncé {prevu}',
+    en: 'Left at {heure} · posted for {prevu}',
+    sw: 'Liliondoka saa {heure} · lilipangwa saa {prevu}',
+  },
+  // En minuscules : ces trois-là s'enchaînent dans une ligne d'historique.
+  equipe_partages_parti_a: { fr: 'parti à {heure}', en: 'left at {heure}', sw: 'liliondoka saa {heure}' },
+  equipe_partages_termine_a: { fr: 'terminé à {heure}', en: 'finished at {heure}', sw: 'lilifika saa {heure}' },
+  equipe_partages_depart_non_declare: {
+    fr: 'départ non déclaré',
+    en: 'departure not declared',
+    sw: 'kuondoka hakujaripotiwa',
+  },
+  equipe_partages_personne_a_bord: {
+    fr: 'Aucune place payée à bord',
+    en: 'No paid seat on board',
+    sw: 'Hakuna kiti kilicholipiwa garini',
+  },
+  equipe_partages_appeler_chauffeur: {
+    fr: 'Appeler le chauffeur',
+    en: 'Call the driver',
+    sw: 'Mpigie dereva',
+  },
   equipe_a_venir_vide: {
     fr: 'Aucun départ programmé pour les prochains jours.',
     en: 'No departures scheduled for the coming days.',
@@ -4144,6 +4198,52 @@ const CHAINES = {
     en: 'Cancel this posted ride?',
     sw: 'Ughairi safari hii iliyotangazwa?',
   },
+  // --- Taxi partagé : le chauffeur déclare le départ et l'arrivée ----------
+  annonce_demarrer_bouton: { fr: '🚐 Démarrer le trajet', en: '🚐 Start the trip', sw: '🚐 Anza safari' },
+  annonce_terminer_bouton: { fr: '🏁 Terminer le trajet', en: '🏁 Finish the trip', sw: '🏁 Maliza safari' },
+  annonce_demarrer_titre: { fr: 'Démarrer le trajet', en: 'Start the trip', sw: 'Anza safari' },
+  annonce_demarrer_confirm: {
+    fr: 'Vous partez maintenant ? Les réservations seront fermées et l\'équipe zanziGo sera prévenue du départ.',
+    en: 'Leaving now? Bookings will close and the zanziGo team will be told you have left.',
+    sw: 'Unaondoka sasa? Uhifadhi utafungwa na timu ya zanziGo itajulishwa kuwa umeondoka.',
+  },
+  annonce_terminer_titre: { fr: 'Terminer le trajet', en: 'Finish the trip', sw: 'Maliza safari' },
+  annonce_terminer_confirm: {
+    fr: 'Tous les passagers sont arrivés ? Le trajet sera marqué comme terminé.',
+    en: 'Have all passengers arrived? The trip will be marked as finished.',
+    sw: 'Abiria wote wamefika? Safari itawekwa kuwa imekamilika.',
+  },
+  annonce_demarrer_trop_tot: {
+    fr: 'Le bouton « Démarrer » s\'active 1 heure avant l\'heure de départ.',
+    en: 'The "Start" button unlocks 1 hour before the departure time.',
+    sw: 'Kitufe cha "Anza" kinafunguka saa 1 kabla ya muda wa kuondoka.',
+  },
+  annonce_demarrer_pret: {
+    fr: 'C\'est l\'heure : touchez « Démarrer » au moment où vous partez.',
+    en: 'It is time: tap "Start" the moment you leave.',
+    sw: 'Ni wakati: gusa "Anza" unapoondoka.',
+  },
+  annonce_en_route_info: {
+    fr: 'En route depuis {heure}. Touchez « Terminer » quand le dernier passager est arrivé.',
+    en: 'On the road since {heure}. Tap "Finish" once the last passenger has arrived.',
+    sw: 'Safarini tangu {heure}. Gusa "Maliza" abiria wa mwisho akifika.',
+  },
+  annonce_termine_info: {
+    fr: 'Trajet terminé à {heure}.',
+    en: 'Trip finished at {heure}.',
+    sw: 'Safari imekamilika saa {heure}.',
+  },
+  // Sur la carte du trajet, dans « Mes trajets postés » : ce qu'il reste à faire.
+  courses_mes_trajets_a_demarrer: {
+    fr: '▶️ C\'est l\'heure — ouvrez pour démarrer',
+    en: '▶️ It is time — open to start',
+    sw: '▶️ Ni wakati — fungua ili kuanza',
+  },
+  courses_mes_trajets_en_route: {
+    fr: '🏁 En route — ouvrez pour terminer',
+    en: '🏁 On the road — open to finish',
+    sw: '🏁 Safarini — fungua ili kumaliza',
+  },
   annonce_retour: { fr: 'Retour à mes trajets', en: 'Back to my rides', sw: 'Rudi kwenye safari zangu' },
   gain_commission: { fr: 'Commission zanziGo', en: 'zanziGo commission', sw: 'Kamisheni ya zanziGo' , it: 'Commissione zanziGo', de: 'zanziGo-Provision' },
   gain_net: { fr: 'Votre gain net', en: 'Your net earnings', sw: 'Mapato yako halisi' , it: 'Il tuo guadagno netto', de: 'Ihr Nettoverdienst' },
@@ -4206,9 +4306,9 @@ const CHAINES = {
     sw: '{tzs} (wazawa) · {usd} (watalii)',
   },
   annonce_prix_info: {
-    fr: 'Chaque client paie dans SA devise : les locaux en shillings (vous touchez 90 %), les touristes et résidents en dollars (vous touchez 80 %). Voir un prix en dollars pour un touriste est donc normal.',
-    en: 'Each client pays in THEIR currency: locals in shillings (you receive 90%), tourists and residents in dollars (you receive 80%). Seeing a dollar price for a tourist is therefore normal.',
-    sw: 'Kila mteja hulipa kwa sarafu YAKE: wazawa kwa shilingi (unapokea 90%), watalii na wakazi kwa dola (unapokea 80%). Kuona bei ya dola kwa mtalii ni jambo la kawaida.',
+    fr: 'Chaque client paie dans SA devise : les locaux en shillings, les touristes et résidents en dollars — dans les deux cas vous touchez 80 %. Voir un prix en dollars pour un touriste est donc normal.',
+    en: 'Each client pays in THEIR currency: locals in shillings, tourists and residents in dollars — either way you receive 80%. Seeing a dollar price for a tourist is therefore normal.',
+    sw: 'Kila mteja hulipa kwa sarafu YAKE: wazawa kwa shilingi, watalii na wakazi kwa dola — kwa vyote unapokea 80%. Kuona bei ya dola kwa mtalii ni jambo la kawaida.',
   },
   resa_payee: { fr: 'payée', en: 'paid', sw: 'imelipwa' , it: 'pagata', de: 'bezahlt' },
   resa_impayee: { fr: 'à encaisser', en: 'to collect', sw: 'inasubiri malipo' , it: 'da incassare', de: 'einzuziehen' },

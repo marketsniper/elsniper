@@ -15,8 +15,36 @@ export type TypeTrajet = 'private' | 'shared_tourist' | 'shared_local' | 'posted
 
 export type StatutColis = 'created' | 'paid' | 'picked_up' | 'delivered' | 'cancelled';
 
-/** Statut d'un trajet partagé posté par un chauffeur (table rides). */
-export type StatutRide = 'open' | 'closed' | 'cancelled';
+/** Statut d'un trajet partagé posté par un chauffeur (table rides).
+ *  open → (closed) → in_progress → completed ; cancelled à part. Miroir de
+ *  l'enum SQL ride_status (migrations 005 et 046). */
+export type StatutRide = 'open' | 'closed' | 'in_progress' | 'completed' | 'cancelled';
+
+// QUAND LE CHAUFFEUR PEUT-IL DÉCLARER LE DÉPART D'UN TAXI PARTAGÉ ?
+// Miroir de backend/src/routes/rides.js (PATCH /rides/:id/start) — les deux
+// bornes doivent bouger ensemble. Pas avant une heure avant l'heure annoncée
+// (un toucher malheureux la veille fermerait les réservations) ; plus après
+// douze heures (une vieille annonce ne « repart » pas).
+export const DEPART_RIDE_AU_PLUS_TOT_MINUTES = 60;
+export const DEPART_RIDE_AU_PLUS_TARD_HEURES = 12;
+
+/**
+ * Le départ peut-il être déclaré maintenant ? 'oui' : le bouton est actif ;
+ * 'trop_tot' : il s'activera une heure avant le départ ; 'non' : ce trajet ne
+ * se démarre pas (déjà parti, terminé, annulé, ou trop ancien).
+ */
+export function rideDemarrable(
+  statut: StatutRide | undefined,
+  departIso: unknown,
+  maintenant: number = Date.now()
+): 'oui' | 'trop_tot' | 'non' {
+  if (statut !== 'open' && statut !== 'closed') return 'non';
+  const depart = new Date(String(departIso ?? '')).getTime();
+  if (!Number.isFinite(depart)) return 'non';
+  if (maintenant < depart - DEPART_RIDE_AU_PLUS_TOT_MINUTES * 60_000) return 'trop_tot';
+  if (maintenant > depart + DEPART_RIDE_AU_PLUS_TARD_HEURES * 3_600_000) return 'non';
+  return 'oui';
+}
 
 export type TypeCompte = 'tourist' | 'resident' | 'local';
 export type StatutVerification = 'pending' | 'verified' | 'rejected';
@@ -125,6 +153,9 @@ export interface ReservationPlace {
   destination: string;
   departure_at: string;
   ride_status: string;
+  /** Le chauffeur a touché « Démarrer » / « Terminer » (sinon null). */
+  ride_started_at?: string | null;
+  ride_completed_at?: string | null;
   driver_name?: string | null;
   /** Le client sait quel taxi vient : plaque + modèle du véhicule. */
   vehicle_plate?: string | null;
@@ -326,6 +357,8 @@ export const ETAPES_COLIS: StatutColis[] = ['created', 'paid', 'picked_up', 'del
 export const LIBELLES_STATUT_RIDE: Record<StatutRide, string> = {
   open: 'Ouvert',
   closed: 'Clôturé',
+  in_progress: 'En route',
+  completed: 'Terminé',
   cancelled: 'Annulé',
 };
 

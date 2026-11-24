@@ -44,6 +44,7 @@ import {
   champ,
   formaterDate,
   formaterMontant,
+  rideDemarrable,
   totalEnTzs,
   trajetExpire,
   type Colis,
@@ -283,9 +284,6 @@ export default function EcranCourses() {
   const nbAFaire = coursesEnCours.length + mesColis.length;
   const nbAPrendre = coursesDispo.length + colisVisibles.length;
 
-  // Mes trajets postés : ceux encore en ligne d'abord (le compteur de la case
-  // ne compte QUE ceux-là — un trajet clôturé n'appelle aucune action), et le
-  // PROCHAIN DÉPART en tête : c'est celui-là que le chauffeur doit préparer.
   // Le serveur décide si les coordonnées du client sont ouvertes : il ne les
   // envoie qu'une fois le paiement validé par l'équipe. (Repli sur le statut
   // pour les anciennes versions de l'API, qui n'envoient pas le drapeau.)
@@ -296,14 +294,36 @@ export default function EcranCourses() {
     return statut !== 'requested' && statut !== 'driver_confirmed';
   };
 
+  // Mes trajets postés : les trajets ACTIFS d'abord — ceux qui attendent
+  // encore quelque chose du chauffeur. Le compteur de la case ne compte QUE
+  // ceux-là. En tête, le taxi déjà EN ROUTE (il reste à le terminer) ; puis
+  // les trajets ouverts, et les clôturés qu'on peut encore démarrer —
+  // clôturer ferme les réservations, pas la route —, le PROCHAIN DÉPART
+  // d'abord : c'est celui-là que le chauffeur doit préparer.
   const quandPart = (ride: Ride) =>
     new Date(String(champ(ride, 'departure_at', 'departureAt') ?? 0)).getTime() || 0;
-  const trajetsOuverts = mesTrajets
-    .filter((ride) => champ<StatutRide>(ride, 'status', 'statut') === 'open')
-    .sort((a, b) => quandPart(a) - quandPart(b));
-  // Les clôturés/annulés se lisent à l'envers : le plus récent d'abord.
+  const statutRide = (ride: Ride) => champ<StatutRide>(ride, 'status', 'statut');
+  // Une seule lecture de l'horloge par affichage : le tri et les cartes
+  // répondent ainsi la même chose pour un même trajet.
+  const maintenant = Date.now();
+  const departDeclarable = (ride: Ride) =>
+    rideDemarrable(statutRide(ride), champ(ride, 'departure_at', 'departureAt'), maintenant);
+  const trajetActif = (ride: Ride) => {
+    const statut = statutRide(ride);
+    return (
+      statut === 'in_progress' ||
+      statut === 'open' ||
+      (statut === 'closed' && departDeclarable(ride) !== 'non')
+    );
+  };
+  const enRouteDabord = (ride: Ride) => (statutRide(ride) === 'in_progress' ? 0 : 1);
+  const trajetsActifs = mesTrajets
+    .filter(trajetActif)
+    .sort((a, b) => enRouteDabord(a) - enRouteDabord(b) || quandPart(a) - quandPart(b));
+  // Le reste — clôturés qui ne partiront plus, terminés, annulés — se lit à
+  // l'envers : le plus récent d'abord.
   const trajetsClos = mesTrajets
-    .filter((ride) => champ<StatutRide>(ride, 'status', 'statut') !== 'open')
+    .filter((ride) => !trajetActif(ride))
     .sort((a, b) => quandPart(b) - quandPart(a));
 
   const faireLeMenage = () => {
@@ -414,7 +434,7 @@ export default function EcranCourses() {
                   cle: 'mestrajets' as const,
                   label: t('courses_case_mes_trajets'),
                   icone: 'bus-outline' as const,
-                  n: trajetsOuverts.length,
+                  n: trajetsActifs.length,
                 },
               ] satisfies { cle: CaseChauffeur; label: string; icone: React.ComponentProps<typeof Ionicons>['name']; n: number }[]
             ).map((rubrique, rang) => (
@@ -781,18 +801,24 @@ export default function EcranCourses() {
           Le chauffeur publie ses propres taxis partagés ; il veut savoir, sans
           chercher, si des places se sont vendues. Une carte = un trajet, avec
           la seule question qui compte : combien de places restent, combien
-          j'ai déjà gagné. Le détail (qui a réservé) s'ouvre au toucher. */}
+          j'ai déjà gagné. Le détail (qui a réservé) s'ouvre au toucher.
+          Quand c'est l'heure de partir, ou que le taxi roule déjà, la carte
+          le DIT — mais ne porte aucun bouton : démarrer ferme les
+          réservations, et une liste qu'on fait défiler n'est pas l'endroit
+          pour un geste pareil. On ouvre la fiche, le bouton y est en haut. */}
       {caseOuverte === 'mestrajets' && (
         <>
           <Text style={styles.titreSection}>
-            {t('courses_case_mes_trajets')} ({trajetsOuverts.length})
+            {t('courses_case_mes_trajets')} ({trajetsActifs.length})
           </Text>
           {mesTrajets.length === 0 && (
             <EncartInfo icone="bus-outline">{t('courses_mes_trajets_vide')}</EncartInfo>
           )}
-          {[...trajetsOuverts, ...trajetsClos].map((ride) => {
-            const statut = champ<StatutRide>(ride, 'status', 'statut');
-            const ouvert = statut === 'open';
+          {[...trajetsActifs, ...trajetsClos].map((ride) => {
+            const statut = statutRide(ride);
+            const actif = trajetActif(ride);
+            const enRoute = statut === 'in_progress';
+            const aDemarrer = departDeclarable(ride) === 'oui';
             const total = Number(champ(ride, 'seats_total', 'seatsTotal') ?? 0);
             const restantes = Number(champ(ride, 'seats_available', 'seatsAvailable') ?? 0);
             const vendues = Math.max(0, total - restantes);
@@ -813,7 +839,7 @@ export default function EcranCourses() {
                 accessibilityRole="button"
                 style={({ pressed }) => [
                   styles.carte,
-                  !ouvert && styles.carteClose,
+                  !actif && styles.carteClose,
                   pressed && { opacity: 0.75 },
                 ]}
               >
@@ -823,7 +849,7 @@ export default function EcranCourses() {
                   </Text>
                   <Badge
                     texte={libelleStatutRide(statut, t)}
-                    ton={ouvert ? 'primaire' : 'neutre'}
+                    ton={enRoute ? 'succes' : statut === 'open' ? 'primaire' : 'neutre'}
                   />
                 </View>
                 <Text style={styles.itineraire}>
@@ -831,6 +857,16 @@ export default function EcranCourses() {
                   <Text style={styles.fleche}>→</Text>{'  '}
                   {String(champ(ride, 'destination') ?? '?')}
                 </Text>
+                {/* Ce qu'il reste à faire sur ce trajet, s'il reste quelque
+                    chose : terminer un taxi en route, ou démarrer quand
+                    l'heure est venue. */}
+                {(enRoute || aDemarrer) && (
+                  <Text style={styles.appelTrajet}>
+                    {enRoute
+                      ? t('courses_mes_trajets_en_route')
+                      : t('courses_mes_trajets_a_demarrer')}
+                  </Text>
+                )}
                 <View style={styles.pied}>
                   <Text style={styles.date}>
                     🪑 {t('courses_mes_trajets_places', { vendues, total })}
@@ -1034,9 +1070,17 @@ const styles = stylesReactifs(() => ({
     borderLeftWidth: 4,
     borderLeftColor: couleurs.primaire,
   },
-  // Trajet posté qui n'est plus en ligne : présent, mais en retrait.
+  // Trajet posté qui n'attend plus rien du chauffeur (clôturé et plus
+  // démarrable, terminé, annulé) : présent, mais en retrait.
   carteClose: {
     opacity: 0.65,
+  },
+  // « C'est l'heure — ouvrez pour démarrer » / « En route — ouvrez pour
+  // terminer » : la ligne qui appelle le chauffeur sur la fiche du trajet.
+  appelTrajet: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: couleurs.primaireFonce,
   },
   ligneUrgence: {
     flexDirection: 'row',

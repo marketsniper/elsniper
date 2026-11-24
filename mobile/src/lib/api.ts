@@ -17,6 +17,7 @@ import type {
   ReservationVehiculeAvecPaiement,
   Ride,
   StatutColis,
+  StatutRide,
   StatutTrajet,
   StatutVerification,
   TailleColis,
@@ -659,7 +660,11 @@ export interface AnnoncePartageEquipe {
   origin: string;
   destination: string;
   departure_at: string;
-  status: 'open' | 'closed' | 'cancelled';
+  status: StatutRide;
+  /** Heure RÉELLE du départ (le chauffeur a touché « Démarrer ») et de
+   *  l'arrivée (« Terminer ») — null tant que ce n'est pas arrivé. */
+  started_at: string | null;
+  completed_at: string | null;
   seats_total: number;
   seats_available: number;
   /** Places payées. */
@@ -785,6 +790,20 @@ export async function modifierRide(
   donnees: { seatsAvailable?: number; status?: 'closed' | 'cancelled' }
 ): Promise<Ride> {
   return requete<Ride>(`/rides/${id}`, { methode: 'PATCH', corps: donnees });
+}
+
+// Le taxi partagé se déclare comme la course privée : une touche au départ,
+// une touche à l'arrivée. Départ possible d'une heure avant à douze heures
+// après l'heure annoncée (voir rideDemarrable dans types.ts).
+/** PATCH /rides/:id/start — annonce 'open' ou 'closed' → 'in_progress'.
+ *  Erreurs : 403 forbidden, 409 invalid_status | too_early | too_late. */
+export async function demarrerRide(id: string): Promise<Ride> {
+  return requete<Ride>(`/rides/${id}/start`, { methode: 'PATCH', corps: {} });
+}
+
+/** PATCH /rides/:id/complete — annonce 'in_progress' → 'completed'. */
+export async function terminerRide(id: string): Promise<Ride> {
+  return requete<Ride>(`/rides/${id}/complete`, { methode: 'PATCH', corps: {} });
 }
 
 // ---------------------------------------------------------------------------
@@ -1822,6 +1841,8 @@ export const api = {
   listerRides,
   listerMesRides,
   modifierRide,
+  demarrerRide,
+  terminerRide,
   reserverPlacesRide,
   lieuxRides,
   creerColis,

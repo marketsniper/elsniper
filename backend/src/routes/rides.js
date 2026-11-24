@@ -6,6 +6,8 @@
 //  - GET /mine         : le chauffeur (ses propres trajets, passés inclus)
 //  - PATCH /:id        : le chauffeur propriétaire ou l'équipe
 //                        (places restantes, clôture, annulation)
+//  - PATCH /:id/start    : le chauffeur propriétaire ou l'équipe (« je pars »)
+//  - PATCH /:id/complete : les mêmes (« tout le monde est arrivé »)
 // La réservation d'une place passe par l'équipe (lien WhatsApp par trajet),
 // fidèle au principe MVP « humain dans la boucle ».
 import { Router } from 'express';
@@ -176,6 +178,62 @@ const PRICING_TZS = { mode: 'TZS' };
 // et les places déjà payées restent acquises au chauffeur. Balayage
 // paresseux (pas de tâche planifiée), idempotent.
 const CLOTURE_APRES_DEPART_MINUTES = 10;
+
+// LE DÉPART ET L'ARRIVÉE, DÉCLARÉS PAR LE CHAUFFEUR. Une annonce savait
+// s'ouvrir, se clore et s'annuler — jamais rouler. Le chauffeur touche
+// « Démarrer » puis « Terminer » (PATCH /:id/start, /:id/complete), et
+// l'équipe voit enfin quelles voitures sont sur la route.
+//
+// Le départ ne se déclare pas n'importe quand : au plus tôt une heure AVANT
+// l'heure annoncée (une touche malheureuse la veille fermerait les
+// réservations d'un trajet du lendemain — et un trajet parti ne se rouvre
+// pas), au plus tard douze heures APRÈS (un retard, même gros, se rattrape ;
+// au-delà l'annonce est de l'histoire ancienne et ne se démarre plus).
+//
+// MIROIR MOBILE : ces deux bornes existent à l'identique dans
+// mobile/src/lib/types.ts (DEPART_RIDE_AU_PLUS_TOT_MINUTES,
+// DEPART_RIDE_AU_PLUS_TARD_HEURES, fonction rideDemarrable) — c'est ce qui
+// allume ou éteint le bouton. Changer l'une sans l'autre, c'est offrir au
+// chauffeur un bouton qui répond 409.
+const DEPART_AU_PLUS_TOT_MINUTES = 60;
+const DEPART_AU_PLUS_TARD_HEURES = 12;
+// Un « Terminer » oublié ne doit pas laisser une voiture « en route » pour
+// toujours sur le tableau de bord : douze heures après le départ déclaré —
+// aucun trajet de l'île n'en demande autant — le trajet se termine tout seul.
+const FIN_AUTOMATIQUE_HEURES = 12;
+
+// Les deux états d'un trajet PARTI (en route, puis arrivé) : plus rien ne s'y
+// modifie par PATCH /:id — ni statut, ni places.
+const TRAJET_PARTI = ['in_progress', 'completed'];
+const trajetPartiIntouchable = (statut) =>
+  new HttpError(
+    409,
+    'invalid_status',
+    `Ce trajet est ${statut === 'completed' ? 'terminé' : 'en route'} : il ne se modifie plus et ne s'annule plus (statut actuel: ${statut})`
+  );
+
+// UNE ANNONCE ANNULÉE NE REVIENT PAS. L'annuler a déjà annulé chaque
+// réservation et ouvert le remboursement des places payées : la repasser
+// « close » ou « ouverte » ferait renaître un trajet dont les passagers ont
+// été renvoyés — et, depuis que le départ se déclare, un trajet annulé
+// pouvait ainsi finir « en route » sur le tableau de l'équipe, sans que plus
+// personne puisse le corriger.
+const annonceAnnuleeDefinitive = () =>
+  new HttpError(
+    409,
+    'invalid_status',
+    "Une annonce annulée ne se rouvre pas et ne se démarre pas (statut actuel: cancelled)"
+  );
+
+// Une date telle qu'on la lit à Zanzibar — pour les messages à l'équipe et
+// les refus adressés au chauffeur.
+const heureZanzibar = (date) =>
+  new Date(date).toLocaleString('fr-FR', {
+    timeZone: 'Africa/Dar_es_Salaam',
+    dateStyle: 'short',
+    timeStyle: 'short',
+  });
+
 export async function cloturerRidesPartis() {
   await query(
     `UPDATE posted_rides
@@ -183,6 +241,18 @@ export async function cloturerRidesPartis() {
      WHERE status = 'open'
        AND departure_at < now() - make_interval(mins => $1)`,
     [CLOTURE_APRES_DEPART_MINUTES]
+  );
+  // Second passage, même paresse : les trajets EN ROUTE depuis trop longtemps.
+  // Il vit ici pour que chaque lecture qui balaie déjà (listes, vue équipe,
+  // passage d'entretien) en profite sans rien savoir de plus. On ne touche
+  // qu'aux 'in_progress' — et le passage du dessus qu'aux 'open' : un trajet
+  // parti n'est jamais « reclôturé », un trajet clos jamais « terminé ».
+  await query(
+    `UPDATE posted_rides
+     SET status = 'completed', completed_at = now()
+     WHERE status = 'in_progress'
+       AND started_at < now() - make_interval(hours => $1)`,
+    [FIN_AUTOMATIQUE_HEURES]
   );
 }
 
@@ -524,6 +594,11 @@ router.get(
           destination: r.destination,
           departure_at: r.departure_at,
           status: r.status,
+          // L'heure RÉELLE du départ et de l'arrivée (touches « Démarrer » et
+          // « Terminer » du chauffeur) : c'est ce qui dit depuis combien de
+          // temps une voiture roule. `departure_at` reste l'heure annoncée.
+          started_at: r.started_at,
+          completed_at: r.completed_at,
           seats_total: r.seats_total,
           seats_available: r.seats_available,
           seats_sold: vendues,
@@ -586,7 +661,16 @@ const round2 = (n) => Math.round(n * 100) / 100;
  * exactement comme sur la fiche d'une réservation.
  */
 function sansPrixDePlace(annonce, usd) {
-  const { price_per_seat: localTzs, price_per_seat_usd: touristeUsd, ...reste } = annonce;
+  // Le lien WhatsApp « demande de place » sort avec les prix : il est écrit
+  // pour les CLIENTS et porte « Prix par place : … » en toutes lettres. Aucun
+  // écran chauffeur ne le lit — le laisser, c'était rendre par la fenêtre le
+  // prix qu'on venait de sortir par la porte.
+  const {
+    price_per_seat: localTzs,
+    price_per_seat_usd: touristeUsd,
+    whatsapp_link: _demandeDePlace,
+    ...reste
+  } = annonce;
   const netTzs = Number.isFinite(Number(localTzs))
     ? arrondiMillierTzs(Number(localTzs) * (1 - TAUX_PLACE_LOCALE))
     : null;
@@ -788,6 +872,7 @@ router.get(
       // choisi de payer en shillings par portefeuille mobile.
       `SELECT b.id, b.seats, b.created_at, b.paid_at, b.cancelled_at,
               r.origin, r.destination, r.departure_at, r.status AS ride_status,
+              r.started_at AS ride_started_at, r.completed_at AS ride_completed_at,
               r.price_per_seat, r.currency AS ride_currency,
               d.full_name AS driver_name, d.vehicle_plate, d.vehicle_model, d.photo_url AS driver_photo_url,
               p.id AS payment_id, p.amount AS payment_amount,
@@ -823,6 +908,10 @@ router.get(
           destination: b.destination,
           departure_at: b.departure_at,
           ride_status: b.ride_status,
+          // Le passager lit sur sa fiche que la voiture est partie, puis
+          // arrivée — à l'heure réelle, pas à l'heure annoncée.
+          ride_started_at: b.ride_started_at,
+          ride_completed_at: b.ride_completed_at,
           driver_name: b.driver_name,
           vehicle_plate: b.vehicle_plate,
           vehicle_model: b.vehicle_model,
@@ -1200,6 +1289,20 @@ router.patch(
       throw new HttpError(403, 'forbidden', 'Accès réservé au chauffeur qui a publié ce trajet');
     }
 
+    // UN TRAJET PARTI NE SE RETOUCHE PLUS. Annuler une annonce rembourse à
+    // 100 % chaque place payée (voir plus bas) : sur une voiture déjà en
+    // route — ou arrivée — ce serait rendre l'argent de passagers qu'on est
+    // en train de transporter. La rouvrir ou lui rendre des places remettrait
+    // en vente des sièges d'une voiture qui roule. Ni statut ni places : tout
+    // est refusé, avant la moindre écriture.
+    if (TRAJET_PARTI.includes(ride.status)) throw trajetPartiIntouchable(ride.status);
+    // Et on ne SORT pas de « annulée » (voir annonceAnnuleeDefinitive). La
+    // répéter reste permis : c'est sans effet, et un double toucher sur
+    // « Annuler » ne doit pas répondre par une erreur.
+    if (ride.status === 'cancelled' && data.status !== undefined && data.status !== 'cancelled') {
+      throw annonceAnnuleeDefinitive();
+    }
+
     if (data.seatsAvailable !== undefined && data.seatsAvailable > ride.seats_total) {
       throw new HttpError(400, 'validation_error', `Ce trajet compte ${ride.seats_total} places au total`);
     }
@@ -1234,13 +1337,29 @@ router.patch(
     const annule = data.status === 'cancelled' && ride.status !== 'cancelled';
     const { rows, rembourses } = await withTransaction(async (client) => {
       const { rows } = await client.query(
+        // La garde est répétée DANS l'écriture : entre la lecture du haut et
+        // cette ligne, le chauffeur a pu toucher « Démarrer » sur un autre
+        // téléphone. C'est elle qui fait autorité — zéro ligne, et toute la
+        // transaction (remboursements compris) est abandonnée.
         `UPDATE posted_rides
          SET seats_available = COALESCE($1, seats_available),
-             status = COALESCE($2, status)
-         WHERE id = $3
+             status = COALESCE($2::ride_status, status)
+         WHERE id = $3 AND status NOT IN ('in_progress', 'completed')
+           AND NOT (status = 'cancelled'
+                    AND $2::ride_status IS NOT NULL
+                    AND $2::ride_status <> 'cancelled')
          RETURNING *`,
         [data.seatsAvailable ?? null, data.status ?? null, req.params.id]
       );
+      if (!rows[0]) {
+        const { rows: relu } = await client.query(
+          'SELECT status FROM posted_rides WHERE id = $1',
+          [req.params.id]
+        );
+        if (!relu[0]) throw notFound('Trajet partagé');
+        if (relu[0].status === 'cancelled') throw annonceAnnuleeDefinitive();
+        throw trajetPartiIntouchable(relu[0].status);
+      }
       let rembourses = [];
       if (annule) {
         const { rows: reservations } = await client.query(
@@ -1290,6 +1409,187 @@ router.patch(
       );
     }
     res.json(serializeRide(rows[0], isAdmin(req) ? { mode: 'both', usd: config.sharedRideUsdPerSeat } : PRICING_TZS));
+  })
+);
+
+// ===== Départ et arrivée d'un taxi partagé =====
+//
+// « Le chauffeur ne peut pas démarrer la course sur les taxis partagés. » Une
+// course privée avait ses deux touches (PATCH /trips/:id/start, /complete) ;
+// l'annonce partagée, rien. Les deux routes ci-dessous sont calquées dessus :
+// mêmes gardes, mêmes codes d'erreur, même alerte à l'équipe lancée en l'air.
+//
+// Ce qu'elles NE font PAS, et c'est voulu : toucher à l'argent. Les gains
+// d'une place sont acquis au paiement, pas à l'arrivée — démarrer ou terminer
+// ne change aucun montant, aucun remboursement, aucune statistique mensuelle.
+
+// L'annonce visée, pour qui a le droit d'y toucher : le chauffeur qui l'a
+// publiée, ou l'équipe. Même garde que pour une course privée (trips.js) :
+// un jeton sans profil chauffeur — client, hôtel — ne passe jamais.
+async function annonceDuChauffeurOuEquipe(req) {
+  const { rows } = await query('SELECT * FROM posted_rides WHERE id = $1', [req.params.id]);
+  const ride = rows[0];
+  if (!ride) throw notFound('Trajet partagé');
+  if (!isAdmin(req) && (!req.auth.driverId || ride.driver_id !== req.auth.driverId)) {
+    throw new HttpError(403, 'forbidden', 'Accès réservé au chauffeur qui a publié ce trajet');
+  }
+  return ride;
+}
+
+// L'écriture a trouvé zéro ligne : quelqu'un a fait bouger l'annonce entre la
+// lecture et l'UPDATE (double toucher, équipe et chauffeur en même temps). On
+// relit pour dire le VRAI statut dans le refus.
+async function statutActuel(rideId) {
+  const { rows } = await query('SELECT status FROM posted_rides WHERE id = $1', [rideId]);
+  return rows[0]?.status ?? 'inconnu';
+}
+
+// La réponse, selon qui a touché. Le chauffeur reçoit son annonce comme dans
+// GET /rides/mine : ce qu'une place lui RAPPORTE, jamais ce que le passager
+// paie. L'équipe (clé seule) garde la double grille, comme sur PATCH /:id.
+// L'identité chauffeur prime sur la clé : le téléphone de l'équipe sert aussi
+// à tester des comptes chauffeurs.
+function annonceApresMouvement(req, ride) {
+  const annonce = serializeRide(ride, { mode: 'both' });
+  if (req.auth?.driverId && ride.driver_id === req.auth.driverId) {
+    return sansPrixDePlace(annonce, sharedSeatUsdForRoute(ride.origin, ride.destination));
+  }
+  return annonce;
+}
+
+// La tour de contrôle voit la voiture partir, puis arriver — sans rien
+// demander. Seules les places PAYÉES comptent « à bord » : une réservation
+// non réglée n'est pas un passager.
+async function annoncerMouvement(sujet, ride, lignesEnPlus = []) {
+  const [{ rows: chauffeur }, { rows: places }] = await Promise.all([
+    query('SELECT full_name, phone FROM drivers WHERE id = $1', [ride.driver_id]),
+    query(
+      `SELECT COALESCE(SUM(seats), 0)::int AS n FROM ride_bookings
+        WHERE ride_id = $1 AND paid_at IS NOT NULL AND cancelled_at IS NULL`,
+      [ride.id]
+    ),
+  ]);
+  return notifierEquipe(
+    sujet,
+    [
+      `Trajet: ${ride.origin} → ${ride.destination}`,
+      `Départ prévu: ${heureZanzibar(ride.departure_at)}`,
+      `Chauffeur: ${chauffeur[0]?.full_name ?? '—'} (${chauffeur[0]?.phone ?? '—'})`,
+      `Places payées à bord: ${places[0].n} sur ${ride.seats_total}`,
+      ...lignesEnPlus,
+      `Réf: ${ride.id}`,
+    ].join('\n')
+  );
+}
+
+// PATCH /rides/:id/start — « je pars ». Le chauffeur propriétaire (ou
+// l'équipe) déclare le départ d'une simple touche. L'annonce passe « en
+// route » : elle n'est plus réservable (seule une annonce 'open' l'est) et
+// disparaît de la place de marché, sans qu'on ait rien d'autre à fermer.
+//
+// Une annonce CLOSE se démarre aussi : dix minutes après l'heure annoncée le
+// balayage l'a close tout seul, et c'est justement le chauffeur en retard qui
+// a le plus besoin du bouton.
+router.patch(
+  '/:id/start',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const ride = await annonceDuChauffeurOuEquipe(req);
+
+    const refusStatut = (statut) =>
+      new HttpError(
+        409,
+        'invalid_status',
+        `Le départ ne peut être déclaré que sur une annonce ouverte ou close (statut actuel: ${statut})`
+      );
+    if (!['open', 'closed'].includes(ride.status)) throw refusStatut(ride.status);
+
+    // La fenêtre de départ (voir les constantes, et leur miroir mobile).
+    const depart = new Date(ride.departure_at).getTime();
+    const maintenant = Date.now();
+    if (maintenant < depart - DEPART_AU_PLUS_TOT_MINUTES * 60_000) {
+      throw new HttpError(
+        409,
+        'too_early',
+        `Trop tôt : le départ se déclare au plus tôt ${DEPART_AU_PLUS_TOT_MINUTES} minutes avant l'heure annoncée (${heureZanzibar(ride.departure_at)})`
+      );
+    }
+    if (maintenant > depart + DEPART_AU_PLUS_TARD_HEURES * 3_600_000) {
+      throw new HttpError(
+        409,
+        'too_late',
+        `Trop tard : plus de ${DEPART_AU_PLUS_TARD_HEURES} heures ont passé depuis l'heure annoncée (${heureZanzibar(ride.departure_at)}) — ce trajet ne se démarre plus`
+      );
+    }
+
+    // Écriture ATOMIQUE : la condition de statut est dans le UPDATE, pas
+    // seulement dans la lecture du dessus. Deux touches coup sur coup (réseau
+    // lent, doigt impatient) : la seconde trouve zéro ligne et n'écrase pas
+    // l'heure de départ de la première.
+    const { rows } = await query(
+      `UPDATE posted_rides
+          SET status = 'in_progress', started_at = now()
+        WHERE id = $1 AND status IN ('open', 'closed')
+        RETURNING *`,
+      [ride.id]
+    );
+    const demarre = rows[0];
+    if (!demarre) throw refusStatut(await statutActuel(ride.id));
+
+    // Après l'écriture, et sans l'attendre : une alerte qui tombe ne doit
+    // jamais empêcher une voiture de partir.
+    annoncerMouvement('▶️ Taxi partagé démarré', demarre).catch(() => {});
+    res.json(annonceApresMouvement(req, demarre));
+  })
+);
+
+// PATCH /rides/:id/complete — « tout le monde est arrivé ». Mêmes acteurs,
+// depuis un trajet EN ROUTE uniquement : on ne termine pas ce qui n'est pas
+// parti. Si le chauffeur oublie, le balayage termine à sa place au bout de
+// FIN_AUTOMATIQUE_HEURES (voir cloturerRidesPartis).
+router.patch(
+  '/:id/complete',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const ride = await annonceDuChauffeurOuEquipe(req);
+
+    const refusStatut = (statut) =>
+      new HttpError(
+        409,
+        'invalid_status',
+        `L'arrivée ne peut être déclarée que sur un trajet en route (statut actuel: ${statut})`
+      );
+    if (ride.status !== 'in_progress') throw refusStatut(ride.status);
+
+    // Même écriture atomique que le départ : un double toucher ne déplace pas
+    // l'heure d'arrivée.
+    const { rows } = await query(
+      `UPDATE posted_rides
+          SET status = 'completed', completed_at = now()
+        WHERE id = $1 AND status = 'in_progress'
+        RETURNING *`,
+      [ride.id]
+    );
+    const termine = rows[0];
+    if (!termine) throw refusStatut(await statutActuel(ride.id));
+
+    // Fin de parcours : l'équipe voit le trajet se clore, avec sa durée
+    // réelle (de la touche « Démarrer » à la touche « Terminer »).
+    const dureeMinutes = termine.started_at
+      ? Math.max(
+          0,
+          Math.round(
+            (new Date(termine.completed_at).getTime() - new Date(termine.started_at).getTime()) /
+              60_000
+          )
+        )
+      : null;
+    annoncerMouvement(
+      '✅ Taxi partagé terminé',
+      termine,
+      dureeMinutes === null ? [] : [`Durée du trajet: ${dureeMinutes} min`]
+    ).catch(() => {});
+    res.json(annonceApresMouvement(req, termine));
   })
 );
 
