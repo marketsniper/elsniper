@@ -16,3 +16,6 @@ graphify-out/.graphify_ast.json
 graphify-out/.graphify_extract.json
 graphify-out/.graphify_detect.json
 graphify-out/.graphify_semantic.json
+
+# Horodatage de la dernière requête graphify : réécrit à chaque lecture, jamais à versionner.
+graphify-out/cache/last_query_stamp
